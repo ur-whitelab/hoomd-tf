@@ -1,4 +1,4 @@
-# Maintainer: mspells
+# Maintainer: Andrew White
 
 set(COMPONENT_NAME tensorflow_plugin)
 
@@ -49,6 +49,11 @@ fix_cudart_rpath(_${COMPONENT_NAME})
 install(TARGETS _${COMPONENT_NAME}
         LIBRARY DESTINATION ${PYTHON_MODULE_BASE_DIR}/${COMPONENT_NAME}
         )
+
+##############################
+# The Tensorflow
+
+add_subdirectory(hoomd-op)
 
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package
