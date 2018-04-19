@@ -1,14 +1,14 @@
 # Maintainer: mspells
 
-set(COMPONENT_NAME example_plugin)
+set(COMPONENT_NAME tensorflow_plugin)
 
 set(_${COMPONENT_NAME}_sources
     module.cc
-    ExampleUpdater.cc
+    TensorflowUpdater.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources
-    ExampleUpdater.cu
+    TensorflowUpdater.cu
     )
 
 # Need to define NO_IMPORT_ARRAY in every file but module.cc

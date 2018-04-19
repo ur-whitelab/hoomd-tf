@@ -7,11 +7,11 @@
 // replaced with a ForceCompute, Integrator, or any other C++ code at all.
 
 // inclusion guard
-#ifndef _EXAMPLE_UPDATER_H_
-#define _EXAMPLE_UPDATER_H_
+#ifndef _TENSORFLOW_UPDATER_H_
+#define _TENSORFLOW_UPDATER_H_
 
-/*! \file ExampleUpdater.h
-    \brief Declaration of ExampleUpdater
+/*! \file TensorflowUpdater.h
+    \brief Declaration of TensorflowUpdater
 */
 
 #include <hoomd/Updater.h>
@@ -33,18 +33,18 @@
 //! A nonsense particle updater written to demonstrate how to write a plugin
 /*! This updater simply sets all of the particle's velocities to 0 when update() is called.
 */
-class ExampleUpdater : public Updater
+class TensorflowUpdater : public Updater
     {
     public:
         //! Constructor
-        ExampleUpdater(std::shared_ptr<SystemDefinition> sysdef);
+        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef);
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
     };
 
-//! Export the ExampleUpdater class to python
-void export_ExampleUpdater(pybind11::module& m);
+//! Export the TensorflowUpdater class to python
+void export_TensorflowUpdater(pybind11::module& m);
 
 // Third, this class offers a GPU accelerated method in order to demonstrate how to include CUDA code in pluins
 // we need to declare a separate class for that (but only if ENABLE_CUDA is set)
@@ -54,19 +54,19 @@ void export_ExampleUpdater(pybind11::module& m);
 //! A GPU accelerated nonsense particle updater written to demonstrate how to write a plugin w/ CUDA code
 /*! This updater simply sets all of the particle's velocities to 0 (on the GPU) when update() is called.
 */
-class ExampleUpdaterGPU : public ExampleUpdater
+class TensorflowUpdaterGPU : public TensorflowUpdater
     {
     public:
         //! Constructor
-        ExampleUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef);
+        TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef);
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
     };
 
-//! Export the ExampleUpdaterGPU class to python
-void export_ExampleUpdaterGPU(pybind11::module& m);
+//! Export the TensorflowUpdaterGPU class to python
+void export_TensorflowUpdaterGPU(pybind11::module& m);
 
 #endif // ENABLE_CUDA
 
-#endif // _EXAMPLE_UPDATER_H_
+#endif // _TENSORFLOW_UPDATER_H_
