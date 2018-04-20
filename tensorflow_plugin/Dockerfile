@@ -30,7 +30,8 @@ WORKDIR /srv/hoomd-blue
 
 #Add plugin
 RUN mkdir -p hoomd/tensorflow_plugin
-ADD . hoomd/tensorflow_plugin
+#ADD . hoomd/tensorflow_plugin
+
 
 ENV PYTHONPATH=$PYTHONPATH:/srv/hoomd-blue/build
 ENV PATH="/usr/local/bin:$PATH"

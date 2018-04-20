@@ -1,8 +1,9 @@
 set(COMPONENT_NAME tensorflow_op)
 set(_${COMPONENT_NAME}_sources
-    zero_out.cc
+    hoomd.cc
     )
 set(_${COMPONENT_NAME}_cu_sources
+    hoomd.cu
     )
 
 
@@ -14,9 +15,11 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(
 SEPARATE_ARGUMENTS( TF_CFLAGS )
 SEPARATE_ARGUMENTS( TF_LFLAGS )
 
-#CUDA TODO: Make sure compatible with TF CUDA target_compile_options
 if (ENABLE_CUDA)
-CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
+#Add TF specific options
+SET(TF_CUDA_ADDITIONAL_OPTIONS ${CUDA_ADDITIONAL_OPTIONS} ${TF_CFLAGS} "-DGOOGLE_CUDA")
+list(APPEND TF_CFLAGS "-lcudart")
+CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${TF_CUDA_ADDITIONAL_OPTIONS} SHARED)
 endif (ENABLE_CUDA)
 
 #add library target
