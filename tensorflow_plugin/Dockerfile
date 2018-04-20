@@ -1,7 +1,14 @@
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:9.1-cudnn7-devel-ubuntu16.04
 MAINTAINER Andrew White <andrew.white@rochester.edu>
 
-RUN apt-get update && apt-get install -y git cmake gcc g++ sqlite3 wget libsqlite3-dev && apt-get clean
+RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev && apt-get clean
+
+#use pip, since conda distro is unofficial
+#RUN pip install tensorflow-gpu
+RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
+WORKDIR /srv
+ADD ./build-tools/install-ubuntu.sh .
+RUN chmod +x ./install-ubuntu.sh && ./install-ubuntu.sh --shared --cuda
 
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /srv/miniconda.sh
 RUN chmod +x /srv/miniconda.sh && /srv/miniconda.sh -b -p /usr/local/miniconda
@@ -21,9 +28,6 @@ RUN conda install -y Pillow \
         && \
 python -m ipykernel.kernelspec && \
 conda clean -a
-
-#use pip, since conda distro is unofficial
-RUN pip install tensorflow-gpu
 
 RUN git clone --recursive https://bitbucket.org/glotzer/hoomd-blue /srv/hoomd-blue
 WORKDIR /srv/hoomd-blue

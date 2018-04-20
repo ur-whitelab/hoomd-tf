@@ -1,6 +1,8 @@
 #ifdef GOOGLE_CUDA
 #define EIGEN_USE_GPU
-#include "hoomd.h"
+#include "hoomd_op.h"
+#include "hoomd/HOOMDMath.h"
+#include "hoomd/ParticleData.cuh"
 #include "tensorflow/core/util/cuda_kernel_helper.h"
 
 using namespace tensorflow;

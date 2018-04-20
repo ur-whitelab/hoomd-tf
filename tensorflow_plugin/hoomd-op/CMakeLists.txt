@@ -1,9 +1,9 @@
 set(COMPONENT_NAME tensorflow_op)
 set(_${COMPONENT_NAME}_sources
-    hoomd.cc
+    hoomd_op.cc
     )
 set(_${COMPONENT_NAME}_cu_sources
-    hoomd.cu
+    hoomd_op.cu
     )
 
 

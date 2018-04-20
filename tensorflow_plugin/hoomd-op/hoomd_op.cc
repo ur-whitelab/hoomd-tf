@@ -1,4 +1,4 @@
-#include "hoomd.h"
+#include "hoomd_op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
 using namespace tensorflow;
