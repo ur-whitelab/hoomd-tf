@@ -36,13 +36,15 @@ apt-get -y install \
   libtool \
   mlocate \
   zlib1g-dev \
-  g++-6 \
   python \
   python3-numpy \
   python3-dev \
   python3-pip \
   python3-wheel \
   wget
+
+ln -s /usr/bin/g++ /usr/bin/g++-6
+ln -s /usr/bin/gcc /usr/bin/gcc-6
 
 if $shared; then
     # install bazel for the shared library version
@@ -53,11 +55,11 @@ if $shared; then
     #apt-get -y install openjdk-8-jdk bazel
     #downgrade bazel due to https://github.com/tensorflow/tensorflow/issues/18450
     #downgrade to bazel .11 due to bug
-    wget --no-check-certificate "https://github.com/bazelbuild/bazel/releases/download/0.11.1/bazel_0.11.1-linux-x86_64.deb" -O bazel.deb  && dpkg -i bazel.deb
+    wget --quiet --no-check-certificate "https://github.com/bazelbuild/bazel/releases/download/0.11.1/bazel_0.11.1-linux-x86_64.deb" -O bazel.deb  && dpkg -i bazel.deb
 fi
 if $cuda; then
     # install libcupti
-    apt-get -y install cuda-command-line-tools-9-1
+    apt-get -y install cuda-command-line-tools-9-0
 fi
 
 apt-get -y clean
