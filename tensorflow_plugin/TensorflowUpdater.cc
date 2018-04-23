@@ -6,6 +6,8 @@
 #include "TensorflowUpdater.cuh"
 #endif
 
+#include <iostream>
+
 /*! \file TensorflowUpdater.cc
     \brief Definition of TensorflowUpdater
 */
@@ -18,6 +20,15 @@
 TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef)
         : Updater(sysdef)
     {
+        Session* session;
+        auto m_exec_conf = sysdef->getParticleData()->getExecConf();
+        Status status = NewSession(SessionOptions(), &session);
+        if (!status.ok()) {
+             m_exec_conf->msg->notice(5) << "Able to load TF Session" << std::endl;
+        } else {
+            m_exec_conf->msg->error() << "Failed to load TF Session!" << std::endl;
+        }
+
     }
 
 

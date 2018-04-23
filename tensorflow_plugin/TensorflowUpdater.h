@@ -15,6 +15,8 @@
 */
 
 #include <hoomd/Updater.h>
+#include <hoomd/ParticleData.h>
+#include <hoomd/SystemDefinition.h>
 
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
