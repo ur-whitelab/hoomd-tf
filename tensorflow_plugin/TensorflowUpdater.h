@@ -15,6 +15,7 @@
 */
 
 #include <hoomd/Updater.h>
+#include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
 
@@ -41,8 +42,14 @@ class TensorflowUpdater : public Updater
         //! Constructor
         TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef);
 
+        //!Destructor
+        ~TensorflowUpdater();
+
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
+    protected:
+        Scalar4* input_buffer;
+        Scalar4* output_buffer;
     };
 
 //! Export the TensorflowUpdater class to python

@@ -40,6 +40,7 @@ CustomOP-reader (C++): -> output must be known at compile time ? -> no only rank
     input-tensor: list of memory addresses (rank 1) ->scalar
     input-tensor: scalar -> shape of output
     update: copy memory address to output tensor
+    
 CustomOP-writer (C++): -> output is nothing
     input-tensor: force-size
     input-tensor: memory address for output

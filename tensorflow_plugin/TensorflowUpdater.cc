@@ -7,6 +7,7 @@
 #endif
 
 #include <iostream>
+#include <sys/mman.h>
 
 /*! \file TensorflowUpdater.cc
     \brief Definition of TensorflowUpdater
@@ -19,19 +20,22 @@
 */
 TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef)
         : Updater(sysdef)
-    {
-        Session* session;
-        auto m_exec_conf = sysdef->getParticleData()->getExecConf();
-        // create particle buffer
-        
-        if (!status.ok()) {
-             m_exec_conf->msg->notice(5) << "Able to load TF Session" << std::endl;
-        } else {
-            m_exec_conf->msg->error() << "Failed to load TF Session!" << std::endl;
-        }
-
+{
+    // might need to do something so GPU code doesn't call this
+    auto m_exec_conf = sysdef->getParticleData()->getExecConf();
+    // create input/output mmap buffer
+    assert(m_pdata);
+    input_buffer = mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)
+    output_buffer = mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)
+    if(input_buffer == MAP_FAILED || output_buffer == MAP_FAILED) {
+        perror("Failed to create mmap")
+        m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
+}
 
+TensorflowUpdater::~TensorflowUpdater {
+    // unmap our mmapings
+}
 
 /*! Perform the needed calculations to zero the system's velocity
     \param timestep Current time step of the simulation
