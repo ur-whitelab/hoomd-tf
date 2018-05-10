@@ -25,15 +25,15 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef)
     auto m_exec_conf = sysdef->getParticleData()->getExecConf();
     // create input/output mmap buffer
     assert(m_pdata);
-    input_buffer = mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)
-    output_buffer = mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)
+    input_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
+    output_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(input_buffer == MAP_FAILED || output_buffer == MAP_FAILED) {
-        perror("Failed to create mmap")
+        perror("Failed to create mmap");
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
 }
 
-TensorflowUpdater::~TensorflowUpdater {
+TensorflowUpdater::~TensorflowUpdater() {
     // unmap our mmapings
 }
 

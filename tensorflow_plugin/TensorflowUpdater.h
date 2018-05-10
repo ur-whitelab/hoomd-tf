@@ -43,7 +43,7 @@ class TensorflowUpdater : public Updater
         TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef);
 
         //!Destructor
-        ~TensorflowUpdater();
+        virtual ~TensorflowUpdater();
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);

@@ -3,16 +3,17 @@ MAINTAINER Andrew White <andrew.white@rochester.edu>
 
 RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev && apt-get clean
 
-#use pip, since conda distro is unofficial
-#RUN pip install tensorflow-gpu
-RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
-WORKDIR /srv
-ADD ./build-tools/install-ubuntu.sh .
-RUN chmod +x ./install-ubuntu.sh && ./install-ubuntu.sh --shared --cuda
+#RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
+#WORKDIR /srv
+#ADD ./build-tools/install-ubuntu.sh .
+#RUN chmod +x ./install-ubuntu.sh && ./install-ubuntu.sh --shared --cuda
 
 RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /srv/miniconda.sh
 RUN chmod +x /srv/miniconda.sh && /srv/miniconda.sh -b -p /usr/local/miniconda
 ENV PATH="/usr/local/miniconda/bin:$PATH"
+
+#use pip, since conda distro is unofficial
+RUN pip install tensorflow-gpu
 
 RUN conda config --add channels glotzer && conda install -y fresnel gsd freud &&  conda clean -a
 RUN conda install -y Pillow \
@@ -33,7 +34,8 @@ RUN git clone --recursive https://bitbucket.org/glotzer/hoomd-blue /srv/hoomd-bl
 WORKDIR /srv/hoomd-blue
 
 #Add plugin
-RUN mkdir -p hoomd/tensorflow_plugin
+RUN mkdir -p tensorflow_plugin
+RUN cd hoomd && ln -s ../tensorflow_plugin tensorflow_plugin
 #ADD . hoomd/tensorflow_plugin
 
 
@@ -52,4 +54,4 @@ CMD ["jupyter", "notebook", "--allow-root", "--ip=0.0.0.0"]
 #         -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF \
 #         && make -j 6
 
-#cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=off -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off
+#cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=off -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF

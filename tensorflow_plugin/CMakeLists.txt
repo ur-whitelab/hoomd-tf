@@ -2,8 +2,6 @@
 
 set(COMPONENT_NAME tensorflow_plugin)
 
-find_package(TensorflowCC REQUIRED)
-
 set(_${COMPONENT_NAME}_sources
     module.cc
     TensorflowUpdater.cc
@@ -23,7 +21,7 @@ endif (ENABLE_CUDA)
 add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 
 # link the library to its dependencies
-target_link_libraries(_${COMPONENT_NAME} ${HOOMD_LIBRARIES} TensorflowCC::Shared)
+target_link_libraries(_${COMPONENT_NAME} ${HOOMD_LIBRARIES})
 
 # if we are compiling with MPI support built in, set appropriate
 # compiler/linker flags
