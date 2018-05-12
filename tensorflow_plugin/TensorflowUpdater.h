@@ -40,16 +40,22 @@ class TensorflowUpdater : public Updater
     {
     public:
         //! Constructor
-        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef);
+        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, pybind11::object& py_self);
 
         //!Destructor
         virtual ~TensorflowUpdater();
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
+
+        const Scalar4* get_input_buffer() {return const_cast<Scalar4*> (_input_buffer);}
+        const Scalar4* get_output_buffer() {return const_cast<Scalar4*> (_output_buffer);}
+
+        pybind11::object& _py_self; //pybind objects have to be public with current cc flags
+
     protected:
-        Scalar4* input_buffer;
-        Scalar4* output_buffer;
+        Scalar4* _input_buffer;
+        Scalar4* _output_buffer;
     };
 
 //! Export the TensorflowUpdater class to python
@@ -67,7 +73,7 @@ class TensorflowUpdaterGPU : public TensorflowUpdater
     {
     public:
         //! Constructor
-        TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef);
+        TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self);
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);

@@ -13,7 +13,9 @@ RUN chmod +x /srv/miniconda.sh && /srv/miniconda.sh -b -p /usr/local/miniconda
 ENV PATH="/usr/local/miniconda/bin:$PATH"
 
 #use pip, since conda distro is unofficial
-RUN pip install tensorflow-gpu
+
+#RUN pip install tensorflow-gpu
+RUN pip install tensorflow
 
 RUN conda config --add channels glotzer && conda install -y fresnel gsd freud &&  conda clean -a
 RUN conda install -y Pillow \

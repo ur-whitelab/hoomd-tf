@@ -70,6 +70,7 @@ ENDMACRO(copy_file)
 set(files
     __init__.py
     update.py
+    tfmanager.py
     )
 
 install(FILES ${files}

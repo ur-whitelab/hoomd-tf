@@ -18,16 +18,16 @@
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef)
-        : Updater(sysdef)
+TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, pybind11::object& py_self)
+        : Updater(sysdef), _py_self(py_self)
 {
     // might need to do something so GPU code doesn't call this
     auto m_exec_conf = sysdef->getParticleData()->getExecConf();
     // create input/output mmap buffer
     assert(m_pdata);
-    input_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
-    output_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
-    if(input_buffer == MAP_FAILED || output_buffer == MAP_FAILED) {
+    _input_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
+    _output_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
+    if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
         perror("Failed to create mmap");
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
@@ -41,8 +41,10 @@ TensorflowUpdater::~TensorflowUpdater() {
     \param timestep Current time step of the simulation
 */
 void TensorflowUpdater::update(unsigned int timestep)
-    {
+{
     if (m_prof) m_prof->push("TensorflowUpdater");
+
+    _py_self.attr("start_update")();
 
     // access the particle data for writing on the CPU
     assert(m_pdata);
@@ -56,15 +58,19 @@ void TensorflowUpdater::update(unsigned int timestep)
         h_vel.data[i].z = Scalar(0.0);
         }
 
+
+    _py_self.attr("finish_update")();
     if (m_prof) m_prof->pop();
-    }
+}
 
 /* Export the CPU updater to be visible in the python module
  */
 void export_TensorflowUpdater(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<Updater>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition> >())
+        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object& >())
+        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
+        .def("get_output_buffer", &TensorflowUpdater::get_input_buffer)
     ;
     }
 
@@ -75,8 +81,8 @@ void export_TensorflowUpdater(pybind11::module& m)
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowUpdaterGPU::TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef)
-        : TensorflowUpdater(sysdef)
+TensorflowUpdaterGPU::TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self)
+        : TensorflowUpdater(sysdef, py_self)
     {
     }
 
@@ -106,7 +112,9 @@ void TensorflowUpdaterGPU::update(unsigned int timestep)
 void export_TensorflowUpdaterGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdaterGPU, std::shared_ptr<TensorflowUpdaterGPU> >(m, "TensorflowUpdaterGPU", pybind11::base<TensorflowUpdater>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition> >())
+        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object >())
+        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
+        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer)
     ;
     }
 

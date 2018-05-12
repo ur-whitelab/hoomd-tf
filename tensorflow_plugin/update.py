@@ -11,6 +11,8 @@ from hoomd.tensorflow_plugin import _tensorflow_plugin
 # Next, since we are extending an updater, we need to bring in the base class updater and some other parts from
 # hoomd_script
 import hoomd
+import multiprocessing
+from .tfmanager import main
 
 ## Zeroes all particle velocities
 #
@@ -36,8 +38,26 @@ class tensorflow(hoomd.update._updater):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_updater = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition)
+            self.cpp_updater = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, self)
         else:
-            self.cpp_updater = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition)
+            self.cpp_updater = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, self)
+
+        #start tf manager
+        self.lock = multiprocessing.Lock()
+        self.tfm = multiprocessing.Process(target=main,
+                                    args=(self.lock,
+                                                    self.cpp_updater.get_input_buffer(),
+                                                    self.cpp_updater.get_output_buffer()))
+        self.tfm.start()
 
         self.setupUpdater(period)
+
+    def __del__(self):
+        #need to terminate oprhan
+        self.tfm.terminate()
+
+    def start_update(self):
+        self.lock.acquire()
+
+    def finish_update(self):
+        self.lock.release()
