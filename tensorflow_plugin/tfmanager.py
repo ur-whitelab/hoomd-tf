@@ -4,17 +4,22 @@ import tensorflow as tf
 import sys, logging
 
 def main(log_filename, lock, input_buffer, output_buffer):
-    logging.basicConfig(filename=log_filename, level=logging.DEBUG)
+    tfm = TFManager(lock, input_buffer, output_buffer, log_filename)
 
-    tfm = TFManager(lock, input_buffer, output_buffer)
-    logging.info('Starting TF Session Manager')
     tfm.start_loop()
 
 class TFManager:
-    def __init__(self, lock, output_buffer, input_buffer):
+    def __init__(self, lock, output_buffer, input_buffer, log_filename):
+
+        self.log = logging.getLogger('tensorflow')
+        fh = logging.FileHandler(log_filename)
+        self.log.addHandler(fh)
+
         self.lock = lock
         self.input_buffer = input_buffer
         self.output_buffer = output_buffer
+
+        self.log.info('Starting TF Session Manager')
 
     def _update(self, sess):
         print(sess.run(self.graph))
@@ -27,13 +32,15 @@ class TFManager:
     def start_loop(self):
 
         self._build_graph()
-        logging.info('Constructed TF Model graph')
+        self.log.info('Constructed TF Model graph')
 
         with tf.Session() as sess:
             while True:
+                break
                 self.lock.acquire()
                 self._update(sess)
                 self.lock.release()
+
 
 
 
