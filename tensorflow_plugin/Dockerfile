@@ -1,7 +1,7 @@
 FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 MAINTAINER Andrew White <andrew.white@rochester.edu>
 
-RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev && apt-get clean
+RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev libtcmalloc-minimal4 && apt-get clean
 
 #RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
 #WORKDIR /srv

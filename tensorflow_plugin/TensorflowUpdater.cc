@@ -31,10 +31,16 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, p
         perror("Failed to create mmap");
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
+    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow updater (" << m_pdata->getN()*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
 }
 
 TensorflowUpdater::~TensorflowUpdater() {
     // unmap our mmapings
+    assert(m_pdata);
+    munmap(_input_buffer, m_pdata->getN()*sizeof(Scalar4));
+    munmap(_output_buffer, m_pdata->getN()*sizeof(Scalar4));
+    _input_buffer = NULL;
+    _output_buffer = NULL;
 }
 
 /*! Perform the needed calculations to zero the system's velocity
@@ -69,8 +75,8 @@ void export_TensorflowUpdater(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<Updater>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object& >())
-        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
-        .def("get_output_buffer", &TensorflowUpdater::get_input_buffer)
+        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
+        .def("get_output_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
     ;
     }
 
@@ -113,8 +119,8 @@ void export_TensorflowUpdaterGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdaterGPU, std::shared_ptr<TensorflowUpdaterGPU> >(m, "TensorflowUpdaterGPU", pybind11::base<TensorflowUpdater>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object >())
-        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
-        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer)
+        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
+        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
     ;
     }
 

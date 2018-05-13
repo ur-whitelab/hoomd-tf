@@ -13,6 +13,7 @@ from hoomd.tensorflow_plugin import _tensorflow_plugin
 import hoomd
 import multiprocessing
 from .tfmanager import main
+import sys
 
 ## Zeroes all particle velocities
 #
@@ -30,7 +31,7 @@ class tensorflow(hoomd.update._updater):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, period=1):
+    def __init__(self, period=1, log_filename='tf_manager.log'):
         hoomd.util.print_status_line()
 
         # initialize base class
@@ -45,15 +46,20 @@ class tensorflow(hoomd.update._updater):
         #start tf manager
         self.lock = multiprocessing.Lock()
         self.tfm = multiprocessing.Process(target=main,
-                                    args=(self.lock,
-                                                    self.cpp_updater.get_input_buffer(),
-                                                    self.cpp_updater.get_output_buffer()))
-        self.tfm.start()
+                                    args=(log_filename,
+                                          self.lock,
+                                          self.cpp_updater.get_input_buffer(),
+                                          self.cpp_updater.get_output_buffer()))
+        #acquire lock, since model can't read data until we have put it into feed
+        self.lock.acquire()
 
+        self.tfm.start()
+        hoomd.context.msg.notice(2, 'Forked TF Session Manager\n')
         self.setupUpdater(period)
 
     def __del__(self):
-        #need to terminate oprhan
+        #need to terminate orphan
+        hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
         self.tfm.terminate()
 
     def start_update(self):
