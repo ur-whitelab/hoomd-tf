@@ -6,9 +6,10 @@
 using namespace tensorflow;
 
 REGISTER_OP("IPC2Tensor")
-    .Input("shape: float")
-    .Input("address: float") //memory address. Should be scalar. TODO: learn to check rank
-    .Output("output: float")
+    .Attr("T: {float}")
+    .Input("shape: int")
+    .Input("address: long") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
+    .Output("output: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       shape_inference::ShapeHandle out;
       //this should make the size be the size of shape. Should be N x 3
@@ -19,14 +20,14 @@ REGISTER_OP("IPC2Tensor")
 
 template <typename Device, typename T>
 struct HoomdFunctor {
-  void operator()(const Device& d, int size, const T* in, T* out);
+  void operator()(const Device& d, int size, long address, T* out);
 };
 
 #if GOOGLE_CUDA
 // Partially specialize functor for GpuDevice.
 template <typename Eigen::GpuDevice, typename T>
 struct HoomdFunctor {
-  void operator()(const Eigen::GpuDevice& d, int size, const T* in, T* out);
+  void operator()(const Eigen::GpuDevice& d, int size, long address, T* out);
 };
 #endif
 

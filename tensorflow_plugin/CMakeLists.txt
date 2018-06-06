@@ -53,7 +53,7 @@ install(TARGETS _${COMPONENT_NAME}
 ##############################
 # The Tensorflow
 
-add_subdirectory(hoomd-op)
+add_subdirectory(ipc2tensor)
 
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package
