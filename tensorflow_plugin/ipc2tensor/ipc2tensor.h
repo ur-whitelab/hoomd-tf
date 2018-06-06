@@ -5,11 +5,15 @@
 
 using namespace tensorflow;
 
-REGISTER_OP("ZeroOut")
-    .Input("to_zero: int32")
-    .Output("zeroed: int32")
-    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
-      c->set_output(0, c->input(0));
+REGISTER_OP("IPC2Tensor")
+    .Input("shape: float")
+    .Input("address: float") //memory address. Should be scalar. TODO: learn to check rank
+    .Output("output: float")
+    .SetShapeFn([](shape_inference::InferenceContext* c) {
+      shape_inference::ShapeHandle out;
+      //this should make the size be the size of shape. Should be N x 3
+      TF_RETURN_IF_ERROR(c->MakeShapeFromShapeTensor(0, &out));
+      c->set_output(0, out);
       return Status::OK();
     });
 
