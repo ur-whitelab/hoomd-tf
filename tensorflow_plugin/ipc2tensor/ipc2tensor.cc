@@ -13,7 +13,7 @@ struct IPC2TFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, long address, T* out) {
     //TODO: access address
     for(int i = 0; i < size; ++i)
-      T[i] = 0;
+      out[i] = 0;
   }
 };
 
@@ -32,15 +32,19 @@ class IPC2Tensor : public OpKernel {
     //get memory address
     //TODO: I have no idea what I'm doing
     const Tensor& input_memory_tensor = context->input(1);
-    long input_address = input_memory_tensor.tensor<long, 1>()(0);
+    int input_address = input_memory_tensor.tensor<int, 1>()(0);
 
     // Create an output tensor
     Tensor* output_tensor = NULL;
-    OP_REQUIRES_OK(context, context->allocate_output(0, input_shape,
+    int temp_dims [1] = {1};
+    TensorShape shape;
+    //why is this necessary?!
+    TensorShapeUtils::MakeShape(temp_dims, 1, &shape);
+    OP_REQUIRES_OK(context, context->allocate_output(0, shape,
                                                      &output_tensor));
 
     // Do the computation.
-    OP_REQUIRES(context, input_tensor.NumElements() <= tensorflow::kint32max,
+    OP_REQUIRES(context, output_tensor->NumElements() <= tensorflow::kint32max,
                 errors::InvalidArgument("Too many elements in tensor"));
     IPC2TFunctor<Device, T>()(
         context->eigen_device<Device>(),

@@ -2,6 +2,9 @@
 #define KERNEL_HOOMD_H_
 
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/shape_inference.h"
+
 
 using namespace tensorflow;
 
@@ -19,14 +22,14 @@ REGISTER_OP("IPC2Tensor")
     });
 
 template <typename Device, typename T>
-struct HoomdFunctor {
+struct IPC2TFunctor {
   void operator()(const Device& d, int size, long address, T* out);
 };
 
 #if GOOGLE_CUDA
 // Partially specialize functor for GpuDevice.
 template <typename Eigen::GpuDevice, typename T>
-struct HoomdFunctor {
+struct IPC2TFunctor {
   void operator()(const Eigen::GpuDevice& d, int size, long address, T* out);
 };
 #endif

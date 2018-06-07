@@ -2,9 +2,9 @@ set(COMPONENT_NAME tensorflow_op)
 set(_${COMPONENT_NAME}_sources
     ipc2tensor.cc
     )
-set(_${COMPONENT_NAME}_cu_sources
-    ipc2tensor.cu
-    )
+#set(_${COMPONENT_NAME}_cu_sources
+#    ipc2tensor.cu
+#    )
 
 
 #get TF specific compiler flags
