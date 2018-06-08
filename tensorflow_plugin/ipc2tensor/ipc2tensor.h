@@ -5,6 +5,7 @@
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/shape_inference.h"
 
+#include "../TensorflowUpdater.h"
 
 using namespace tensorflow;
 
@@ -14,9 +15,13 @@ REGISTER_OP("IpcToTensor")
     .Input("address: int64") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
     .Output("output: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
-      shape_inference::ShapeHandle out;
+      int32 shape;
+      c->GetAttr("shape", &shape);
+
       //this should make the size be the size of shape. Should be N x 3
-      TF_RETURN_IF_ERROR(c->MakeShapeFromShapeTensor(0, &out));
+      shape_inference::DimensionHandle particle_dimension = c->MakeDim(shape);
+      shape_inference::DimensionHandle spatial_dimension = c->MakeDim(3);
+      shape_inference::ShapeHandle out = c->MakeShape({particle_dimension, spatial_dimension});
       c->set_output(0, out);
       return Status::OK();
     });
@@ -24,6 +29,11 @@ REGISTER_OP("IpcToTensor")
 template <typename Device, typename T>
 struct IPC2TFunctor {
   void operator()(const Device& d, int size, int64 address, T* out);
+};
+
+template <typename Device>
+struct IPC2TInitialize {
+  bool operator()(int32 size, int64 address);
 };
 
 #if GOOGLE_CUDA

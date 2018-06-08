@@ -48,6 +48,7 @@ class tensorflow(hoomd.update._updater):
         self.tfm = multiprocessing.Process(target=main,
                                     args=(log_filename,
                                           self.lock,
+                                          len(hoomd.context.current.group_all),
                                           self.cpp_updater.get_input_buffer(),
                                           self.cpp_updater.get_output_buffer()))
         #acquire lock, since model can't read data until we have put it into feed

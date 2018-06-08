@@ -32,6 +32,7 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, p
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
     m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow updater (" << m_pdata->getN()*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
+    _input_buffer[0].x = MMAP_MAGIC_FLOAT;
 }
 
 TensorflowUpdater::~TensorflowUpdater() {

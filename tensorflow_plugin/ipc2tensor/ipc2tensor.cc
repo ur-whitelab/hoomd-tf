@@ -1,6 +1,9 @@
 #include "ipc2tensor.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/platform/logging.h"
 #include <stdio.h>
+#include <sys/mman.h>
+
 
 using namespace tensorflow;
 
@@ -13,35 +16,57 @@ template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, int64 address, T* out) {
     //TODO: access address
+
     for(int i = 0; i < size; ++i)
       out[i] = 0;
   }
 };
+
+// CPU Initializer
+template<>
+struct IPC2TInitialize<CPUDevice> {
+  bool operator()(int32 size, int64 address) {
+    // check shared memory
+    // Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
+    LOG(ERROR) << "about to try reading from " << address;
+    // check for magic byte sequence
+    //return input_buffer[0].x == MMAP_MAGIC_FLOAT;
+    return true;
+  }
+};
+
 
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
 template <typename Device, typename T>
 class IpcToTensorOp : public OpKernel {
  public:
-  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit IpcToTensorOp(OpKernelConstruction* c) : OpKernel(c) {
 
-  void Compute(OpKernelContext* context) override {
-    // Get input shape
-    const Tensor& input_shape_tensor = context->input(0);
-    int input_shape = input_shape_tensor.tensor<int, 1>()(0);
+    //get shape
+    c->GetAttr("shape", &_input_shape);
 
     //get memory address
-    //TODO: I have no idea what I'm doing
-    const Tensor& input_memory_tensor = context->input(1);
-    int64 input_address = input_memory_tensor.tensor<int64, 1>()(0);
+    int64 input_address;
+    c->GetAttr("address", &_input_address);
+
+    int temp_dims [2] = {_input_shape, 3};
+    //TODO: why is this necessary?!
+    TensorShapeUtils::MakeShape(temp_dims, 1, &_output_shape);
+
+    //call device initializer
+    OP_REQUIRES(c, IPC2TInitialize<Device>()(_input_shape,
+                              _input_address),
+                errors::FailedPrecondition("Memory mapped buffer not accessible or invalid."));
+    LOG(INFO) << "OP constructed and mmap connection validated";
+
+  }
+
+  void Compute(OpKernelContext* context) override {
 
     // Create an output tensor
     Tensor* output_tensor = NULL;
-    int temp_dims [1] = {input_shape};
-    TensorShape shape;
-    //TODO: why is this necessary?!
-    TensorShapeUtils::MakeShape(temp_dims, 1, &shape);
-    OP_REQUIRES_OK(context, context->allocate_output(0, shape,
+    OP_REQUIRES_OK(context, context->allocate_output(0, _output_shape,
                                                      &output_tensor));
 
     // Do the computation.
@@ -49,10 +74,15 @@ class IpcToTensorOp : public OpKernel {
                 errors::InvalidArgument("Too many elements in tensor"));
     IPC2TFunctor<Device, T>()(
         context->eigen_device<Device>(),
-        input_shape,
-        input_address,
+        _input_shape,
+        _input_address,
         output_tensor->flat<T>().data());
   }
+
+private:
+  int32 _input_shape;
+  int64 _input_address;
+  TensorShape _output_shape;
 };
 
 // Register the CPU kernels.

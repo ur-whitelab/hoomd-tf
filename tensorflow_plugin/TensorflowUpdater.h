@@ -25,6 +25,9 @@
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 #endif
 
+// just a specific sequence to make sure we're encoding correctly from loc to loc
+#define MMAP_MAGIC_FLOAT 4.41055940e-46
+
 // (if you really don't want to include the whole hoomd.h, you can include individual files IF AND ONLY IF
 // hoomd_config.h is included first)
 // For example:
