@@ -1,5 +1,6 @@
 #include "ipc2tensor.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include <stdio.h>
 
 using namespace tensorflow;
 
@@ -10,7 +11,7 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, long address, T* out) {
+  void operator()(const CPUDevice& d, int size, int64 address, T* out) {
     //TODO: access address
     for(int i = 0; i < size; ++i)
       out[i] = 0;
@@ -20,9 +21,9 @@ struct IPC2TFunctor<CPUDevice, T> {
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
 template <typename Device, typename T>
-class IPC2Tensor : public OpKernel {
+class IpcToTensorOp : public OpKernel {
  public:
-  explicit IPC2Tensor(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     // Get input shape
@@ -32,13 +33,13 @@ class IPC2Tensor : public OpKernel {
     //get memory address
     //TODO: I have no idea what I'm doing
     const Tensor& input_memory_tensor = context->input(1);
-    int input_address = input_memory_tensor.tensor<int, 1>()(0);
+    int64 input_address = input_memory_tensor.tensor<int64, 1>()(0);
 
     // Create an output tensor
     Tensor* output_tensor = NULL;
-    int temp_dims [1] = {1};
+    int temp_dims [1] = {input_shape};
     TensorShape shape;
-    //why is this necessary?!
+    //TODO: why is this necessary?!
     TensorShapeUtils::MakeShape(temp_dims, 1, &shape);
     OP_REQUIRES_OK(context, context->allocate_output(0, shape,
                                                      &output_tensor));
@@ -57,8 +58,8 @@ class IPC2Tensor : public OpKernel {
 // Register the CPU kernels.
 #define REGISTER_CPU(T)                                          \
   REGISTER_KERNEL_BUILDER(                                       \
-      Name("IPC2Tensor").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      IPC2Tensor<CPUDevice, T>);
+      Name("IpcToTensor").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      IpcToTensorOp<CPUDevice, T>);
 REGISTER_CPU(float);
 
 
@@ -68,10 +69,10 @@ REGISTER_CPU(float);
   /* Declare explicit instantiations in kernel_IPC2T.cu.cc. */ \
   extern template IPC2TFunctor<GPUDevice, float>;              \
   REGISTER_KERNEL_BUILDER(                                       \
-      Name("IPC2Tensor")
+      Name("IpcToTensor")
       .Device(DEVICE_GPU).TypeConstraint<T>("T")
       .HostMemory("shape")
       .HostMemory("address"), \
-      IPC2Tensor<GPUDevice, T>);
+      IpcToTensorOp<GPUDevice, T>);
 REGISTER_GPU(float);
 #endif  // GOOGLE_CUDA

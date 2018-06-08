@@ -8,10 +8,10 @@
 
 using namespace tensorflow;
 
-REGISTER_OP("IPC2Tensor")
+REGISTER_OP("IpcToTensor")
     .Attr("T: {float}")
-    .Input("shape: int")
-    .Input("address: long") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
+    .Input("shape: int32")
+    .Input("address: int64") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
     .Output("output: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       shape_inference::ShapeHandle out;
@@ -23,14 +23,14 @@ REGISTER_OP("IPC2Tensor")
 
 template <typename Device, typename T>
 struct IPC2TFunctor {
-  void operator()(const Device& d, int size, long address, T* out);
+  void operator()(const Device& d, int size, int64 address, T* out);
 };
 
 #if GOOGLE_CUDA
 // Partially specialize functor for GpuDevice.
 template <typename Eigen::GpuDevice, typename T>
 struct IPC2TFunctor {
-  void operator()(const Eigen::GpuDevice& d, int size, long address, T* out);
+  void operator()(const Eigen::GpuDevice& d, int size, int64 address, T* out);
 };
 #endif
 

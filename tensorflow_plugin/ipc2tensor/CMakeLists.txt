@@ -1,4 +1,4 @@
-set(COMPONENT_NAME tensorflow_op)
+set(COMPONENT_NAME ipc2tensor_op)
 set(_${COMPONENT_NAME}_sources
     ipc2tensor.cc
     )
