@@ -11,8 +11,8 @@ using namespace tensorflow;
 
 REGISTER_OP("IpcToTensor")
     .Attr("T: {float}")
-    .Input("shape: int32")
-    .Input("address: int64") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
+    .Attr("shape: int")
+    .Attr("address: int") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
     .Output("output: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       int32 shape;

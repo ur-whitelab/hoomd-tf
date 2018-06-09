@@ -20,21 +20,26 @@ class TFManager:
         self.output_buffer = output_buffer
         self.N = N
 
-        self.log.info('Starting TF Session Manager')
+        self.log.info('Starting TF Session Manager. MMAP is at', input_buffer, ',',output_buffer)
 
     def _update(self, sess):
         print(sess.run(self.graph))
 
     def _build_graph(self):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
+        print(dir(ipc_to_tensor_module))
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
-        self.graph = ipc_to_tensor(address=self.input_buffer, shape=self.N)
+        #need to convert out scalar4 memory address to an integer
+        #longlong should be int64
+        address = id(self.input_buffer)
+        self.log.info('initializing ipc_to_tensor at address ', address, 'and size', address)
+        #self.graph = ipc_to_tensor(address=address, shape=self.N, T=tf.float32)
 
     def start_loop(self):
 
         self._build_graph()
         self.log.info('Constructed TF Model graph')
-
+        return
         with tf.Session() as sess:
             while True:
                 break

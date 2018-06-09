@@ -1,7 +1,6 @@
 #include "ipc2tensor.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/platform/logging.h"
-#include <stdio.h>
 #include <sys/mman.h>
 
 
@@ -43,11 +42,11 @@ class IpcToTensorOp : public OpKernel {
  public:
   explicit IpcToTensorOp(OpKernelConstruction* c) : OpKernel(c) {
 
+    LOG(INFO) << "OP construction starting";
     //get shape
     c->GetAttr("shape", &_input_shape);
 
     //get memory address
-    int64 input_address;
     c->GetAttr("address", &_input_address);
 
     int temp_dims [2] = {_input_shape, 3};

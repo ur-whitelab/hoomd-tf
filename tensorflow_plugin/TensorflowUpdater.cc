@@ -7,6 +7,7 @@
 #endif
 
 #include <iostream>
+#include <string.h>
 #include <sys/mman.h>
 
 /*! \file TensorflowUpdater.cc
@@ -32,6 +33,7 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, p
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
     m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow updater (" << m_pdata->getN()*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
+    m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
     _input_buffer[0].x = MMAP_MAGIC_FLOAT;
 }
 
@@ -55,16 +57,9 @@ void TensorflowUpdater::update(unsigned int timestep)
 
     // access the particle data for writing on the CPU
     assert(m_pdata);
-    ArrayHandle<Scalar4> h_vel(m_pdata->getVelocities(), access_location::host, access_mode::readwrite);
+    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
 
-    // zero the velocity of every particle
-    for (unsigned int i = 0; i < m_pdata->getN(); i++)
-        {
-        h_vel.data[i].x = Scalar(0.0);
-        h_vel.data[i].y = Scalar(0.0);
-        h_vel.data[i].z = Scalar(0.0);
-        }
-
+    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 
     _py_self.attr("finish_update")();
     if (m_prof) m_prof->pop();
