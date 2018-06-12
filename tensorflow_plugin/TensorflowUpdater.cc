@@ -26,6 +26,7 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, p
     auto m_exec_conf = sysdef->getParticleData()->getExecConf();
     // create input/output mmap buffer
     assert(m_pdata);
+
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, m_pdata->getN()*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
@@ -59,9 +60,9 @@ void TensorflowUpdater::update(unsigned int timestep)
     assert(m_pdata);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
 
-    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
+    //memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 
-    _py_self.attr("finish_update")();
+    //_py_self.attr("finish_update")();
     if (m_prof) m_prof->pop();
 }
 
@@ -72,7 +73,7 @@ void export_TensorflowUpdater(pybind11::module& m)
     pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<Updater>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object& >())
         .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
-        .def("get_output_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
+        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
     ;
     }
 
