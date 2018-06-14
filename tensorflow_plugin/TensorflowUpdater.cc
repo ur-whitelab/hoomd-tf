@@ -71,7 +71,7 @@ void TensorflowUpdater::update(unsigned int timestep)
 void export_TensorflowUpdater(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<Updater>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object& >())
+        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
         .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
         .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
     ;
@@ -115,7 +115,7 @@ void TensorflowUpdaterGPU::update(unsigned int timestep)
 void export_TensorflowUpdaterGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdaterGPU, std::shared_ptr<TensorflowUpdaterGPU> >(m, "TensorflowUpdaterGPU", pybind11::base<TensorflowUpdater>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object >())
+        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
         .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
         .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
     ;
