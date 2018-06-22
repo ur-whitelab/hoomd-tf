@@ -1,6 +1,8 @@
 #include "ClassMethod.h"
 
-ClassMethod::ClassMethod(pybind11::object& py_self): _py_self(py_self) {}
+ClassMethod::ClassMethod(pybind11::object& py_self): _py_self(py_self) {
+    _py_self.attr("test")();
+}
 
 void ClassMethod::test() {
     _py_self.attr("test")();

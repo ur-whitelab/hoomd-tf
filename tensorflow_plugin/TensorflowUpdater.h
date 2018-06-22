@@ -54,7 +54,7 @@ class TensorflowUpdater : public Updater
         const Scalar4* get_input_buffer() {return const_cast<Scalar4*> (_input_buffer);}
         const Scalar4* get_output_buffer() {return const_cast<Scalar4*> (_output_buffer);}
 
-        pybind11::object& _py_self; //pybind objects have to be public with current cc flags
+        pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
     protected:
         Scalar4* _input_buffer;
