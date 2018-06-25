@@ -55,16 +55,19 @@ void TensorflowUpdater::update(unsigned int timestep)
 {
     if (m_prof) m_prof->push("TensorflowUpdater");
 
-    if(timestep > 0) // don't need lock on first time through
-        _py_self.attr("start_update")();
+    _py_self.attr("start_update")();
 
     // access the particle data for writing on the CPU
     assert(m_pdata);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
 
-    //memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
+    //send data to buffer
+    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 
     _py_self.attr("finish_update")();
+
+    //process results from TF
+
     if (m_prof) m_prof->pop();
 }
 

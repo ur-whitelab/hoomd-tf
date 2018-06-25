@@ -3,13 +3,13 @@ import numpy as np
 import tensorflow as tf
 import sys, logging
 
-def main(log_filename, lock, N, input_buffer, output_buffer):
-    tfm = TFManager(lock, N, input_buffer, output_buffer, log_filename)
+def main(log_filename, lock, barrier, N, input_buffer, output_buffer):
+    tfm = TFManager(lock, barrier, N, input_buffer, output_buffer, log_filename)
 
     tfm.start_loop()
 
 class TFManager:
-    def __init__(self, lock, N, output_buffer, input_buffer, log_filename):
+    def __init__(self, lock, barrier, N, output_buffer, input_buffer, log_filename):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -18,6 +18,7 @@ class TFManager:
         print('Switching to logger')
 
         self.lock = lock
+        self.barrier = barrier
         self.input_buffer = input_buffer
         self.output_buffer = output_buffer
         self.N = N
@@ -41,7 +42,8 @@ class TFManager:
         self._build_graph()
         self.log.info('Constructed TF Model graph')
         with tf.Session() as sess:
-            while True:                
+            while True:
+                self.barrier.wait()               
                 self.lock.acquire()
                 self.log.info('Starting TF update...')
                 self._update(sess)

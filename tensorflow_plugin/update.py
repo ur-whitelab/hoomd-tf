@@ -45,14 +45,16 @@ class tensorflow(hoomd.update._updater):
 
         #start tf manager
         self.lock = multiprocessing.Lock()
+        #I can't figure out how to reliably get __del__ to be called,
+        #so I set a timeout to clean-up TF manager.
+        self.barrier = multiprocessing.Barrier(2, timeout=10)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(log_filename,
                                           self.lock,
+                                          self.barrier,
                                           len(hoomd.context.current.group_all),
                                           self.cpp_updater.get_input_buffer(),
                                           self.cpp_updater.get_output_buffer()))
-        #acquire lock, since model can't read data until we have put it into feed
-        self.lock.acquire()
 
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager\n')
@@ -60,12 +62,16 @@ class tensorflow(hoomd.update._updater):
 
     def __del__(self):
         #need to terminate orphan
-        self.lock.release()
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
+        self.lock.release()
+        self.barrier.abort()
         self.tfm.terminate()
 
     def start_update(self):
+        '''Write to output the current sys information'''
         self.lock.acquire()
 
     def finish_update(self):
+        '''Allow TF to read output and we wait for it to finish.'''
         self.lock.release()
+        self.barrier.wait()
