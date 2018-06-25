@@ -35,8 +35,7 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, p
     }
     m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow updater (" << m_pdata->getN()*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
     m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
-    m_exec_conf->msg->notice(2) << "At (const) addresses " << get_input_buffer() << "," << get_output_buffer() << std::endl;
-    _input_buffer[0].x = MMAP_MAGIC_FLOAT;
+
 }
 
 TensorflowUpdater::~TensorflowUpdater() {
@@ -121,8 +120,8 @@ void export_TensorflowUpdaterGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdaterGPU, std::shared_ptr<TensorflowUpdaterGPU> >(m, "TensorflowUpdaterGPU", pybind11::base<TensorflowUpdater>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
-        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
-        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
+        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
+        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer)
     ;
     }
 

@@ -2,7 +2,7 @@
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/platform/logging.h"
 #include <sys/mman.h>
-
+#include <typeinfo>
 
 using namespace tensorflow;
 
@@ -15,9 +15,13 @@ template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, int64 address, T* out) {
     //TODO: access address
-
-    for(int i = 0; i < size; ++i)
-      out[i] = 0;
+    Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
+    for(int i = 0; i < size; ++i) {
+      out[4 * i + 0] = input_buffer[i].y;
+      out[4 * i + 1] = input_buffer[i].z;
+      out[4 * i + 2] = input_buffer[i].x;
+      out[4 * i + 3] = input_buffer[i].w;
+    }
   }
 };
 
@@ -26,13 +30,9 @@ template<>
 struct IPC2TInitialize<CPUDevice> {
   bool operator()(int32 size, int64 address) {
     // check shared memory
-     Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
-    LOG(INFO) << "about to try reading from " << std::hex << address;
-    // check for magic byte sequence
-    bool result = input_buffer[0].x == MMAP_MAGIC_FLOAT;    
-    if(!result)
-      LOG(ERROR) << "Filed to find magic float. Instead found " << input_buffer[0].x;
-    return result;
+    Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
+    LOG(INFO) << "about to try reading from " << std::hex << address << " with type " << typeid(input_buffer).name() << std::endl;
+    return true;
   }
 };
 
@@ -51,7 +51,7 @@ class IpcToTensorOp : public OpKernel {
     //get memory address
     c->GetAttr("address", &_input_address);
 
-    int temp_dims [2] = {_input_shape, 3};
+    int temp_dims [2] = {_input_shape, 4};
     //TODO: why is this necessary?!
     TensorShapeUtils::MakeShape(temp_dims, 1, &_output_shape);
 

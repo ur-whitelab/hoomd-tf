@@ -15,7 +15,6 @@ class TFManager:
         fh = logging.FileHandler(log_filename)
         self.log.addHandler(fh)
         self.log.setLevel(logging.INFO)
-        print('Switching to logger')
 
         self.lock = lock
         self.barrier = barrier
@@ -33,7 +32,7 @@ class TFManager:
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
         #need to convert out scalar4 memory address to an integer
         #longlong should be int64
-        address = id(self.input_buffer)
+        address = self.input_buffer
         self.log.info('initializing ipc_to_tensor at address {:x}'.format(address))
         self.graph = ipc_to_tensor(address=address, shape=self.N, T=tf.float32)
 
@@ -42,6 +41,7 @@ class TFManager:
         self._build_graph()
         self.log.info('Constructed TF Model graph')
         with tf.Session() as sess:
+            self._update(sess) #run once to force initialize 
             while True:
                 self.barrier.wait()               
                 self.lock.acquire()

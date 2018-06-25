@@ -27,9 +27,6 @@ class test_updater(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
         updater = hoomd.tensorflow_plugin.update.tensorflow(1)
         hoomd.run(5)
-        #why is this necessary?
-        print('Completed runs!')
-        del updater
 
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])

@@ -25,9 +25,6 @@
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 #endif
 
-// just a specific sequence to make sure we're encoding correctly from loc to loc
-#define MMAP_MAGIC_FLOAT 4.41055940e-46
-
 // (if you really don't want to include the whole hoomd.h, you can include individual files IF AND ONLY IF
 // hoomd_config.h is included first)
 // For example:
@@ -51,8 +48,8 @@ class TensorflowUpdater : public Updater
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
 
-        const Scalar4* get_input_buffer() {return const_cast<Scalar4*> (_input_buffer);}
-        const Scalar4* get_output_buffer() {return const_cast<Scalar4*> (_output_buffer);}
+        int64_t get_input_buffer() { return reinterpret_cast<int64_t> (_input_buffer);}
+        int64_t get_output_buffer() {return reinterpret_cast<int64_t> (_output_buffer);}
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 

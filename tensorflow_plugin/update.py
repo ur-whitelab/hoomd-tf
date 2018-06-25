@@ -47,10 +47,6 @@ class tensorflow(hoomd.update._updater):
         self.lock = multiprocessing.Lock()
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        print('TEST ADDRESS: {:x}'.format(id(self.cpp_updater.get_input_buffer())))
-        print('TEST ADDRESS: {:x}'.format(id(self.cpp_updater.get_input_buffer())))
-        print('TEST ADDRESS: {:x}'.format(id(self.cpp_updater.get_input_buffer())))
-        print('TEST ADDRESS: {:x}'.format(id(self.cpp_updater.get_input_buffer())))
         self.barrier = multiprocessing.Barrier(2, timeout=10)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(log_filename,
@@ -61,7 +57,7 @@ class tensorflow(hoomd.update._updater):
                                           self.cpp_updater.get_output_buffer()))
 
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager\n')
+        hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))
         self.setupUpdater(period)
 
     def __del__(self):
