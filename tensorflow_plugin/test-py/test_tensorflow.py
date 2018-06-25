@@ -8,7 +8,7 @@ import unittest
 import os
 import numpy as np
 
-class test_simple:
+class test_simple(unittest.TestCase):
     def test_constructor(self):
         sysdef = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                            n=[1,2])

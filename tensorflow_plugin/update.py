@@ -45,27 +45,27 @@ class tensorflow(hoomd.update._updater):
 
         #start tf manager
         self.lock = multiprocessing.Lock()
-        #self.tfm = multiprocessing.Process(target=main,
-        #                            args=(log_filename,
-        #                                  self.lock,
-        #                                  len(hoomd.context.current.group_all),
-        #                                  self.cpp_updater.get_input_buffer(),
-        #                                  self.cpp_updater.get_output_buffer()))
+        self.tfm = multiprocessing.Process(target=main,
+                                    args=(log_filename,
+                                          self.lock,
+                                          len(hoomd.context.current.group_all),
+                                          self.cpp_updater.get_input_buffer(),
+                                          self.cpp_updater.get_output_buffer()))
         #acquire lock, since model can't read data until we have put it into feed
         self.lock.acquire()
 
-        #self.tfm.start()
+        self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager\n')
         self.setupUpdater(period)
 
     def __del__(self):
         #need to terminate orphan
+        self.lock.release()
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
-        #self.tfm.terminate()
+        self.tfm.terminate()
 
     def start_update(self):
-        pass
-        #self.lock.acquire()
+        self.lock.acquire()
 
     def finish_update(self):
         self.lock.release()
