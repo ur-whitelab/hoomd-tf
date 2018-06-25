@@ -1,5 +1,5 @@
-#ifndef KERNEL_HOOMD_H_
-#define KERNEL_HOOMD_H_
+#ifndef IPC2TENSOR
+#define IPC2TENSOR
 
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/op.h"
@@ -44,4 +44,4 @@ struct IPC2TFunctor {
 };
 #endif
 
-#endif //KERNEL_HOOMD_H_
+#endif //IPC2TENSOR

@@ -54,6 +54,7 @@ install(TARGETS _${COMPONENT_NAME}
 # The Tensorflow
 
 add_subdirectory(ipc2tensor)
+add_subdirectory(tensor2ipc)
 
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package

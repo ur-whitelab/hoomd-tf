@@ -17,9 +17,9 @@ struct IPC2TFunctor<CPUDevice, T> {
     //TODO: access address
     Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
     for(int i = 0; i < size; ++i) {
-      out[4 * i + 0] = input_buffer[i].y;
-      out[4 * i + 1] = input_buffer[i].z;
-      out[4 * i + 2] = input_buffer[i].x;
+      out[4 * i + 0] = input_buffer[i].x;
+      out[4 * i + 1] = input_buffer[i].y;
+      out[4 * i + 2] = input_buffer[i].z;
       out[4 * i + 3] = input_buffer[i].w;
     }
   }
