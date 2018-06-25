@@ -26,11 +26,13 @@ template<>
 struct IPC2TInitialize<CPUDevice> {
   bool operator()(int32 size, int64 address) {
     // check shared memory
-    // Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
-    LOG(ERROR) << "about to try reading from " << std::hex << address;
+     Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
+    LOG(INFO) << "about to try reading from " << std::hex << address;
     // check for magic byte sequence
-    //return input_buffer[0].x == MMAP_MAGIC_FLOAT;
-    return true;
+    bool result = input_buffer[0].x == MMAP_MAGIC_FLOAT;    
+    if(!result)
+      LOG(ERROR) << "Filed to find magic float. Instead found " << input_buffer[0].x;
+    return result;
   }
 };
 
