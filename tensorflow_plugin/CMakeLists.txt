@@ -70,7 +70,7 @@ ENDMACRO(copy_file)
 
 set(files
     __init__.py
-    update.py
+    tfcompute.py
     tfmanager.py
     )
 

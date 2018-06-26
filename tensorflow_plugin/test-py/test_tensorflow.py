@@ -27,9 +27,13 @@ class test_updater(unittest.TestCase):
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
-        updater = hoomd.tensorflow_plugin.update.tensorflow(1)
-        hoomd.run(1)
+        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow(1)
         #read out buffer containing hoomd positions
+        print('pos', tfcompute.get_output_array())
+        print('force', tfcompute.get_input_array())
+        hoomd.run(5)
+        print('pos', tfcompute.get_output_array())
+        print('force', tfcompute.get_input_array())
         
 
 if __name__ == '__main__':

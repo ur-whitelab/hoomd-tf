@@ -23,6 +23,8 @@
 // but not if we are compiling GPU kernels
 #ifndef NVCC
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
+#include <hoomd/extern/pybind/include/pybind11/stl.h>
+#include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
 #endif
 
 // (if you really don't want to include the whole hoomd.h, you can include individual files IF AND ONLY IF

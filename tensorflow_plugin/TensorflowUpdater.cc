@@ -82,6 +82,8 @@ void TensorflowUpdater::computeForces(unsigned int timestep)
      ArrayHandle<Scalar4> h_force(m_force, access_location::host);
     memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * _buffer_size);
 
+    //for funsies
+    _input_buffer[0].x = 10;
     if (m_prof) m_prof->pop();
 }
 
@@ -103,8 +105,8 @@ void export_TensorflowUpdater(pybind11::module& m)
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
         .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
         .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
-        .def("get_input_array", &TensorflowUpdater::get_input_array, pybind11::return_value_policy::automatic)
-        .def("get_output_array", &TensorflowUpdater::get_output_array, pybind11::return_value_policy::automatic)
+        .def("get_input_array", &TensorflowUpdater::get_input_array, pybind11::return_value_policy::take_ownership)
+        .def("get_output_array", &TensorflowUpdater::get_output_array, pybind11::return_value_policy::take_ownership)
     ;
     }
 
