@@ -20,7 +20,7 @@ REGISTER_OP("TensorToIpc")
 
 template <typename Device, typename T>
 struct TF2IPCFunctor {
-  void operator()(const Device& d, int size, int64 address, T* in);
+  void operator()(const Device& d, int size, int64 address, const T* in);
 };
 
 #if GOOGLE_CUDA

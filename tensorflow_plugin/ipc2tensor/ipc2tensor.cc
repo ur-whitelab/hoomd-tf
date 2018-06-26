@@ -28,7 +28,7 @@ struct IPC2TFunctor<CPUDevice, T> {
 // CPU Initializer
 template<>
 struct IPC2TInitialize<CPUDevice> {
-  bool operator()(int32 size, int64 address) {
+  bool operator()(int size, int64 address) {
     // check shared memory
     Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
     LOG(INFO) << "about to try reading from " << std::hex << address << " with type " << typeid(input_buffer).name() << std::endl;
@@ -44,19 +44,19 @@ class IpcToTensorOp : public OpKernel {
  public:
   explicit IpcToTensorOp(OpKernelConstruction* c) : OpKernel(c) {
 
-    LOG(INFO) << "OP construction starting";
-    //get shape
-    c->GetAttr("shape", &_input_shape);
+    LOG(INFO) << "IpcToTensorOp construction starting";
+    //get number of atoms
+    c->GetAttr("size", &_input_size);
 
     //get memory address
     c->GetAttr("address", &_input_address);
 
-    int temp_dims [2] = {_input_shape, 4};
+    int temp_dims [2] = {_input_size, 4};
     //TODO: why is this necessary?!
     TensorShapeUtils::MakeShape(temp_dims, 1, &_output_shape);
 
     //call device initializer
-    OP_REQUIRES(c, IPC2TInitialize<Device>()(_input_shape,
+    OP_REQUIRES(c, IPC2TInitialize<Device>()(_input_size,
                               _input_address),
                 errors::FailedPrecondition("Memory mapped buffer not accessible or invalid."));
     LOG(INFO) << "OP constructed and mmap connection validated";
@@ -75,13 +75,13 @@ class IpcToTensorOp : public OpKernel {
                 errors::InvalidArgument("Too many elements in tensor"));
     IPC2TFunctor<Device, T>()(
         context->eigen_device<Device>(),
-        _input_shape,
+        _input_size,
         _input_address,
         output_tensor->flat<T>().data());
   }
 
 private:
-  int32 _input_shape;
+  int _input_size;
   int64 _input_address;
   TensorShape _output_shape;
 };

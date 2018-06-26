@@ -13,7 +13,7 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, int64 address, T* in) {
+  void operator()(const CPUDevice& d, int size, int64 address, const T* in) {
     //TODO: access address
     Scalar4* output_buffer = reinterpret_cast<Scalar4*> (address);
     for(int i = 0; i < size; ++i) {
@@ -28,11 +28,11 @@ struct TF2IPCFunctor<CPUDevice, T> {
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
 template <typename Device, typename T>
-class TensorToIpcOP : public OpKernel {
+class TensorToIpcOp : public OpKernel {
  public:
-  explicit TensorToIpcOP(OpKernelConstruction* c) : OpKernel(c) {
+  explicit TensorToIpcOp(OpKernelConstruction* c) : OpKernel(c) {
 
-    LOG(INFO) << "OP construction starting";
+    LOG(INFO) << "TensorToIpcOp construction starting";
     //get shape
     c->GetAttr("size", &_input_size);
 
@@ -44,7 +44,7 @@ class TensorToIpcOP : public OpKernel {
   void Compute(OpKernelContext* context) override {
 
     const Tensor& input_tensor = context->input(0);
-    auto input = input_tensor.flat<T>();
+    auto input = input_tensor.flat<T>().data();
 
 
     // Do the computation.
@@ -56,7 +56,7 @@ class TensorToIpcOP : public OpKernel {
   }
 
 private:
-  int32 _input_size;
+  int _input_size;
   int64 _output_address;
 };
 
@@ -78,6 +78,6 @@ REGISTER_CPU(float);
       .Device(DEVICE_GPU).TypeConstraint<T>("T")
       .HostMemory("shape")
       .HostMemory("address"), \
-      TensorToIpcOP<GPUDevice, T>);
+      TensorToIpcOp<GPUDevice, T>);
 REGISTER_GPU(float);
 #endif  // GOOGLE_CUDA

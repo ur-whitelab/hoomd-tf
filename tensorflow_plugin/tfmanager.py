@@ -35,8 +35,9 @@ class TFManager:
         #need to convert out scalar4 memory address to an integer
         #longlong should be int64
         self.log.info('initializing ipc_to_tensor at address {:x}'.format(self.input_buffer))
-        input = ipc_to_tensor(address=self.input_buffer, shape=self.N, T=tf.float32)
-        output = tensor_to_ipc(input, address=self.output_buffer, shape=self.N, T=tf.float32)
+        self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.output_buffer))
+        input = ipc_to_tensor(address=self.input_buffer, size=self.N, T=tf.float32)
+        output = tensor_to_ipc(input, address=self.output_buffer, size=self.N)
         self.graph = output
 
     def start_loop(self):
