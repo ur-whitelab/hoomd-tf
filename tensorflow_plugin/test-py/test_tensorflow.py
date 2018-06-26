@@ -8,6 +8,8 @@ import unittest
 import os
 import numpy as np
 
+#TODO: write test for changing particle number dynamically
+
 class test_simple(unittest.TestCase):
     def test_ipc_to_tensor_import(self):
         import tensorflow as tf
@@ -26,7 +28,9 @@ class test_updater(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
         updater = hoomd.tensorflow_plugin.update.tensorflow(1)
-        hoomd.run(5)
+        hoomd.run(1)
+        #read out buffer containing hoomd positions
+        
 
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])

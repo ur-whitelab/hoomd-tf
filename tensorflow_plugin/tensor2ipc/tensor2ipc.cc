@@ -17,9 +17,10 @@ struct TF2IPCFunctor<CPUDevice, T> {
     //TODO: access address
     Scalar4* output_buffer = reinterpret_cast<Scalar4*> (address);
     for(int i = 0; i < size; ++i) {
-      output_buffer[i].x = in[3 * i + 0];
-      output_buffer[i].y = in[3 * i + 1];
-      output_buffer[i].z = in[3 * i + 2];
+      output_buffer[i].x = in[4 * i + 0];
+      output_buffer[i].y = in[4 * i + 1];
+      output_buffer[i].z = in[4 * i + 2];
+      output_buffer[i].w = in[4 * i + 3];
     }
   }
 };

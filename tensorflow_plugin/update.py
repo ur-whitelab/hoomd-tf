@@ -36,14 +36,30 @@ class tensorflow(hoomd.update._updater):
 
         # initialize base class
         hoomd.update._updater.__init__(self)
+        self.tfm = None
+        self.setupUpdater(period)
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_updater = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, self)
         else:
             self.cpp_updater = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, self)
+        #the C++ constructor will invoke the restart_tf
 
-        #start tf manager
+    def __del__(self):
+        self.shutdown_tf()
+
+    def shutdown_tf(self):
+        #need to terminate orphan
+        hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
+        self.lock.release()
+        self.barrier.abort()
+        self.tfm.terminate()
+
+    def restart_tf(self):
+        if self.tfm and self.tfm.is_alive():
+            self.shutdown_tf()
+        #setup locks
         self.lock = multiprocessing.Lock()
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
@@ -58,14 +74,7 @@ class tensorflow(hoomd.update._updater):
 
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))
-        self.setupUpdater(period)
 
-    def __del__(self):
-        #need to terminate orphan
-        hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
-        self.lock.release()
-        self.barrier.abort()
-        self.tfm.terminate()
 
     def start_update(self):
         '''Write to output the current sys information'''

@@ -14,7 +14,7 @@
     \brief Declaration of TensorflowUpdater
 */
 
-#include <hoomd/Updater.h>
+#include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
@@ -36,7 +36,7 @@
 //! A nonsense particle updater written to demonstrate how to write a plugin
 /*! This updater simply sets all of the particle's velocities to 0 when update() is called.
 */
-class TensorflowUpdater : public Updater
+class TensorflowUpdater : public ForceCompute
     {
     public:
         //! Constructor
@@ -46,16 +46,23 @@ class TensorflowUpdater : public Updater
         virtual ~TensorflowUpdater();
 
         //! Take one timestep forward
-        virtual void update(unsigned int timestep);
+        void computeForces(unsigned int timestep);
 
-        int64_t get_input_buffer() { return reinterpret_cast<int64_t> (_input_buffer);}
-        int64_t get_output_buffer() {return reinterpret_cast<int64_t> (_output_buffer);}
+        //used if particle number changes
+        void reallocate();
+
+        int64_t get_input_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);} 
+        int64_t get_output_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
+
+        std::vector<Scalar4> get_input_array() const;
+        std::vector<Scalar4> get_output_array() const;
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
     protected:
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
+        size_t _buffer_size;
     };
 
 //! Export the TensorflowUpdater class to python
