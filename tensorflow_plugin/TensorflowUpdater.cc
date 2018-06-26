@@ -82,8 +82,6 @@ void TensorflowUpdater::computeForces(unsigned int timestep)
      ArrayHandle<Scalar4> h_force(m_force, access_location::host);
     memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * _buffer_size);
 
-    //for funsies
-    _input_buffer[0].x = 10;
     if (m_prof) m_prof->pop();
 }
 

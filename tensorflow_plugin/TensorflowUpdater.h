@@ -47,9 +47,6 @@ class TensorflowUpdater : public ForceCompute
         //!Destructor
         virtual ~TensorflowUpdater();
 
-        //! Take one timestep forward
-        void computeForces(unsigned int timestep);
-
         //used if particle number changes
         void reallocate();
 
@@ -62,6 +59,9 @@ class TensorflowUpdater : public ForceCompute
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
     protected:
+        //! Take one timestep forward
+        void computeForces(unsigned int timestep) override;
+
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
         size_t _buffer_size;

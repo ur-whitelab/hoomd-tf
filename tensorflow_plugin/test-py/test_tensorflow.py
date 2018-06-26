@@ -6,7 +6,7 @@ hoomd.context.initialize()
 import hoomd.tensorflow_plugin
 import unittest
 import os
-import numpy as np
+import numpy as np, math
 
 #TODO: write test for changing particle number dynamically
 
@@ -29,11 +29,17 @@ class test_updater(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
         tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow(1)
         #read out buffer containing hoomd positions
-        print('pos', tfcompute.get_output_array())
-        print('force', tfcompute.get_input_array())
+        pos0 = tfcompute.get_output_array()
         hoomd.run(5)
-        print('pos', tfcompute.get_output_array())
-        print('force', tfcompute.get_input_array())
+        pos1 = tfcompute.get_output_array()
+        force1 = tfcompute.get_input_array()
+
+        assert(pos1.shape == force1.shape)
+        for a,b in zip(pos1, force1):
+            if(np.sum(a**2) + np.sum(b**2) > 0):
+                #stupid generous fp comparison        
+                assert np.max(np.abs(b - a)) / np.max(np.concatenate((np.abs(a),np.abs(b)))) < 10**-6, '{} and {} are not close'.format(a,b)
+        assert(np.sum(pos1**2) != 0)
         
 
 if __name__ == '__main__':

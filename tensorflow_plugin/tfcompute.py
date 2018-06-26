@@ -32,6 +32,19 @@ class tensorflow(hoomd.compute._compute):
     #
     # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self, period=1, log_filename='tf_manager.log'):
+        
+        #make sure we have number of atoms and know dimensionality, etc. 
+        if not hoomd.init.is_initialized():
+            hoomd.context.msg.error("Cannot create TF before initialization\n")
+            raise RuntimeError('Error creating TF')
+
+        #I'm not sure if this is necessary following other files
+        self.enabled = True
+        self.log = True
+        self.cpp_force = None
+        self.force_name = "tfcompute"
+        self.compute_name = self.force_name
+
         hoomd.util.print_status_line()
 
         # initialize base class
@@ -41,11 +54,13 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_compute = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, self)
+            self.cpp_force = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, self)
         else:
-            self.cpp_compute = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, self)
+            self.cpp_force = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, self)
 
-        hoomd.context.current.system.addCompute(self.cpp_compute, self.compute_name);
+        #adding to forces causes the computeForces method to be called.
+        hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
+        hoomd.context.current.forces.append(self)
 
         self.restart_tf()
 
@@ -62,7 +77,7 @@ class tensorflow(hoomd.compute._compute):
     def restart_tf(self):
         if self.tfm and self.tfm.is_alive():
             self.shutdown_tf()
-        if not self.cpp_compute:
+        if not self.cpp_force:
             return
         #setup locks
         self.lock = multiprocessing.Lock()
@@ -74,8 +89,8 @@ class tensorflow(hoomd.compute._compute):
                                           self.lock,
                                           self.barrier,
                                           len(hoomd.context.current.group_all),
-                                          self.cpp_compute.get_input_buffer(),
-                                          self.cpp_compute.get_output_buffer()))
+                                          self.cpp_force.get_input_buffer(),
+                                          self.cpp_force.get_output_buffer()))
 
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))
@@ -83,7 +98,6 @@ class tensorflow(hoomd.compute._compute):
 
     def start_update(self):
         '''Write to output the current sys information'''
-        hoomd.context.msg.notice(2, 'FREAFRIJFERIOAFE\n')
         self.lock.acquire()
 
     def finish_update(self):
@@ -92,10 +106,13 @@ class tensorflow(hoomd.compute._compute):
         self.barrier.wait()
 
     def get_input_array(self):
-        return scalar4_vec_to_np(self.cpp_compute.get_input_array())
+        return scalar4_vec_to_np(self.cpp_force.get_input_array())
     
     def get_output_array(self):
-        return scalar4_vec_to_np(self.cpp_compute.get_output_array())
+        return scalar4_vec_to_np(self.cpp_force.get_output_array())
+
+    def update_coeffs(self):
+        pass
 
 def scalar4_vec_to_np(array):
     '''TODO: This must exist somewhere in HOOMD codebase'''
