@@ -20,14 +20,20 @@
 /*! \param sysdef System to zero the velocities of
 */
 TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef,
+    std::shared_ptr<NeighborList> nlist,
     pybind11::object& py_self,
     unsigned int nneighs)
         : ForceCompute(sysdef),
+          m_nlist(nlist),
           _py_self(py_self),
           _input_buffer(NULL),
           _output_buffer(NULL),
           _nneighs(nneighs)
 {
+    //we need full neighbor lists for this.
+    assert(m_nlist->getStorageMode() != NeighborList::half);
+
+
     reallocate();
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
      m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowUpdater, &TensorflowUpdater::reallocate>(this);
@@ -39,12 +45,13 @@ void TensorflowUpdater::reallocate() {
     auto m_exec_conf = m_sysdef->getParticleData()->getExecConf();
     // create input/output mmap buffer
     assert(m_pdata);
-    _buffer_size = m_pdata->getN();
     //check if allocated
     if(_input_buffer)
         munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
     if(_output_buffer)
         munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
+    //set new size
+    _buffer_size = m_pdata->getN() + m_pdata->getN() * _nneighs;
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
@@ -74,18 +81,17 @@ void TensorflowUpdater::computeForces(unsigned int timestep)
 
     _py_self.attr("start_update")();
 
-    //nneighs == 0 -> send positions instead
+    //nneighs == 0 send positions only
+    sendPositions();
     if(_nneighs > 0)
-        sendNeighbors();
-    else
-        sendPositions();
+        sendNeighbors(timestep);
 
     _py_self.attr("finish_update")();
 
     //process results from TF
     //TODO: Handle virial (See TablePotential.cc?)
      ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-    memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * _buffer_size);
+    memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
 
     if (m_prof) m_prof->pop();
 }
@@ -93,14 +99,16 @@ void TensorflowUpdater::computeForces(unsigned int timestep)
 void TensorflowUpdater::sendPositions() {
     // access the particle data for writing on the CPU
     assert(m_pdata);
-    assert(m_pdata->getN() == _buffer_size);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
 
     //send data to buffer
-    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * _buffer_size);
+    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 }
 
-void TensorflowUpdater::sendNeighbors() {
+void TensorflowUpdater::sendNeighbors(unsigned int timestep) {
+
+    //create ptr at offset to where neighbors go
+    Scalar4* buffer = _output_buffer + m_pdata->getN();
 
     //These snippets taken from md/TablePotentials.cc
 
@@ -109,67 +117,64 @@ void TensorflowUpdater::sendNeighbors() {
 
     if (m_prof) m_prof->push("TensorflowUpdater::sendNeighbors");
 
-    // depending on the neighborlist settings, we can take advantage of newton's third law
-    // to reduce computations at the cost of memory access complexity: set that flag now
-    bool third_law = m_nlist->getStorageMode() == NeighborList::half;
-
     // access the neighbor list
+     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_n_neigh(m_nlist->getNNeighArray(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_nlist(m_nlist->getNListArray(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_head_list(m_nlist->getHeadList(), access_location::host, access_mode::read);
+
+    //need for periodic image correction
+    const BoxDim& box = m_pdata->getBox();
 
     // for each particle
     for (int i = 0; i < (int) m_pdata->getN(); i++) {
         // access the particle's position and type (MEM TRANSFER: 4 scalars)
         Scalar3 pi = make_scalar3(h_pos.data[i].x, h_pos.data[i].y, h_pos.data[i].z);
-        unsigned int typei = __scalar_as_int(h_pos.data[i].w);
         const unsigned int head_i = h_head_list.data[i];
 
         // loop over all of the neighbors of this particle
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
-        for (unsigned int j = 0; j < size; j++)
-            {
+        unsigned int j = 0;
+        for (; j < std::min(_nneighs, size); j++) {
             // access the index of this neighbor
             unsigned int k = h_nlist.data[head_i + j];
-            // sanity check
-            assert(k < m_pdata->getN() + m_pdata->getNGhosts());
 
             // calculate dr
             Scalar3 pk = make_scalar3(h_pos.data[k].x, h_pos.data[k].y, h_pos.data[k].z);
             Scalar3 dx = pi - pk;
 
-            // access the type of the neighbor particle
-            unsigned int typej = __scalar_as_int(h_pos.data[k].w);
-            // sanity check
-            assert(typej < m_pdata->getNTypes());
-
             // apply periodic boundary conditions
             dx = box.minImage(dx);
 
-            // access needed parameters
-            unsigned int cur_table_index = table_index(typei, typej);
-            Scalar4 params = h_params.data[cur_table_index];
-            Scalar rmin = params.x;
-            Scalar rmax = params.y;
-            Scalar delta_r = params.z;
+            buffer[i * _nneighs + j].x = dx.x;
+            buffer[i * _nneighs + j].y = dx.y;
+            buffer[i * _nneighs + j].z = dx.z;
+            buffer[i * _nneighs + j].w = h_pos.data[k].w;
+        }
+        // fill missing entries
+        for (; j < _nneighs; j++) {
+            buffer[i * _nneighs + j].x = 0;
+            buffer[i * _nneighs + j].y = 0;
+            buffer[i * _nneighs + j].z = 0;
+            buffer[i * _nneighs + j].w = 0;
+        }
+    }
 
-            // start computing the force
-            Scalar rsq = dot(dx, dx);
-            Scalar r = sqrt(rsq);
-
-            // only compute the force if the particles are within the region defined by V
-
-
-    if (m_prof) m_prof->pop("TensorflowUpdater::sendNeighbors");
+    if (m_prof) m_prof->pop();
 }
 
-std::vector<Scalar4> TensorflowUpdater::get_input_array() const {
-    std::vector<Scalar4> array(_input_buffer, _input_buffer + _buffer_size);
+std::vector<Scalar4> TensorflowUpdater::get_positions_array() const {
+    std::vector<Scalar4> array(_output_buffer, _output_buffer + m_pdata->getN());
     return array;
 }
 
-std::vector<Scalar4> TensorflowUpdater::get_output_array() const {
-    std::vector<Scalar4> array(_output_buffer, _output_buffer + _buffer_size);
+std::vector<Scalar4> TensorflowUpdater::get_nlist_array() const {
+    std::vector<Scalar4> array(_output_buffer + m_pdata->getN(), _output_buffer + _buffer_size);
+    return array;
+}
+
+std::vector<Scalar4> TensorflowUpdater::get_forces_array() const {
+    std::vector<Scalar4> array(_input_buffer, _input_buffer + _buffer_size);
     return array;
 }
 
@@ -178,11 +183,13 @@ std::vector<Scalar4> TensorflowUpdater::get_output_array() const {
 void export_TensorflowUpdater(pybind11::module& m)
     {
     pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<ForceCompute>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
-        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer, pybind11::return_value_policy::reference)
-        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer, pybind11::return_value_policy::reference)
-        .def("get_input_array", &TensorflowUpdater::get_input_array, pybind11::return_value_policy::take_ownership)
-        .def("get_output_array", &TensorflowUpdater::get_output_array, pybind11::return_value_policy::take_ownership)
+        .def(pybind11::init<std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>,  pybind11::object&, unsigned int>())
+        .def("get_positions_buffer", &TensorflowUpdater::get_positions_buffer, pybind11::return_value_policy::reference)
+        .def("get_nlist_buffer", &TensorflowUpdater::get_nlist_buffer, pybind11::return_value_policy::reference)
+        .def("get_forces_buffer", &TensorflowUpdater::get_forces_buffer, pybind11::return_value_policy::reference)
+        .def("get_positions_array", &TensorflowUpdater::get_positions_array, pybind11::return_value_policy::take_ownership)
+        .def("get_nlist_array", &TensorflowUpdater::get_nlist_array, pybind11::return_value_policy::take_ownership)
+        .def("get_forces_array", &TensorflowUpdater::get_forces_array, pybind11::return_value_policy::take_ownership)
     ;
     }
 

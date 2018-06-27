@@ -18,6 +18,7 @@
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
+#include <hoomd/md/NeighborList.h>
 
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
@@ -42,7 +43,8 @@ class TensorflowUpdater : public ForceCompute
     {
     public:
         //! Constructor
-        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, pybind11::object& py_self, unsigned int nneighs);
+        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
+             pybind11::object& py_self, unsigned int nneighs);
 
         //!Destructor
         virtual ~TensorflowUpdater();
@@ -50,11 +52,13 @@ class TensorflowUpdater : public ForceCompute
         //used if particle number changes
         void reallocate();
 
-        int64_t get_input_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);}
-        int64_t get_output_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
+        int64_t get_forces_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);}
+        int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
+        int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
 
-        std::vector<Scalar4> get_input_array() const;
-        std::vector<Scalar4> get_output_array() const;
+        std::vector<Scalar4> get_forces_array() const;
+        std::vector<Scalar4> get_nlist_array() const;
+        std::vector<Scalar4> get_positions_array() const;
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
@@ -63,9 +67,9 @@ class TensorflowUpdater : public ForceCompute
         void computeForces(unsigned int timestep) override;
 
         void sendPositions();
-        void sendNeighbors();
+        void sendNeighbors(unsigned int timestep);
 
-
+        std::shared_ptr<NeighborList> m_nlist;
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
         size_t _buffer_size;

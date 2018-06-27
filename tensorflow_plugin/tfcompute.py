@@ -14,6 +14,7 @@ import hoomd
 import multiprocessing
 from .tfmanager import main
 import sys, math, numpy as np
+import tensorflow as tf
 
 ## Zeroes all particle velocities
 #
@@ -31,9 +32,9 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, period=1, log_filename='tf_manager.log'):
-        
-        #make sure we have number of atoms and know dimensionality, etc. 
+    def __init__(self, tf_graph_def, nlist, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
+
+        #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
             hoomd.context.msg.error("Cannot create TF before initialization\n")
             raise RuntimeError('Error creating TF')
@@ -44,6 +45,8 @@ class tensorflow(hoomd.compute._compute):
         self.cpp_force = None
         self.force_name = "tfcompute"
         self.compute_name = self.force_name
+        self.nneighbor_cutoff = nneighbor_cutoff
+        self.tf_graph = tf_graph_def
 
         hoomd.util.print_status_line()
 
@@ -54,9 +57,9 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, self)
+            self.cpp_force = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, self)
+            self.cpp_force = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
 
         #adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
@@ -86,11 +89,14 @@ class tensorflow(hoomd.compute._compute):
         self.barrier = multiprocessing.Barrier(2, timeout=10)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
+                                          self.tf_graph,
                                           self.lock,
                                           self.barrier,
                                           len(hoomd.context.current.group_all),
-                                          self.cpp_force.get_input_buffer(),
-                                          self.cpp_force.get_output_buffer()))
+                                          self.nneighbor_cutoff,
+                                          self.cpp_force.get_nlist_buffer(),
+                                          self.cpp_force.get_positions_buffer(),
+                                          self.cpp_force.get_forces_buffer()))
 
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))
@@ -99,17 +105,23 @@ class tensorflow(hoomd.compute._compute):
     def start_update(self):
         '''Write to output the current sys information'''
         self.lock.acquire()
+        if not self.tfm.is_alive():
+            hoomd.context.msg.error("TF Session Manager died. See its output log ({})".format(self.log_filename))
+            raise RuntimeError()
 
     def finish_update(self):
         '''Allow TF to read output and we wait for it to finish.'''
         self.lock.release()
         self.barrier.wait()
 
-    def get_input_array(self):
-        return scalar4_vec_to_np(self.cpp_force.get_input_array())
-    
-    def get_output_array(self):
-        return scalar4_vec_to_np(self.cpp_force.get_output_array())
+    def get_positions_array(self):
+        return scalar4_vec_to_np(self.cpp_force.get_positions_array())
+
+    def get_nlist_array(self):
+        return scalar4_vec_to_np(self.cpp_force.get_nlist_array())
+
+    def get_forces_array(self):
+        return scalar4_vec_to_np(self.cpp_force.get_forces_array())
 
     def update_coeffs(self):
         pass
@@ -123,4 +135,3 @@ def scalar4_vec_to_np(array):
         npa[i,2] = e.z
         npa[i,3] = e.w
     return npa
-    
