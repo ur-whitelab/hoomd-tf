@@ -42,7 +42,7 @@ class TensorflowUpdater : public ForceCompute
     {
     public:
         //! Constructor
-        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, pybind11::object& py_self);
+        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef, pybind11::object& py_self, unsigned int nneighs);
 
         //!Destructor
         virtual ~TensorflowUpdater();
@@ -50,7 +50,7 @@ class TensorflowUpdater : public ForceCompute
         //used if particle number changes
         void reallocate();
 
-        int64_t get_input_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);} 
+        int64_t get_input_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);}
         int64_t get_output_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
 
         std::vector<Scalar4> get_input_array() const;
@@ -62,9 +62,14 @@ class TensorflowUpdater : public ForceCompute
         //! Take one timestep forward
         void computeForces(unsigned int timestep) override;
 
+        void sendPositions();
+        void sendNeighbors();
+
+
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
         size_t _buffer_size;
+        unsigned int _nneighs;
     };
 
 //! Export the TensorflowUpdater class to python
