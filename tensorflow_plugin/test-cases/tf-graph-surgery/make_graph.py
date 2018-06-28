@@ -1,9 +1,11 @@
 import tensorflow as tf
 
 x = tf.Variable(tf.random_uniform([32, 4], name='input'))
-w = tf.Variable(tf.random_uniform([4, 32]))
-y = tf.matmul(x, w)
-z = tf.identity(y, name='output')
+w = tf.Variable(tf.random_uniform([32, 4]), name='random')
+y = tf.multiply(x, w)
+z = tf.reshape(y, [-1, 4], name='output')
 
-with open('graph.pb', 'wb') as f:
-  f.write(y.graph.as_graph_def().SerializeToString())
+saver = tf.train.Saver()
+sess = tf.Session()
+sess.run(tf.global_variables_initializer())
+saver.save(sess, 'model/test')

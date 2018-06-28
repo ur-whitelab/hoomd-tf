@@ -13,14 +13,17 @@ tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
 
 graph_input = ipc_to_tensor(address=address1, size=32, T=np.float32)
 output_tensor = tf.Variable(expected_shape=(32, 4), name='output_tensor', dtype=np.float32, initial_value=0)
-graph_output = tensor_to_ipc(output_tensor, address=address2, size=32)
 
-with open('graph.pb', 'rb') as f:
-  graph_def = tf.GraphDef()
-  graph_def.ParseFromString(f.read())
-  tf.import_graph_def(graph_def, input_map={'input:0': graph_input,
-                                            'output:0': output_tensor})
+with tf.Session() as sess:
+  new_saver = tf.train.import_meta_graph('model/test.meta', input_map={'input:0': graph_input})
+  new_saver.restore(sess, tf.train.latest_checkpoint('./model'))
+  graph = tf.get_default_graph()
+
+  print([n.name for n in tf.get_default_graph().as_graph_def().node])
+  out = tf.get_default_graph().get_tensor_by_name('output:0')
+  #print(tf.get_default_graph().as_graph_def().SerializeToString())
+  #graph_output = tensor_to_ipc(out, address=address2, size=32)
+
   print(array2)
-  with tf.Session() as sess:
-    sess.run(graph_output)
-  print(array2)
+  sess.run(tf.Print(out, [out]))
+print(array2)
