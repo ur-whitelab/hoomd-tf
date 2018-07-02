@@ -5,7 +5,7 @@
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/shape_inference.h"
 
-#include "../TensorflowUpdater.h"
+#include "../TensorflowCompute.h"
 
 using namespace tensorflow;
 

@@ -5,14 +5,14 @@
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/shape_inference.h"
 
-#include "../TensorflowUpdater.h"
+#include "../TensorflowCompute.h"
 
 using namespace tensorflow;
 
 REGISTER_OP("TensorToIpc")
     .Attr("T: {float}")
     .Attr("size: int")
-    .Attr("address: int") 
+    .Attr("address: int")
     .Input("input: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       return Status::OK();
