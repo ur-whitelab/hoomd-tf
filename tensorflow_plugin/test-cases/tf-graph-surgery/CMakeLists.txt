@@ -1,4 +1,4 @@
-add_library (_ipc_tester SHARED ClassMethod.cc)
+add_library (_ipc_tester SHARED IpcTester)
 
 # link the library to its dependencies
 target_link_libraries(_ipc_tester ${HOOMD_LIBRARIES})
