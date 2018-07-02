@@ -17,8 +17,8 @@ class test_simple(unittest.TestCase):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
 
-class test_updater(unittest.TestCase):
-    def test_updater_loop(self):
+class test_compute(unittest.TestCase):
+    def test_compute_loop(self):
         hoomd.context.initialize()
         hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])

@@ -2,7 +2,7 @@
 // This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
 
 // Include the defined classes that are to be exported to python
-#include "TensorflowUpdater.h"
+#include "TensorflowCompute.h"
 
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 
@@ -11,10 +11,10 @@
 PYBIND11_PLUGIN(_tensorflow_plugin)
     {
     pybind11::module m("_tensorflow_plugin");
-    export_TensorflowUpdater(m);
+    export_TensorflowCompute(m);
 
     #ifdef ENABLE_CUDA
-    export_TensorflowUpdaterGPU(m);
+    export_TensorflowComputeGPU(m);
     #endif
 
     return m.ptr();

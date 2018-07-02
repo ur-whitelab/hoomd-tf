@@ -9,7 +9,6 @@ tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflo
 tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
 
 graph_input = ipc_to_tensor(address=ipct.get_input_buffer(), size=32, T=np.float32)
-output_tensor = tf.Variable(expected_shape=(32, 4), name='output_tensor', dtype=np.float32, initial_value=0)
 
 print('prior', ipct.get_output_array())
 with tf.Session() as sess:

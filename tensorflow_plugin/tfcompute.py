@@ -1,14 +1,14 @@
 # Copyright (c) 2009-2017 The Regents of the University of Michigan
 # This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
 
-# this simple python interface just actiavates the c++ TensorflowUpdater from cppmodule
+# this simple python interface just actiavates the c++ TensorflowCompute from cppmodule
 # Check out any of the python code in lib/hoomd-python-module/hoomd_script for moreexamples
 
 # First, we need to import the C++ module. It has the same name as this module (tensorflow_plugin) but with an underscore
 # in front
 from hoomd.tensorflow_plugin import _tensorflow_plugin
 
-# Next, since we are extending an updater, we need to bring in the base class updater and some other parts from
+# Next, since we are extending an Compute, we need to bring in the base class Compute and some other parts from
 # hoomd_script
 import hoomd
 import multiprocessing
@@ -32,7 +32,7 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_graph_def, nlist, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
+    def __init__(self, tf_model_directory, nlist, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -46,7 +46,7 @@ class tensorflow(hoomd.compute._compute):
         self.force_name = "tfcompute"
         self.compute_name = self.force_name
         self.nneighbor_cutoff = nneighbor_cutoff
-        self.tf_graph = tf_graph_def
+        self.tf_model_directory = tf_model_directory
 
         hoomd.util.print_status_line()
 
@@ -57,9 +57,9 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowUpdater(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowUpdaterGPU(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
 
         #adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
@@ -89,7 +89,7 @@ class tensorflow(hoomd.compute._compute):
         self.barrier = multiprocessing.Barrier(2, timeout=10)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
-                                          self.tf_graph,
+                                          self.tf_model_directory,
                                           self.lock,
                                           self.barrier,
                                           len(hoomd.context.current.group_all),

@@ -1,15 +1,15 @@
 import tensorflow as tf
 import numpy as np
 import tensorflow as tf
-import sys, logging
+import sys, logging, os
 
-def main(log_filename, graph, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer):
-    tfm = TFManager(lock, graph, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename)
+def main(log_filename, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer):
+    tfm = TFManager(lock, model_directory, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename)
 
     tfm.start_loop()
 
 class TFManager:
-    def __init__(self, graph, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename):
+    def __init__(self, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -24,38 +24,48 @@ class TFManager:
         self.N = N
         self.nneighs = NN
 
-        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(input_buffer),id(output_buffer)))
-        self._prepare_graph(graph)
+        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
+        self.model_directory = model_directory
+        self._prepare_graph(model_directory)
+
 
     def _update(self, sess):
-        sess.run(self.graph)
+        sess.run(self.forces)
 
-    def _prepare_graph(self, graph_def):
+    def _prepare_graph(self, model_directory):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
-        tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
-        tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
         #need to convert out scalar4 memory address to an integer
         #longlong should be int64
         self.log.info('initializing ipc_to_tensor at address {:x}'.format(self.positions_buffer))
         self.log.info('initializing ipc_to_tensor at address {:x}'.format(self.nlist_buffer))
-        self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
         self.positions = ipc_to_tensor(address=self.positions_buffer, size=self.N, T=tf.float32)
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32)
-        self.forces = tensor_to_ipc(input, address=self.forces_buffer, size=self.N)
-
         #now insert into graph
         try:
-            self.graph = tf.import_graph_def(graph_def, input_map={"Forces:0": self.forces,
-                                                               "Nlist:0": self.nlist,
-                                                               "Positions:0" : self.positions})
+            self.saver = tf.import_graph_def(os.path.join(model_directory, 'model.meta'), input_map={"nlist:0": self.nlist,
+                                                               "positions:0" : self.positions})
         except ValueError:
-            raise ValueError('Your graph must contain the following tensors: Forces:0, Nlist:0, Positions:0')
+            raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
+
+    def _prepare_forces(self):
+        #insert the output forces
+        try:
+            out = tf.get_default_graph().get_tensor_by_name('output:0')
+
+        except ValueError:
+            raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
+        tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
+        tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
+        self.forces = tensor_to_ipc(out, address=self.forces_buffer, size=self.N)
+        self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
 
     def start_loop(self):
 
         self.log.info('Constructed TF Model graph')
         with tf.Session() as sess:
+            #resore model checkpoint
+            self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             self._update(sess) #run once to force initialize
             while True:
                 self.barrier.wait()

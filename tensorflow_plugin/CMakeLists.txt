@@ -4,11 +4,11 @@ set(COMPONENT_NAME tensorflow_plugin)
 
 set(_${COMPONENT_NAME}_sources
     module.cc
-    TensorflowUpdater.cc
+    TensorflowCompute.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources
-    TensorflowUpdater.cu
+    TensorflowCompute.cu
     )
 
 # Need to define NO_IMPORT_ARRAY in every file but module.cc

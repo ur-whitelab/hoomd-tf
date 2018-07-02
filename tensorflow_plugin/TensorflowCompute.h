@@ -3,15 +3,15 @@
 
 // **********************
 // This is a simple example code written for no function purpose other then to demonstrate the steps needed to write a
-// c++ source code plugin for HOOMD-Blue. This example includes an example Updater class, but it can just as easily be
+// c++ source code plugin for HOOMD-Blue. This example includes an example Compute class, but it can just as easily be
 // replaced with a ForceCompute, Integrator, or any other C++ code at all.
 
 // inclusion guard
-#ifndef _TENSORFLOW_UPDATER_H_
-#define _TENSORFLOW_UPDATER_H_
+#ifndef _TENSORFLOW_COMPUTE_H_
+#define _TENSORFLOW_COMPUTE_H_
 
-/*! \file TensorflowUpdater.h
-    \brief Declaration of TensorflowUpdater
+/*! \file TensorflowCompute.h
+    \brief Declaration of TensorflowCompute
 */
 
 #include <hoomd/ForceCompute.h>
@@ -31,23 +31,23 @@
 // (if you really don't want to include the whole hoomd.h, you can include individual files IF AND ONLY IF
 // hoomd_config.h is included first)
 // For example:
-// #include <hoomd/Updater.h>
+// #include <hoomd/Compute.h>
 
 // Second, we need to declare the class. One could just as easily use any class in HOOMD as a template here, there are
 // no restrictions on what a template can do
 
-//! A nonsense particle updater written to demonstrate how to write a plugin
-/*! This updater simply sets all of the particle's velocities to 0 when update() is called.
+//! A nonsense particle Compute written to demonstrate how to write a plugin
+/*! This Compute simply sets all of the particle's velocities to 0 when update() is called.
 */
-class TensorflowUpdater : public ForceCompute
+class TensorflowCompute : public ForceCompute
     {
     public:
         //! Constructor
-        TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
+        TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              pybind11::object& py_self, unsigned int nneighs);
 
         //!Destructor
-        virtual ~TensorflowUpdater();
+        virtual ~TensorflowCompute();
 
         //used if particle number changes
         void reallocate();
@@ -76,30 +76,30 @@ class TensorflowUpdater : public ForceCompute
         unsigned int _nneighs;
     };
 
-//! Export the TensorflowUpdater class to python
-void export_TensorflowUpdater(pybind11::module& m);
+//! Export the TensorflowCompute class to python
+void export_TensorflowCompute(pybind11::module& m);
 
 // Third, this class offers a GPU accelerated method in order to demonstrate how to include CUDA code in pluins
 // we need to declare a separate class for that (but only if ENABLE_CUDA is set)
 
 #ifdef ENABLE_CUDA
 
-//! A GPU accelerated nonsense particle updater written to demonstrate how to write a plugin w/ CUDA code
-/*! This updater simply sets all of the particle's velocities to 0 (on the GPU) when update() is called.
+//! A GPU accelerated nonsense particle Compute written to demonstrate how to write a plugin w/ CUDA code
+/*! This Compute simply sets all of the particle's velocities to 0 (on the GPU) when update() is called.
 */
-class TensorflowUpdaterGPU : public TensorflowUpdater
+class TensorflowComputeGPU : public TensorflowCompute
     {
     public:
         //! Constructor
-        TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self);
+        TensorflowComputeGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self);
 
         //! Take one timestep forward
         virtual void update(unsigned int timestep);
     };
 
-//! Export the TensorflowUpdaterGPU class to python
-void export_TensorflowUpdaterGPU(pybind11::module& m);
+//! Export the TensorflowComputeGPU class to python
+void export_TensorflowComputeGPU(pybind11::module& m);
 
 #endif // ENABLE_CUDA
 
-#endif // _TENSORFLOW_UPDATER_H_
+#endif // _TENSORFLOW_COMPUTE_H_

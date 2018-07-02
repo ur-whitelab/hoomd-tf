@@ -1,25 +1,25 @@
 // Copyright (c) 2009-2017 The Regents of the University of Michigan
 // This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
 
-#include "TensorflowUpdater.h"
+#include "TensorflowCompute.h"
 #ifdef ENABLE_CUDA
-#include "TensorflowUpdater.cuh"
+#include "TensorflowCompute.cuh"
 #endif
 
 #include <iostream>
 #include <string.h>
 #include <sys/mman.h>
 
-/*! \file TensorflowUpdater.cc
-    \brief Definition of TensorflowUpdater
+/*! \file TensorflowCompute.cc
+    \brief Definition of TensorflowCompute
 */
 
 // ********************************
-// here follows the code for TensorflowUpdater on the CPU
+// here follows the code for TensorflowCompute on the CPU
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef,
+TensorflowCompute::TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist,
     pybind11::object& py_self,
     unsigned int nneighs)
@@ -36,11 +36,11 @@ TensorflowUpdater::TensorflowUpdater(std::shared_ptr<SystemDefinition> sysdef,
 
     reallocate();
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
-     m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowUpdater, &TensorflowUpdater::reallocate>(this);
+     m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute::reallocate>(this);
 
 }
 
-void TensorflowUpdater::reallocate() {
+void TensorflowCompute::reallocate() {
      // might need to do something so GPU code doesn't call this
     auto m_exec_conf = m_sysdef->getParticleData()->getExecConf();
     // create input/output mmap buffer
@@ -58,13 +58,13 @@ void TensorflowUpdater::reallocate() {
         perror("Failed to create mmap");
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
-    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow updater (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
+    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow Compute (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
     m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
 
     _py_self.attr("restart_tf")();
 }
 
-TensorflowUpdater::~TensorflowUpdater() {
+TensorflowCompute::~TensorflowCompute() {
     // unmap our mmapings
     munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
     munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
@@ -75,9 +75,9 @@ TensorflowUpdater::~TensorflowUpdater() {
 /*! Perform the needed calculations to zero the system's velocity
     \param timestep Current time step of the simulation
 */
-void TensorflowUpdater::computeForces(unsigned int timestep)
+void TensorflowCompute::computeForces(unsigned int timestep)
 {
-    if (m_prof) m_prof->push("TensorflowUpdater");
+    if (m_prof) m_prof->push("TensorflowCompute");
 
     _py_self.attr("start_update")();
 
@@ -96,7 +96,7 @@ void TensorflowUpdater::computeForces(unsigned int timestep)
     if (m_prof) m_prof->pop();
 }
 
-void TensorflowUpdater::sendPositions() {
+void TensorflowCompute::sendPositions() {
     // access the particle data for writing on the CPU
     assert(m_pdata);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
@@ -105,7 +105,7 @@ void TensorflowUpdater::sendPositions() {
     memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 }
 
-void TensorflowUpdater::sendNeighbors(unsigned int timestep) {
+void TensorflowCompute::sendNeighbors(unsigned int timestep) {
 
     //create ptr at offset to where neighbors go
     Scalar4* buffer = _output_buffer + m_pdata->getN();
@@ -115,7 +115,7 @@ void TensorflowUpdater::sendNeighbors(unsigned int timestep) {
     // start by updating the neighborlist
     m_nlist->compute(timestep);
 
-    if (m_prof) m_prof->push("TensorflowUpdater::sendNeighbors");
+    if (m_prof) m_prof->push("TensorflowCompute::sendNeighbors");
 
     // access the neighbor list
      ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
@@ -163,45 +163,45 @@ void TensorflowUpdater::sendNeighbors(unsigned int timestep) {
     if (m_prof) m_prof->pop();
 }
 
-std::vector<Scalar4> TensorflowUpdater::get_positions_array() const {
+std::vector<Scalar4> TensorflowCompute::get_positions_array() const {
     std::vector<Scalar4> array(_output_buffer, _output_buffer + m_pdata->getN());
     return array;
 }
 
-std::vector<Scalar4> TensorflowUpdater::get_nlist_array() const {
+std::vector<Scalar4> TensorflowCompute::get_nlist_array() const {
     std::vector<Scalar4> array(_output_buffer + m_pdata->getN(), _output_buffer + _buffer_size);
     return array;
 }
 
-std::vector<Scalar4> TensorflowUpdater::get_forces_array() const {
+std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
     std::vector<Scalar4> array(_input_buffer, _input_buffer + _buffer_size);
     return array;
 }
 
-/* Export the CPU updater to be visible in the python module
+/* Export the CPU Compute to be visible in the python module
  */
-void export_TensorflowUpdater(pybind11::module& m)
+void export_TensorflowCompute(pybind11::module& m)
     {
-    pybind11::class_<TensorflowUpdater, std::shared_ptr<TensorflowUpdater> >(m, "TensorflowUpdater", pybind11::base<ForceCompute>())
+    pybind11::class_<TensorflowCompute, std::shared_ptr<TensorflowCompute> >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>,  pybind11::object&, unsigned int>())
-        .def("get_positions_buffer", &TensorflowUpdater::get_positions_buffer, pybind11::return_value_policy::reference)
-        .def("get_nlist_buffer", &TensorflowUpdater::get_nlist_buffer, pybind11::return_value_policy::reference)
-        .def("get_forces_buffer", &TensorflowUpdater::get_forces_buffer, pybind11::return_value_policy::reference)
-        .def("get_positions_array", &TensorflowUpdater::get_positions_array, pybind11::return_value_policy::take_ownership)
-        .def("get_nlist_array", &TensorflowUpdater::get_nlist_array, pybind11::return_value_policy::take_ownership)
-        .def("get_forces_array", &TensorflowUpdater::get_forces_array, pybind11::return_value_policy::take_ownership)
+        .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
+        .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
+        .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)
+        .def("get_positions_array", &TensorflowCompute::get_positions_array, pybind11::return_value_policy::take_ownership)
+        .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
+        .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)
     ;
     }
 
 // ********************************
-// here follows the code for TensorflowUpdater on the GPU
+// here follows the code for TensorflowCompute on the GPU
 
 #ifdef ENABLE_CUDA
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowUpdaterGPU::TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self)
-        : TensorflowUpdater(sysdef, py_self)
+TensorflowComputeGPU::TensorflowComputeGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self)
+        : TensorflowCompute(sysdef, py_self)
     {
     }
 
@@ -209,14 +209,14 @@ TensorflowUpdaterGPU::TensorflowUpdaterGPU(std::shared_ptr<SystemDefinition> sys
 /*! Perform the needed calculations to zero the system's velocity
     \param timestep Current time step of the simulation
 */
-void TensorflowUpdaterGPU::update(unsigned int timestep)
+void TensorflowComputeGPU::update(unsigned int timestep)
     {
-    if (m_prof) m_prof->push("TensorflowUpdater");
+    if (m_prof) m_prof->push("TensorflowCompute");
 
     // access the particle data arrays for writing on the GPU
     ArrayHandle<Scalar4> d_vel(m_pdata->getVelocities(), access_location::device, access_mode::readwrite);
 
-    // call the kernel devined in TensorflowUpdater.cu
+    // call the kernel devined in TensorflowCompute.cu
     gpu_zero_velocities(d_vel.data, _buffer_size);
 
     // check for error codes from the GPU if error checking is enabled
@@ -226,14 +226,14 @@ void TensorflowUpdaterGPU::update(unsigned int timestep)
     if (m_prof) m_prof->pop();
     }
 
-/* Export the GPU updater to be visible in the python module
+/* Export the GPU Compute to be visible in the python module
  */
-void export_TensorflowUpdaterGPU(pybind11::module& m)
+void export_TensorflowComputeGPU(pybind11::module& m)
     {
-    pybind11::class_<TensorflowUpdaterGPU, std::shared_ptr<TensorflowUpdaterGPU> >(m, "TensorflowUpdaterGPU", pybind11::base<TensorflowUpdater>())
+    pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<TensorflowCompute>())
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
-        .def("get_input_buffer", &TensorflowUpdater::get_input_buffer)
-        .def("get_output_buffer", &TensorflowUpdater::get_output_buffer)
+        .def("get_input_buffer", &TensorflowCompute::get_input_buffer)
+        .def("get_output_buffer", &TensorflowCompute::get_output_buffer)
     ;
     }
 
