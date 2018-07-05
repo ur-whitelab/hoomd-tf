@@ -7,5 +7,9 @@
 
 # NOTE: adjust the import statement to match the name of the template
 # (here: tensorflow_plugin)
+
 from hoomd.tensorflow_plugin import tfcompute
 from hoomd.tensorflow_plugin import tfmanager
+# these are necessary to link?
+from hoomd import _hoomd
+from hoomd.md import _md

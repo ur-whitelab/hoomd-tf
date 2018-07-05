@@ -1,5 +1,9 @@
 # Maintainer: Andrew White
 
+if (NOT BUILD_MD)
+    message(FATAL_ERROR "MPCD package cannot be built without MD.")
+endif(NOT BUILD_MD)
+
 set(COMPONENT_NAME tensorflow_plugin)
 
 set(_${COMPONENT_NAME}_sources
@@ -19,6 +23,11 @@ CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CU
 endif (ENABLE_CUDA)
 
 add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
+
+# I think this will link against md
+#pybind11_add_module(_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
+#set_target_properties(_${COMPONENT_NAME} PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_BASE_DIR};${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_BASE_DIR}/md")
+
 
 # link the library to its dependencies
 target_link_libraries(_${COMPONENT_NAME} ${HOOMD_LIBRARIES})
