@@ -30,7 +30,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
 
         #build tf model
-        import tf
+        import tensorflow as tf
         x = tf.Variable(tf.random_uniform([N, 4], name='nlist:0'))
         w = tf.Variable(tf.random_uniform([N, 4]), name='positions:0')
         y = tf.multiply(x, w)
