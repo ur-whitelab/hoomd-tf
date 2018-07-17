@@ -31,10 +31,10 @@ class test_compute(unittest.TestCase):
 
         #build tf model
         import tensorflow as tf
-        x = tf.Variable(tf.random_uniform([N, 4], name='nlist:0'))
-        w = tf.Variable(tf.random_uniform([N, 4]), name='positions:0')
+        x = tf.Variable(tf.random_uniform([N, 4], name='nlist'))
+        w = tf.Variable(tf.random_uniform([N, 4]), name='positions')
         y = tf.multiply(x, w)
-        z = tf.reshape(y, [-1, 4], name='forces:0')
+        z = tf.reshape(y, [-1, 4], name='forces')
 
         saver = tf.train.Saver()
         sess = tf.Session()
