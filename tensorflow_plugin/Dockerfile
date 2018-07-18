@@ -62,3 +62,4 @@ CMD ["jupyter", "notebook", "--allow-root", "--ip=0.0.0.0"]
 #to get gdb
 #docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined  -v /home/whitead/hoomd-tf/tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
 #apt install gdb python3-dbg
+#GIT_SSH_COMMAND='ssh -i private_key_file' git clone host:repo.git

@@ -39,12 +39,12 @@ class test_compute(unittest.TestCase):
         saver = tf.train.Saver()
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
-        saver.save(sess, 'model')
+        saver.save(sess, '/tmp/model')
         ######## done with model
 
         nlist = hoomd.md.nlist.tree()
         #only use nearest 1 neighbor (since nlist dimension is N x 4)
-        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow('model', nlist, neighbor_cutoff=1)
+        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow('/tmp/model', nlist, nneighbor_cutoff=1)
         hoomd.run(5)
 
 
