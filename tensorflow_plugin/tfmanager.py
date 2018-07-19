@@ -4,7 +4,7 @@ import tensorflow as tf
 import sys, logging, os
 
 def main(log_filename, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer):
-    tfm = TFManager(lock, model_directory, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename)
+    tfm = TFManager(model_directory, lock,  barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename)
 
     tfm.start_loop()
 
@@ -43,7 +43,7 @@ class TFManager:
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32)
         #now insert into graph
         try:
-            self.saver = tf.import_graph_def(os.path.join(model_directory, 'model.meta'), input_map={"nlist:0": self.nlist,
+            self.saver =tf.train.import_meta_graph(model_directory + '.meta', input_map={"nlist:0": self.nlist,
                                                                "positions:0" : self.positions})
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')

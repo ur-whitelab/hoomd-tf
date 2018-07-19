@@ -57,9 +57,9 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowCompute(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(hoomd.context.current.system_definition, nlist.cpp_nlist, self, nneighbor_cutoff)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(hoomd.context.current.system_definition, nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(hoomd.context.current.system_definition, nlist.cpp_nlist, self, nneighbor_cutoff)
 
         #adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);

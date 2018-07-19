@@ -31,7 +31,8 @@ TensorflowCompute::TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,
           _nneighs(nneighs)
 {
     //we need full neighbor lists for this.
-    assert(m_nlist->getStorageMode() != NeighborList::half);
+    nlist->setStorageMode(NeighborList::full);
+    //assert(m_nlist->getStorageMode() != NeighborList::half);
 
 
     reallocate();
