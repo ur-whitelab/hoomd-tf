@@ -13,6 +13,7 @@ graph_input = ipc_to_tensor(address=ipct.get_input_buffer(), size=32, T=np.float
 print('prior', ipct.get_output_array())
 with tf.Session() as sess:
   new_saver = tf.train.import_meta_graph('model/test.meta', input_map={'input:0': graph_input})
+with tf.Session() as sess:
   new_saver.restore(sess, tf.train.latest_checkpoint('./model'))
   graph = tf.get_default_graph()
 

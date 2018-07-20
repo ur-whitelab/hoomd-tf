@@ -32,7 +32,7 @@ class test_compute(unittest.TestCase):
         #build tf model
         import tensorflow as tf
         x = tf.Variable(tf.random_uniform([N, 4], name='nlist'))
-        w = tf.Variable(tf.random_uniform([N, 4]), name='positions')
+        w = tf.Variable(tf.random_uniform([N, 4], name='positions'))
         y = tf.multiply(x, w)
         z = tf.reshape(y, [-1, 4], name='forces')
 
@@ -44,7 +44,7 @@ class test_compute(unittest.TestCase):
 
         nlist = hoomd.md.nlist.tree()
         #only use nearest 1 neighbor (since nlist dimension is N x 4)
-        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow('/tmp/model', nlist, nneighbor_cutoff=1)
+        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow('/tmp/', nlist, nneighbor_cutoff=1)
         hoomd.run(5)
 
 

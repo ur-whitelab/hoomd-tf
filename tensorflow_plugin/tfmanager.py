@@ -26,13 +26,13 @@ class TFManager:
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
         self.model_directory = model_directory
-        self._prepare_graph(model_directory)
+        self._prepare_graph()
 
 
     def _update(self, sess):
         sess.run(self.forces)
 
-    def _prepare_graph(self, model_directory):
+    def _prepare_graph(self):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
         #need to convert out scalar4 memory address to an integer
@@ -43,15 +43,15 @@ class TFManager:
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32)
         #now insert into graph
         try:
-            self.saver =tf.train.import_meta_graph(model_directory + '.meta', input_map={"nlist:0": self.nlist,
-                                                               "positions:0" : self.positions})
+            self.saver =tf.train.import_meta_graph(self.model_directory + 'model.meta', input_map={'nlist:0': self.nlist,
+                                                               'positions:0' : self.positions})
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
 
     def _prepare_forces(self):
         #insert the output forces
         try:
-            out = tf.get_default_graph().get_tensor_by_name('output:0')
+            out = tf.get_default_graph().get_tensor_by_name('forces:0')
 
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
@@ -65,6 +65,7 @@ class TFManager:
         self.log.info('Constructed TF Model graph')
         with tf.Session() as sess:
             #resore model checkpoint
+            print(self.model_directory)
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             self._update(sess) #run once to force initialize
             while True:
