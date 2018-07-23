@@ -27,6 +27,7 @@ class TFManager:
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
         self.model_directory = model_directory
         self._prepare_graph()
+        self._prepare_forces()
 
 
     def _update(self, sess):
@@ -43,7 +44,7 @@ class TFManager:
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32)
         #now insert into graph
         try:
-            self.saver =tf.train.import_meta_graph(self.model_directory + 'model.meta', input_map={'nlist:0': self.nlist,
+            self.saver =tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={'nlist:0': self.nlist,
                                                                'positions:0' : self.positions})
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
@@ -71,7 +72,6 @@ class TFManager:
             while True:
                 self.barrier.wait()
                 self.lock.acquire()
-                self.log.info('Starting TF update...')
                 self._update(sess)
                 self.lock.release()
 

@@ -86,7 +86,7 @@ class tensorflow(hoomd.compute._compute):
         self.lock = multiprocessing.Lock()
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        self.barrier = multiprocessing.Barrier(2, timeout=10)
+        self.barrier = multiprocessing.Barrier(2, timeout=3)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
                                           self.tf_model_directory,

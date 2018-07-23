@@ -5,7 +5,7 @@ import hoomd, hoomd.md
 hoomd.context.initialize()
 import hoomd.tensorflow_plugin
 import unittest
-import os
+import os, tempfile, shutil
 import numpy as np, math
 
 #TODO: write test for changing particle number dynamically
@@ -30,21 +30,29 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
 
         #build tf model
+        #### RUN THIS ####
+        # I can't run on this process because TF gets confused
+        # if 2 instances are running. I don't understand it.
+        # you can uncomment then kill when deadlock occurs
+        #see test-cases/tf-restore for minimal example
+        save_loc = '/tmp'
+        '''
         import tensorflow as tf
         x = tf.Variable(tf.random_uniform([N, 4], name='nlist'))
         w = tf.Variable(tf.random_uniform([N, 4], name='positions'))
         y = tf.multiply(x, w)
         z = tf.reshape(y, [-1, 4], name='forces')
 
-        saver = tf.train.Saver()
-        sess = tf.Session()
-        sess.run(tf.global_variables_initializer())
-        saver.save(sess, '/tmp/model')
-        ######## done with model
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            sess.run(tf.global_variables_initializer())
+            saver.save(sess, os.path.join(save_loc, 'model'))
+        '''
+        ##### DONE WITH THIS CODE ####
 
         nlist = hoomd.md.nlist.tree()
         #only use nearest 1 neighbor (since nlist dimension is N x 4)
-        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow('/tmp/', nlist, nneighbor_cutoff=1)
+        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow(save_loc, nlist, nneighbor_cutoff=1)
         hoomd.run(5)
 
 
