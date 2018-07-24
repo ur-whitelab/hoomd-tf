@@ -23,6 +23,8 @@ class TFManager:
         self.forces_buffer = forces_buffer
         self.N = N
         self.nneighs = NN
+        self.visualize = True
+        self.step = 0
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
         self.model_directory = model_directory
@@ -31,20 +33,27 @@ class TFManager:
 
 
     def _update(self, sess):
-        sess.run(self.forces)
+        runs = [self.forces]
+        if self.visualize:
+            runs += [self.summaries]
+        result = sess.run(runs)
+        if self.visualize:
+            print('writing ', self.step)
+            self.tb_writer.add_summary(result[-1], self.step)
+        self.step += 1
 
     def _prepare_graph(self):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
         #need to convert out scalar4 memory address to an integer
         #longlong should be int64
-        self.log.info('initializing ipc_to_tensor at address {:x}'.format(self.positions_buffer))
-        self.log.info('initializing ipc_to_tensor at address {:x}'.format(self.nlist_buffer))
-        self.positions = ipc_to_tensor(address=self.positions_buffer, size=self.N, T=tf.float32)
-        self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32)
+        self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
+        self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
+        self.positions = ipc_to_tensor(address=self.positions_buffer, size=self.N, T=tf.float32, name='positions-input')
+        self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32, name='nlist-input')
         #now insert into graph
         try:
-            self.saver =tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={'nlist:0': self.nlist,
+            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={'nlist:0': self.nlist,
                                                                'positions:0' : self.positions})
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
@@ -61,6 +70,16 @@ class TFManager:
         self.forces = tensor_to_ipc(out, address=self.forces_buffer, size=self.N)
         self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
 
+    def _attach_tensorboard(self, sess):
+
+        tf.summary.histogram('forces', tf.get_default_graph().get_tensor_by_name('forces:0'))
+
+        self.summaries = tf.summary.merge_all()
+        self.tb_writer = tf.summary.FileWriter(self.model_directory + '/tensorboard',
+                                      sess.graph)
+        self.visualize = True
+
+
     def start_loop(self):
 
         self.log.info('Constructed TF Model graph')
@@ -68,6 +87,8 @@ class TFManager:
             #resore model checkpoint
             print(self.model_directory)
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
+            print(tf.get_default_graph().get_tensor_by_name('nlist:0'))
+            self._attach_tensorboard(sess)
             self._update(sess) #run once to force initialize
             while True:
                 self.barrier.wait()

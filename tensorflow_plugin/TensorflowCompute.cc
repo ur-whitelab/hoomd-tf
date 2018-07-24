@@ -30,10 +30,6 @@ TensorflowCompute::TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,
           _output_buffer(NULL),
           _nneighs(nneighs)
 {
-    //we need full neighbor lists for this.
-    nlist->setStorageMode(NeighborList::full);
-    //assert(m_nlist->getStorageMode() != NeighborList::half);
-
 
     reallocate();
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
@@ -110,6 +106,7 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
 
     //create ptr at offset to where neighbors go
     Scalar4* buffer = _output_buffer + m_pdata->getN();
+    unsigned int* nnoffset = (unsigned int*) calloc(m_pdata->getN(), sizeof(unsigned int));
 
     //These snippets taken from md/TablePotentials.cc
 
@@ -147,19 +144,33 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
             // apply periodic boundary conditions
             dx = box.minImage(dx);
 
-            buffer[i * _nneighs + j].x = dx.x;
-            buffer[i * _nneighs + j].y = dx.y;
-            buffer[i * _nneighs + j].z = dx.z;
-            buffer[i * _nneighs + j].w = h_pos.data[k].w;
-        }
-        // fill missing entries
-        for (; j < _nneighs; j++) {
-            buffer[i * _nneighs + j].x = 0;
-            buffer[i * _nneighs + j].y = 0;
-            buffer[i * _nneighs + j].z = 0;
-            buffer[i * _nneighs + j].w = 0;
+            buffer[i * _nneighs + nnoffset[i]].x = dx.x;
+            buffer[i * _nneighs + nnoffset[i]].y = dx.y;
+            buffer[i * _nneighs + nnoffset[i]].z = dx.z;
+            buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[k].w;
+            nnoffset[i]++;
+
+            if(m_nlist->getStorageMode() == NeighborList::half) {
+                buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
+                buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
+                buffer[k * _nneighs + nnoffset[k]].z = -dx.z;
+                buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[i].w;
+                nnoffset[k]++;
+            }
         }
     }
+
+    for (int i = 0; i < (int) m_pdata->getN(); i++) {
+        // fill missing entries
+        for (; nnoffset[i] < _nneighs; nnoffset[i]++) {
+            buffer[i * _nneighs + nnoffset[i]].x = 0;
+            buffer[i * _nneighs + nnoffset[i]].y = 0;
+            buffer[i * _nneighs + nnoffset[i]].z = 0;
+            buffer[i * _nneighs + nnoffset[i]].w = 0;
+        }
+    }
+
+    free(nnoffset);
 
     if (m_prof) m_prof->pop();
 }

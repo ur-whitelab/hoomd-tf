@@ -6,7 +6,7 @@ hoomd.context.initialize()
 import hoomd.tensorflow_plugin
 import unittest
 import os, tempfile, shutil
-import numpy as np, math
+import numpy as np, math, scipy
 
 #TODO: write test for changing particle number dynamically
 
@@ -21,39 +21,39 @@ class test_compute(unittest.TestCase):
     def test_compute_loop(self):
         hoomd.context.initialize()
         N = 3 * 3
-        hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])
-        nl_c = hoomd.md.nlist.cell(check_period=1)
-        lj = hoomd.md.pair.lj(r_cut=2.5, nlist=nl_c)
+        nlist = hoomd.md.nlist.cell(check_period = 1)
+        lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1.2, tau=0.5)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        #build tf model
-        #### RUN THIS ####
-        # I can't run on this process because TF gets confused
-        # if 2 instances are running. I don't understand it.
-        # you can uncomment then kill when deadlock occurs
-        #see test-cases/tf-restore for minimal example
+        #This assumes you have run the code in models/test-model/build.py
         save_loc = '/tmp'
-        '''
-        import tensorflow as tf
-        x = tf.Variable(tf.random_uniform([N, 4], name='nlist'))
-        w = tf.Variable(tf.random_uniform([N, 4], name='positions'))
-        y = tf.multiply(x, w)
-        z = tf.reshape(y, [-1, 4], name='forces')
+        #
+        def compute_forces(system):
+            snapshot = system.take_snapshot()
+            position = snapshot.particles.position
+            forces = np.zeros((N, 3))
+            for i in range(N):
+                for j in range(i + 1, N):
+                    r = position[j] - position[i]
+                    rd = np.sqrt(np.sum(r**2))
+                    if rd <= rcut:
+                        f = -r / rd
+                        forces[i, :] += f
+                        forces[j, :] -= f
+            return forces
 
-        with tf.Session() as sess:
-            saver = tf.train.Saver()
-            sess.run(tf.global_variables_initializer())
-            saver.save(sess, os.path.join(save_loc, 'model'))
-        '''
-        ##### DONE WITH THIS CODE ####
-
-        nlist = hoomd.md.nlist.tree()
-        #only use nearest 1 neighbor (since nlist dimension is N x 4)
-        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow(save_loc, nlist, nneighbor_cutoff=1)
-        hoomd.run(5)
+        tfcompute = hoomd.tensorflow_plugin.tfcompute.tensorflow(save_loc, nlist, nneighbor_cutoff=NN)
+        for i in range(1):
+            hoomd.run(1)
+            py_forces = compute_forces(system)
+            for j in range(N):
+                print(system.particles[j].net_force, py_forces[j, :])
 
 
 if __name__ == '__main__':

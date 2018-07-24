@@ -53,13 +53,13 @@ class IpcToTensorOp : public OpKernel {
 
     int temp_dims [2] = {_input_size, 4};
     //TODO: why is this necessary?!
-    TensorShapeUtils::MakeShape(temp_dims, 1, &_output_shape);
+    TensorShapeUtils::MakeShape(temp_dims, 2, &_output_shape);
 
     //call device initializer
     OP_REQUIRES(c, IPC2TInitialize<Device>()(_input_size,
                               _input_address),
                 errors::FailedPrecondition("Memory mapped buffer not accessible or invalid."));
-    LOG(INFO) << "OP constructed and mmap connection validated";
+    LOG(INFO) << "OP constructed and mmap connection validated with size " << _output_shape;
 
   }
 

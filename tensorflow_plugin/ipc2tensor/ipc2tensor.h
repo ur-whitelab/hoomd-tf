@@ -17,7 +17,6 @@ REGISTER_OP("IpcToTensor")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       int32 size;
       c->GetAttr("size", &size);
-
       //this should make the size be the size of shape. Should be N x 4
       shape_inference::DimensionHandle particle_dimension = c->MakeDim(size);
       shape_inference::DimensionHandle spatial_dimension = c->MakeDim(4);
