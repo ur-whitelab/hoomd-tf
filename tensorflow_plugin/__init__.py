@@ -9,5 +9,4 @@
 # (here: tensorflow_plugin)
 # these are necessary to link?
 
-from hoomd.tensorflow_plugin import tfcompute
-from hoomd.tensorflow_plugin import tfmanager
+from hoomd.tensorflow_plugin.tfcompute import tensorflow

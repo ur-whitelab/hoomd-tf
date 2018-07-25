@@ -12,7 +12,6 @@ _ = tf.ones([N, 4], name='positions')
 with tf.name_scope('force-calc') as scope:
     neighs = tf.reshape(nlist, [N, NN, 4], name='reshaped-nlist')
     neighs_rs = tf.norm(neighs, axis=1, keepdims=True)
-    neighs_rs = tf.Print(neighs_rs, [neighs_rs])
     normed_neighs = tf.divide(neighs, neighs_rs, name='normed-neighs')
     #1/2 because we're double counting
     fr = tf.multiply(-0.5, tf.multiply(tf.reciprocal(neighs_rs), normed_neighs), name='nan-pairwise-forces')

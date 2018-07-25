@@ -143,7 +143,6 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
-
             buffer[i * _nneighs + nnoffset[i]].x = dx.x;
             buffer[i * _nneighs + nnoffset[i]].y = dx.y;
             buffer[i * _nneighs + nnoffset[i]].z = dx.z;

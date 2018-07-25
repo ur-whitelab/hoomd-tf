@@ -94,8 +94,8 @@ class tensorflow(hoomd.compute._compute):
                                           self.barrier,
                                           len(hoomd.context.current.group_all),
                                           self.nneighbor_cutoff,
-                                          self.cpp_force.get_nlist_buffer(),
                                           self.cpp_force.get_positions_buffer(),
+                                          self.cpp_force.get_nlist_buffer(),
                                           self.cpp_force.get_forces_buffer()))
 
         self.tfm.start()
