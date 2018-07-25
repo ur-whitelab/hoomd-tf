@@ -33,7 +33,7 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, r_cut, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
+    def __init__(self, tf_model_directory, nlist, r_cut, nneighbor_cutoff = 4, log_filename='tf_manager.log', debug_mode=False):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -50,6 +50,7 @@ class tensorflow(hoomd.compute._compute):
         self.tf_model_directory = tf_model_directory
         nlist.subscribe(self.rcut)
         self.r_cut = r_cut
+        self.debug_mode = debug_mode
 
         hoomd.util.print_status_line()
 
@@ -60,9 +61,9 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowCompute(hoomd.context.current.system_definition, nlist.cpp_nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(hoomd.context.current.system_definition, nlist.cpp_nlist, self, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
 
         #adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
@@ -106,7 +107,7 @@ class tensorflow(hoomd.compute._compute):
         self.lock = multiprocessing.Lock()
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        self.barrier = multiprocessing.Barrier(2, timeout=3)
+        self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 3)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
                                           self.tf_model_directory,
@@ -116,7 +117,8 @@ class tensorflow(hoomd.compute._compute):
                                           self.nneighbor_cutoff,
                                           self.cpp_force.get_positions_buffer(),
                                           self.cpp_force.get_nlist_buffer(),
-                                          self.cpp_force.get_forces_buffer()))
+                                          self.cpp_force.get_forces_buffer(),
+                                          self.debug_mode))
 
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))

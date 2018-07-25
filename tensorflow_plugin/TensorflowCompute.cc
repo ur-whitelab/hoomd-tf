@@ -19,9 +19,10 @@
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowCompute::TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,
-    std::shared_ptr<NeighborList> nlist,
+TensorflowCompute::TensorflowCompute(
     pybind11::object& py_self,
+    std::shared_ptr<SystemDefinition> sysdef,
+    std::shared_ptr<NeighborList> nlist,
     unsigned int nneighs)
         : ForceCompute(sysdef),
           m_nlist(nlist),
@@ -194,7 +195,7 @@ std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
 void export_TensorflowCompute(pybind11::module& m)
     {
     pybind11::class_<TensorflowCompute, std::shared_ptr<TensorflowCompute> >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>,  pybind11::object&, unsigned int>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, unsigned int>())
         .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
         .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
         .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)

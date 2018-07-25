@@ -43,8 +43,8 @@ class TensorflowCompute : public ForceCompute
     {
     public:
         //! Constructor
-        TensorflowCompute(std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             pybind11::object& py_self, unsigned int nneighs);
+        TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
+             unsigned int nneighs);
 
         //!Destructor
         virtual ~TensorflowCompute();

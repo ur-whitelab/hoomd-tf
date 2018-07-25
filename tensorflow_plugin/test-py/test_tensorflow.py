@@ -47,7 +47,7 @@ class test_compute(unittest.TestCase):
                         forces[j, :] -= f
             return forces
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False)
         for i in range(1):
             hoomd.run(1)
             py_forces = compute_forces(system)

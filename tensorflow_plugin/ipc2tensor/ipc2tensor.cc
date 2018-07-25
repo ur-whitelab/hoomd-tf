@@ -30,8 +30,7 @@ template<>
 struct IPC2TInitialize<CPUDevice> {
   bool operator()(int size, int64 address) {
     // check shared memory
-    Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
-    LOG(INFO) << "about to try reading from " << std::hex << address << " with type " << typeid(input_buffer).name() << std::endl;
+    // Scalar4* input_buffer = reinterpret_cast<Scalar4*> (address);
     return true;
   }
 };
@@ -44,7 +43,6 @@ class IpcToTensorOp : public OpKernel {
  public:
   explicit IpcToTensorOp(OpKernelConstruction* c) : OpKernel(c) {
 
-    LOG(INFO) << "IpcToTensorOp construction starting";
     //get number of atoms
     c->GetAttr("size", &_input_size);
 
@@ -59,7 +57,6 @@ class IpcToTensorOp : public OpKernel {
     OP_REQUIRES(c, IPC2TInitialize<Device>()(_input_size,
                               _input_address),
                 errors::FailedPrecondition("Memory mapped buffer not accessible or invalid."));
-    LOG(INFO) << "OP constructed and mmap connection validated with size " << _output_shape;
 
   }
 

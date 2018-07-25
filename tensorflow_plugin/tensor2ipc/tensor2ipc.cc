@@ -33,7 +33,6 @@ class TensorToIpcOp : public OpKernel {
  public:
   explicit TensorToIpcOp(OpKernelConstruction* c) : OpKernel(c) {
 
-    LOG(INFO) << "TensorToIpcOp construction starting";
     //get shape
     c->GetAttr("size", &_input_size);
 
