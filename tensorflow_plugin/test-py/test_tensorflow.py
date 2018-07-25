@@ -26,8 +26,6 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])
         nlist = hoomd.md.nlist.cell(check_period = 1)
-        lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
-        lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
@@ -41,6 +39,7 @@ class test_compute(unittest.TestCase):
             for i in range(N):
                 for j in range(i + 1, N):
                     r = position[j] - position[i]
+                    r = np.array(snapshot.box.min_image(r))
                     rd = np.sqrt(np.sum(r**2))
                     if rd <= rcut:
                         f = -r / rd
@@ -48,12 +47,12 @@ class test_compute(unittest.TestCase):
                         forces[j, :] -= f
             return forces
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut)
         for i in range(1):
             hoomd.run(1)
             py_forces = compute_forces(system)
             for j in range(N):
-                print(system.particles[j].net_force, py_forces[j, :])
+                np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
 
 if __name__ == '__main__':

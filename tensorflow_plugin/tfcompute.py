@@ -14,6 +14,7 @@ import hoomd
 import multiprocessing
 from .tfmanager import main
 import sys, math, numpy as np
+import hoomd.md.nlist
 import tensorflow as tf
 
 ## Zeroes all particle velocities
@@ -32,7 +33,7 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
+    def __init__(self, tf_model_directory, nlist, r_cut, nneighbor_cutoff = 4, log_filename='tf_manager.log'):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -47,6 +48,8 @@ class tensorflow(hoomd.compute._compute):
         self.compute_name = self.force_name
         self.nneighbor_cutoff = nneighbor_cutoff
         self.tf_model_directory = tf_model_directory
+        nlist.subscribe(self.rcut)
+        self.r_cut = r_cut
 
         hoomd.util.print_status_line()
 
@@ -66,6 +69,23 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.current.forces.append(self)
 
         self.restart_tf()
+
+    def rcut(self):
+        #adapted from hoomd/md/pair.py
+        # go through the list of only the active particle types in the sim
+        ntypes = hoomd.context.current.system_definition.getParticleData().getNTypes()
+        type_list = []
+        for i in range(0,ntypes):
+            type_list.append(hoomd.context.current.system_definition.getParticleData().getNameByType(i))
+
+        # update the rcut by pair type
+        r_cut_dict = hoomd.md.nlist.rcut()
+        for i in range(0,ntypes):
+            for j in range(i,ntypes):
+                # get the r_cut value
+                r_cut_dict.set_pair(type_list[i],type_list[j],self.r_cut)
+        print(r_cut_dict)
+        return r_cut_dict
 
     def __del__(self):
         if self.tfm and self.tfm.is_alive():

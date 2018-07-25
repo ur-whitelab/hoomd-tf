@@ -34,6 +34,8 @@ class TFManager:
 
     def _update(self, sess):
         runs = [self.forces]
+        #pf = self.nlist#tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
+        #runs += [tf.Print(pf, [pf], summarize=288)]
         if self.visualize:
             runs += [self.summaries]
         result = sess.run(runs)
@@ -89,7 +91,6 @@ class TFManager:
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             print(tf.get_default_graph().get_tensor_by_name('nlist:0'))
             self._attach_tensorboard(sess)
-            self._update(sess) #run once to force initialize
             while True:
                 self.barrier.wait()
                 self.lock.acquire()

@@ -139,7 +139,7 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
 
             // calculate dr
             Scalar3 pk = make_scalar3(h_pos.data[k].x, h_pos.data[k].y, h_pos.data[k].z);
-            Scalar3 dx = pi - pk;
+            Scalar3 dx = pk - pi;
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
