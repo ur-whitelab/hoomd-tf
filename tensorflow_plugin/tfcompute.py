@@ -10,11 +10,9 @@ from hoomd.tensorflow_plugin import _tensorflow_plugin
 
 # Next, since we are extending an Compute, we need to bring in the base class Compute and some other parts from
 # hoomd_script
-import hoomd
-import multiprocessing
 from .tfmanager import main
-import sys, math, numpy as np
-import hoomd.md.nlist
+import sys, math, numpy as np, pickle, multiprocessing, os
+import hoomd, hoomd.md.nlist
 import tensorflow as tf
 
 ## Zeroes all particle velocities
@@ -37,14 +35,28 @@ class tensorflow(hoomd.compute._compute):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
-            hoomd.context.msg.error("Cannot create TF before initialization\n")
+            hoomd.context.msg.error('Cannot create TF before initialization\n')
+            raise RuntimeError('Error creating TF')
+
+        #check our parameters
+        try:
+            with open(os.path.join(tf_model_directory, 'graph_info.p'), 'rb') as f:
+                self.graph_info = pickle.load(f)
+                if self.graph_info['N'] != len(hoomd.context.current.group_all):
+                    hoomd.context.msg.error('Number of atoms must be same in TF model and HOOMD system\n')
+                    raise RuntimeError('Error creating TF')
+                if self.graph_info['NN'] != nneighbor_cutoff:
+                    hoomd.context.msg.error('Number of neighbors to consider must be the same in TF model and HOOMD system\n')
+                    raise RuntimeError('Error creating TF')
+        except IOError:
+            hoomd.context.msg.error('Unable to load model in directory {}'.format(tf_model_directory))
             raise RuntimeError('Error creating TF')
 
         #I'm not sure if this is necessary following other files
         self.enabled = True
         self.log = True
         self.cpp_force = None
-        self.force_name = "tfcompute"
+        self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         self.nneighbor_cutoff = nneighbor_cutoff
         self.tf_model_directory = tf_model_directory
@@ -115,11 +127,9 @@ class tensorflow(hoomd.compute._compute):
         self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 3)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
-                                          self.tf_model_directory,
+                                          self.graph_info,
                                           self.lock,
                                           self.barrier,
-                                          len(hoomd.context.current.group_all),
-                                          self.nneighbor_cutoff,
                                           self.cpp_force.get_positions_buffer(),
                                           self.cpp_force.get_nlist_buffer(),
                                           self.cpp_force.get_forces_buffer(),
@@ -133,7 +143,7 @@ class tensorflow(hoomd.compute._compute):
         '''Write to output the current sys information'''
         self.lock.acquire()
         if not self.tfm.is_alive():
-            hoomd.context.msg.error("TF Session Manager died. See its output log ({})".format(self.log_filename))
+            hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
             raise RuntimeError()
 
     def finish_update(self):

@@ -10,3 +10,4 @@
 # these are necessary to link?
 
 from .tfcompute import tensorflow
+from .graphbuilder import GraphBuilder

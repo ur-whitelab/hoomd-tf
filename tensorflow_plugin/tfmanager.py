@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
-import sys, logging, os
+import sys, logging, os, pickle
 
-def main(log_filename, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, debug=True):
-    tfm = TFManager(model_directory, lock,  barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug)
+def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, debug=True):
+    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug)
 
     tfm.start_loop()
 
@@ -18,7 +18,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug):
+    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -30,15 +30,19 @@ class TFManager:
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer
-        self.N = N
-        self.nneighs = NN
         self.debug = debug
         self.step = 0
+        self.graph_info = graph_info
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
-        self.model_directory = model_directory
+        self.model_directory = self.graph_info['model_directory']
+        self.N = self.graph_info['N']
+        self.nneighs = self.graph_info['NN']
+
+
         self._prepare_graph()
         self._prepare_forces()
+
 
 
 
@@ -64,18 +68,18 @@ class TFManager:
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=tf.float32, name='nlist-input')
         #now insert into graph
         try:
-            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={'nlist:0': self.nlist,
-                                                               'positions:0' : self.positions})
+            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={self.graph_info['nlist']: self.nlist,
+                                                               self.graph_info['positions'] : self.positions})
         except ValueError:
-            raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
+            raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
 
     def _prepare_forces(self):
         #insert the output forces
         try:
-            out = tf.get_default_graph().get_tensor_by_name('forces:0')
+            out = tf.get_default_graph().get_tensor_by_name(self.graph_info['forces'])
             self.forces = out
         except ValueError:
-            raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
+            raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
         tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
         self.out_node = tensor_to_ipc(out, address=self.forces_buffer, maxsize=self.N * 4)

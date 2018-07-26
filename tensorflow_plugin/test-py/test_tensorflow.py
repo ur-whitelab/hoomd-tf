@@ -5,13 +5,13 @@ import hoomd, hoomd.md
 hoomd.context.initialize()
 import hoomd.tensorflow_plugin
 import unittest
-import os, tempfile, shutil
+import os, tempfile, shutil, pickle
 import numpy as np, math, scipy
 import tensorflow as tf
 
 #TODO: write test for changing particle number dynamically
 
-class test_simple(unittest.TestCase):
+class test_ipc(unittest.TestCase):
     def test_ipc_to_tensor(self):
         ipc_to_tensor_module = hoomd.tensorflow_plugin.tfmanager.load_op_library('ipc2tensor')
         shape = [4, 2, 3, 12]
@@ -34,6 +34,28 @@ class test_simple(unittest.TestCase):
             result = sess.run(tensor_to_ipc)
         assert np.sum(data) < 10**-10
 
+#class test_builder(unittest.TestCase):
+class test_builder:
+    def test_simple_potential(self):
+        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
+        with tf.name_scope('force-calc') as scope:
+            nlist = graph.nlist[:, :, :3]
+            neighs_rs = tf.norm(nlist, axis=1, keepdims=True)
+            #no need to use netwon's law because nlist should be double counted
+            fr = tf.multiply(-1.0, tf.multiply(tf.reciprocal(neighs_rs), nlist), name='nan-pairwise-forces')
+            with tf.name_scope('remove-nans') as scope:
+                zeros = tf.zeros(tf.shape(nlist))
+                real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
+            forces = tf.reduce_sum(real_fr, axis=1, name='forces')
+        graph.save(forces, '/tmp/model')
+
+        #check graph info
+        with open('/tmp/model/graph_info.p', 'rb') as f:
+            gi = pickle.load(f)
+            assert gi['forces'] != 'forces:0'
+            assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
+
+
 class test_compute(unittest.TestCase):
 #class test_compute:
     def test_compute_force_overwrite(self):
@@ -48,7 +70,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
         #This assumes you have run the code in models/test-model/build.py
-        save_loc = '/tmp'
+        save_loc = '/tmp/model'
         #
         def compute_forces(system):
             snapshot = system.take_snapshot()
@@ -84,7 +106,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
         #This assumes you have run the code in models/test-model/build.py
-        save_loc = '/tmp'
+        save_loc = '/tmp/model'
 
         tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False, force_mode='ignore')
         for i in range(3):

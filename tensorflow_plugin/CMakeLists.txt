@@ -80,6 +80,7 @@ ENDMACRO(copy_file)
 set(files
     __init__.py
     tfcompute.py
+    graphbuilder.py
     tfmanager.py
     )
 
