@@ -7,17 +7,29 @@ import hoomd.tensorflow_plugin
 import unittest
 import os, tempfile, shutil
 import numpy as np, math, scipy
+import tensorflow as tf
 
 #TODO: write test for changing particle number dynamically
 
 class test_simple(unittest.TestCase):
-    def test_ipc_to_tensor_import(self):
-        import tensorflow as tf
-        #TODO: pick a better path
+    def test_ipc_to_tensor(self):
         ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
-        ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
+        shape = [4, 2, 3, 12]
+        data = np.array(np.random.random_sample(shape), dtype=np.float32)
+        pointer, _ = data.__array_interface__['data']
+        ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor(address=pointer, T=np.float32, shape=shape)
+        diff = tf.convert_to_tensor(data) - ipc_to_tensor
+        sqe = tf.reduce_sum(diff**2)
+        with tf.Session() as sess:
+            result = sess.run(sqe)
+        assert result < 10**-10
 
-class test_compute(unittest.TestCase):
+    def test_tensor_to_ipc(self):
+        pass
+
+
+#class test_compute(unittest.TestCase):
+class test_compute:
     def test_compute_loop(self):
         hoomd.context.initialize()
         N = 3 * 3

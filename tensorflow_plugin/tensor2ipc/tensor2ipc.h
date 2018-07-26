@@ -16,14 +16,14 @@ REGISTER_OP("TensorToIpc")
     .Input("input: T")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       int32 size;
-      tensorflow::shape_inference::DimensionHandle v1; //unused
-      tensorflow::shape_inference::ShapeHandle v2; //unused
+      tensorflow::shape_inference::DimensionHandle unused1; //unused
+      tensorflow::shape_inference::ShapeHandle unused2; //unused
       c->GetAttr("size", &size);
       //check shape of input is size x 4
       //just looking for errors, not using result
-      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 0), size, &v1));
-      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 1), 4, &v1));
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &v2));
+      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 0), size, &unused1));
+      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 1), 4, &unused1));
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &unused2));
       return Status::OK();
     });
 

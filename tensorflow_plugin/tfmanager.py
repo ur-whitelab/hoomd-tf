@@ -49,8 +49,8 @@ class TFManager:
         #longlong should be int64
         self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
         self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
-        self.positions = ipc_to_tensor(address=self.positions_buffer, size=self.N, T=tf.float32, name='positions-input')
-        self.nlist = ipc_to_tensor(address=self.nlist_buffer, size=self.nneighs * self.N, T=tf.float32, name='nlist-input')
+        self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=tf.float32, name='positions-input')
+        self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=tf.float32, name='nlist-input')
         #now insert into graph
         try:
             self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={'nlist:0': self.nlist,

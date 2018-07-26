@@ -85,7 +85,6 @@ class tensorflow(hoomd.compute._compute):
             for j in range(i,ntypes):
                 # get the r_cut value
                 r_cut_dict.set_pair(type_list[i],type_list[j],self.r_cut)
-        print(r_cut_dict)
         return r_cut_dict
 
     def __del__(self):
