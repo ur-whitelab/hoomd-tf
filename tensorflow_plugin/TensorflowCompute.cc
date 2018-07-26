@@ -23,13 +23,14 @@ TensorflowCompute::TensorflowCompute(
     pybind11::object& py_self,
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist,
-    unsigned int nneighs)
+    unsigned int nneighs, FORCE_MODE force_mode)
         : ForceCompute(sysdef),
           m_nlist(nlist),
           _py_self(py_self),
           _input_buffer(NULL),
           _output_buffer(NULL),
-          _nneighs(nneighs)
+          _nneighs(nneighs),
+          _force_mode(force_mode)
 {
 
     reallocate();
@@ -64,8 +65,10 @@ void TensorflowCompute::reallocate() {
 
 TensorflowCompute::~TensorflowCompute() {
     // unmap our mmapings
-    munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
-    munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
+    if(_input_buffer) {
+        munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
+        munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
+    }
     _input_buffer = NULL;
     _output_buffer = NULL;
 }
@@ -88,8 +91,22 @@ void TensorflowCompute::computeForces(unsigned int timestep)
 
     //process results from TF
     //TODO: Handle virial (See TablePotential.cc?)
-     ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-    memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
+    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
+    switch(_force_mode) {
+        case FORCE_MODE::overwrite:
+            memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
+            break;
+        case FORCE_MODE::add:
+            for(unsigned int i = 0; i < m_pdata->getN(); i++) {
+                h_force.data[i].x += _input_buffer[i].x;
+                h_force.data[i].y += _input_buffer[i].y;
+                h_force.data[i].z += _input_buffer[i].z;
+            }
+            break;
+        case FORCE_MODE::ignore:
+            break;
+    }
+
 
     if (m_prof) m_prof->pop();
 }
@@ -195,7 +212,7 @@ std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
 void export_TensorflowCompute(pybind11::module& m)
     {
     pybind11::class_<TensorflowCompute, std::shared_ptr<TensorflowCompute> >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, unsigned int>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, unsigned int, FORCE_MODE>())
         .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
         .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
         .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)
@@ -203,6 +220,10 @@ void export_TensorflowCompute(pybind11::module& m)
         .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
         .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)
     ;
+    pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
+        .value("overwrite", FORCE_MODE::overwrite)
+        .value("add", FORCE_MODE::add)
+        .value("ignore", FORCE_MODE::ignore);
     }
 
 // ********************************

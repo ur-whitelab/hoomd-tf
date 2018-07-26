@@ -30,13 +30,12 @@ class test_simple(unittest.TestCase):
         data = np.ones(shape, dtype=np.float32)
         pointer, _ = data.__array_interface__['data']
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc(tf.zeros(shape, dtype=tf.float32), address=pointer, maxsize=np.prod(shape))
-        print(data)
         with tf.Session() as sess:
             result = sess.run(tensor_to_ipc)
         assert np.sum(data) < 10**-10
 
-#class test_compute(unittest.TestCase):
-class test_compute:
+class test_compute(unittest.TestCase):
+#class test_compute:
     def test_compute_loop(self):
         hoomd.context.initialize()
         N = 3 * 3

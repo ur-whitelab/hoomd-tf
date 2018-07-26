@@ -39,12 +39,20 @@
 //! A nonsense particle Compute written to demonstrate how to write a plugin
 /*! This Compute simply sets all of the particle's velocities to 0 when update() is called.
 */
+
+enum class FORCE_MODE{
+    overwrite, add, ignore
+};
+
+
 class TensorflowCompute : public ForceCompute
     {
     public:
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             unsigned int nneighs);
+             unsigned int nneighs, FORCE_MODE force_mode);
+
+        TensorflowCompute() = delete;
 
         //!Destructor
         virtual ~TensorflowCompute();
@@ -62,6 +70,8 @@ class TensorflowCompute : public ForceCompute
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
+
+
     protected:
         //! Take one timestep forward
         void computeForces(unsigned int timestep) override;
@@ -74,6 +84,7 @@ class TensorflowCompute : public ForceCompute
         Scalar4* _output_buffer;
         size_t _buffer_size;
         unsigned int _nneighs;
+        FORCE_MODE _force_mode;
     };
 
 //! Export the TensorflowCompute class to python

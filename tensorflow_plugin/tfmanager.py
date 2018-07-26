@@ -88,7 +88,6 @@ class TFManager:
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             if self.debug:
                 from tensorflow.python import debug as tf_debug
-
                 sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
                 self._attach_tensorboard(sess)
                 self.log.info('You must (first!) attach tensorboard by running '

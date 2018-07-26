@@ -22,7 +22,7 @@ import tensorflow as tf
 # Every \a period time steps, particle velocities are modified so that they are all zero
 #
 class tensorflow(hoomd.compute._compute):
-    ## Initialize the velocity zeroer
+    ## Initialize the velocity zeroe
     #
     # \param period Velocities will be zeroed every \a period time steps
     #
@@ -33,7 +33,7 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, r_cut, nneighbor_cutoff = 4, log_filename='tf_manager.log', debug_mode=False):
+    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite', nneighbor_cutoff = 4, log_filename='tf_manager.log', debug_mode=False):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -59,9 +59,15 @@ class tensorflow(hoomd.compute._compute):
         self.tfm = None
         self.log_filename = log_filename
 
+        force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite
+        if force_mode == 'add':
+            force_mode_code = _tensorflow_plugin.FORCE_MODE.add
+        elif force_mode == 'none' or force_mode == 'ignore' or force_mode is None:
+            force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
+
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff, force_mode_code)
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
 
