@@ -7,6 +7,16 @@ def main(log_filename, model_directory, lock, barrier, N, NN, positions_buffer, 
 
     tfm.start_loop()
 
+def load_op_library(op):
+    import hoomd.tensorflow_plugin
+    path = hoomd.tensorflow_plugin.__path__[0]
+    try:
+        mod = tf.load_op_library(os.path.join(path, op, 'lib_{}_op.so'.format(op)))
+    except IOError:
+        raise IOError('Unable to load OP {}'.format(op))
+    return mod
+
+
 class TFManager:
     def __init__(self, model_directory, lock, barrier, N, NN, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug):
 
@@ -31,6 +41,7 @@ class TFManager:
         self._prepare_forces()
 
 
+
     def _update(self, sess):
         runs = [self.out_node]
         #pf = self.nlist#tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
@@ -43,7 +54,7 @@ class TFManager:
         self.step += 1
 
     def _prepare_graph(self):
-        ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
+        ipc_to_tensor_module = load_op_library('ipc2tensor')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
         #need to convert out scalar4 memory address to an integer
         #longlong should be int64
@@ -65,7 +76,7 @@ class TFManager:
             self.forces = out
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
-        tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
+        tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
         self.out_node = tensor_to_ipc(out, address=self.forces_buffer, maxsize=self.N * 4)
         self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
