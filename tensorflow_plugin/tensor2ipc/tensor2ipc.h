@@ -10,20 +10,17 @@
 using namespace tensorflow;
 
 REGISTER_OP("TensorToIpc")
-    .Attr("T: {float}")
-    .Attr("size: int")
-    .Attr("address: int")
     .Input("input: T")
+    .Attr("T: {float, double}")
+    .Attr("maxsize: int")
+    .Attr("address: int")
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       int32 size;
-      tensorflow::shape_inference::DimensionHandle unused1; //unused
-      tensorflow::shape_inference::ShapeHandle unused2; //unused
-      c->GetAttr("size", &size);
-      //check shape of input is size x 4
-      //just looking for errors, not using result
-      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 0), size, &unused1));
-      TF_RETURN_IF_ERROR(c->WithValue(c->Dim(c->input(0), 1), 4, &unused1));
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &unused2));
+      c->GetAttr("maxsize", &size);
+      //check shape of input is not larger than buffer
+      auto result = c->Value(c->NumElements(c->input(0)));
+      if(!result || size > result)
+        return errors::InvalidArgument("Input tensor may exceed buffer size, which is set by maxsize");
       return Status::OK();
     });
 

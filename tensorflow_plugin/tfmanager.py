@@ -67,7 +67,7 @@ class TFManager:
             raise ValueError('Your graph must contain the following tensors: forces:0, nlist:0, positions:0')
         tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
-        self.out_node = tensor_to_ipc(out, address=self.forces_buffer, size=self.N)
+        self.out_node = tensor_to_ipc(out, address=self.forces_buffer, maxsize=self.N * 4)
         self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
 
     def _attach_tensorboard(self, sess):

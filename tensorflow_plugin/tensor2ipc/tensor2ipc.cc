@@ -15,13 +15,8 @@ template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, int64 address, const T* in) {
     //TODO: access address
-    Scalar4* output_buffer = reinterpret_cast<Scalar4*> (address);
-    for(int i = 0; i < size; ++i) {
-      output_buffer[i].x = in[4 * i + 0];
-      output_buffer[i].y = in[4 * i + 1];
-      output_buffer[i].z = in[4 * i + 2];
-      output_buffer[i].w = in[4 * i + 3];
-    }
+    T* output_buffer = reinterpret_cast<T*> (address);
+    std::memcpy(output_buffer, in, sizeof(T) * size);
   }
 };
 
@@ -34,7 +29,7 @@ class TensorToIpcOp : public OpKernel {
   explicit TensorToIpcOp(OpKernelConstruction* c) : OpKernel(c) {
 
     //get shape
-    c->GetAttr("size", &_input_size);
+    c->GetAttr("maxsize", &_input_size);
 
     //get memory address
     c->GetAttr("address", &_output_address);
@@ -44,15 +39,17 @@ class TensorToIpcOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
 
     const Tensor& input_tensor = context->input(0);
-    auto input = input_tensor.flat<T>().data();
+    auto input = input_tensor.flat<T>();
 
-
+    if(input.size() > _input_size) {
+      errors::InvalidArgument("Tensor input size is too large for output buffer!");
+    }
     // Do the computation.
     TF2IPCFunctor<Device, T>()(
         context->eigen_device<Device>(),
-        _input_size,
+        input.size(),
         _output_address,
-        input);
+        input.data());
   }
 
 private:
@@ -66,6 +63,7 @@ private:
       Name("TensorToIpc").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
       TensorToIpcOp<CPUDevice, T>);
 REGISTER_CPU(float);
+REGISTER_CPU(double);
 
 
 // Register the GPU kernels.

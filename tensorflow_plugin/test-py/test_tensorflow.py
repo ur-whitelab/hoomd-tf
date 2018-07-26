@@ -25,8 +25,15 @@ class test_simple(unittest.TestCase):
         assert result < 10**-10
 
     def test_tensor_to_ipc(self):
-        pass
-
+        tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
+        shape = [8]
+        data = np.ones(shape, dtype=np.float32)
+        pointer, _ = data.__array_interface__['data']
+        tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc(tf.zeros(shape, dtype=tf.float32), address=pointer, maxsize=np.prod(shape))
+        print(data)
+        with tf.Session() as sess:
+            result = sess.run(tensor_to_ipc)
+        assert np.sum(data) < 10**-10
 
 #class test_compute(unittest.TestCase):
 class test_compute:
