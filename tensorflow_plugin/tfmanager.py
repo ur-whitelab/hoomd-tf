@@ -48,8 +48,10 @@ class TFManager:
 
     def _update(self, sess):
         runs = [self.out_node]
-        #pf = self.nlist#tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
-        #runs += [tf.Print(pf, [pf], summarize=288), tf.Print(self.positions, [self.positions], summarize=288)]
+        #for i in tf.get_default_graph().get_operations():
+        #    print(i.name)
+        #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
+        #runs += [tf.Print(pf, [pf], summarize=288)]
         if self.debug:
             runs += [self.summaries]
         result = sess.run(runs)

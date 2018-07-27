@@ -11,6 +11,23 @@ import tensorflow as tf
 
 #TODO: write test for changing particle number dynamically
 
+def compute_forces(system, rcut):
+    '''1 / r^2 force'''
+    snapshot = system.take_snapshot()
+    position = snapshot.particles.position
+    N = len(position)
+    forces = np.zeros((N, 3))
+    for i in range(N):
+        for j in range(i + 1, N):
+            r = position[j] - position[i]
+            r = np.array(snapshot.box.min_image(r))
+            rd = np.sqrt(np.sum(r**2))
+            if rd <= rcut:
+                f = -r / rd
+                forces[i, :] += f
+                forces[j, :] -= f
+    return forces
+
 class test_ipc(unittest.TestCase):
     def test_ipc_to_tensor(self):
         ipc_to_tensor_module = hoomd.tensorflow_plugin.tfmanager.load_op_library('ipc2tensor')
@@ -46,7 +63,7 @@ class test_builder(unittest.TestCase):
                 zeros = tf.zeros(tf.shape(nlist))
                 real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
             forces = tf.reduce_sum(real_fr, axis=1, name='forces')
-        graph.save(forces, '/tmp/model')
+        graph.save(forces, '/tmp/test-simple-potential-model')
 
         #check graph info
         with open('/tmp/model/graph_info.p', 'rb') as f:
@@ -54,9 +71,18 @@ class test_builder(unittest.TestCase):
             assert gi['forces'] != 'forces:0'
             assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
 
+    def disabled_test_gradient_potential(self):
+        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
+        with tf.name_scope('force-calc') as scope:
+            nlist = graph.nlist[:, :, :3]
+            neighs_rs = tf.norm(nlist, axis=1)
+            energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
+        forces = graph.compute_forces(energy)
+        graph.save(forces, '/tmp/test-gradient-potential-model')
+
 
 class test_compute(unittest.TestCase):
-    def test_compute_force_overwrite(self):
+    def disabled_test_compute_force_overwrite(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -67,32 +93,17 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        #This assumes you have run the code in models/test-model/build.py
-        save_loc = '/tmp/model'
-        #
-        def compute_forces(system):
-            snapshot = system.take_snapshot()
-            position = snapshot.particles.position
-            forces = np.zeros((N, 3))
-            for i in range(N):
-                for j in range(i + 1, N):
-                    r = position[j] - position[i]
-                    r = np.array(snapshot.box.min_image(r))
-                    rd = np.sqrt(np.sum(r**2))
-                    if rd <= rcut:
-                        f = -r / rd
-                        forces[i, :] += f
-                        forces[j, :] -= f
-            return forces
+        #This assumes you have succeeded in the above test_builder suite
+        save_loc = '/tmp/test-simple-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=True)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False)
         for i in range(3):
             hoomd.run(1)
-            py_forces = compute_forces(system)
+            py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
-    def test_compute_force_ignore(self):
+    def test_gradient_potential_forces(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -103,8 +114,29 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        #This assumes you have run the code in models/test-model/build.py
-        save_loc = '/tmp/model'
+        #This assumes you have succeeded in the above test_builder suite
+        save_loc = '/tmp/test-gradient-potential-model'
+
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False)
+        for i in range(3):
+            hoomd.run(1)
+            py_forces = compute_forces(system, rcut)
+            for j in range(N):
+                np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
+
+    def disabled_test_compute_force_ignore(self):
+        hoomd.context.initialize()
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+        nlist = hoomd.md.nlist.cell(check_period = 1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+
+        #This assumes you have succeeded in the above test_builder suite
+        save_loc = '/tmp/test-simple-potential-model'
 
         tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False, force_mode='ignore')
         for i in range(3):
