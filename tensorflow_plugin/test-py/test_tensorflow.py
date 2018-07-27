@@ -14,7 +14,7 @@ import tensorflow as tf
 class test_ipc(unittest.TestCase):
     def test_ipc_to_tensor(self):
         ipc_to_tensor_module = hoomd.tensorflow_plugin.tfmanager.load_op_library('ipc2tensor')
-        shape = [4, 2, 3, 12]
+        shape = [9, 4, 8]
         data = np.array(np.random.random_sample(shape), dtype=np.float32)
         pointer, _ = data.__array_interface__['data']
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor(address=pointer, T=np.float32, shape=shape)
@@ -26,7 +26,7 @@ class test_ipc(unittest.TestCase):
 
     def test_tensor_to_ipc(self):
         tensor_to_ipc_module = hoomd.tensorflow_plugin.tfmanager.load_op_library('tensor2ipc')
-        shape = [8]
+        shape = [8, 3, 2]
         data = np.ones(shape, dtype=np.float32)
         pointer, _ = data.__array_interface__['data']
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc(tf.zeros(shape, dtype=tf.float32), address=pointer, maxsize=np.prod(shape))
@@ -34,9 +34,8 @@ class test_ipc(unittest.TestCase):
             result = sess.run(tensor_to_ipc)
         assert np.sum(data) < 10**-10
 
-#class test_builder(unittest.TestCase):
-class test_builder:
-    def test_simple_potential(self):
+class test_builder(unittest.TestCase):
+    def disabled_test_simple_potential(self):
         graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
         with tf.name_scope('force-calc') as scope:
             nlist = graph.nlist[:, :, :3]
@@ -57,7 +56,6 @@ class test_builder:
 
 
 class test_compute(unittest.TestCase):
-#class test_compute:
     def test_compute_force_overwrite(self):
         hoomd.context.initialize()
         N = 3 * 3
@@ -87,7 +85,7 @@ class test_compute(unittest.TestCase):
                         forces[j, :] -= f
             return forces
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=True)
         for i in range(3):
             hoomd.run(1)
             py_forces = compute_forces(system)

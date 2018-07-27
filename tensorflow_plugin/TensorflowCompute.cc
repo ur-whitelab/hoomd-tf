@@ -164,14 +164,14 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
             buffer[i * _nneighs + nnoffset[i]].x = dx.x;
             buffer[i * _nneighs + nnoffset[i]].y = dx.y;
             buffer[i * _nneighs + nnoffset[i]].z = dx.z;
-            buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[k].w;
+            buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
             nnoffset[i]++;
 
             if(m_nlist->getStorageMode() == NeighborList::half) {
-                buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
-                buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
-                buffer[k * _nneighs + nnoffset[k]].z = -dx.z;
-                buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[i].w;
+                buffer[k * _nneighs + nnoffset[k]].x =  -dx.x;
+                buffer[k * _nneighs + nnoffset[k]].y =  -dx.y;
+                buffer[k * _nneighs + nnoffset[k]].z =  -dx.z;
+                buffer[k * _nneighs + nnoffset[k]].w =  h_pos.data[k].w;
                 nnoffset[k]++;
             }
         }
@@ -219,6 +219,7 @@ void export_TensorflowCompute(pybind11::module& m)
         .def("get_positions_array", &TensorflowCompute::get_positions_array, pybind11::return_value_policy::take_ownership)
         .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
         .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)
+        .def("is_double_precision", &TensorflowCompute::is_double_precision)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("overwrite", FORCE_MODE::overwrite)

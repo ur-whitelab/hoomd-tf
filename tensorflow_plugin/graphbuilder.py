@@ -31,6 +31,7 @@ class GraphBuilder:
                         'model_directory': model_directory,
                         'forces': self.forces.name,
                         'positions': self.positions.name,
-                        'nlist': self.nlist.name}
+                        'nlist': self.nlist.name,
+                        'dtype': self.nlist.dtype}
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

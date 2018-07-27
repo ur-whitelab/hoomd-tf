@@ -2,8 +2,8 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle
 
-def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, debug=True):
-    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug)
+def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, dtype, debug=True):
+    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, dtype, debug)
 
     tfm.start_loop()
 
@@ -18,7 +18,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, debug):
+    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, dtype, debug):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -33,12 +33,12 @@ class TFManager:
         self.debug = debug
         self.step = 0
         self.graph_info = graph_info
+        self.dtype = dtype
 
-        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}'.format(id(positions_buffer),id(forces_buffer)))
+        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(id(positions_buffer),id(forces_buffer), dtype))
         self.model_directory = self.graph_info['model_directory']
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
-
 
         self._prepare_graph()
         self._prepare_forces()
@@ -49,7 +49,7 @@ class TFManager:
     def _update(self, sess):
         runs = [self.out_node]
         #pf = self.nlist#tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
-        #runs += [tf.Print(pf, [pf], summarize=288)]
+        #runs += [tf.Print(pf, [pf], summarize=288), tf.Print(self.positions, [self.positions], summarize=288)]
         if self.debug:
             runs += [self.summaries]
         result = sess.run(runs)
@@ -60,12 +60,16 @@ class TFManager:
     def _prepare_graph(self):
         ipc_to_tensor_module = load_op_library('ipc2tensor')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
-        #need to convert out scalar4 memory address to an integer
-        #longlong should be int64
+
         self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
         self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
-        self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=tf.float32, name='positions-input')
-        self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=tf.float32, name='nlist-input')
+        self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
+        self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
+        #now cast if graph dtype are different
+        if self.graph_info['dtype'] != self.dtype:
+            self.positions = tf.cast(self.positions, self.graph_info['dtype'])
+            self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
+
         #now insert into graph
         try:
             self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={self.graph_info['nlist']: self.nlist,
@@ -77,7 +81,8 @@ class TFManager:
         #insert the output forces
         try:
             out = tf.get_default_graph().get_tensor_by_name(self.graph_info['forces'])
-            self.forces = out
+            #make sure forces will be output in correct precision to hoomd
+            self.forces = tf.cast(out, self.dtype)
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
         tensor_to_ipc_module = load_op_library('tensor2ipc')
@@ -103,7 +108,7 @@ class TFManager:
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             if self.debug:
                 from tensorflow.python import debug as tf_debug
-                sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
+                #sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
                 self._attach_tensorboard(sess)
                 self.log.info('You must (first!) attach tensorboard by running '
                             'tensorboard --logdir {} --debugger_port 6064'

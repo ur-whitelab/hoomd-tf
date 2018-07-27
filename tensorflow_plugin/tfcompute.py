@@ -83,6 +83,11 @@ class tensorflow(hoomd.compute._compute):
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
 
+        #get double vs single precision
+        self.dtype = tf.float32
+        if self.cpp_force.is_double_precision():
+            self.dtype = tf.double
+
         #adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
         hoomd.context.current.forces.append(self)
@@ -133,6 +138,7 @@ class tensorflow(hoomd.compute._compute):
                                           self.cpp_force.get_positions_buffer(),
                                           self.cpp_force.get_nlist_buffer(),
                                           self.cpp_force.get_forces_buffer(),
+                                          self.dtype,
                                           self.debug_mode))
 
         self.tfm.start()

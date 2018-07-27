@@ -64,6 +64,14 @@ class TensorflowCompute : public ForceCompute
         int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
         int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
 
+        bool is_double_precision() const {
+            #ifdef SINGLE_PRECISION
+            return false;
+            #else
+            return true;
+            #endif //SINGLE_PRECISION
+        }
+
         std::vector<Scalar4> get_forces_array() const;
         std::vector<Scalar4> get_nlist_array() const;
         std::vector<Scalar4> get_positions_array() const;
