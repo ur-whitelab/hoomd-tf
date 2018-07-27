@@ -41,13 +41,17 @@ class TFManager:
         self.nneighs = self.graph_info['NN']
 
         self._prepare_graph()
-        self._prepare_forces()
-
+        if graph_info['output_forces']:
+            self.log.info('This TF Graph can modify forces.')
+            self._prepare_forces()
+        else:
+            self.log.info('This TF Graph will not modify forces.')
+            self.out_node = tf.get_default_graph().get_tensor_by_name(self.graph_info['out_node'])
 
 
 
     def _update(self, sess):
-        runs = [self.out_node]
+        runs = [tf.Print(self.out_node, [self.out_node], summarize=44)]
         #for i in tf.get_default_graph().get_operations():
         #    print(i.name)
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
@@ -63,10 +67,19 @@ class TFManager:
         ipc_to_tensor_module = load_op_library('ipc2tensor')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
 
-        self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
-        self.log.info('initializing ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
+        self.log.info('initializing  positions ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
+        self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
         self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
+
+        input_map = {self.graph_info['nlist']: self.nlist, self.graph_info['positions'] : self.positions}
+
+        if not self.graph_info['output_forces']:
+            #if the graph outputs forces
+            self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
+            self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
+            input_map[self.graph_info['forces']] = self.forces
+
         #now cast if graph dtype are different
         if self.graph_info['dtype'] != self.dtype:
             self.positions = tf.cast(self.positions, self.graph_info['dtype'])
@@ -74,8 +87,7 @@ class TFManager:
 
         #now insert into graph
         try:
-            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map={self.graph_info['nlist']: self.nlist,
-                                                               self.graph_info['positions'] : self.positions})
+            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map=input_map)
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
 

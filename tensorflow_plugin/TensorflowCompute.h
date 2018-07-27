@@ -41,7 +41,7 @@
 */
 
 enum class FORCE_MODE{
-    overwrite, add, ignore
+    overwrite, add, ignore, output
 };
 
 
@@ -60,7 +60,13 @@ class TensorflowCompute : public ForceCompute
         //used if particle number changes
         void reallocate();
 
-        int64_t get_forces_buffer() const { return reinterpret_cast<int64_t> (_input_buffer);}
+        int64_t get_forces_buffer() const {
+            if(_force_mode == FORCE_MODE::output)
+                //if forces are being output, get their location
+                return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN() * (1 + _nneighs));
+            return reinterpret_cast<int64_t> (_input_buffer);
+        }
+
         int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
         int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
 

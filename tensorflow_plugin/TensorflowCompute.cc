@@ -50,7 +50,12 @@ void TensorflowCompute::reallocate() {
     if(_output_buffer)
         munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
     //set new size
+    //             positions         neighbors
     _buffer_size = m_pdata->getN() + m_pdata->getN() * _nneighs;
+    if(_force_mode == FORCE_MODE::output) {
+        //add space for forces
+        _buffer_size += m_pdata->getN();
+    }
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
@@ -101,7 +106,11 @@ void TensorflowCompute::computeForces(unsigned int timestep)
                 h_force.data[i].x += _input_buffer[i].x;
                 h_force.data[i].y += _input_buffer[i].y;
                 h_force.data[i].z += _input_buffer[i].z;
+                //w value is unused currently, until I learn more about it...TODO
             }
+            break;
+        case FORCE_MODE::output: //output the forces, instead of using them from input buffer
+            memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
             break;
         case FORCE_MODE::ignore:
             break;
@@ -224,6 +233,7 @@ void export_TensorflowCompute(pybind11::module& m)
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("overwrite", FORCE_MODE::overwrite)
         .value("add", FORCE_MODE::add)
+        .value("output", FORCE_MODE::output)
         .value("ignore", FORCE_MODE::ignore);
     }
 

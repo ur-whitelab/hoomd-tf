@@ -74,6 +74,8 @@ class tensorflow(hoomd.compute._compute):
         force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite
         if force_mode == 'add':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.add
+        elif force_mode == 'output':
+            force_mode_code = _tensorflow_plugin.FORCE_MODE.output
         elif force_mode == 'none' or force_mode == 'ignore' or force_mode is None:
             force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
 

@@ -63,7 +63,7 @@ class test_builder(unittest.TestCase):
                 zeros = tf.zeros(tf.shape(nlist))
                 real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
             forces = tf.reduce_sum(real_fr, axis=1, name='forces')
-        graph.save(forces, '/tmp/test-simple-potential-model')
+        graph.save(force_tensor=forces, model_directory='/tmp/test-simple-potential-model')
 
         #check graph info
         with open('/tmp/model/graph_info.p', 'rb') as f:
@@ -78,7 +78,14 @@ class test_builder(unittest.TestCase):
             neighs_rs = tf.norm(nlist, axis=1)
             energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
         forces = graph.compute_forces(energy)
-        graph.save(forces, '/tmp/test-gradient-potential-model')
+        graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model')
+
+    def disabled_test_noforce_graph(self):
+        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1, output_forces=False)
+        nlist = graph.nlist[:, :, :3]
+        neighs_rs = tf.norm(nlist, axis=1)
+        energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
+        graph.save('/tmp/test-noforce-model', out_node=energy)
 
 
 class test_compute(unittest.TestCase):
@@ -103,7 +110,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
-    def test_gradient_potential_forces(self):
+    def disabled_test_gradient_potential_forces(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -139,6 +146,26 @@ class test_compute(unittest.TestCase):
         save_loc = '/tmp/test-simple-potential-model'
 
         tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False, force_mode='ignore')
+        for i in range(3):
+            hoomd.run(1)
+            for j in range(N):
+                np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
+
+    def test_compute_noforce_graph(self):
+        hoomd.context.initialize()
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+        nlist = hoomd.md.nlist.cell(check_period = 1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+
+        #This assumes you have succeeded in the above test_builder suite
+        save_loc = '/tmp/test-noforce-model'
+
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, nneighbor_cutoff=NN, r_cut=rcut, debug_mode=False, force_mode='output')
         for i in range(3):
             hoomd.run(1)
             for j in range(N):

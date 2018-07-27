@@ -3,13 +3,18 @@ import os, pickle
 
 class GraphBuilder:
     '''Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations'''
-    def __init__(self, atom_number, nneighbor_cutoff):
+
+    def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):
+        '''output_forces -> should the graph output forces'''
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
         self.positions = tf.zeros ([atom_number, 4], name='positions')
+        if not output_forces:
+            self.forces = tf.zeros([atom_number, 4], name='forces')
+        self.output_forces = output_forces
 
-    def compute_forces(self, energy, overwrite_w=True):
+    def compute_forces(self, energy, overwrite_w=True, name='forces'):
 
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
@@ -33,7 +38,7 @@ class GraphBuilder:
         #make sure w doesn't change
         if overwrite_w:
             forces = forces[:,:3]
-        return tf.identity(forces, name='forces')
+        return tf.identity(forces, name='computed-forces')
 
     @staticmethod
     def safe_div(numerator, denominator, name):
@@ -54,18 +59,27 @@ class GraphBuilder:
 
 
 
-    def save(self, force_tensor, model_directory):
+    def save(self, model_directory, force_tensor = None, out_node=None):
 
-        assert force_tensor.shape[0] == self.atom_number
-        if force_tensor.shape[1] == 3:
-            with tf.name_scope('add-ws'):
-                force_tensor = tf.concat([force_tensor, tf.reshape(self.positions[:,3], [-1,  1])], axis=1, name='forces')
+        if force_tensor is None and self.output_forces:
+            raise ValueError('You must provide force_tensor if you are outputing forces')
 
-        self.forces = force_tensor
-        if force_tensor.name != 'force:0':
-            self.forces = tf.identity(force_tensor, name='force')
+        if self.output_forces:
+            if force_tensor.shape[0] != self.atom_number:
+                raise ValueError('Dimension of force_tensor should be same as atom number')
 
-        tf.Variable(self.forces, name='force-save')
+            if force_tensor.shape[1] == 3:
+                #add w information if it was removed
+                with tf.name_scope('add-ws'):
+                    force_tensor = tf.concat([force_tensor, tf.reshape(self.positions[:,3], [-1,  1])], axis=1, name='forces')
+
+            self.forces = force_tensor
+            tf.Variable(self.forces, name='force-save')
+        else:
+            if out_node is None:
+                raise ValueError('You must provide a node to run (out_node) if you are not outputting forces')
+            tf.Variable(out_node, name='force-save')
+
 
         with tf.Session() as sess:
             saver = tf.train.Saver()
@@ -78,6 +92,8 @@ class GraphBuilder:
                         'forces': self.forces.name,
                         'positions': self.positions.name,
                         'nlist': self.nlist.name,
-                        'dtype': self.nlist.dtype}
+                        'dtype': self.nlist.dtype,
+                        'output_forces': self.output_forces,
+                        'out_node': None if out_node is None else out_node.name}
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
