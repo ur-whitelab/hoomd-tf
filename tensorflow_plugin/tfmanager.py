@@ -51,11 +51,12 @@ class TFManager:
 
 
     def _update(self, sess):
-        runs = [tf.Print(self.out_node, [self.out_node], summarize=44)]
+        #runs = [tf.Print(self.out_node, [self.out_node], summarize=44)]
         #for i in tf.get_default_graph().get_operations():
         #    print(i.name)
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #runs += [tf.Print(pf, [pf], summarize=288)]
+        runs = [self.out_node]
         if self.debug:
             runs += [self.summaries]
         result = sess.run(runs)
@@ -71,6 +72,10 @@ class TFManager:
         self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
         self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
         self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
+        #now cast if graph dtype are different
+        if self.graph_info['dtype'] != self.dtype:
+            self.positions = tf.cast(self.positions, self.graph_info['dtype'])
+            self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
 
         input_map = {self.graph_info['nlist']: self.nlist, self.graph_info['positions'] : self.positions}
 
@@ -79,11 +84,8 @@ class TFManager:
             self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
             self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
             input_map[self.graph_info['forces']] = self.forces
-
-        #now cast if graph dtype are different
-        if self.graph_info['dtype'] != self.dtype:
-            self.positions = tf.cast(self.positions, self.graph_info['dtype'])
-            self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
+            if self.graph_info['dtype'] != self.dtype:
+                self.forces = tf.cast(self.forces, self.graph_info['dtype'])
 
         #now insert into graph
         try:
@@ -121,12 +123,12 @@ class TFManager:
             #resore model checkpoint
             self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             if self.debug:
-                from tensorflow.python import debug as tf_debug
+                #from tensorflow.python import debug as tf_debug
                 #sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
+                #self.log.info('You must (first!) attach tensorboard by running '
+                #            'tensorboard --logdir {} --debugger_port 6064'
+                #            .format(os.path.join(self.model_directory, 'tensorboard')))
                 self._attach_tensorboard(sess)
-                self.log.info('You must (first!) attach tensorboard by running '
-                            'tensorboard --logdir {} --debugger_port 6064'
-                            .format(os.path.join(self.model_directory, 'tensorboard')))
             while True:
                 self.barrier.wait()
                 self.lock.acquire()
