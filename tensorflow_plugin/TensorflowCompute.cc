@@ -232,9 +232,10 @@ void export_TensorflowCompute(pybind11::module& m)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("overwrite", FORCE_MODE::overwrite)
-        .value("add", FORCE_MODE::add)
         .value("output", FORCE_MODE::output)
-        .value("ignore", FORCE_MODE::ignore);
+        .value("add", FORCE_MODE::add)
+        .value("ignore", FORCE_MODE::ignore)
+    ;
     }
 
 // ********************************

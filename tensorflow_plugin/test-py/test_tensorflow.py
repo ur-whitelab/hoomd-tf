@@ -51,45 +51,8 @@ class test_ipc(unittest.TestCase):
             result = sess.run(tensor_to_ipc)
         assert np.sum(data) < 10**-10
 
-class test_builder(unittest.TestCase):
-    def disabled_test_simple_potential(self):
-        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
-        with tf.name_scope('force-calc') as scope:
-            nlist = graph.nlist[:, :, :3]
-            neighs_rs = tf.norm(nlist, axis=1, keepdims=True)
-            #no need to use netwon's law because nlist should be double counted
-            fr = tf.multiply(-1.0, tf.multiply(tf.reciprocal(neighs_rs), nlist), name='nan-pairwise-forces')
-            with tf.name_scope('remove-nans') as scope:
-                zeros = tf.zeros(tf.shape(nlist))
-                real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
-            forces = tf.reduce_sum(real_fr, axis=1, name='forces')
-        graph.save(force_tensor=forces, model_directory='/tmp/test-simple-potential-model')
-
-        #check graph info
-        with open('/tmp/model/graph_info.p', 'rb') as f:
-            gi = pickle.load(f)
-            assert gi['forces'] != 'forces:0'
-            assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
-
-    def disabled_test_gradient_potential(self):
-        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
-        with tf.name_scope('force-calc') as scope:
-            nlist = graph.nlist[:, :, :3]
-            neighs_rs = tf.norm(nlist, axis=1)
-            energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
-        forces = graph.compute_forces(energy)
-        graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model')
-
-    def disabled_test_noforce_graph(self):
-        graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1, output_forces=False)
-        nlist = graph.nlist[:, :, :3]
-        neighs_rs = tf.norm(nlist, axis=1)
-        energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
-        graph.save('/tmp/test-noforce-model', out_node=energy)
-
-
 class test_compute(unittest.TestCase):
-    def disabled_test_compute_force_overwrite(self):
+    def test_compute_force_overwrite(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -110,7 +73,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
-    def disabled_test_gradient_potential_forces(self):
+    def test_gradient_potential_forces(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -131,7 +94,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
-    def disabled_test_compute_force_ignore(self):
+    def test_compute_force_ignore(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1

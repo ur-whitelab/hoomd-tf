@@ -80,7 +80,6 @@ class GraphBuilder:
                 raise ValueError('You must provide a node to run (out_node) if you are not outputting forces')
             tf.Variable(out_node, name='force-save')
 
-
         with tf.Session() as sess:
             saver = tf.train.Saver()
             sess.run(tf.global_variables_initializer())
