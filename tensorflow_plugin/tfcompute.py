@@ -31,7 +31,7 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite', nneighbor_cutoff = 4, log_filename='tf_manager.log', debug_mode=False):
+    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite', log_filename='tf_manager.log', debug_mode=False):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -45,9 +45,6 @@ class tensorflow(hoomd.compute._compute):
                 if self.graph_info['N'] != len(hoomd.context.current.group_all):
                     hoomd.context.msg.error('Number of atoms must be same in TF model and HOOMD system\n')
                     raise RuntimeError('Error creating TF')
-                if self.graph_info['NN'] != nneighbor_cutoff:
-                    hoomd.context.msg.error('Number of neighbors to consider must be the same in TF model and HOOMD system\n')
-                    raise RuntimeError('Error creating TF')
         except IOError:
             hoomd.context.msg.error('Unable to load model in directory {}'.format(tf_model_directory))
             raise RuntimeError('Error creating TF')
@@ -58,7 +55,7 @@ class tensorflow(hoomd.compute._compute):
         self.cpp_force = None
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
-        self.nneighbor_cutoff = nneighbor_cutoff
+        self.nneighbor_cutoff = self.graph_info['NN']
         self.tf_model_directory = tf_model_directory
         nlist.subscribe(self.rcut)
         self.r_cut = r_cut
@@ -81,9 +78,9 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff, force_mode_code)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff, force_mode_code)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff)
 
         #get double vs single precision
         self.dtype = tf.float32
