@@ -84,6 +84,7 @@ Due to the side-effects of importing tensorflow, you must build and save your gr
 Issues
 ====
 
-* Add GPU
+* Add GPU!
 * Domain decomposition testing
-* Deal with nlist overflow being unsorted.
+* Deal with nlist overflow being unsorted. (sort of done)
+* treat virial and potential energy

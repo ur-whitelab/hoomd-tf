@@ -56,6 +56,11 @@ void TensorflowCompute::reallocate() {
         //add space for forces
         _buffer_size += m_pdata->getN();
     }
+
+    //allocate space for virial by making sure buffer is big enough to accomodate.
+    //virial is a 3x3 but elements are scalar4s. TODO: do this more cleanly
+    _buffer_size = std::max(_buffer_size, m_pdata->getN() + 3 * 3 / 4 + 1);
+
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
@@ -124,6 +129,10 @@ void TensorflowCompute::computeForces(unsigned int timestep)
     if (m_prof) m_prof->pop();
 
     if (m_prof) m_prof->pop();
+}
+
+void TensorflowCompute::receiveVirial() {
+    ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
 }
 
 void TensorflowCompute::sendPositions() {
