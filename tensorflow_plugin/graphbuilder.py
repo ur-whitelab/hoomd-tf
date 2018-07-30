@@ -41,7 +41,7 @@ class GraphBuilder:
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
-    def safe_div(numerator, denominator, name):
+    def safe_div(numerator, denominator, name='graphbuild-safe-div'):
         '''Divides two values, returning 0 if the denominator is <= 0.
         Args:
             numerator: A real `Tensor`.

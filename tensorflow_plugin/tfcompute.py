@@ -33,6 +33,9 @@ class tensorflow(hoomd.compute._compute):
     # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite', log_filename='tf_manager.log', debug_mode=False):
 
+        #so delete won't fail
+        self.tfm = None
+
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
             hoomd.context.msg.error('Cannot create TF before initialization\n')
@@ -43,11 +46,10 @@ class tensorflow(hoomd.compute._compute):
             with open(os.path.join(tf_model_directory, 'graph_info.p'), 'rb') as f:
                 self.graph_info = pickle.load(f)
                 if self.graph_info['N'] != len(hoomd.context.current.group_all):
-                    hoomd.context.msg.error('Number of atoms must be same in TF model and HOOMD system\n')
+                    hoomd.context.msg.error('Number of atoms must be same in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
                     raise RuntimeError('Error creating TF')
-        except IOError:
-            hoomd.context.msg.error('Unable to load model in directory {}'.format(tf_model_directory))
-            raise RuntimeError('Error creating TF')
+        except FileNotFoundError:
+            raise RuntimeError('Unable to load model in directory {}'.format(tf_model_directory))
 
         #I'm not sure if this is necessary following other files
         self.enabled = True

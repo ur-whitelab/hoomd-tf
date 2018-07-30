@@ -2,7 +2,7 @@ import tensorflow as tf
 import os, hoomd.tensorflow_plugin, pickle
 
 
-def test_simple_potential():
+def simple_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -21,7 +21,17 @@ def test_simple_potential():
         assert gi['forces'] != 'forces:0'
         assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
 
-def test_gradient_potential():
+def benchmark_gradient_potential():
+    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 128)
+    nlist = graph.nlist[:, :, :3]
+    #get r
+    r = tf.norm(nlist, axis=1)
+    #compute 1 / r while safely treating r = 0.
+    energy = graph.safe_div(1., r)
+    forces = graph.compute_forces(energy)
+    graph.save(force_tensor=forces, model_directory='/tmp/benchmark-gradient-potential-model')
+
+def gradient_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -30,13 +40,21 @@ def test_gradient_potential():
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model')
 
-def test_noforce_graph():
+def noforce_graph():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=1)
     energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     graph.save('/tmp/test-noforce-model', out_node=energy)
 
-test_noforce_graph()
-test_gradient_potential()
-test_simple_potential()
+def benchmark_nonlist_graph():
+    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 0, output_forces=False)
+    ps = tf.norm(graph.positions, axis=1)
+    energy = graph.safe_div(1. , ps)
+    graph.save('/tmp/benchmark-nonlist-model', out_node=energy)
+
+noforce_graph()
+gradient_potential()
+simple_potential()
+benchmark_gradient_potential()
+benchmark_nonlist_graph()

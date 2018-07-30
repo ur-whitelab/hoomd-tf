@@ -25,7 +25,7 @@ graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
 nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=1)
-#compute 1 / r while safely treating r = 0.
+#compute 1. / r while safely treating r = 0.
 energy = graph.safe_div(1, r)
 forces = graph.compute_forces(energy)
 ```
@@ -48,7 +48,7 @@ graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
 nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=1)
-#compute 1 / r while safely treating r = 0.
+#compute 1. / r while safely treating r = 0.
 energy = graph.safe_div(1, r)
 forces = graph.compute_forces(energy)
 graph.save(force_tensor=forces, model_directory='/tmp/test-coloumbic-potential-model')
@@ -79,3 +79,11 @@ Note on Building and Executing Tensorflow Models in Same Script
 ------
 
 Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it hoomd.
+
+
+Issues
+====
+
+* Add GPU
+* Domain decomposition testing
+* Deal with nlist overflow being unsorted.

@@ -85,18 +85,26 @@ void TensorflowCompute::computeForces(unsigned int timestep)
 {
     if (m_prof) m_prof->push("TensorflowCompute");
 
+    if (m_prof) m_prof->push("TensorflowCompute::Acquire Lock");
     _py_self.attr("start_update")();
+    if (m_prof) m_prof->pop();
 
     //nneighs == 0 send positions only
     sendPositions();
     if(_nneighs > 0)
         sendNeighbors(timestep);
 
-    _py_self.attr("finish_update")();
-
-    //process results from TF
     //TODO: Handle virial (See TablePotential.cc?)
     ArrayHandle<Scalar4> h_force(m_force, access_location::host);
+    if(_force_mode == FORCE_MODE::output) //output the forces, instead of using them from input buffer
+        memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
+
+    if (m_prof) m_prof->push("TensorflowCompute::Acquire Barrier (TF Update)");
+    _py_self.attr("finish_update")();
+    if (m_prof) m_prof->pop();
+
+    //process results from TF
+    if (m_prof) m_prof->push("TensorflowCompute::Force Update");
     switch(_force_mode) {
         case FORCE_MODE::overwrite:
             memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
@@ -109,13 +117,11 @@ void TensorflowCompute::computeForces(unsigned int timestep)
                 //w value is unused currently, until I learn more about it...TODO
             }
             break;
-        case FORCE_MODE::output: //output the forces, instead of using them from input buffer
-            memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
-            break;
+        case FORCE_MODE::output: //already done above
         case FORCE_MODE::ignore:
             break;
     }
-
+    if (m_prof) m_prof->pop();
 
     if (m_prof) m_prof->pop();
 }
@@ -160,6 +166,8 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
         // loop over all of the neighbors of this particle
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
         unsigned int j = 0;
+        if(_nneighs < size)
+            m_exec_conf->msg->error() << "Overflow in nlist!" << std::endl;
         for (; j < std::min(_nneighs, size); j++) {
             // access the index of this neighbor
             unsigned int k = h_nlist.data[head_i + j];
