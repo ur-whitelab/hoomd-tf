@@ -24,7 +24,7 @@ graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
-r = tf.norm(nlist, axis=1)
+r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
 energy = graph.safe_div(1, r)
 forces = graph.compute_forces(energy)
@@ -47,7 +47,7 @@ graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
-r = tf.norm(nlist, axis=1)
+r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
 energy = graph.safe_div(1, r)
 forces = graph.compute_forces(energy)
@@ -87,4 +87,4 @@ Issues
 * Add GPU!
 * Domain decomposition testing
 * Deal with nlist overflow being unsorted. (sort of done)
-* treat virial and potential energy
+* Add virial and potential energy tests

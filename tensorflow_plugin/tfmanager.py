@@ -2,8 +2,8 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle
 
-def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, dtype, debug=True):
-    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, dtype, debug)
+def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, dtype, debug=True):
+    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug)
 
     tfm.start_loop()
 
@@ -18,7 +18,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, log_filename, dtype, debug):
+    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -30,6 +30,7 @@ class TFManager:
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer
+        self.virial_buffer = virial_buffer
         self.debug = debug
         self.step = 0
         self.graph_info = graph_info
@@ -39,6 +40,7 @@ class TFManager:
         self.model_directory = self.graph_info['model_directory']
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
+        self.out_nodes = []
 
         self._prepare_graph()
         if graph_info['output_forces']:
@@ -46,7 +48,9 @@ class TFManager:
             self._prepare_forces()
         else:
             self.log.info('This TF Graph will not modify forces.')
-            self.out_node = tf.get_default_graph().get_tensor_by_name(self.graph_info['out_node'])
+
+        for n in self.graph_info['out_nodes']:
+            self.out_nodes.append(tf.get_default_graph().get_tensor_by_name(n))
 
 
 
@@ -56,7 +60,9 @@ class TFManager:
         #    print(i.name)
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #runs += [tf.Print(pf, [pf], summarize=288)]
-        runs = [self.out_node]
+
+        #make it a copy
+        runs = self.out_nodes[:]
         if self.debug:
             runs += [self.summaries]
         result = sess.run(runs)
@@ -99,12 +105,22 @@ class TFManager:
             out = tf.get_default_graph().get_tensor_by_name(self.graph_info['forces'])
             #make sure forces will be output in correct precision to hoomd
             self.forces = tf.cast(out, self.dtype)
+            if self.graph_info['virial'] is not None:
+                out = tf.get_default_graph().get_tensor_by_name(self.graph_info['virial'])
+                #make sure forces will be output in correct precision to hoomd
+                self.virial = tf.cast(out, self.dtype)
+            else:
+                self.log.warning('No virial computed in graph. Pressure may be inaccurate!')
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
         tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
-        self.out_node = tensor_to_ipc(out, address=self.forces_buffer, maxsize=self.N * 4)
-        self.log.info('initializing tensor_to_ipc at address {:x}'.format(self.forces_buffer))
+        self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer, maxsize=self.N * 4))
+        self.log.info('initializing force tensor_to_ipc at address {:x}'.format(self.forces_buffer))
+        if self.graph_info['virial'] is not None:
+            #virial is Nx3x3
+            self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer, maxsize=self.N * 9))
+            self.log.info('initializing virial tensor_to_ipc at address {:x}'.format(self.virial_buffer))
 
     def _attach_tensorboard(self, sess):
 

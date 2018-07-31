@@ -139,6 +139,7 @@ class tensorflow(hoomd.compute._compute):
                                           self.cpp_force.get_positions_buffer(),
                                           self.cpp_force.get_nlist_buffer(),
                                           self.cpp_force.get_forces_buffer(),
+                                          self.cpp_force.get_virial_buffer(),
                                           self.dtype,
                                           self.debug_mode))
 

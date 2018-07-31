@@ -68,6 +68,7 @@ class TensorflowCompute : public ForceCompute
         }
 
         int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
+        int64_t get_virial_buffer() const {return reinterpret_cast<int64_t> (_input_buffer + m_pdata->getN());}
         int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
 
         bool is_double_precision() const {
@@ -92,11 +93,13 @@ class TensorflowCompute : public ForceCompute
 
         void sendPositions();
         void sendNeighbors(unsigned int timestep);
+        void receiveVirial();
 
         std::shared_ptr<NeighborList> m_nlist;
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
         size_t _buffer_size;
+        size_t _virial_size;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
     };

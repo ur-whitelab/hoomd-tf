@@ -58,8 +58,10 @@ void TensorflowCompute::reallocate() {
     }
 
     //allocate space for virial by making sure buffer is big enough to accomodate.
-    //virial is a 3x3 but elements are scalar4s. TODO: do this more cleanly
-    _buffer_size = std::max(_buffer_size, m_pdata->getN() + 3 * 3 / 4 + 1);
+    //virial is a 3x3 matrix per particle but elements are scalar4s.
+    //hoomd internally uses 6 scalars per particle
+    _virial_size = m_pdata->getN() * (3 * 3 / 4 + 1);
+    _buffer_size = std::max(_buffer_size, m_pdata->getN() + _virial_size);
 
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
@@ -119,20 +121,31 @@ void TensorflowCompute::computeForces(unsigned int timestep)
                 h_force.data[i].x += _input_buffer[i].x;
                 h_force.data[i].y += _input_buffer[i].y;
                 h_force.data[i].z += _input_buffer[i].z;
-                //w value is unused currently, until I learn more about it...TODO
+                //w is potential energy (?) TODO: learn more about this
+                h_force.data[i].w += _input_buffer[i].w;
+
             }
             break;
         case FORCE_MODE::output: //already done above
         case FORCE_MODE::ignore:
             break;
     }
-    if (m_prof) m_prof->pop();
 
-    if (m_prof) m_prof->pop();
+    if (m_prof) m_prof->pop(); //force update
+    if (m_prof) m_prof->pop(); //compute
 }
 
 void TensorflowCompute::receiveVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
+    Scalar* virial_buffer = reinterpret_cast<Scalar*> (_input_buffer + m_pdata->getN());
+    for(unsigned int i = 0; i < m_pdata->getN(); i++) {
+        h_virial.data[0*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 0]; //xx
+        h_virial.data[1*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 1]; //xy
+        h_virial.data[2*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 2]; //xz
+        h_virial.data[3*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 4]; //yy
+        h_virial.data[4*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 5]; //yz
+        h_virial.data[5*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 8]; //zz
+    }
 }
 
 void TensorflowCompute::sendPositions() {
@@ -242,6 +255,7 @@ void export_TensorflowCompute(pybind11::module& m)
         .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
         .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
         .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)
+        .def("get_virial_buffer", &TensorflowCompute::get_virial_buffer, pybind11::return_value_policy::reference)
         .def("get_positions_array", &TensorflowCompute::get_positions_array, pybind11::return_value_policy::take_ownership)
         .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
         .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)

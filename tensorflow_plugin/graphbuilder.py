@@ -9,12 +9,13 @@ class GraphBuilder:
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
+        self.virial = None
         self.positions = tf.zeros ([atom_number, 4], name='positions')
         if not output_forces:
             self.forces = tf.zeros([atom_number, 4], name='forces')
         self.output_forces = output_forces
 
-    def compute_forces(self, energy, overwrite_w=True, name='forces'):
+    def compute_forces(self, energy, name='forces'):
 
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
@@ -28,6 +29,13 @@ class GraphBuilder:
                 zeros = tf.zeros(tf.shape(nlist_forces))
                 nlist_forces = tf.where(tf.is_nan(nlist_forces), zeros, nlist_forces, name='nlist-pairwise-force-gradient')
                 nlist_reduce = tf.reduce_sum(nlist_forces, axis=1, name='nlist-force-gradient')
+                #now treat virial
+                nlist3 = self.nlist[:, :, :3]
+                rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
+                #F / rs
+                F_rs = self.safe_div(tf.norm(nlist_forces, axis=2), tf.norm(nlist3, axis=2))
+                #sum over neighbors: F / r * (r (outter) r)
+                self.virial = tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
         if pos_forces is not None and nlist_forces is not None:
             forces = tf.add(nlist_reduce, pos_forces, name='forces-badw')
         elif pos_forces is None:
@@ -35,9 +43,17 @@ class GraphBuilder:
         else:
             forces = pos_forces
 
-        #make sure w doesn't change
-        if overwrite_w:
-            forces = forces[:,:3]
+        #set w to be potential energy
+        if len(energy.shape) > 1:
+            energy = tf.reduce_sum(energy, axis=tf.range(1, tf.rank(energy.shape)))
+            forces = tf.concat([forces[:,:3], energy], -1)
+        elif len(energy.shape) == 1 and energy.shape[0] == 1:
+            forces[:,:3] = tf.concat([forces[:,:3], tf.tile(energy, forces.shape[0])], -1)
+        elif energy.shape[0] == forces.shape[0]:
+            forces[:,:3] = tf.concat([forces[:,:3], energy], -1)
+        else:
+            raise ValueError('energy must either be scalar or have first dimension of atom_number')
+
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
@@ -59,7 +75,7 @@ class GraphBuilder:
 
 
 
-    def save(self, model_directory, force_tensor = None, out_node=None):
+    def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[]):
 
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are outputing forces')
@@ -75,10 +91,17 @@ class GraphBuilder:
 
             self.forces = force_tensor
             tf.Variable(self.forces, name='force-save')
+            if virial is None:
+                if self.virial is not None:
+                    virial = self.virial
+                else:
+                    print('WARNING: You did not provide a virial for {}, so per particle virials will not be correct'.format(model_directory))
+            else:
+                assert virial.shape == [self.atom_number, self.nneighbor_cutoff, 3, 3]
         else:
-            if out_node is None:
-                raise ValueError('You must provide a node to run (out_node) if you are not outputting forces')
-            tf.Variable(out_node, name='force-save')
+            if len(out_nodes) == 0:
+                raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
+            tf.Variable(out_nodes[0], name='force-save')
 
         with tf.Session() as sess:
             saver = tf.train.Saver()
@@ -90,9 +113,11 @@ class GraphBuilder:
                         'model_directory': model_directory,
                         'forces': self.forces.name,
                         'positions': self.positions.name,
+                        'virial': None if virial is None else virial.name,
                         'nlist': self.nlist.name,
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
-                        'out_node': None if out_node is None else out_node.name}
+                        'out_nodes': [x.name for x in out_nodes]
+                        }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

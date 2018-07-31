@@ -6,7 +6,7 @@ def simple_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
-        neighs_rs = tf.norm(nlist, axis=1, keepdims=True)
+        neighs_rs = tf.norm(nlist, axis=2, keepdims=True)
         #no need to use netwon's law because nlist should be double counted
         fr = tf.multiply(-1.0, tf.multiply(tf.reciprocal(neighs_rs), nlist), name='nan-pairwise-forces')
         with tf.name_scope('remove-nans') as scope:
@@ -25,7 +25,7 @@ def benchmark_gradient_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 128)
     nlist = graph.nlist[:, :, :3]
     #get r
-    r = tf.norm(nlist, axis=1)
+    r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
     energy = graph.safe_div(1., r)
     forces = graph.compute_forces(energy)
@@ -35,23 +35,23 @@ def gradient_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
-        neighs_rs = tf.norm(nlist, axis=1)
+        neighs_rs = tf.norm(nlist, axis=2)
         energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model')
+    graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph():
     graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
-    neighs_rs = tf.norm(nlist, axis=1)
+    neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
-    graph.save('/tmp/test-noforce-model', out_node=energy)
+    graph.save('/tmp/test-noforce-model', out_nodes=[energy])
 
 def benchmark_nonlist_graph():
     graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 0, output_forces=False)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
-    graph.save('/tmp/benchmark-nonlist-model', out_node=energy)
+    graph.save('/tmp/benchmark-nonlist-model', out_nodes=[energy])
 
 noforce_graph()
 gradient_potential()
