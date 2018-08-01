@@ -90,4 +90,4 @@ Issues
 * Add GPU!
 * Domain decomposition testing
 * Deal with nlist overflow being unsorted. (sort of done)
-* Add virial and potential energy tests
+* Make virial and potential energy tests pass

@@ -36,7 +36,7 @@ class TFManager:
         self.graph_info = graph_info
         self.dtype = dtype
 
-        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(id(positions_buffer),id(forces_buffer), dtype))
+        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(positions_buffer,forces_buffer, dtype))
         self.model_directory = self.graph_info['model_directory']
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
@@ -120,11 +120,11 @@ class TFManager:
         tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
         self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer, maxsize=self.N * 4))
-        self.log.info('initializing force tensor_to_ipc at address {:x}'.format(self.forces_buffer))
+        self.log.info('initializing force tensor_to_ipc: {:x} to {:x}'.format(self.forces_buffer, self.forces_buffer + self.N * 4))
         if self.graph_info['virial'] is not None:
             #virial is Nx3x3
             self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer, maxsize=self.N * 9))
-            self.log.info('initializing virial tensor_to_ipc at address {:x}'.format(self.virial_buffer))
+            self.log.info('initializing virial tensor_to_ipc: {:x} to {:x}'.format(self.virial_buffer, self.virial_buffer + self.N * 9))
 
     def _attach_tensorboard(self, sess):
 

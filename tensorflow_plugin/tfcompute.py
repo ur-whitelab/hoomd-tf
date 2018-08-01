@@ -58,10 +58,14 @@ class tensorflow(hoomd.compute._compute):
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
+        print('neighs', self.nneighbor_cutoff, 'atoms', len(hoomd.context.current.group_all))
         self.tf_model_directory = tf_model_directory
         nlist.subscribe(self.rcut)
         self.r_cut = r_cut
         self.debug_mode = debug_mode
+
+        #activate neighbor list
+        nlist.update_rcut()
 
         hoomd.util.print_status_line()
 

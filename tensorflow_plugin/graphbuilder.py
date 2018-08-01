@@ -53,9 +53,9 @@ class GraphBuilder:
             energy = tf.reshape(tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))), [forces.shape[0], 1])
             forces = tf.concat([forces[:,:3], energy], -1)
         elif len(energy.shape) == 1 and energy.shape[0] == 1:
-            forces[:,:3] = tf.concat([forces[:,:3], tf.tile(energy, forces.shape[0])], -1)
+            forces = tf.concat([forces[:,:3], tf.tile(energy, forces.shape[0])], -1)
         elif energy.shape[0] == forces.shape[0]:
-            forces[:,:3] = tf.concat([forces[:,:3], energy], -1)
+            forces = tf.concat([forces[:,:3], tf.reshape(energy, [forces.shape[0], 1])], -1)
         else:
             raise ValueError('energy must either be scalar or have first dimension of atom_number')
         return tf.identity(forces, name='computed-forces')

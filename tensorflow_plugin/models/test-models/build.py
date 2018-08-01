@@ -22,10 +22,9 @@ def simple_potential():
         assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
 
 def benchmark_gradient_potential():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 128)
+    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     #get r
-    print(nlist.shape)
     r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
     energy = tf.reduce_sum(graph.safe_div(1., r), axis=1)
@@ -39,7 +38,6 @@ def gradient_potential():
         neighs_rs = tf.norm(nlist, axis=2)
         energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     forces = graph.compute_forces(energy)
-    print(forces, forces.shape)
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph():
@@ -52,11 +50,29 @@ def noforce_graph():
 def benchmark_nonlist_graph():
     graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 0, output_forces=False)
     ps = tf.norm(graph.positions, axis=1)
-    energy = tf.reduce_sum(graph.safe_div(1. , ps), axis=1)
+    energy = graph.safe_div(1. , ps)
     graph.save('/tmp/benchmark-nonlist-model', out_nodes=[energy])
+
+def lj_graph(N, NN, name):
+    graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
+    nlist = graph.nlist[:, :, :3]
+    #get r
+    r = tf.norm(nlist, axis=2)
+    #compute 1 / r while safely treating r = 0.
+    #pairwise energy. Double count -> divide by 2
+    p_energy = 0.5 * 4.0 * (graph.safe_div(1., r**12) - graph.safe_div(1., r**6))
+    #sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    graph.save(force_tensor=forces, model_directory=name)
+
+
+
 
 noforce_graph()
 gradient_potential()
 simple_potential()
 benchmark_gradient_potential()
 benchmark_nonlist_graph()
+lj_graph(1024, 32, '/tmp/benchmark-lj-potential-model')
+lj_graph(9, 9 - 1, '/tmp/test-lj-potential-model')

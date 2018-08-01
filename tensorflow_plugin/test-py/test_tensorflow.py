@@ -93,8 +93,6 @@ class test_compute(unittest.TestCase):
             py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
-            #check pressure
-            snapshot = system.take_snapshot()
 
     def test_compute_force_ignore(self):
         hoomd.context.initialize()
@@ -136,6 +134,39 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
+    def test_lj_graph(self):
+        hoomd.context.initialize()
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+        nlist = hoomd.md.nlist.cell(check_period = 1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+
+        save_loc = '/tmp/test-lj-potential-model'
+
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
+        log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
+        thermo_scalars = []
+        for i in range(25):
+            hoomd.run(10)
+            thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
+
+        #now run with stock lj
+        hoomd.context.initialize()
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+        nlist = hoomd.md.nlist.cell(check_period = 1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
+        lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+        log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
+        for i in range(25):
+            hoomd.run(10)
+            np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i])
 
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])

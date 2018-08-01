@@ -60,6 +60,8 @@ class TensorflowCompute : public ForceCompute
         //used if particle number changes
         void reallocate();
 
+        Scalar getLogValue(const std::string& quantity, unsigned int timestep) override;
+
         int64_t get_forces_buffer() const {
             if(_force_mode == FORCE_MODE::output)
                 //if forces are being output, get their location
@@ -95,13 +97,14 @@ class TensorflowCompute : public ForceCompute
         void sendNeighbors(unsigned int timestep);
         void receiveVirial();
 
-        std::shared_ptr<NeighborList> m_nlist;
+        std::shared_ptr<NeighborList> _m_nlist;
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
         size_t _buffer_size;
         size_t _virial_size;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
+        std::string m_log_name;
     };
 
 //! Export the TensorflowCompute class to python

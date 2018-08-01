@@ -25,8 +25,8 @@ TensorflowCompute::TensorflowCompute(
     std::shared_ptr<NeighborList> nlist,
     unsigned int nneighs, FORCE_MODE force_mode)
         : ForceCompute(sysdef),
-          m_nlist(nlist),
           _py_self(py_self),
+          _m_nlist(nlist),
           _input_buffer(NULL),
           _output_buffer(NULL),
           _nneighs(nneighs),
@@ -34,6 +34,7 @@ TensorflowCompute::TensorflowCompute(
 {
 
     reallocate();
+    m_log_name = std::string("tensorflow");
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
      m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute::reallocate>(this);
 
@@ -57,7 +58,7 @@ void TensorflowCompute::reallocate() {
         _buffer_size += m_pdata->getN();
     }
 
-    //allocate space for virial by making sure buffer is big enough to accomodate.
+    //allocate space for virial by making sure buffer is big enough to accommodate.
     //virial is a 3x3 matrix per particle but elements are scalar4s.
     //hoomd internally uses 6 scalars per particle
     _virial_size = m_pdata->getN() * (3 * 3 / 4 + 1);
@@ -70,6 +71,7 @@ void TensorflowCompute::reallocate() {
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
     m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow Compute (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
+    m_exec_conf->msg->notice(2) << "particles: " << m_pdata->getN() << ", neighbors: " << _nneighs << ", buffer size: " << _buffer_size << ", virial size: " << _virial_size << std::endl;
     m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
 
     _py_self.attr("restart_tf")();
@@ -138,14 +140,16 @@ void TensorflowCompute::computeForces(unsigned int timestep)
 
 void TensorflowCompute::receiveVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
+    //note we are casting to scalar, not scalar4. Still add N, because _input_buffer is scalar4
     Scalar* virial_buffer = reinterpret_cast<Scalar*> (_input_buffer + m_pdata->getN());
     for(unsigned int i = 0; i < m_pdata->getN(); i++) {
-        h_virial.data[0*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 0]; //xx
-        h_virial.data[1*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 1]; //xy
-        h_virial.data[2*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 2]; //xz
-        h_virial.data[3*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 4]; //yy
-        h_virial.data[4*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 5]; //yz
-        h_virial.data[5*m_virial_pitch + i * 6] += virial_buffer[i * 9 + 8]; //zz
+        //I don't understand how h_virial is indexed. Taken from TablePotential.cc
+        h_virial.data[0*m_virial_pitch + i] += virial_buffer[i * 9 + 0]; //xx
+        h_virial.data[1*m_virial_pitch + i] += virial_buffer[i * 9 + 1]; //xy
+        h_virial.data[2*m_virial_pitch + i] += virial_buffer[i * 9 + 2]; //xz
+        h_virial.data[3*m_virial_pitch + i] += virial_buffer[i * 9 + 4]; //yy
+        h_virial.data[4*m_virial_pitch + i] += virial_buffer[i * 9 + 5]; //yz
+        h_virial.data[5*m_virial_pitch + i] += virial_buffer[i * 9 + 8]; //zz
     }
 }
 
@@ -167,15 +171,15 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
     //These snippets taken from md/TablePotentials.cc
 
     // start by updating the neighborlist
-    m_nlist->compute(timestep);
+    _m_nlist->compute(timestep);
 
     if (m_prof) m_prof->push("TensorflowCompute::sendNeighbors");
 
     // access the neighbor list
      ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_n_neigh(m_nlist->getNNeighArray(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_nlist(m_nlist->getNListArray(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_head_list(m_nlist->getHeadList(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_n_neigh(_m_nlist->getNNeighArray(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_nlist(_m_nlist->getNListArray(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_head_list(_m_nlist->getHeadList(), access_location::host, access_mode::read);
 
     //need for periodic image correction
     const BoxDim& box = m_pdata->getBox();
@@ -207,7 +211,7 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
             buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
             nnoffset[i]++;
 
-            if(m_nlist->getStorageMode() == NeighborList::half) {
+            if(_m_nlist->getStorageMode() == NeighborList::half) {
                 buffer[k * _nneighs + nnoffset[k]].x =  -dx.x;
                 buffer[k * _nneighs + nnoffset[k]].y =  -dx.y;
                 buffer[k * _nneighs + nnoffset[k]].z =  -dx.z;
@@ -230,6 +234,21 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
     free(nnoffset);
 
     if (m_prof) m_prof->pop();
+}
+
+Scalar TensorflowCompute::getLogValue(const std::string& quantity, unsigned int timestep) {
+    //not really sure why this has to be implemented by this class...
+    if (quantity == m_log_name)
+        {
+        compute(timestep);
+        return calcEnergySum();
+        }
+    else
+        {
+        this->m_exec_conf->msg->error() << "tensorflow:" <<  quantity << " is not a valid log quantity"
+                    << std::endl;
+        throw std::runtime_error("Error getting log value");
+        }
 }
 
 std::vector<Scalar4> TensorflowCompute::get_positions_array() const {
