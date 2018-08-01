@@ -115,6 +115,7 @@ void TensorflowCompute::computeForces(unsigned int timestep)
     switch(_force_mode) {
         case FORCE_MODE::overwrite:
             memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
+            receiveVirial();
             break;
         case FORCE_MODE::add:
             for(unsigned int i = 0; i < m_pdata->getN(); i++) {
@@ -123,8 +124,8 @@ void TensorflowCompute::computeForces(unsigned int timestep)
                 h_force.data[i].z += _input_buffer[i].z;
                 //w is potential energy (?) TODO: learn more about this
                 h_force.data[i].w += _input_buffer[i].w;
-
             }
+            receiveVirial();
             break;
         case FORCE_MODE::output: //already done above
         case FORCE_MODE::ignore:

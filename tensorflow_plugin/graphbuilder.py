@@ -29,15 +29,18 @@ class GraphBuilder:
                 zeros = tf.zeros(tf.shape(nlist_forces))
                 nlist_forces = tf.where(tf.is_nan(nlist_forces), zeros, nlist_forces, name='nlist-pairwise-force-gradient')
                 nlist_reduce = tf.reduce_sum(nlist_forces, axis=1, name='nlist-force-gradient')
-                #now treat virial
-                nlist3 = self.nlist[:, :, :3]
-                rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
-                #F / rs
-                F_rs = self.safe_div(tf.norm(nlist_forces, axis=2), tf.norm(nlist3, axis=2))
-                #sum over neighbors: F / r * (r (outter) r)
-                self.virial = tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
+                with tf.name_scope('virial-calc'):
+                    #now treat virial
+                    nlist3 = self.nlist[:, :, :3]
+                    rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
+                    #F / rs
+                    self.nlist_r_mag = tf.norm(nlist3, axis=2, name='nlist-r-mag')
+                    self.nlist_force_mag = tf.norm(nlist_forces, axis=2, name='nlist-force-mag')
+                    F_rs = self.safe_div(self.nlist_force_mag, self.nlist_r_mag)
+                    #sum over neighbors: F / r * (r (outter) r)
+                    self.virial = tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
         if pos_forces is not None and nlist_forces is not None:
-            forces = tf.add(nlist_reduce, pos_forces, name='forces-badw')
+            forces = tf.add(nlist_reduce, pos_forces, name='forces-added')
         elif pos_forces is None:
             forces = nlist_reduce
         else:
@@ -45,7 +48,9 @@ class GraphBuilder:
 
         #set w to be potential energy
         if len(energy.shape) > 1:
-            energy = tf.reduce_sum(energy, axis=tf.range(1, tf.rank(energy.shape)))
+            #reduce energy to be correct shape
+            print('WARNING: Your energy is multidimensional per particle. Hopefully that is intentional')
+            energy = tf.reshape(tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))), [forces.shape[0], 1])
             forces = tf.concat([forces[:,:3], energy], -1)
         elif len(energy.shape) == 1 and energy.shape[0] == 1:
             forces[:,:3] = tf.concat([forces[:,:3], tf.tile(energy, forces.shape[0])], -1)
@@ -53,7 +58,6 @@ class GraphBuilder:
             forces[:,:3] = tf.concat([forces[:,:3], energy], -1)
         else:
             raise ValueError('energy must either be scalar or have first dimension of atom_number')
-
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod

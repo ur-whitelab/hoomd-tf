@@ -26,7 +26,9 @@ nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
-energy = graph.safe_div(1, r)
+rij_energy = graph.safe_div(1, r)
+#sum over neighbors
+energy = tf.reduce_sum(rij_energy, axis=1)
 forces = graph.compute_forces(energy)
 ```
 
@@ -49,7 +51,8 @@ nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
-energy = graph.safe_div(1, r)
+rij_energy = graph.safe_div(1, r)
+energy = rf.reduce_sum(rij_energy, axis=1)
 forces = graph.compute_forces(energy)
 graph.save(force_tensor=forces, model_directory='/tmp/test-coloumbic-potential-model')
 ```

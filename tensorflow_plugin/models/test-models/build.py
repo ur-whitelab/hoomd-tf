@@ -25,9 +25,10 @@ def benchmark_gradient_potential():
     graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 128)
     nlist = graph.nlist[:, :, :3]
     #get r
+    print(nlist.shape)
     r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
-    energy = graph.safe_div(1., r)
+    energy = tf.reduce_sum(graph.safe_div(1., r), axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory='/tmp/benchmark-gradient-potential-model')
 
@@ -38,6 +39,7 @@ def gradient_potential():
         neighs_rs = tf.norm(nlist, axis=2)
         energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     forces = graph.compute_forces(energy)
+    print(forces, forces.shape)
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph():
@@ -50,7 +52,7 @@ def noforce_graph():
 def benchmark_nonlist_graph():
     graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 0, output_forces=False)
     ps = tf.norm(graph.positions, axis=1)
-    energy = graph.safe_div(1. , ps)
+    energy = tf.reduce_sum(graph.safe_div(1. , ps), axis=1)
     graph.save('/tmp/benchmark-nonlist-model', out_nodes=[energy])
 
 noforce_graph()

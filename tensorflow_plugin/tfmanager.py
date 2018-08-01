@@ -55,14 +55,18 @@ class TFManager:
 
 
     def _update(self, sess):
-        #runs = [tf.Print(self.out_node, [self.out_node], summarize=44)]
-        #for i in tf.get_default_graph().get_operations():
-        #    print(i.name)
-        #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-        #runs += [tf.Print(pf, [pf], summarize=288)]
-
         #make it a copy
         runs = self.out_nodes[:]
+
+        #for i in tf.get_default_graph().get_operations():
+        #    print(i.values())
+        #try:
+        #    pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
+        #    runs += [tf.Print(pf, [pf], summarize=288)]
+        #    runs += [tf.Print(self.forces, [self.forces], summarize=288)]
+        #except KeyError as e:
+        #    print(e)
+        #    pass
         if self.debug:
             runs += [self.summaries]
         result = sess.run(runs)

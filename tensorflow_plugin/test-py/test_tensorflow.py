@@ -23,7 +23,7 @@ def compute_forces(system, rcut):
             r = np.array(snapshot.box.min_image(r))
             rd = np.sqrt(np.sum(r**2))
             if rd <= rcut:
-                f = -r / rd
+                f = -r / rd * 1 / rd**2
                 forces[i, :] += f
                 forces[j, :] -= f
     return forces
@@ -93,6 +93,8 @@ class test_compute(unittest.TestCase):
             py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
+            #check pressure
+            snapshot = system.take_snapshot()
 
     def test_compute_force_ignore(self):
         hoomd.context.initialize()
