@@ -50,7 +50,7 @@ class TensorflowCompute : public ForceCompute
     public:
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             unsigned int nneighs, FORCE_MODE force_mode);
+             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
 
         TensorflowCompute() = delete;
 
@@ -102,6 +102,7 @@ class TensorflowCompute : public ForceCompute
         Scalar4* _output_buffer;
         size_t _buffer_size;
         size_t _virial_size;
+        Scalar _r_cut;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
         std::string m_log_name;

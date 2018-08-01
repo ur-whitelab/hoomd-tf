@@ -8,6 +8,7 @@ class GraphBuilder:
         '''output_forces -> should the graph output forces'''
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
+        #use zeros so that we don't need to feed to start session
         self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
         self.virial = None
         self.positions = tf.zeros ([atom_number, 4], name='positions')
@@ -36,7 +37,7 @@ class GraphBuilder:
                     #F / rs
                     self.nlist_r_mag = tf.norm(nlist3, axis=2, name='nlist-r-mag')
                     self.nlist_force_mag = tf.norm(nlist_forces, axis=2, name='nlist-force-mag')
-                    F_rs = self.safe_div(self.nlist_force_mag, self.nlist_r_mag)
+                    F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
                     #sum over neighbors: F / r * (r (outter) r)
                     self.virial = tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
         if pos_forces is not None and nlist_forces is not None:
@@ -94,7 +95,7 @@ class GraphBuilder:
                     force_tensor = tf.concat([force_tensor, tf.reshape(self.positions[:,3], [-1,  1])], axis=1, name='forces')
 
             self.forces = force_tensor
-            tf.Variable(self.forces, name='force-save')
+            tf.Variable(self.forces, name='force-save', trainable=False)
             if virial is None:
                 if self.virial is not None:
                     virial = self.virial

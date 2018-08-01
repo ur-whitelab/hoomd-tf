@@ -61,6 +61,7 @@ class tensorflow(hoomd.compute._compute):
         print('neighs', self.nneighbor_cutoff, 'atoms', len(hoomd.context.current.group_all))
         self.tf_model_directory = tf_model_directory
         nlist.subscribe(self.rcut)
+        r_cut = float(r_cut)
         self.r_cut = r_cut
         self.debug_mode = debug_mode
 
@@ -84,9 +85,11 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff, force_mode_code)
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
+            hoomd.context.current.system_definition, nlist.cpp_nlist, r_cut, self.nneighbor_cutoff, force_mode_code)
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self, hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
+            hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff)
 
         #get double vs single precision
         self.dtype = tf.float32

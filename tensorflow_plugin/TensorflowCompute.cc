@@ -23,12 +23,14 @@ TensorflowCompute::TensorflowCompute(
     pybind11::object& py_self,
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist,
+    Scalar r_cut,
     unsigned int nneighs, FORCE_MODE force_mode)
         : ForceCompute(sysdef),
           _py_self(py_self),
           _m_nlist(nlist),
           _input_buffer(NULL),
           _output_buffer(NULL),
+          _r_cut(r_cut),
           _nneighs(nneighs),
           _force_mode(force_mode)
 {
@@ -205,6 +207,8 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
+            if(dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut)
+                continue;
             buffer[i * _nneighs + nnoffset[i]].x = dx.x;
             buffer[i * _nneighs + nnoffset[i]].y = dx.y;
             buffer[i * _nneighs + nnoffset[i]].z = dx.z;
@@ -271,7 +275,7 @@ std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
 void export_TensorflowCompute(pybind11::module& m)
     {
     pybind11::class_<TensorflowCompute, std::shared_ptr<TensorflowCompute> >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, unsigned int, FORCE_MODE>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE>())
         .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
         .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
         .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)
