@@ -182,6 +182,8 @@ def scalar4_vec_to_np(array):
     '''TODO: This must exist somewhere in HOOMD codebase'''
     npa = np.empty((len(array), 4))
     for i, e in enumerate(array):
+        if i == 0:
+            print(i,e.x)
         npa[i,0] = e.x
         npa[i,1] = e.y
         npa[i,2] = e.z

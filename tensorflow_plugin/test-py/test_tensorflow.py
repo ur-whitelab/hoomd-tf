@@ -151,10 +151,15 @@ class test_compute(unittest.TestCase):
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
         thermo_scalars = []
-        for i in range(5):
-            hoomd.run(1)
+        for i in range(1):
+            #hoomd.run(1)
+            snapshot = system.take_snapshot()
+            position = snapshot.particles.position
+            print('position', i, position[0])
+            print(tfcompute.get_positions_array()[0,:])
             print('force', i, system.particles[0].net_force)
             print(tfcompute.get_forces_array()[0,:])
+            print('types',tfcompute.get_forces_array().dtype, tfcompute.dtype)
             thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
 
         #now run with stock lj
@@ -166,13 +171,19 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='ignore')
 
         hoomd.run(1)
-
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
-        for i in range(5):
+        for i in range(1):
             hoomd.run(1)
-            print('force', i, lj.forces[0].force)
+            snapshot = system.take_snapshot()
+            position = snapshot.particles.position
+            print('position', i, position[0])
+            print(tfcompute.get_positions_array()[0,:])
+            print('lj-force', i, lj.forces[0].force, lj.forces[0].energy)
+            print('net-force', i, system.particles[0].net_force)
+            print('tf-compute-force', tfcompute.get_forces_array()[0,:])
             np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i])
         print(thermos_scalars)
 if __name__ == '__main__':

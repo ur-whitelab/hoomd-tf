@@ -118,8 +118,10 @@ void TensorflowCompute::computeForces(unsigned int timestep)
     if (m_prof) m_prof->push("TensorflowCompute::Force Update");
     switch(_force_mode) {
         case FORCE_MODE::overwrite:
+            std::cout << "force on 0 " << _input_buffer[0].x << std::endl;
             memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
             receiveVirial();
+            std::cout << "force on 0 " << h_force.data[0].x << std::endl;
             break;
         case FORCE_MODE::add:
             for(unsigned int i = 0; i < m_pdata->getN(); i++) {
