@@ -95,7 +95,6 @@ class GraphBuilder:
                     force_tensor = tf.concat([force_tensor, tf.reshape(self.positions[:,3], [-1,  1])], axis=1, name='forces')
 
             self.forces = force_tensor
-            tf.Variable(self.forces, name='force-save', trainable=False)
             if virial is None:
                 if self.virial is not None:
                     virial = self.virial
@@ -106,12 +105,10 @@ class GraphBuilder:
         else:
             if len(out_nodes) == 0:
                 raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
-            tf.Variable(out_nodes[0], name='force-save')
 
-        with tf.Session() as sess:
-            saver = tf.train.Saver()
-            sess.run(tf.global_variables_initializer())
-            saver.save(sess, os.path.join(model_directory, 'model'))
+        os.makedirs(model_directory, exist_ok=True)
+        with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
+            f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         #save metadata of class
         graph_info = {  'N': self.atom_number,
                         'NN': self.nneighbor_cutoff,

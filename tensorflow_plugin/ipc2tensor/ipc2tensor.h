@@ -15,6 +15,7 @@ REGISTER_OP("IpcToTensor")
     .Input("shape: Tshape")
     .Attr("address: int") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
     .Output("output: T")
+    .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       //Taken from common_shape_functions and following
       //example for random_ops.cc in TF source

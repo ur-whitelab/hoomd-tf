@@ -73,7 +73,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
-    def test_gradient_potential_forces(self):
+    def dtest_gradient_potential_forces(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -87,7 +87,7 @@ class test_compute(unittest.TestCase):
         #This assumes you have succeeded in the above test_builder suite
         save_loc = '/tmp/test-gradient-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=True)
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
         for i in range(2):
             hoomd.run(100)
             py_forces = compute_forces(system, rcut)
@@ -134,7 +134,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
-    def dtest_lj_graph(self):
+    def test_lj_graph(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -156,7 +156,7 @@ class test_compute(unittest.TestCase):
             print('force', i, system.particles[0].net_force)
             print(tfcompute.get_forces_array()[0,:])
             thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
-        return
+
         #now run with stock lj
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -174,6 +174,6 @@ class test_compute(unittest.TestCase):
             hoomd.run(1)
             print('force', i, lj.forces[0].force)
             np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i])
-
+        print(thermos_scalars)
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])

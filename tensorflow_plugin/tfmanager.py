@@ -59,9 +59,9 @@ class TFManager:
         result = sess.run(self.out_nodes)
 
         #result = sess.run(self.out_nodes)
-        #if self.debug:
+        if self.debug:
             #last out_node should be merged summary (set in _attach_tensorboard)
-            #self.tb_writer.add_summary(result[-1], self.step)
+            self.tb_writer.add_summary(result[-1], self.step)
         self.step += 1
 
     def _prepare_graph(self):
@@ -89,9 +89,12 @@ class TFManager:
 
         #now insert into graph
         try:
-            self.saver = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map=input_map)
+            graph_def = tf.GraphDef()
+            with open(os.path.join(self.model_directory,'model.pb2'), 'rb') as f:
+                graph_def.ParseFromString(f.read())
+            self.graph = tf.import_graph_def(graph_def, input_map=input_map, name='')
         except ValueError:
-            raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
+            raise ValueError('Your graph ({}) must contain the following tensors: forces, nlist, positions'.format(os.path.join(self.model_directory,'model.meta')))
 
     def _prepare_forces(self):
         #insert the output forces
@@ -132,21 +135,23 @@ class TFManager:
 
         self.log.info('Constructed TF Model graph')
         with tf.Session() as sess:
-            #resore model checkpoint
-            self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
-            #if self.debug:
-                #from tensorflow.python import debug as tf_debug
-                #sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
-                #self.log.info('You must (first!) attach tensorboard by running '
-                #            'tensorboard --logdir {} --debugger_port 6064'
-                #            .format(os.path.join(self.model_directory, 'tensorboard')))
-                #self._attach_tensorboard(sess)
-            test = lambda x: x.out_nodes.append(tf.identity(x.forces))
-            test(self)
+            #resore model checkpoint if there are variables
+            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
+                self.saver = tf.train.Saver()
+                self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
+            if self.debug:
+                from tensorflow.python import debug as tf_debug
+                sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
+                self.log.info('You must (first!) attach tensorboard by running '
+                            'tensorboard --logdir {} --debugger_port 6064'
+                            .format(os.path.join(self.model_directory, 'tensorboard')))
+                self._attach_tensorboard(sess)
+            #test = lambda x: x.out_nodes.append(tf.identity(x.forces))
+            #test(self)
             while True:
                 #self.out_nodes += [tf.identity(self.forces)]
-                if self.step == 1:
-                    self.out_nodes.append(tf.identity(self.forces))
+                #if self.step == 1:
+                #    self.out_nodes.append(tf.identity(self.forces))
                 self.barrier.wait()
                 self.lock.acquire()
                 self._update(sess)
