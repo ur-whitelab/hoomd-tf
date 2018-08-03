@@ -25,7 +25,7 @@ class TFManager:
         self.log.addHandler(fh)
         self.log.setLevel(logging.INFO)
 
-        self.lock = lock
+        self.force_lock, self.pos_lock = lock
         self.barrier = barrier
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
@@ -141,21 +141,25 @@ class TFManager:
                 self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             if self.debug:
                 from tensorflow.python import debug as tf_debug
-                sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
+                #sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
                 self.log.info('You must (first!) attach tensorboard by running '
                             'tensorboard --logdir {} --debugger_port 6064'
                             .format(os.path.join(self.model_directory, 'tensorboard')))
                 self._attach_tensorboard(sess)
-            #test = lambda x: x.out_nodes.append(tf.identity(x.forces))
-            #test(self)
             while True:
-                #self.out_nodes += [tf.identity(self.forces)]
-                #if self.step == 1:
-                #    self.out_nodes.append(tf.identity(self.forces))
                 self.barrier.wait()
-                self.lock.acquire()
+                print('start loop')
+                sys.stdout.flush()
+                self.force_lock.acquire()
+                self.pos_lock.acquire()
+                print('update')
+                sys.stdout.flush()
                 self._update(sess)
-                self.lock.release()
+                self.force_lock.release()
+                self.pos_lock.release()
+
+
+
 
 
 

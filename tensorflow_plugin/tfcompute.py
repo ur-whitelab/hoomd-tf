@@ -125,6 +125,7 @@ class tensorflow(hoomd.compute._compute):
     def shutdown_tf(self):
         #need to terminate orphan
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
+        #self.lock.release
         self.barrier.abort()
         self.tfm.terminate()
 
@@ -134,14 +135,15 @@ class tensorflow(hoomd.compute._compute):
         if not self.cpp_force:
             return
         #setup locks
-        self.lock = multiprocessing.Lock()
+        self.force_lock, self.pos_lock = multiprocessing.Lock(), multiprocessing.Lock()
+        self.force_lock.acquire()
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
         self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 3)
         self.tfm = multiprocessing.Process(target=main,
                                     args=(self.log_filename,
                                           self.graph_info,
-                                          self.lock,
+                                          (self.force_lock, self.pos_lock),
                                           self.barrier,
                                           self.cpp_force.get_positions_buffer(),
                                           self.cpp_force.get_nlist_buffer(),
@@ -156,36 +158,49 @@ class tensorflow(hoomd.compute._compute):
 
     def start_update(self):
         '''Write to output the current sys information'''
-        self.lock.acquire()
+        print('start update - barrier')
+        sys.stdout.flush()
+        self.barrier.wait()
+        print('start update')
+        sys.stdout.flush()
+        #self.lock.release()
+        self.pos_lock.acquire()
+        self.force_lock.release()
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
             raise RuntimeError()
+        print('start update - done')
+        sys.stdout.flush()
 
     def finish_update(self):
         '''Allow TF to read output and we wait for it to finish.'''
-        self.lock.release()
-        self.barrier.wait()
+        print('finish update')
+        sys.stdout.flush()
+        self.pos_lock.release()
+        self.force_lock.acquire()
+        print('finish update - done')
+        sys.stdout.flush()
 
     def get_positions_array(self):
-        return scalar4_vec_to_np(self.cpp_force.get_positions_array())
+        return self.scalar4_vec_to_np(self.cpp_force.get_positions_array())
 
     def get_nlist_array(self):
-        return scalar4_vec_to_np(self.cpp_force.get_nlist_array())
+        return self.scalar4_vec_to_np(self.cpp_force.get_nlist_array())
 
     def get_forces_array(self):
-        return scalar4_vec_to_np(self.cpp_force.get_forces_array())
+        return self.scalar4_vec_to_np(self.cpp_force.get_forces_array())
 
     def update_coeffs(self):
         pass
 
-def scalar4_vec_to_np(array):
-    '''TODO: This must exist somewhere in HOOMD codebase'''
-    npa = np.empty((len(array), 4))
-    for i, e in enumerate(array):
-        if i == 0:
-            print(i,e.x)
-        npa[i,0] = e.x
-        npa[i,1] = e.y
-        npa[i,2] = e.z
-        npa[i,3] = e.w
-    return npa
+    def scalar4_vec_to_np(self,array):
+        '''TODO: This must exist somewhere in HOOMD codebase'''
+        npa = np.empty((len(array), 4))
+        for i, e in enumerate(array):
+            if i == 0:
+                print(i,e.x)
+            npa[i,0] = e.x
+            npa[i,1] = e.y
+            npa[i,2] = e.z
+            npa[i,3] = e.w
+        return npa
