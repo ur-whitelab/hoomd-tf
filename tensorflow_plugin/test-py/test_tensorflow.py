@@ -52,7 +52,7 @@ class test_ipc(unittest.TestCase):
         assert np.sum(data) < 10**-10
 
 class test_compute(unittest.TestCase):
-    def dtest_compute_force_overwrite(self):
+    def test_compute_force_overwrite(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -94,7 +94,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-2)
 
-    def dtest_compute_force_ignore(self):
+    def test_compute_force_ignore(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -114,7 +114,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
-    def dtest_compute_noforce_graph(self):
+    def test_compute_noforce_graph(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -134,7 +134,7 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
-    def dtest_lj_graph(self):
+    def test_lj_graph(self):
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -151,19 +151,12 @@ class test_compute(unittest.TestCase):
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
         thermo_scalars = []
-        for i in range(1):
-            #hoomd.run(1)
+        for i in range(5):
+            hoomd.run(3)
             snapshot = system.take_snapshot()
-            position = snapshot.particles.position
-            print('position', i, position[0])
-            print(tfcompute.get_positions_array()[0,:])
-            print('force', i, system.particles[0].net_force)
-            print(tfcompute.get_forces_array()[0,:])
-            print('types',tfcompute.get_forces_array().dtype, tfcompute.dtype)
             thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
 
         #now run with stock lj
-        return
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])
@@ -176,16 +169,13 @@ class test_compute(unittest.TestCase):
 
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
-        for i in range(1):
-            hoomd.run(1)
+        for i in range(5):
+            hoomd.run(3)
             snapshot = system.take_snapshot()
-            position = snapshot.particles.position
-            print('position', i, position[0])
-            print(tfcompute.get_positions_array()[0,:])
-            print('lj-force', i, lj.forces[0].force, lj.forces[0].energy)
-            print('net-force', i, system.particles[0].net_force)
-            print('tf-compute-force', tfcompute.get_forces_array()[0,:])
-            np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i])
-        print(thermos_scalars)
+            v = snapshot.particles.velocity
+            lj_virial = np.array([lj.forces[i].virial for i in range(N)])
+            tf_virial = tfcompute.get_virial_array()[:,(0,1,2,4,5,8)]
+            np.testing.assert_allclose(lj_virial, tf_virial, rtol=1e-2)
+            np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i], rtol=1e-3)
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])

@@ -58,6 +58,7 @@ class tensorflow(hoomd.compute._compute):
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
+        self.atom_number = len(hoomd.context.current.group_all)
         print('neighs', self.nneighbor_cutoff, 'atoms', len(hoomd.context.current.group_all))
         self.tf_model_directory = tf_model_directory
         nlist.subscribe(self.rcut)
@@ -158,28 +159,14 @@ class tensorflow(hoomd.compute._compute):
 
     def start_update(self):
         '''Write to output the current sys information'''
-        print('start update - barrier')
-        sys.stdout.flush()
         self.barrier.wait()
-        print('start update')
-        sys.stdout.flush()
-        #self.lock.release()
-        self.pos_lock.acquire()
-        self.force_lock.release()
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
             raise RuntimeError()
-        print('start update - done')
-        sys.stdout.flush()
 
     def finish_update(self):
         '''Allow TF to read output and we wait for it to finish.'''
-        print('finish update')
-        sys.stdout.flush()
-        self.pos_lock.release()
-        self.force_lock.acquire()
-        print('finish update - done')
-        sys.stdout.flush()
+        self.barrier.wait()
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.get_positions_array())
@@ -189,6 +176,12 @@ class tensorflow(hoomd.compute._compute):
 
     def get_forces_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.get_forces_array())
+
+    def get_virial_array(self):
+        array = self.cpp_force.get_virial_array()
+        npa = np.reshape(array, (self.atom_number,9))
+        return npa
+
 
     def update_coeffs(self):
         pass

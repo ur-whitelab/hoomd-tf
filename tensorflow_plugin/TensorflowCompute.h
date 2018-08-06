@@ -84,6 +84,7 @@ class TensorflowCompute : public ForceCompute
         std::vector<Scalar4> get_forces_array() const;
         std::vector<Scalar4> get_nlist_array() const;
         std::vector<Scalar4> get_positions_array() const;
+        std::vector<Scalar> get_virial_array() const;
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 

@@ -37,6 +37,12 @@ TensorflowCompute::TensorflowCompute(
 
     reallocate();
     m_log_name = std::string("tensorflow");
+    auto flags = this->m_pdata->getFlags();
+    if(_force_mode == FORCE_MODE::overwrite || _force_mode == FORCE_MODE::add) {
+        //flags[pdata_flag::isotropic_virial] = 1;
+        flags[pdata_flag::pressure_tensor] = 1;
+        m_exec_conf->msg->notice(2) <<"Setting flag indicating virial modification will occur" << std::endl;
+    }
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
      m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute::reallocate>(this);
 
@@ -120,7 +126,6 @@ void TensorflowCompute::computeForces(unsigned int timestep)
         case FORCE_MODE::overwrite:
             memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
             receiveVirial();
-            std::cout << "timestep" << timestep << ": force on 0 " << _input_buffer[0].x << std::endl;
             break;
         case FORCE_MODE::add:
             for(unsigned int i = 0; i < m_pdata->getN(); i++) {
@@ -143,6 +148,8 @@ void TensorflowCompute::computeForces(unsigned int timestep)
 
 void TensorflowCompute::receiveVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
+    if(_force_mode == FORCE_MODE::overwrite)
+        memset((void*)h_virial.data,0,sizeof(Scalar)*m_virial.getNumElements());
     //note we are casting to scalar, not scalar4. Still add N, because _input_buffer is scalar4
     Scalar* virial_buffer = reinterpret_cast<Scalar*> (_input_buffer + m_pdata->getN());
     for(unsigned int i = 0; i < m_pdata->getN(); i++) {
@@ -267,8 +274,13 @@ std::vector<Scalar4> TensorflowCompute::get_nlist_array() const {
 }
 
 std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
-    std::cout << "fdsaaaaaaaaaaaaaaaaaaaaaaaaA " << _input_buffer[0].x  <<  " fdsafds" << std::endl;
     std::vector<Scalar4> array(_input_buffer, _input_buffer + m_pdata->getN());
+    return array;
+}
+
+std::vector<Scalar> TensorflowCompute::get_virial_array() const {
+    Scalar* buffer = reinterpret_cast<Scalar*> (get_virial_buffer());
+    std::vector<Scalar> array(buffer, buffer + 9 * m_pdata->getN());
     return array;
 }
 
@@ -285,6 +297,7 @@ void export_TensorflowCompute(pybind11::module& m)
         .def("get_positions_array", &TensorflowCompute::get_positions_array, pybind11::return_value_policy::take_ownership)
         .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
         .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)
+        .def("get_virial_array", &TensorflowCompute::get_virial_array, pybind11::return_value_policy::take_ownership)
         .def("is_double_precision", &TensorflowCompute::is_double_precision)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")

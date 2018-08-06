@@ -148,15 +148,8 @@ class TFManager:
                 self._attach_tensorboard(sess)
             while True:
                 self.barrier.wait()
-                print('start loop')
-                sys.stdout.flush()
-                self.force_lock.acquire()
-                self.pos_lock.acquire()
-                print('update')
-                sys.stdout.flush()
                 self._update(sess)
-                self.force_lock.release()
-                self.pos_lock.release()
+                self.barrier.wait()
 
 
 

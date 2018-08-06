@@ -26,7 +26,7 @@ class GraphBuilder:
             #minus sign cancels when going from force on neighbor to force on origin in nlist
             nlist_forces = tf.gradients(energy, self.nlist)[0]
             if nlist_forces is not None:
-                nlist_forces = tf.identity(nlist_forces, name='nlist-pairwise-force-gradient-raw')
+                nlist_forces = tf.identity(2.0 * nlist_forces, name='nlist-pairwise-force-gradient-raw')
                 zeros = tf.zeros(tf.shape(nlist_forces))
                 nlist_forces = tf.where(tf.is_nan(nlist_forces), zeros, nlist_forces, name='nlist-pairwise-force-gradient')
                 nlist_reduce = tf.reduce_sum(nlist_forces, axis=1, name='nlist-force-gradient')
@@ -39,7 +39,7 @@ class GraphBuilder:
                     self.nlist_force_mag = tf.norm(nlist_forces, axis=2, name='nlist-force-mag')
                     F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
                     #sum over neighbors: F / r * (r (outter) r)
-                    self.virial = tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
+                    self.virial = -1.0 * tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
         if pos_forces is not None and nlist_forces is not None:
             forces = tf.add(nlist_reduce, pos_forces, name='forces-added')
         elif pos_forces is None:
