@@ -92,6 +92,45 @@ Note on Building and Executing Tensorflow Models in Same Script
 
 Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it hoomd.
 
+Requirements
+=====
+* Latest tensorflow (cuda 9.0, cudnn7)
+* numpy
+* HOOMD
+
+
+Docker Image for Development
+====
+
+To use the included docker image:
+
+```
+docker build -t hoomd-tf tensorflow_plugin
+```
+
+To run the container:
+
+```
+docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined  -v tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
+```
+
+The `cap--add` and `security-opt` flags are optional and allow `gdb` debugging.
+
+Once in the container:
+
+```
+cd /srv/hoomd-blue && mkdir build && cd build
+cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=OFF -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
+make -j2
+```
+
+To run the unit tests after make:
+```
+python ../tensorflow-plugin/test-py/test_tensorflow.py
+```
+
+If you change C++/C code, remake. If you modify python code, copy the new version to the build directory.
+
 
 Issues
 ====
