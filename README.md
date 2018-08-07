@@ -26,35 +26,44 @@ nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
-rij_energy = graph.safe_div(1, r)
+# halve due to full nlist
+rij_energy = 0.5 * graph.safe_div(1, r)
 #sum over neighbors
 energy = tf.reduce_sum(rij_energy, axis=1)
 forces = graph.compute_forces(energy)
 ```
 
-See in the above example that we have used the `GraphBuilder.safe_div(numerator, denominator)` function which allows us to safely treat a `1 / 0` due to using nearest neighbor distances, which can arise because `nlist` contains 0s for when less than `NN` nearest neighbors are found.
+See in the above example that we have used the `GraphBuilder.safe_div(numerator, denominator)` function which allows us to safely treat a `1 / 0` due to using nearest neighbor distances, which can arise because `nlist` contains 0s for when less than `NN` nearest neighbors are found. Note that because `nlist` is a *full* neighbor list, you should divide by 2 if your energy is a sum of pairwise energies.
+
+Virial
+-----
+
+The virial is computed and added to the graph if you use the `compute_forces` function and your energy has a non-zero derivative with respect to `nlist`. You may also explicitly pass the virial when saving, or pass `None` to remove the automatically calculated virial.
 
 Finalizing the Graph
 ----
 
-To finalize and save your graph, you must call the `GraphBuilder.save(directory, force_tensor=forces, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Although your forces can be a `N`x3 or `N`x4, only the first 3 columns will be used.
+To finalize and save your graph, you must call the `GraphBuilder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Although your forces can be a `N`x3 or `N`x4, only the first 3 columns will be used. The virial should be an `N` x 3 x 3 tensor.
 
 Complete Examples
 -----
 
 See `tensorflow_plugin/models/test-models/build.py` for more.
 
+### Lennard-Jones
+
 ```
-graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
-#remove w since we don't care about types
+graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
 nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=2)
-#compute 1. / r while safely treating r = 0.
-rij_energy = graph.safe_div(1, r)
-energy = rf.reduce_sum(rij_energy, axis=1)
+#compute 1 / r while safely treating r = 0.
+#pairwise energy. Double count -> divide by 2
+p_energy = 4.0 / 2.0 * (graph.safe_div(1., r**12) - graph.safe_div(1., r**6))
+#sum over pairwise energy
+energy = tf.reduce_sum(p_energy, axis=1)
 forces = graph.compute_forces(energy)
-graph.save(force_tensor=forces, model_directory='/tmp/test-coloumbic-potential-model')
+graph.save(force_tensor=forces, model_directory='/tmp/lj-model')
 ```
 
 

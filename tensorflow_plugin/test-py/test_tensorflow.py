@@ -108,7 +108,7 @@ class test_compute(unittest.TestCase):
         #This assumes you have succeeded in the above test_builder suite
         save_loc = '/tmp/test-simple-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=True, force_mode='ignore')
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='ignore')
         for i in range(3):
             hoomd.run(100)
             for j in range(N):
@@ -128,7 +128,7 @@ class test_compute(unittest.TestCase):
         #This assumes you have succeeded in the above test_builder suite
         save_loc = '/tmp/test-noforce-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=True, force_mode='output')
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='output')
         for i in range(3):
             hoomd.run(1)
             for j in range(N):
