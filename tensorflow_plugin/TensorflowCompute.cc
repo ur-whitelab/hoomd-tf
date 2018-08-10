@@ -72,6 +72,12 @@ void TensorflowCompute::reallocate() {
     _virial_size = m_pdata->getN() * (3 * 3 / 4 + 1);
     _buffer_size = std::max(_buffer_size, m_pdata->getN() + _virial_size);
 
+    ipcmmap();
+
+    _py_self.attr("restart_tf")();
+}
+
+void TensorflowCompute::ipcmmap() {
     _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
     if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
@@ -82,10 +88,9 @@ void TensorflowCompute::reallocate() {
     m_exec_conf->msg->notice(2) << "particles: " << m_pdata->getN() << ", neighbors: " << _nneighs << ", buffer size: " << _buffer_size << ", virial size: " << _virial_size << std::endl;
     m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
 
-    _py_self.attr("restart_tf")();
 }
 
-TensorflowCompute::~TensorflowCompute() {
+void TensorflowCompute::ipcmunmap() {
     // unmap our mmapings
     if(_input_buffer) {
         munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
@@ -93,6 +98,10 @@ TensorflowCompute::~TensorflowCompute() {
     }
     _input_buffer = NULL;
     _output_buffer = NULL;
+}
+
+TensorflowCompute::~TensorflowCompute() {
+    ipcmunmap();
 }
 
 /*! Perform the needed calculations to zero the system's velocity
@@ -108,36 +117,33 @@ void TensorflowCompute::computeForces(unsigned int timestep)
 
     //nneighs == 0 send positions only
     sendPositions();
-    if(_nneighs > 0)
-        sendNeighbors(timestep);
+    if(_nneighs > 0) {
+        //Update the neighborlist
+        _m_nlist->compute(timestep);
+        if (m_prof) m_prof->push("TensorflowCompute::sendNeighbors");
+        sendNeighbors();
+        if (m_prof) m_prof->pop();
+    }
 
-    //TODO: Handle virial (See TablePotential.cc?)
-    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-    if(_force_mode == FORCE_MODE::output) //output the forces, instead of using them from input buffer
-        memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
 
     if (m_prof) m_prof->push("TensorflowCompute::Acquire Barrier (TF Update)");
     _py_self.attr("finish_update")();
     if (m_prof) m_prof->pop();
 
-    //process results from TF
     if (m_prof) m_prof->push("TensorflowCompute::Force Update");
+
     switch(_force_mode) {
+        //process results from TF
         case FORCE_MODE::overwrite:
-            memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
+            overwriteForces();
             receiveVirial();
             break;
         case FORCE_MODE::add:
-            for(unsigned int i = 0; i < m_pdata->getN(); i++) {
-                h_force.data[i].x += _input_buffer[i].x;
-                h_force.data[i].y += _input_buffer[i].y;
-                h_force.data[i].z += _input_buffer[i].z;
-                //w is potential energy (?) TODO: learn more about this
-                h_force.data[i].w += _input_buffer[i].w;
-            }
+            addForces();
             receiveVirial();
             break;
-        case FORCE_MODE::output: //already done above
+        case FORCE_MODE::output:
+            sendForces();
         case FORCE_MODE::ignore:
             break;
     }
@@ -146,11 +152,33 @@ void TensorflowCompute::computeForces(unsigned int timestep)
     if (m_prof) m_prof->pop(); //compute
 }
 
+void TensorflowCompute::sendForces() {
+    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
+        memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
+
+}
+
+void TensorflowCompute::overwriteForces() {
+    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
+    memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
+}
+
+void TensorflowCompute::addForces() {
+    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
+    for(unsigned int i = 0; i < m_pdata->getN(); i++) {
+    h_force.data[i].x += _input_buffer[i].x;
+    h_force.data[i].y += _input_buffer[i].y;
+    h_force.data[i].z += _input_buffer[i].z;
+    //w is potential energy
+    h_force.data[i].w += _input_buffer[i].w;
+}
+}
+
 void TensorflowCompute::receiveVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
     if(_force_mode == FORCE_MODE::overwrite)
         memset((void*)h_virial.data,0,sizeof(Scalar)*m_virial.getNumElements());
-    //note we are casting to scalar, not scalar4. Still add N, because _input_buffer is scalar4
+    //note we are casting to scalar, not scalar4. Still add N, because _input_buffer type is scalar4
     Scalar* virial_buffer = reinterpret_cast<Scalar*> (_input_buffer + m_pdata->getN());
     for(unsigned int i = 0; i < m_pdata->getN(); i++) {
         //I don't understand how h_virial is indexed. Taken from TablePotential.cc
@@ -172,18 +200,13 @@ void TensorflowCompute::sendPositions() {
     memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
 }
 
-void TensorflowCompute::sendNeighbors(unsigned int timestep) {
+void TensorflowCompute::sendNeighbors() {
 
     //create ptr at offset to where neighbors go
     Scalar4* buffer = _output_buffer + m_pdata->getN();
     unsigned int* nnoffset = (unsigned int*) calloc(m_pdata->getN(), sizeof(unsigned int));
 
     //These snippets taken from md/TablePotentials.cc
-
-    // start by updating the neighborlist
-    _m_nlist->compute(timestep);
-
-    if (m_prof) m_prof->push("TensorflowCompute::sendNeighbors");
 
     // access the neighbor list
      ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
@@ -244,8 +267,6 @@ void TensorflowCompute::sendNeighbors(unsigned int timestep) {
     }
 
     free(nnoffset);
-
-    if (m_prof) m_prof->pop();
 }
 
 Scalar TensorflowCompute::getLogValue(const std::string& quantity, unsigned int timestep) {

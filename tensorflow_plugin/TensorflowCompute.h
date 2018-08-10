@@ -57,21 +57,18 @@ class TensorflowCompute : public ForceCompute
         //!Destructor
         virtual ~TensorflowCompute();
 
-        //used if particle number changes
-        void reallocate();
-
         Scalar getLogValue(const std::string& quantity, unsigned int timestep) override;
 
-        int64_t get_forces_buffer() const {
+        virtual int64_t get_forces_buffer() const {
             if(_force_mode == FORCE_MODE::output)
                 //if forces are being output, get their location
                 return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN() * (1 + _nneighs));
             return reinterpret_cast<int64_t> (_input_buffer);
         }
 
-        int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
-        int64_t get_virial_buffer() const {return reinterpret_cast<int64_t> (_input_buffer + m_pdata->getN());}
-        int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
+        virtual int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
+        virtual int64_t get_virial_buffer() const {return reinterpret_cast<int64_t> (_input_buffer + m_pdata->getN());}
+        virtual int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
 
         bool is_double_precision() const {
             #ifdef SINGLE_PRECISION
@@ -91,22 +88,32 @@ class TensorflowCompute : public ForceCompute
 
 
     protected:
+
+        //used if particle number changes
+        void reallocate();
         //! Take one timestep forward
         void computeForces(unsigned int timestep) override;
 
-        void sendPositions();
-        void sendNeighbors(unsigned int timestep);
-        void receiveVirial();
+        virtual void sendPositions();
+        virtual void sendNeighbors();
+        virtual void sendForces();
+        virtual void overwriteForces();
+        virtual void addForces();
+        virtual void receiveVirial();
+        virtual void ipcmmap();
+        virtual void ipcmunmap();
 
         std::shared_ptr<NeighborList> _m_nlist;
-        Scalar4* _input_buffer;
-        Scalar4* _output_buffer;
         size_t _buffer_size;
         size_t _virial_size;
         Scalar _r_cut;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
         std::string m_log_name;
+    private:
+        Scalar4* _input_buffer;
+        Scalar4* _output_buffer;
+
     };
 
 //! Export the TensorflowCompute class to python
@@ -126,8 +133,21 @@ class TensorflowComputeGPU : public TensorflowCompute
         //! Constructor
         TensorflowComputeGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self);
 
+    protected:
+
+        //used if particle number changes
+        void reallocate();
         //! Take one timestep forward
-        virtual void update(unsigned int timestep);
+        void computeForces(unsigned int timestep) override;
+
+        void sendPositions() override;
+        void sendNeighbors() override;
+        void sendForces() override;
+        void overwriteForces() override;
+        void addForces() override;
+        void receiveVirial() override;
+        void ipcmmap() override;
+        void ipcmunmap() override;
     };
 
 //! Export the TensorflowComputeGPU class to python
