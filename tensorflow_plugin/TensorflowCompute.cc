@@ -49,15 +49,19 @@ TensorflowCompute::TensorflowCompute(
 }
 
 void TensorflowCompute::reallocate() {
-     // might need to do something so GPU code doesn't call this
-    auto m_exec_conf = m_sysdef->getParticleData()->getExecConf();
-    // create input/output mmap buffer
+
+
     assert(m_pdata);
-    //check if allocated
-    if(_input_buffer)
-        munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
-    if(_output_buffer)
-        munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
+
+    positions_comm = IPCArrayComm(m_pdata->getPositions());
+    _forces_comm = IPCArrayComm(m_force);
+    GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
+    _nlist_array.swap(tmp);
+    _nlist_comm = IPCArrayComm(_nlist_array);
+    _virial_comm = IPCArrayComm(m_virial);
+
+    //unmap check if allocated
+    ipcmunmap();
     //set new size
     //             positions         neighbors
     _buffer_size = m_pdata->getN() + m_pdata->getN() * _nneighs;
@@ -74,6 +78,12 @@ void TensorflowCompute::reallocate() {
 
     ipcmmap();
 
+    // auto m_exec_conf = m_sysdef->getParticleData()->getExecConf();
+
+    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow Compute (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
+    m_exec_conf->msg->notice(2) << "particles: " << m_pdata->getN() << ", neighbors: " << _nneighs << ", buffer size: " << _buffer_size << ", virial size: " << _virial_size << std::endl;
+    m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
+
     _py_self.attr("restart_tf")();
 }
 
@@ -84,10 +94,6 @@ void TensorflowCompute::ipcmmap() {
         perror("Failed to create mmap");
         m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
     }
-    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow Compute (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
-    m_exec_conf->msg->notice(2) << "particles: " << m_pdata->getN() << ", neighbors: " << _nneighs << ", buffer size: " << _buffer_size << ", virial size: " << _virial_size << std::endl;
-    m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
-
 }
 
 void TensorflowCompute::ipcmunmap() {

@@ -20,6 +20,7 @@
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
 
+
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
 #ifndef NVCC
@@ -104,15 +105,16 @@ class TensorflowCompute : public ForceCompute
         virtual void ipcmunmap();
 
         std::shared_ptr<NeighborList> _m_nlist;
-        size_t _buffer_size;
-        size_t _virial_size;
         Scalar _r_cut;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
         std::string m_log_name;
-        Scalar4* _input_buffer;
-        Scalar4* _output_buffer;
 
+        IPCArrayComm _pos_comm;
+        IPCArrayComm _force_comm;
+        GPUArray<Scalar4> _nlist_array;
+        IPCArrayComm _nlist_comm;
+        IPCArrayComm _virial_comm;
     };
 
 //! Export the TensorflowCompute class to python
@@ -151,6 +153,10 @@ class TensorflowComputeGPU : public TensorflowCompute
     private:
         cudaIpcMemHandle_t* _input_handle;
         cudaIpcMemHandle_t* _output_handle;
+        GPUArray<Scalar4> _forces_array;
+        GPUArray<Scalar4> _virial_array;
+        GPUArray<Scalar4> _nlist_array;
+        GPUArray<Scalar4> _positions_array;
     };
 
 //! Export the TensorflowComputeGPU class to python
