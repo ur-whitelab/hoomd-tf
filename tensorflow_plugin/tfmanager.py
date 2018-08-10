@@ -134,7 +134,11 @@ class TFManager:
     def start_loop(self):
 
         self.log.info('Constructed TF Model graph')
-        with tf.Session() as sess:
+        #make it grow as memory is needed instead of consuming all
+        gpu_options = tf.GPUOptions(allow_growth=True)
+        config=tf.ConfigProto(gpu_options=gpu_options)
+
+        with tf.Session(config=config) as sess:
             #resore model checkpoint if there are variables
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 self.saver = tf.train.Saver()

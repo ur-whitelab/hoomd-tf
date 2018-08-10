@@ -336,40 +336,71 @@ void export_TensorflowCompute(pybind11::module& m)
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowComputeGPU::TensorflowComputeGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self)
-        : TensorflowCompute(sysdef, py_self)
-    {
-    }
+TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
+            std::shared_ptr<SystemDefinition> sysdef,
+            std::shared_ptr<NeighborList> nlist,
+             Scalar r_cut, unsigned int nneighs,
+             FORCE_MODE force_mode)
+        : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode)
+{
+}
 
+ int64_t TensorflowComputeGPU::get_forces_buffer() const {
+     return 0;
+ }
 
-/*! Perform the needed calculations to zero the system's velocity
-    \param timestep Current time step of the simulation
-*/
-void TensorflowComputeGPU::update(unsigned int timestep)
-    {
-    if (m_prof) m_prof->push("TensorflowCompute");
+  int64_t TensorflowComputeGPU::get_positions_buffer() const {
+     return 0;
+ }
 
-    // access the particle data arrays for writing on the GPU
-    ArrayHandle<Scalar4> d_vel(m_pdata->getVelocities(), access_location::device, access_mode::readwrite);
+  int64_t TensorflowComputeGPU::get_virial_buffer() const {
+     return 0;
+ }
 
-    // call the kernel devined in TensorflowCompute.cu
-    gpu_zero_velocities(d_vel.data, _buffer_size);
+  int64_t TensorflowComputeGPU::get_nlist_buffer() const {
+     return 0;
+ }
 
-    // check for error codes from the GPU if error checking is enabled
-    if(m_exec_conf->isCUDAErrorCheckingEnabled())
-        CHECK_CUDA_ERROR();
+void TensorflowComputeGPU::sendPositions() {
 
-    if (m_prof) m_prof->pop();
-    }
+}
+void TensorflowComputeGPU::sendNeighbors() {
+
+}
+void TensorflowComputeGPU::sendForces() {
+
+}
+void TensorflowComputeGPU::overwriteForces() {
+
+}
+void TensorflowComputeGPU::addForces() {
+
+}
+void TensorflowComputeGPU::receiveVirial() {
+
+}
+void TensorflowComputeGPU::ipcmmap() {
+
+}
+void TensorflowComputeGPU::ipcmunmap() {
+
+}
 
 /* Export the GPU Compute to be visible in the python module
  */
 void export_TensorflowComputeGPU(pybind11::module& m)
     {
-    pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<TensorflowCompute>())
-        .def(pybind11::init<std::shared_ptr<SystemDefinition>, pybind11::object &>())
-        .def("get_input_buffer", &TensorflowCompute::get_input_buffer)
-        .def("get_output_buffer", &TensorflowCompute::get_output_buffer)
+    pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<ForceCompute>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE>())
+        .def("get_positions_buffer", &TensorflowComputeGPU::get_positions_buffer, pybind11::return_value_policy::reference)
+        .def("get_nlist_buffer", &TensorflowComputeGPU::get_nlist_buffer, pybind11::return_value_policy::reference)
+        .def("get_forces_buffer", &TensorflowComputeGPU::get_forces_buffer, pybind11::return_value_policy::reference)
+        .def("get_virial_buffer", &TensorflowComputeGPU::get_virial_buffer, pybind11::return_value_policy::reference)
+        .def("get_positions_array", &TensorflowComputeGPU::get_positions_array, pybind11::return_value_policy::take_ownership)
+        .def("get_nlist_array", &TensorflowComputeGPU::get_nlist_array, pybind11::return_value_policy::take_ownership)
+        .def("get_forces_array", &TensorflowComputeGPU::get_forces_array, pybind11::return_value_policy::take_ownership)
+        .def("get_virial_array", &TensorflowComputeGPU::get_virial_array, pybind11::return_value_policy::take_ownership)
+        .def("is_double_precision", &TensorflowComputeGPU::is_double_precision)
     ;
     }
 

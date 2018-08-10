@@ -110,7 +110,6 @@ class TensorflowCompute : public ForceCompute
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
         std::string m_log_name;
-    private:
         Scalar4* _input_buffer;
         Scalar4* _output_buffer;
 
@@ -131,15 +130,16 @@ class TensorflowComputeGPU : public TensorflowCompute
     {
     public:
         //! Constructor
-        TensorflowComputeGPU(std::shared_ptr<SystemDefinition> sysdef, pybind11::object py_self);
+        TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
+             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
+
+        int64_t get_forces_buffer() const override;
+        int64_t get_positions_buffer() const override;
+        int64_t get_virial_buffer() const override;
+        int64_t get_nlist_buffer()  const override;
+
 
     protected:
-
-        //used if particle number changes
-        void reallocate();
-        //! Take one timestep forward
-        void computeForces(unsigned int timestep) override;
-
         void sendPositions() override;
         void sendNeighbors() override;
         void sendForces() override;
@@ -148,6 +148,9 @@ class TensorflowComputeGPU : public TensorflowCompute
         void receiveVirial() override;
         void ipcmmap() override;
         void ipcmunmap() override;
+    private:
+        cudaIpcMemHandle_t* _input_handle;
+        cudaIpcMemHandle_t* _output_handle;
     };
 
 //! Export the TensorflowComputeGPU class to python

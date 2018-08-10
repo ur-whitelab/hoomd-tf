@@ -20,9 +20,9 @@ import tensorflow as tf
 # Every \a period time steps, particle velocities are modified so that they are all zero
 #
 class tensorflow(hoomd.compute._compute):
-    ## Initialize the velocity zeroe
+    ##
     #
-    # \param period Velocities will be zeroed every \a period time steps
+    # \param _mock_mode Do not set-up tensorflow process
     #
     # \b tensorflows:
     # \code
@@ -31,7 +31,8 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite', log_filename='tf_manager.log', debug_mode=False):
+    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite',
+                 log_filename='tf_manager.log', debug_mode=False, _mock_mode=False):
 
         #so delete won't fail
         self.tfm = None
@@ -90,7 +91,7 @@ class tensorflow(hoomd.compute._compute):
             hoomd.context.current.system_definition, nlist.cpp_nlist, r_cut, self.nneighbor_cutoff, force_mode_code)
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
-            hoomd.context.current.system_definition, nlist.cpp_nlist, self.nneighbor_cutoff)
+            hoomd.context.current.system_definition, nlist.cpp_nlist, r_cut, self.nneighbor_cutoff, force_mode_code)
 
         #get double vs single precision
         self.dtype = tf.float32
@@ -101,7 +102,9 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
         hoomd.context.current.forces.append(self)
 
-        self.restart_tf()
+        if not _mock_mode:
+            self.restart_tf()
+        self._mock_mode = _mock_mode
 
     def rcut(self):
         #adapted from hoomd/md/pair.py
@@ -159,6 +162,9 @@ class tensorflow(hoomd.compute._compute):
 
     def start_update(self):
         '''Write to output the current sys information'''
+        if self._mock_mode:
+            return
+
         self.barrier.wait()
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
@@ -166,6 +172,10 @@ class tensorflow(hoomd.compute._compute):
 
     def finish_update(self):
         '''Allow TF to read output and we wait for it to finish.'''
+
+        if self._mock_mode:
+            return
+
         self.barrier.wait()
 
     def get_positions_array(self):
