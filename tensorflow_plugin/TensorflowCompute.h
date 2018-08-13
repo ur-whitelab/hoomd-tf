@@ -14,6 +14,8 @@
     \brief Declaration of TensorflowCompute
 */
 
+#include "ipcarraycomm/IPCArrayComm.h"
+
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
@@ -46,6 +48,34 @@ enum class FORCE_MODE{
 };
 
 
+//these functors use 'call' instead of 'operator()' to avoid
+//writing out functor.template operator()<T> (...) which is
+//necessary due to some arcane c++ rules. Normally
+// you would write functor(...), when creating a functor.
+struct receiveForcesFunctorAdd {
+
+    size_t _N;
+    receiveForcesFunctorAdd(size_t N) : _N(N) {}
+
+    //have empty implementation so if CUDA not enabled,
+    //we still have a GPU implementation
+    template<IPCCommMode M>
+    void call(Scalar4* dest, Scalar4* src) {}
+
+};
+
+struct receiveVirialFunctorAdd {
+
+    size_t _N;
+    size_t _pitch;
+    receiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch) {}
+
+    template<IPCCommMode M>
+    void call(Scalar* dest, Scalar* src) {}
+};
+
+
+template <IPCCommMode M = IPCCommMode::CPU>
 class TensorflowCompute : public ForceCompute
     {
     public:
@@ -60,18 +90,12 @@ class TensorflowCompute : public ForceCompute
 
         Scalar getLogValue(const std::string& quantity, unsigned int timestep) override;
 
-        virtual int64_t get_forces_buffer() const {
-            if(_force_mode == FORCE_MODE::output)
-                //if forces are being output, get their location
-                return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN() * (1 + _nneighs));
-            return reinterpret_cast<int64_t> (_input_buffer);
-        }
+        int64_t getForcesBuffer() const;
+        int64_t getPositionsBuffer() const;
+        int64_t getVirialBuffer() const;
+        int64_t getNlistBuffer() const;
 
-        virtual int64_t get_positions_buffer() const {return reinterpret_cast<int64_t> (_output_buffer);}
-        virtual int64_t get_virial_buffer() const {return reinterpret_cast<int64_t> (_input_buffer + m_pdata->getN());}
-        virtual int64_t get_nlist_buffer() const {return reinterpret_cast<int64_t> (_output_buffer + m_pdata->getN());}
-
-        bool is_double_precision() const {
+        bool isDoublePrecision() const {
             #ifdef SINGLE_PRECISION
             return false;
             #else
@@ -79,10 +103,10 @@ class TensorflowCompute : public ForceCompute
             #endif //SINGLE_PRECISION
         }
 
-        std::vector<Scalar4> get_forces_array() const;
-        std::vector<Scalar4> get_nlist_array() const;
-        std::vector<Scalar4> get_positions_array() const;
-        std::vector<Scalar> get_virial_array() const;
+        std::vector<Scalar4> getForcesArray() const;
+        std::vector<Scalar4> getNlistArray() const;
+        std::vector<Scalar4> getPositionsArray() const;
+        std::vector<Scalar> getVirialArray() const;
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
@@ -95,14 +119,8 @@ class TensorflowCompute : public ForceCompute
         //! Take one timestep forward
         void computeForces(unsigned int timestep) override;
 
-        virtual void sendPositions();
-        virtual void sendNeighbors();
-        virtual void sendForces();
-        virtual void overwriteForces();
-        virtual void addForces();
-        virtual void receiveVirial();
-        virtual void ipcmmap();
-        virtual void ipcmunmap();
+        virtual void prepareNeighbors();
+        virtual void zeroVirial();
 
         std::shared_ptr<NeighborList> _m_nlist;
         Scalar _r_cut;
@@ -110,11 +128,11 @@ class TensorflowCompute : public ForceCompute
         FORCE_MODE _force_mode;
         std::string m_log_name;
 
-        IPCArrayComm _pos_comm;
-        IPCArrayComm _force_comm;
+        IPCArrayComm<M, Scalar4> _positions_comm;
+        IPCArrayComm<M, Scalar4> _forces_comm;
         GPUArray<Scalar4> _nlist_array;
-        IPCArrayComm _nlist_comm;
-        IPCArrayComm _virial_comm;
+        IPCArrayComm<M, Scalar4> _nlist_comm;
+        IPCArrayComm<M, Scalar> _virial_comm;
     };
 
 //! Export the TensorflowCompute class to python
@@ -128,28 +146,16 @@ void export_TensorflowCompute(pybind11::module& m);
 //! A GPU accelerated nonsense particle Compute written to demonstrate how to write a plugin w/ CUDA code
 /*! This Compute simply sets all of the particle's velocities to 0 (on the GPU) when update() is called.
 */
-class TensorflowComputeGPU : public TensorflowCompute
+class TensorflowComputeGPU : public TensorflowCompute<IPCommMode::GPU>
     {
     public:
         //! Constructor
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
 
-        int64_t get_forces_buffer() const override;
-        int64_t get_positions_buffer() const override;
-        int64_t get_virial_buffer() const override;
-        int64_t get_nlist_buffer()  const override;
-
-
     protected:
-        void sendPositions() override;
-        void sendNeighbors() override;
-        void sendForces() override;
-        void overwriteForces() override;
-        void addForces() override;
-        void receiveVirial() override;
-        void ipcmmap() override;
-        void ipcmunmap() override;
+        void prepareNeighbors() override;
+        void zeroVirial() override;
     private:
         cudaIpcMemHandle_t* _input_handle;
         cudaIpcMemHandle_t* _output_handle;
@@ -162,6 +168,10 @@ class TensorflowComputeGPU : public TensorflowCompute
 //! Export the TensorflowComputeGPU class to python
 void export_TensorflowComputeGPU(pybind11::module& m);
 
+template class TensorflowCompute<IPCCommMode::GPU>;
 #endif // ENABLE_CUDA
+
+//force implementation
+template class TensorflowCompute<IPCCommMode::CPU>;
 
 #endif // _TENSORFLOW_COMPUTE_H_

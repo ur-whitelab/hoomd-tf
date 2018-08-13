@@ -95,7 +95,7 @@ class tensorflow(hoomd.compute._compute):
 
         #get double vs single precision
         self.dtype = tf.float32
-        if self.cpp_force.is_double_precision():
+        if self.cpp_force.isDoublePrecision():
             self.dtype = tf.double
 
         #adding to forces causes the computeForces method to be called.
@@ -149,10 +149,10 @@ class tensorflow(hoomd.compute._compute):
                                           self.graph_info,
                                           (self.force_lock, self.pos_lock),
                                           self.barrier,
-                                          self.cpp_force.get_positions_buffer(),
-                                          self.cpp_force.get_nlist_buffer(),
-                                          self.cpp_force.get_forces_buffer(),
-                                          self.cpp_force.get_virial_buffer(),
+                                          self.cpp_force.getPositionsBuffer(),
+                                          self.cpp_force.getNlistBuffer(),
+                                          self.cpp_force.getForcesBuffer(),
+                                          self.cpp_force.getVirialBuffer(),
                                           self.dtype,
                                           self.debug_mode))
 
@@ -179,16 +179,16 @@ class tensorflow(hoomd.compute._compute):
         self.barrier.wait()
 
     def get_positions_array(self):
-        return self.scalar4_vec_to_np(self.cpp_force.get_positions_array())
+        return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
-        return self.scalar4_vec_to_np(self.cpp_force.get_nlist_array())
+        return self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
 
     def get_forces_array(self):
-        return self.scalar4_vec_to_np(self.cpp_force.get_forces_array())
+        return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
-        array = self.cpp_force.get_virial_array()
+        array = self.cpp_force.getVirialArray()
         npa = np.reshape(array, (self.atom_number,9))
         return npa
 

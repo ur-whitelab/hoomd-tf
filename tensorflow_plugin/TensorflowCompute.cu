@@ -16,34 +16,28 @@
     as long as block_size * num_blocks is >= the number of particles.
 */
 extern "C" __global__
-void gpu_zero_velocities_kernel(Scalar4 *d_vel, unsigned int N)
+void gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i < _N)
     {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < N)
-        {
-        // vel.w is the mass, don't want to modify that
-        Scalar4 vel = d_vel[idx];
-        vel.x = vel.y = vel.z = 0.0f;
-        d_vel[idx] = vel;
-        }
+        dest[i] += src[i];
     }
+}
 
-/*! \param d_vel Velocity-mass array from the ParticleData
-    \param N Number of particles
-    This is just a driver for gpu_zero_velocities_kernel(), see it for the details
-*/
-cudaError_t gpu_zero_velocities(Scalar4 *d_vel, unsigned int N)
+extern "C" __global__
+void gpu_add_virial(Scalar4 *dest, Scalar4 *src, unsigned int _N, unsigned int _pitch)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i < _N)
     {
-    // setup the grid to run the kernel
-    int block_size = 256;
-    dim3 grid( (int)ceil((double)N / (double)block_size), 1, 1);
-    dim3 threads(block_size, 1, 1);
-
-    // run the kernel
-    gpu_zero_velocities_kernel<<< grid, threads >>>(d_vel, N);
-
-    // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
-    // cudaSuccess
-    return cudaSuccess;
+        dest[0 * _pitch + i] += src[i * 9 + 0]; //xx
+        dest[1 * _pitch + i] += src[i * 9 + 1]; //xy
+        dest[2 * _pitch + i] += src[i * 9 + 2]; //xz
+        dest[3 * _pitch + i] += src[i * 9 + 4]; //yy
+        dest[4 * _pitch + i] += src[i * 9 + 5]; //yz
+        dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
     }
+}

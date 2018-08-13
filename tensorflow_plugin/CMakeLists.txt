@@ -99,3 +99,4 @@ if (BUILD_TESTING)
 endif()
 
 add_subdirectory(test-cases)
+add_subdirectory(ipcarraycomm)

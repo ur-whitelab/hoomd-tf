@@ -13,13 +13,13 @@
 /*! \file TensorflowCompute.cc
     \brief Definition of TensorflowCompute
 */
-
 // ********************************
 // here follows the code for TensorflowCompute on the CPU
 
 /*! \param sysdef System to zero the velocities of
 */
-TensorflowCompute::TensorflowCompute(
+template<IPCCommMode M>
+TensorflowCompute<M>::TensorflowCompute(
     pybind11::object& py_self,
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist,
@@ -28,8 +28,6 @@ TensorflowCompute::TensorflowCompute(
         : ForceCompute(sysdef),
           _py_self(py_self),
           _m_nlist(nlist),
-          _input_buffer(NULL),
-          _output_buffer(NULL),
           _r_cut(r_cut),
           _nneighs(nneighs),
           _force_mode(force_mode)
@@ -44,112 +42,78 @@ TensorflowCompute::TensorflowCompute(
         m_exec_conf->msg->notice(2) <<"Setting flag indicating virial modification will occur" << std::endl;
     }
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
-     m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute::reallocate>(this);
+     m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute<M>::reallocate>(this);
 
 }
-
-void TensorflowCompute::reallocate() {
+template <IPCCommMode M>
+void TensorflowCompute<M>::reallocate() {
 
 
     assert(m_pdata);
 
-    positions_comm = IPCArrayComm(m_pdata->getPositions());
-    _forces_comm = IPCArrayComm(m_force);
+    //we won't ever override positions,
+    //but the recieve method does exist
+    //so we'll cast away until I make a version
+    //of IPCArrayComm that can't override array
+    _positions_comm = IPCArrayComm<M,Scalar4>(const_cast<GPUArray<Scalar4>& > (m_pdata->getPositions()));
+    _forces_comm = IPCArrayComm<M,Scalar4>(m_force);
     GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
     _nlist_array.swap(tmp);
-    _nlist_comm = IPCArrayComm(_nlist_array);
-    _virial_comm = IPCArrayComm(m_virial);
-
-    //unmap check if allocated
-    ipcmunmap();
-    //set new size
-    //             positions         neighbors
-    _buffer_size = m_pdata->getN() + m_pdata->getN() * _nneighs;
-    if(_force_mode == FORCE_MODE::output) {
-        //add space for forces
-        _buffer_size += m_pdata->getN();
-    }
-
-    //allocate space for virial by making sure buffer is big enough to accommodate.
-    //virial is a 3x3 matrix per particle but elements are scalar4s.
-    //hoomd internally uses 6 scalars per particle
-    _virial_size = m_pdata->getN() * (3 * 3 / 4 + 1);
-    _buffer_size = std::max(_buffer_size, m_pdata->getN() + _virial_size);
-
-    ipcmmap();
-
-    // auto m_exec_conf = m_sysdef->getParticleData()->getExecConf();
-
-    m_exec_conf->msg->notice(2) << "Created mmaped pages for tensorflow Compute (" << _buffer_size*sizeof(Scalar4) / 1024.0 << " kB)" << std::endl;
-    m_exec_conf->msg->notice(2) << "particles: " << m_pdata->getN() << ", neighbors: " << _nneighs << ", buffer size: " << _buffer_size << ", virial size: " << _virial_size << std::endl;
-    m_exec_conf->msg->notice(2) << "At addresses " << _input_buffer << "," << _output_buffer << std::endl;
+    _nlist_comm = IPCArrayComm<M,Scalar4>(_nlist_array);
+    //pass a larger size because sparse matrix is used in HOOMD
+    _virial_comm = IPCArrayComm<M,Scalar>(m_virial, m_pdata->getN() * 9);
 
     _py_self.attr("restart_tf")();
 }
 
-void TensorflowCompute::ipcmmap() {
-    _input_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
-    _output_buffer = static_cast<Scalar4*> (mmap(NULL, _buffer_size*sizeof(Scalar4), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0));
-    if(_input_buffer == MAP_FAILED || _output_buffer == MAP_FAILED) {
-        perror("Failed to create mmap");
-        m_exec_conf->msg->error() << "Failed to create mmap" << std::endl;
-    }
-}
 
-void TensorflowCompute::ipcmunmap() {
-    // unmap our mmapings
-    if(_input_buffer) {
-        munmap(_input_buffer, _buffer_size*sizeof(Scalar4));
-        munmap(_output_buffer, _buffer_size*sizeof(Scalar4));
-    }
-    _input_buffer = NULL;
-    _output_buffer = NULL;
-}
+template<IPCCommMode M>
+TensorflowCompute<M>::~TensorflowCompute() {
 
-TensorflowCompute::~TensorflowCompute() {
-    ipcmunmap();
 }
 
 /*! Perform the needed calculations to zero the system's velocity
     \param timestep Current time step of the simulation
 */
-void TensorflowCompute::computeForces(unsigned int timestep)
+template<IPCCommMode M>
+void TensorflowCompute<M>::computeForces(unsigned int timestep)
 {
     if (m_prof) m_prof->push("TensorflowCompute");
 
-    if (m_prof) m_prof->push("TensorflowCompute::Acquire Lock");
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Acquire Lock");
     _py_self.attr("start_update")();
     if (m_prof) m_prof->pop();
 
     //nneighs == 0 send positions only
-    sendPositions();
+    _positions_comm.send();
     if(_nneighs > 0) {
         //Update the neighborlist
         _m_nlist->compute(timestep);
-        if (m_prof) m_prof->push("TensorflowCompute::sendNeighbors");
-        sendNeighbors();
+        if (m_prof) m_prof->push("TensorflowCompute<M>::prepareNeighbors");
+        prepareNeighbors();
         if (m_prof) m_prof->pop();
+        _nlist_comm.send();
     }
 
 
-    if (m_prof) m_prof->push("TensorflowCompute::Acquire Barrier (TF Update)");
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Acquire Barrier (TF Update)");
     _py_self.attr("finish_update")();
     if (m_prof) m_prof->pop();
-
-    if (m_prof) m_prof->push("TensorflowCompute::Force Update");
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
     switch(_force_mode) {
         //process results from TF
         case FORCE_MODE::overwrite:
-            overwriteForces();
-            receiveVirial();
+            _forces_comm.receive();
+            zeroVirial();
+            _virial_comm.receiveOp(receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch));
             break;
         case FORCE_MODE::add:
-            addForces();
-            receiveVirial();
+            _forces_comm.receiveOp(receiveForcesFunctorAdd(m_pdata->getN()));
+            _virial_comm.receiveOp(receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch));
             break;
         case FORCE_MODE::output:
-            sendForces();
+            _forces_comm.send();
         case FORCE_MODE::ignore:
             break;
     }
@@ -158,64 +122,26 @@ void TensorflowCompute::computeForces(unsigned int timestep)
     if (m_prof) m_prof->pop(); //compute
 }
 
-void TensorflowCompute::sendForces() {
-    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-        memcpy(_output_buffer, h_force.data, sizeof(Scalar4) * m_pdata->getN());
 
-}
-
-void TensorflowCompute::overwriteForces() {
-    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-    memcpy(h_force.data, _input_buffer, sizeof(Scalar4) * m_pdata->getN());
-}
-
-void TensorflowCompute::addForces() {
-    ArrayHandle<Scalar4> h_force(m_force, access_location::host);
-    for(unsigned int i = 0; i < m_pdata->getN(); i++) {
-    h_force.data[i].x += _input_buffer[i].x;
-    h_force.data[i].y += _input_buffer[i].y;
-    h_force.data[i].z += _input_buffer[i].z;
-    //w is potential energy
-    h_force.data[i].w += _input_buffer[i].w;
-}
-}
-
-void TensorflowCompute::receiveVirial() {
+template<IPCCommMode M>
+void TensorflowCompute<M>::zeroVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
     if(_force_mode == FORCE_MODE::overwrite)
         memset((void*)h_virial.data,0,sizeof(Scalar)*m_virial.getNumElements());
-    //note we are casting to scalar, not scalar4. Still add N, because _input_buffer type is scalar4
-    Scalar* virial_buffer = reinterpret_cast<Scalar*> (_input_buffer + m_pdata->getN());
-    for(unsigned int i = 0; i < m_pdata->getN(); i++) {
-        //I don't understand how h_virial is indexed. Taken from TablePotential.cc
-        h_virial.data[0*m_virial_pitch + i] += virial_buffer[i * 9 + 0]; //xx
-        h_virial.data[1*m_virial_pitch + i] += virial_buffer[i * 9 + 1]; //xy
-        h_virial.data[2*m_virial_pitch + i] += virial_buffer[i * 9 + 2]; //xz
-        h_virial.data[3*m_virial_pitch + i] += virial_buffer[i * 9 + 4]; //yy
-        h_virial.data[4*m_virial_pitch + i] += virial_buffer[i * 9 + 5]; //yz
-        h_virial.data[5*m_virial_pitch + i] += virial_buffer[i * 9 + 8]; //zz
-    }
 }
 
-void TensorflowCompute::sendPositions() {
-    // access the particle data for writing on the CPU
-    assert(m_pdata);
-    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-
-    //send data to buffer
-    memcpy(_output_buffer, h_pos.data, sizeof(Scalar4) * m_pdata->getN());
-}
-
-void TensorflowCompute::sendNeighbors() {
+template<IPCCommMode M>
+void TensorflowCompute<M>::prepareNeighbors() {
 
     //create ptr at offset to where neighbors go
-    Scalar4* buffer = _output_buffer + m_pdata->getN();
+    ArrayHandle<Scalar4> buffer_array(_nlist_array, access_location::host, access_mode::overwrite);
+    Scalar4* buffer = buffer_array.data;
     unsigned int* nnoffset = (unsigned int*) calloc(m_pdata->getN(), sizeof(unsigned int));
 
     //These snippets taken from md/TablePotentials.cc
 
     // access the neighbor list
-     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
+    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_n_neigh(_m_nlist->getNNeighArray(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_nlist(_m_nlist->getNListArray(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_head_list(_m_nlist->getHeadList(), access_location::host, access_mode::read);
@@ -275,7 +201,8 @@ void TensorflowCompute::sendNeighbors() {
     free(nnoffset);
 }
 
-Scalar TensorflowCompute::getLogValue(const std::string& quantity, unsigned int timestep) {
+template<IPCCommMode M>
+Scalar TensorflowCompute<M>::getLogValue(const std::string& quantity, unsigned int timestep) {
     //not really sure why this has to be implemented by this class...
     if (quantity == m_log_name)
         {
@@ -290,42 +217,40 @@ Scalar TensorflowCompute::getLogValue(const std::string& quantity, unsigned int 
         }
 }
 
-std::vector<Scalar4> TensorflowCompute::get_positions_array() const {
-    std::vector<Scalar4> array(_output_buffer, _output_buffer + m_pdata->getN());
-    return array;
-}
 
-std::vector<Scalar4> TensorflowCompute::get_nlist_array() const {
-    std::vector<Scalar4> array(_output_buffer + m_pdata->getN(), _output_buffer + _buffer_size);
-    return array;
-}
+template<IPCCommMode M>
+int64_t TensorflowCompute<M>::getForcesBuffer() const { return _forces_comm.getAddress();}
+template<IPCCommMode M>
+int64_t TensorflowCompute<M>::getPositionsBuffer() const {return _positions_comm.getAddress();}
+template<IPCCommMode M>
+int64_t TensorflowCompute<M>::getVirialBuffer() const {return _virial_comm.getAddress();}
+template<IPCCommMode M>
+int64_t TensorflowCompute<M>::getNlistBuffer() const {return _nlist_comm.getAddress();}
 
-std::vector<Scalar4> TensorflowCompute::get_forces_array() const {
-    std::vector<Scalar4> array(_input_buffer, _input_buffer + m_pdata->getN());
-    return array;
-}
-
-std::vector<Scalar> TensorflowCompute::get_virial_array() const {
-    Scalar* buffer = reinterpret_cast<Scalar*> (get_virial_buffer());
-    std::vector<Scalar> array(buffer, buffer + 9 * m_pdata->getN());
-    return array;
-}
+template<IPCCommMode M>
+std::vector<Scalar4> TensorflowCompute<M>::getPositionsArray() const {return _positions_comm.getArray();}
+template<IPCCommMode M>
+std::vector<Scalar4> TensorflowCompute<M>::getNlistArray() const {return _nlist_comm.getArray();}
+template<IPCCommMode M>
+std::vector<Scalar4> TensorflowCompute<M>::getForcesArray() const {return _forces_comm.getArray();}
+template<IPCCommMode M>
+std::vector<Scalar> TensorflowCompute<M>::getVirialArray() const {return _virial_comm.getArray();}
 
 /* Export the CPU Compute to be visible in the python module
  */
 void export_TensorflowCompute(pybind11::module& m)
     {
-    pybind11::class_<TensorflowCompute, std::shared_ptr<TensorflowCompute> >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
+    pybind11::class_<TensorflowCompute<IPCCommMode::CPU>, std::shared_ptr<TensorflowCompute<IPCCommMode::CPU> > >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
         .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE>())
-        .def("get_positions_buffer", &TensorflowCompute::get_positions_buffer, pybind11::return_value_policy::reference)
-        .def("get_nlist_buffer", &TensorflowCompute::get_nlist_buffer, pybind11::return_value_policy::reference)
-        .def("get_forces_buffer", &TensorflowCompute::get_forces_buffer, pybind11::return_value_policy::reference)
-        .def("get_virial_buffer", &TensorflowCompute::get_virial_buffer, pybind11::return_value_policy::reference)
-        .def("get_positions_array", &TensorflowCompute::get_positions_array, pybind11::return_value_policy::take_ownership)
-        .def("get_nlist_array", &TensorflowCompute::get_nlist_array, pybind11::return_value_policy::take_ownership)
-        .def("get_forces_array", &TensorflowCompute::get_forces_array, pybind11::return_value_policy::take_ownership)
-        .def("get_virial_array", &TensorflowCompute::get_virial_array, pybind11::return_value_policy::take_ownership)
-        .def("is_double_precision", &TensorflowCompute::is_double_precision)
+        .def("getPositionsBuffer", &TensorflowCompute<IPCCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
+        .def("getNlistBuffer", &TensorflowCompute<IPCCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
+        .def("getForcesBuffer", &TensorflowCompute<IPCCommMode::CPU>::getForcesBuffer, pybind11::return_value_policy::reference)
+        .def("getVirialBuffer", &TensorflowCompute<IPCCommMode::CPU>::getVirialBuffer, pybind11::return_value_policy::reference)
+        .def("getPositionsArray", &TensorflowCompute<IPCCommMode::CPU>::getPositionsArray, pybind11::return_value_policy::take_ownership)
+        .def("getNlistArray", &TensorflowCompute<IPCCommMode::CPU>::getNlistArray, pybind11::return_value_policy::take_ownership)
+        .def("getForcesArray", &TensorflowCompute<IPCCommMode::CPU>::getForcesArray, pybind11::return_value_policy::take_ownership)
+        .def("getVirialArray", &TensorflowCompute<IPCCommMode::CPU>::getVirialArray, pybind11::return_value_policy::take_ownership)
+        .def("isDoublePrecision", &TensorflowCompute<IPCCommMode::CPU>::isDoublePrecision)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("overwrite", FORCE_MODE::overwrite)
@@ -351,44 +276,10 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
 {
 }
 
- int64_t TensorflowComputeGPU::get_forces_buffer() const {
-     return 0;
- }
-
-  int64_t TensorflowComputeGPU::get_positions_buffer() const {
-     return 0;
- }
-
-  int64_t TensorflowComputeGPU::get_virial_buffer() const {
-     return 0;
- }
-
-  int64_t TensorflowComputeGPU::get_nlist_buffer() const {
-     return 0;
- }
-
-void TensorflowComputeGPU::sendPositions() {
+void TensorflowComputeGPU::prepareNeighbors() {
 
 }
-void TensorflowComputeGPU::sendNeighbors() {
-
-}
-void TensorflowComputeGPU::sendForces() {
-
-}
-void TensorflowComputeGPU::overwriteForces() {
-
-}
-void TensorflowComputeGPU::addForces() {
-
-}
-void TensorflowComputeGPU::receiveVirial() {
-
-}
-void TensorflowComputeGPU::ipcmmap() {
-
-}
-void TensorflowComputeGPU::ipcmunmap() {
+void TensorflowComputeGPU::zeroVorial() {
 
 }
 
@@ -398,16 +289,40 @@ void export_TensorflowComputeGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<ForceCompute>())
         .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE>())
-        .def("get_positions_buffer", &TensorflowComputeGPU::get_positions_buffer, pybind11::return_value_policy::reference)
-        .def("get_nlist_buffer", &TensorflowComputeGPU::get_nlist_buffer, pybind11::return_value_policy::reference)
-        .def("get_forces_buffer", &TensorflowComputeGPU::get_forces_buffer, pybind11::return_value_policy::reference)
-        .def("get_virial_buffer", &TensorflowComputeGPU::get_virial_buffer, pybind11::return_value_policy::reference)
-        .def("get_positions_array", &TensorflowComputeGPU::get_positions_array, pybind11::return_value_policy::take_ownership)
-        .def("get_nlist_array", &TensorflowComputeGPU::get_nlist_array, pybind11::return_value_policy::take_ownership)
-        .def("get_forces_array", &TensorflowComputeGPU::get_forces_array, pybind11::return_value_policy::take_ownership)
-        .def("get_virial_array", &TensorflowComputeGPU::get_virial_array, pybind11::return_value_policy::take_ownership)
-        .def("is_double_precision", &TensorflowComputeGPU::is_double_precision)
+        .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
+        .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
+        .def("getForcesBuffer", &TensorflowComputeGPU::getForcesBuffer, pybind11::return_value_policy::reference)
+        .def("getVirialBuffer", &TensorflowComputeGPU::getVirialBuffer, pybind11::return_value_policy::reference)
+        .def("getPositionsArray", &TensorflowComputeGPU::getPositionsArray, pybind11::return_value_policy::take_ownership)
+        .def("getNlistArray", &TensorflowComputeGPU::getNlistArray, pybind11::return_value_policy::take_ownership)
+        .def("getForcesArray", &TensorflowComputeGPU::getForcesArray, pybind11::return_value_policy::take_ownership)
+        .def("getVirialArray", &TensorflowComputeGPU::getVirialArray, pybind11::return_value_policy::take_ownership)
+        .def("isDoublePrecision", &TensorflowComputeGPU::isDoublePrecision)
     ;
     }
 
 #endif // ENABLE_CUDA
+
+
+template<>
+void receiveForcesFunctorAdd::call<IPCCommMode::CPU>(Scalar4* dest, Scalar4* src) {
+    for(unsigned int i = 0; i < _N; i++) {
+        dest[i].x += src[i].x;
+        dest[i].y += src[i].y;
+        dest[i].z += src[i].z;
+        dest[i].w += src[i].w;
+    }
+}
+
+
+template<>
+void receiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) {
+    for(unsigned int i = 0; i < _N; i++) {
+        dest[0 * _pitch + i] += src[i * 9 + 0]; //xx
+        dest[1 * _pitch + i] += src[i * 9 + 1]; //xy
+        dest[2 * _pitch + i] += src[i * 9 + 2]; //xz
+        dest[3 * _pitch + i] += src[i * 9 + 4]; //yy
+        dest[4 * _pitch + i] += src[i * 9 + 5]; //yz
+        dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
+    }
+}
