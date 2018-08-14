@@ -126,8 +126,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
 template<IPCCommMode M>
 void TensorflowCompute<M>::zeroVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::host, access_mode::overwrite);
-    if(_force_mode == FORCE_MODE::overwrite)
-        memset((void*)h_virial.data,0,sizeof(Scalar)*m_virial.getNumElements());
+    memset((void*)h_virial.data,0,sizeof(Scalar)*m_virial.getNumElements());
 }
 
 template<IPCCommMode M>

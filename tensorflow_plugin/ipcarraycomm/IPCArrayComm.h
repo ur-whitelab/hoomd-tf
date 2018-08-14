@@ -7,6 +7,12 @@
 #include <sys/mman.h>
 
 
+// You may wonder why I do not use specialization
+// to treat the CommMode. The answer is that
+// you cannot do partial specialization of a method
+// The overhead of the ifs is nothing, since the compiler will
+// see them as if (1 == 0) and if(1 == 1) so they will be optimized.
+
 enum class IPCCommMode{GPU, CPU};
 
 // M: Communication mode (GPU or CPU)

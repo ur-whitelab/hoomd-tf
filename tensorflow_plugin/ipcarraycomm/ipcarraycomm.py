@@ -25,3 +25,21 @@ class IPCArrayComm:
         for i in range(self._size):
             npa[i] = array[i]
         return npa
+
+
+if __name__ == '__main__':
+    print('testing...')
+    shared = np.zeros(10)
+    ipc = IPCArrayComm(shared)
+
+    np.testing.assert_allclose(shared, ipc.getArray())
+
+    shared[4] = 10.0
+    ipc.receive()
+    np.testing.assert_allclose(shared, ipc.getArray())
+
+    ref = shared[:]
+    shared[:] = -1
+    ipc.send()
+    np.testing.assert_allclose(shared, ref)
+    print('all passed')

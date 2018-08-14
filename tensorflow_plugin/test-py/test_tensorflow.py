@@ -145,6 +145,7 @@ class test_compute(unittest.TestCase):
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
         thermo_scalars = []
+        tf_virial = []
         for i in range(5):
             hoomd.run(3)
             snapshot = system.take_snapshot()
@@ -159,7 +160,6 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='ignore')
 
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
@@ -167,10 +167,8 @@ class test_compute(unittest.TestCase):
             hoomd.run(3)
             snapshot = system.take_snapshot()
             v = snapshot.particles.velocity
-            lj_virial = np.array([lj.forces[i].virial for i in range(N)])
-            tf_virial = tfcompute.get_virial_array()[:,(0,1,2,4,5,8)]
-            np.testing.assert_allclose(lj_virial, tf_virial, rtol=1e-2)
-            np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i], rtol=1e-3)
+            lj_virial = np.array([lj.forces[j].virial for j in range(N)])
+            np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i], rtol=1e-2)
 
 if __name__ == '__main__':
     unittest.main(argv = ['test_tensorflow.py', '-v'])
