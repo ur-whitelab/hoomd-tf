@@ -277,9 +277,12 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
 
 void TensorflowComputeGPU::prepareNeighbors() {
 
+    //See TablePotentialGPU.cu
+    //gpu_prepare_neighbors()
 }
-void TensorflowComputeGPU::zeroVorial() {
-
+void TensorflowComputeGPU::zeroVirial() {
+    ArrayHandle<Scalar> h_virial(m_virial,access_location::device, access_mode::overwrite);
+    cudaMemset(static_cast<void*> (h_virial.data), 0, sizeof(Scalar) * m_virial.getNumElements());
 }
 
 /* Export the GPU Compute to be visible in the python module
@@ -325,3 +328,16 @@ void receiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) 
         dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
     }
 }
+
+#ifdef ENABLE_CUDA
+template<>
+void receiveForcesFunctorAdd::call<IPCCommMode::GPU>(Scalar4* dest, Scalar4* src) {
+    gpu_add_scalar4(dest, src, _N);
+}
+
+
+template<>
+void receiveVirialFunctorAdd::call<IPCCommMode::GPU>(Scalar* dest, Scalar* src) {
+    gpu_add_virial(dest, src, _N, _pitch);
+}
+#endif //ENABLE_CUDA

@@ -3,6 +3,7 @@
 
 #include "TensorflowCompute.cuh"
 
+
 /*! \file TensorflowCompute.cu
     \brief CUDA kernels for TensorflowCompute
 */
@@ -16,18 +17,36 @@
     as long as block_size * num_blocks is >= the number of particles.
 */
 extern "C" __global__
-void gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N)
+void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (i < _N)
+    if (i < N)
     {
-        dest[i] += src[i];
+        dest[i].x += src[i].x;
+        dest[i].y += src[i].y;
+        dest[i].z += src[i].z;
+        dest[i].w += src[i].w;
     }
 }
 
+cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N)
+{
+    // setup the grid to run the kernel
+    int block_size = 256;
+    dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
+    dim3 threads(block_size, 1, 1);
+
+    // run the kernel
+    gpu_add_scalar4_kernel<<< grid, threads >>>(dest, src, _N);
+
+    // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
+    // cudaSuccess
+    return cudaSuccess;
+}
+
 extern "C" __global__
-void gpu_add_virial(Scalar4 *dest, Scalar4 *src, unsigned int _N, unsigned int _pitch)
+void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -40,4 +59,19 @@ void gpu_add_virial(Scalar4 *dest, Scalar4 *src, unsigned int _N, unsigned int _
         dest[4 * _pitch + i] += src[i * 9 + 5]; //yz
         dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
     }
+}
+
+cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch)
+{
+    // setup the grid to run the kernel
+    int block_size = 256;
+    dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
+    dim3 threads(block_size, 1, 1);
+
+    // run the kernel
+    gpu_add_virial_kernel<<< grid, threads >>>(dest, src, _N, _pitch);
+
+    // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
+    // cudaSuccess
+    return cudaSuccess;
 }

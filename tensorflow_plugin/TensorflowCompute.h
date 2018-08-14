@@ -14,8 +14,8 @@
     \brief Declaration of TensorflowCompute
 */
 
+#include "TensorflowCompute.h"
 #include "ipcarraycomm/IPCArrayComm.h"
-
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
@@ -146,7 +146,7 @@ void export_TensorflowCompute(pybind11::module& m);
 //! A GPU accelerated nonsense particle Compute written to demonstrate how to write a plugin w/ CUDA code
 /*! This Compute simply sets all of the particle's velocities to 0 (on the GPU) when update() is called.
 */
-class TensorflowComputeGPU : public TensorflowCompute<IPCommMode::GPU>
+class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
     {
     public:
         //! Constructor
