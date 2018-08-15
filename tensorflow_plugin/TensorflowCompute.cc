@@ -27,7 +27,7 @@ TensorflowCompute<M>::TensorflowCompute(
     unsigned int nneighs, FORCE_MODE force_mode)
         : ForceCompute(sysdef),
           _py_self(py_self),
-          _m_nlist(nlist),
+          m_nlist(nlist),
           _r_cut(r_cut),
           _nneighs(nneighs),
           _force_mode(force_mode)
@@ -76,8 +76,7 @@ TensorflowCompute<M>::~TensorflowCompute() {
     \param timestep Current time step of the simulation
 */
 template<IPCCommMode M>
-void TensorflowCompute<M>::computeForces(unsigned int timestep)
-{
+void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->push("TensorflowCompute");
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Acquire Lock");
@@ -88,7 +87,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
     _positions_comm.send();
     if(_nneighs > 0) {
         //Update the neighborlist
-        _m_nlist->compute(timestep);
+        m_nlist->compute(timestep);
         if (m_prof) m_prof->push("TensorflowCompute<M>::prepareNeighbors");
         prepareNeighbors();
         if (m_prof) m_prof->pop();
@@ -141,9 +140,9 @@ void TensorflowCompute<M>::prepareNeighbors() {
 
     // access the neighbor list
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_n_neigh(_m_nlist->getNNeighArray(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_nlist(_m_nlist->getNListArray(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_head_list(_m_nlist->getHeadList(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_n_neigh(m_nlist->getNNeighArray(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_nlist(m_nlist->getNListArray(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_head_list(m_nlist->getHeadList(), access_location::host, access_mode::read);
 
     //need for periodic image correction
     const BoxDim& box = m_pdata->getBox();
@@ -177,7 +176,7 @@ void TensorflowCompute<M>::prepareNeighbors() {
             buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
             nnoffset[i]++;
 
-            if(_m_nlist->getStorageMode() == NeighborList::half) {
+            if(m_nlist->getStorageMode() == NeighborList::half) {
                 buffer[k * _nneighs + nnoffset[k]].x =  -dx.x;
                 buffer[k * _nneighs + nnoffset[k]].y =  -dx.y;
                 buffer[k * _nneighs + nnoffset[k]].z =  -dx.z;
@@ -273,13 +272,47 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
              FORCE_MODE force_mode)
         : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode)
 {
+
+    _nneighs = std::min(this->m_nlist->getNListArray().getPitch(),nneighs);
+    std::cout << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+    m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", this->m_exec_conf));
+}
+
+void TensorflowComputeGPU::setAutotunerParams(bool enable, unsigned int period)
+{
+    TensorflowCompute::setAutotunerParams(enable, period);
+    m_tuner->setPeriod(period);
+    m_tuner->setEnabled(enable);
 }
 
 void TensorflowComputeGPU::prepareNeighbors() {
 
-    //See TablePotentialGPU.cu
-    //gpu_prepare_neighbors()
+    ArrayHandle<Scalar4> d_nlist_array(this->_nlist_array, access_location::device, access_mode::overwrite);
+    ArrayHandle<unsigned int> d_n_neigh(this->m_nlist->getNNeighArray(), access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_nlist(this->m_nlist->getNListArray(), access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_head_list(this->m_nlist->getHeadList(), access_location::device, access_mode::read);
+    ArrayHandle<Scalar4> d_pos(m_pdata->getPositions(), access_location::device, access_mode::read);
+    m_tuner->begin();
+    gpu_reshape_nlist(d_nlist_array.data,
+                      d_pos.data,
+                      m_pdata->getN(),
+                      _nneighs,
+                      m_pdata->getNGhosts(),
+                      m_pdata->getBox(),
+                      d_n_neigh.data,
+                      d_nlist.data,
+                      d_head_list.data,
+                      this->m_nlist->getNListArray().getPitch(),
+                      m_tuner->getParam(),
+                      m_exec_conf->getComputeCapability(),
+                      m_exec_conf->dev_prop.maxTexture1DLinear,
+                      _r_cut);
+
+    if(m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_tuner->end();
 }
+
 void TensorflowComputeGPU::zeroVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::device, access_mode::overwrite);
     cudaMemset(static_cast<void*> (h_virial.data), 0, sizeof(Scalar) * m_virial.getNumElements());

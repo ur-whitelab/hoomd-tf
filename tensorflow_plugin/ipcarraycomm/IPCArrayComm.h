@@ -162,20 +162,21 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                 _array_size = sizeof(T) * _array->getNumElements();
             if(!_mm_page) {
                 _mm_page = mmap(NULL, getMMSize(), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-                std::cout << "Allocating" << _mm_page << std::endl;
                 if(_mm_page == MAP_FAILED)
                     throw std::runtime_error("Unable to create mmap");
             }
             #ifdef ENABLE_CUDA
-            if(_mm_page) {
-                //we will open the existing mapped memory in cuda
-                _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
-                cudaIpcOpenMemHandle(&_ipc_array, *_ipc_handle, cudaIpcMemLazyEnablePeerAccess);
-            } else {
-                //We will create a shared block
-                _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
-                cudaMalloc(&_ipc_array, getArraySize());
-                cudaIpcGetMemHandle(_ipc_handle, _ipc_array);
+            if(M == IPCCommMode::GPU) {
+                if(_mm_page) {
+                    //we will open the existing mapped memory in cuda
+                    _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
+                    cudaIpcOpenMemHandle(&_ipc_array, *_ipc_handle, cudaIpcMemLazyEnablePeerAccess);
+                } else {
+                    //We will create a shared block
+                    _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
+                    cudaMalloc(&_ipc_array, getArraySize());
+                    cudaIpcGetMemHandle(_ipc_handle, _ipc_array);\
+                }
 
             }
             #endif
@@ -183,7 +184,6 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
 
         void deallocate() {
             if(_mm_page) {
-                std::cout << "Deallocating" << _mm_page << std::endl;
                 munmap(_mm_page, getMMSize());
             }
             if(M == IPCCommMode::GPU) {

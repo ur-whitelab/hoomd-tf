@@ -21,6 +21,7 @@
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
+#include <hoomd/Autotuner.h>
 
 
 // pybind11 is used to create the python bindings to the C++ object,
@@ -122,7 +123,7 @@ class TensorflowCompute : public ForceCompute
         virtual void prepareNeighbors();
         virtual void zeroVirial();
 
-        std::shared_ptr<NeighborList> _m_nlist;
+        std::shared_ptr<NeighborList> m_nlist;
         Scalar _r_cut;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
@@ -153,10 +154,12 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
 
+        void setAutotunerParams(bool enable, unsigned int period) override;
     protected:
         void prepareNeighbors() override;
         void zeroVirial() override;
     private:
+        std::unique_ptr<Autotuner> m_tuner; // Autotuner for block size
         cudaIpcMemHandle_t* _input_handle;
         cudaIpcMemHandle_t* _output_handle;
         GPUArray<Scalar4> _forces_array;
