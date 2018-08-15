@@ -4,8 +4,26 @@
 #include <sys/mman.h>
 #include <typeinfo>
 #include <string.h>
+#include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/shape_inference.h"
 
 using namespace tensorflow;
+
+REGISTER_OP("IpcToTensor")
+    .Attr("T: {float, double}")
+    .Attr("Tshape: {int32, int64}")
+    .Input("shape: Tshape")
+    .Attr("address: int") //memory address. Should be scalar. TODO: learn to check rank. Not sure about type to use here!
+    .Output("output: T")
+    .SetIsStateful()
+    .SetShapeFn([](shape_inference::InferenceContext* c) {
+      //Taken from common_shape_functions and following
+      //example for random_ops.cc in TF source
+      shape_inference::ShapeHandle out;
+      TF_RETURN_IF_ERROR(c->MakeShapeFromShapeTensor(0, &out));
+      c->set_output(0, out);
+      return Status::OK();
+    });
 
 
 using CPUDevice = Eigen::ThreadPoolDevice;
@@ -14,7 +32,7 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, int64 address, T* out) {
+  void operator()(const CPUDevice& d, int size, int64 address, T** ipc_memory, T* out) {
     //TODO: access address
     T* input_buffer = reinterpret_cast<T*> (address);
     std::memcpy(out, input_buffer, size * sizeof(T));
@@ -27,7 +45,7 @@ struct IPC2TFunctor<CPUDevice, T> {
 template <typename Device, typename T, typename Tshape>
 class IpcToTensorOp : public OpKernel {
  public:
-  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context), _ipc_memory(NULL) {
 
     //get memory address
     context->GetAttr("address", &_input_address);
@@ -61,11 +79,13 @@ class IpcToTensorOp : public OpKernel {
         context->eigen_device<Device>(),
         output.size(),
         _input_address,
+        &_ipc_memory,
         output.data());
   }
 
 private:
   int64 _input_address;
+  T* _ipc_memory;
 };
 
 // Register the CPU kernels.
@@ -84,14 +104,19 @@ REGISTER_CPU(double, int64);
 
 // Register the GPU kernels.
 #ifdef GOOGLE_CUDA
-#define REGISTER_GPU(T)                                          \
+#define REGISTER_GPU(T, Tshape)                                          \
   /* Declare explicit instantiations in kernel_IPC2T.cu.cc. */ \
-  extern template IPC2TFunctor<GPUDevice, float>;              \
+  extern template IPC2TFunctor<GPUDevice, T>;              \
   REGISTER_KERNEL_BUILDER(                                       \
       Name("IpcToTensor")
-      .Device(DEVICE_GPU).TypeConstraint<T>("T")
-      .HostMemory("shape")
+      .Device(DEVICE_GPU) \
+      .HostMemory("shape") \
       .HostMemory("address"), \
-      IpcToTensorOp<GPUDevice, T>);
-REGISTER_GPU(float);
+      .TypeConstraint<Tshape>("Tshape") \
+      .TypeConstraint<T>("T"), \
+      IpcToTensorOp<GPUDevice, T, Tshape>);
+REGISTER_GPU(float, int32);
+REGISTER_GPU(float, int64);
+REGISTER_GPU(double, int32);
+REGISTER_GPU(double, int64);
 #endif  // GOOGLE_CUDA

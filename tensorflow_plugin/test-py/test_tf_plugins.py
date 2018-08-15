@@ -10,9 +10,10 @@ class test_ipc(unittest.TestCase):
         shape = [9, 4, 8]
         data = np.array(np.random.random_sample(shape), dtype=np.float32)
         pointer, _ = data.__array_interface__['data']
-        ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor(address=pointer, T=np.float32, shape=shape)
-        diff = tf.convert_to_tensor(data) - ipc_to_tensor
-        sqe = tf.reduce_sum(diff**2)
+        with tf.device("/cpu:0"):
+            ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor(address=pointer, T=np.float32, shape=shape)
+            diff = tf.convert_to_tensor(data) - ipc_to_tensor
+            sqe = tf.reduce_sum(diff**2)
         with tf.Session() as sess:
             result = sess.run(sqe)
         assert result < 10**-10
@@ -22,7 +23,8 @@ class test_ipc(unittest.TestCase):
         shape = [8, 3, 2]
         data = np.ones(shape, dtype=np.float32)
         pointer, _ = data.__array_interface__['data']
-        tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc(tf.zeros(shape, dtype=tf.float32), address=pointer, maxsize=np.prod(shape))
+        with tf.device("/cpu:0"):
+            tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc(tf.zeros(shape, dtype=tf.float32), address=pointer, maxsize=np.prod(shape))
         with tf.Session() as sess:
             result = sess.run(tensor_to_ipc)
         assert np.sum(data) < 10**-10

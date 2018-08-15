@@ -1,39 +1,28 @@
 #ifdef GOOGLE_CUDA
 #define EIGEN_USE_GPU
+
 #include "ipc2tensor.h"
-#include "hoomd/HOOMDMath.h"
-#include "hoomd/ParticleData.cuh"
-#include "tensorflow/core/util/cuda_kernel_helper.h"
+#include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/op_kernel.h"
 
 using namespace tensorflow;
 
 using GPUDevice = Eigen::GpuDevice;
 
-// Define the CUDA kernel.
-template <typename T>
-__global__ void HoomdCudaKernel(const int size, const T* in, T* out) {
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size;
-       i += blockDim.x * gridDim.x) {
-    out[i] = 2 * ldg(in + i);
+// GPU specialization of actual computation.
+template<typename T>
+struct IPC2TFunctor<GPUDevice, T> {
+  void operator()(const GPUDevice& d, int size, int64 address, T** ipc_memory, T* out) {
+    if(!ipc_memory) {
+      cudaIpcMemHandle_t* ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (address);
+      cudaIpcOpenMemHandle((void**) (ipc_memory), *ipc_handle, cudaIpcMemLazyEnablePeerAccess);
+    }
+    cudaMemcpy(out, *ipc_memory, size * sizeof(T), cudaMemcpyDeviceToDevice);
   }
-}
-
-// Define the GPU implementation that launches the CUDA kernel.
-template <typename T>
-void HoomdFunctor<GPUDevice, T>::operator()(
-    const GPUDevice& d, int size, const T* in, T* out) {
-  // Launch the cuda kernel.
-  //
-  // See core/util/cuda_kernel_helper.h for Hoomd of computing
-  // block count and thread_per_block count.
-  int block_count = 1024;
-  int thread_per_block = 20;
-  HoomdCudaKernel<T>
-      <<<block_count, thread_per_block, 0, d.stream()>>>(size, in, out);
-}
+};
 
 // Explicitly instantiate functors for the types of OpKernels registered.
-template struct HoomdFunctor<GPUDevice, float>;
-template struct HoomdFunctor<GPUDevice, int32>;
+template struct IPC2TFunctor<GPUDevice, float>;
+template struct IPC2TFunctor<GPUDevice, double>;
 
 #endif  // GOOGLE_CUDA
