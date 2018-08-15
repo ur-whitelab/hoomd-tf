@@ -2,7 +2,6 @@
 # Maintainer: Andrew White
 
 import hoomd, hoomd.md
-hoomd.context.initialize()
 import hoomd.tensorflow_plugin
 import unittest
 import os, tempfile, shutil, pickle
@@ -28,9 +27,28 @@ def compute_forces(system, rcut):
                 forces[j, :] -= f
     return forces
 
+class test_ipc(unittest.TestCase):
+    def test_ipc_array_comm(self):
+        hoomd.context.initialize('--mode=cpu')
+        shared = np.zeros(10)
+        ipc = hoomd.tensorflow_plugin.IPCArrayComm(shared,  hoomd.context.exec_conf)
+
+        np.testing.assert_allclose(shared, ipc.getArray())
+
+        shared[4] = 10.0
+        ipc.receive()
+        np.testing.assert_allclose(shared, ipc.getArray())
+
+        ref = shared[:]
+        shared[:] = -1
+        ipc.send()
+        np.testing.assert_allclose(shared, ref)
+
 class test_access(unittest.TestCase):
     def test_access(self):
-        hoomd.context.initialize()
+        model_dir = '/tmp/test-simple-potential-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir, _mock_mode=True)
+        hoomd.context.initialize('--gpu_error_checking')
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
@@ -39,18 +57,21 @@ class test_access(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period = 1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
-        save_loc = '/tmp/test-simple-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, _mock_mode=True)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(1)
 
-        tfcompute.get_positions_array()
         tfcompute.get_virial_array()
+        tfcompute.get_positions_array()                
         tfcompute.get_nlist_array()
         tfcompute.get_forces_array()
 
+        print('Able to access all arrays!')
+
 class test_compute(unittest.TestCase):
     def test_compute_force_overwrite(self):
+        model_dir = '/tmp/test-simple-potential-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -61,9 +82,9 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        save_loc = '/tmp/test-simple-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
+
+        tfcompute.attach(nlist, r_cut=rcut)
         for i in range(3):
             hoomd.run(1)
             py_forces = compute_forces(system, rcut)
@@ -171,4 +192,4 @@ class test_compute(unittest.TestCase):
             np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i], rtol=1e-2)
 
 if __name__ == '__main__':
-    unittest.main(argv = ['test_tensorflow.py', '-v'])
+    unittest.main()

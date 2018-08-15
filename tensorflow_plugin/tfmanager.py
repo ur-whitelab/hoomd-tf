@@ -2,8 +2,12 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle
 
-def main(log_filename, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, dtype, debug=True):
-    tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug)
+def main(q, barrier):
+
+    tfm_args = q.get()
+
+    #tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug)
+    tfm = TFManager(barrier=barrier, **tfm_args)
 
     tfm.start_loop()
 

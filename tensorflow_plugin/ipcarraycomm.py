@@ -1,4 +1,4 @@
-import _ipc_array_comm
+from hoomd.tensorflow_plugin import _tensorflow_plugin
 import numpy as np
 import hoomd
 
@@ -11,8 +11,10 @@ class IPCArrayComm:
         if hoomd_context is None:
             hoomd.context.initialize()
             hoomd_context = hoomd.context.exec_conf
-        self.cpp_ref = _ipc_array_comm.IPCArrayCommCPU(_ipc_array_comm.int2ptr(ptr_address), nparray.dtype.itemsize * len(nparray), hoomd_context)
-
+        if not hoomd.context.exec_conf.isCUDAEnabled():
+            self.cpp_ref = _tensorflow_plugin.IPCArrayCommCPU(_tensorflow_plugin.int2ptr(ptr_address), nparray.dtype.itemsize * len(nparray), hoomd_context)
+        else:
+            raise RuntimeError('Can only build IPCArray Comm on CPU')
     def send(self):
         self.cpp_ref.send()
 
@@ -25,21 +27,3 @@ class IPCArrayComm:
         for i in range(self._size):
             npa[i] = array[i]
         return npa
-
-
-if __name__ == '__main__':
-    print('testing...')
-    shared = np.zeros(10)
-    ipc = IPCArrayComm(shared)
-
-    np.testing.assert_allclose(shared, ipc.getArray())
-
-    shared[4] = 10.0
-    ipc.receive()
-    np.testing.assert_allclose(shared, ipc.getArray())
-
-    ref = shared[:]
-    shared[:] = -1
-    ipc.send()
-    np.testing.assert_allclose(shared, ref)
-    print('all passed')

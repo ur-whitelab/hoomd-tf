@@ -3,6 +3,21 @@
 #include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
 #include "IPCArrayComm.h"
 
+
+#ifdef ENABLE_CUDA
+void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line) {
+    // if there was an error
+    if (err != cudaSuccess) {
+        // print an error message
+        std::cerr << "error type: " << cudaGetErrorName(err) << ": " << std::string(cudaGetErrorString(err)) << " before "
+                     << file << ":" << line << std::endl;
+
+        // throw an error exception
+        throw(std::runtime_error("CUDA Error"));
+        }
+}
+#endif
+
 void* int2ptr(int64_t address) {
     return reinterpret_cast<void*> (address);
 }
@@ -15,12 +30,9 @@ void export_IPCArrayComm(pybind11::module& m) {
     .def("receive", &IPCArrayComm<IPCCommMode::CPU, double>::receive)
     ;
 
-    m.def("int2ptr", &int2ptr);
-}
+    pybind11::class_<IPCReservation>(m, "IPCReservation")
+    .def(pybind11::init<size_t>())
+    ;
 
-//doing this two-step approach to mimic what's done by hoomd
-PYBIND11_PLUGIN(_ipc_array_comm) {
-    pybind11::module m("_ipc_array_comm");
-    export_IPCArrayComm(m);
-    return m.ptr();
+    m.def("int2ptr", &int2ptr);
 }

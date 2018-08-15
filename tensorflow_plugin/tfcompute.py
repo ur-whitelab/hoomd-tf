@@ -31,26 +31,43 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self, tf_model_directory, nlist, r_cut, force_mode='overwrite',
-                 log_filename='tf_manager.log', debug_mode=False, _mock_mode=False):
+    def __init__(self,tf_model_directory, log_filename='tf_manager.log', _debug_mode=False, _mock_mode=False):
 
         #so delete won't fail
         self.tfm = None
 
-        #make sure we have number of atoms and know dimensionality, etc.
-        if not hoomd.init.is_initialized():
-            hoomd.context.msg.error('Cannot create TF before initialization\n')
-            raise RuntimeError('Error creating TF')
+        if hoomd.init.is_initialized():
+            raise RuntimeError('Must create TF before hoomd initialization')
 
-        #check our parameters
+
+        self.debug_mode = _debug_mode
+        self.tf_model_directory = tf_model_directory
+
         try:
             with open(os.path.join(tf_model_directory, 'graph_info.p'), 'rb') as f:
                 self.graph_info = pickle.load(f)
-                if self.graph_info['N'] != len(hoomd.context.current.group_all):
-                    hoomd.context.msg.error('Number of atoms must be same in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
-                    raise RuntimeError('Error creating TF')
         except FileNotFoundError:
             raise RuntimeError('Unable to load model in directory {}'.format(tf_model_directory))
+
+        #need to allocate ipc reservation now so it can be forked
+        self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
+
+        if not _mock_mode:
+            self._init_tf()
+        self._mock_mode = _mock_mode
+
+
+    def attach(self, nlist, r_cut, force_mode='overwrite'):
+
+        #make sure we have number of atoms and know dimensionality, etc.
+        if not hoomd.init.is_initialized():
+            hoomd.context.msg.error('Must attach TF after initialization\n')
+            raise RuntimeError('Error creating TF')
+
+        #check our parameters
+        if self.graph_info['N'] != len(hoomd.context.current.group_all):
+            hoomd.context.msg.error('Number of atoms must be same in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
+            raise RuntimeError('Error creating TF')
 
         #I'm not sure if this is necessary following other files
         self.enabled = True
@@ -61,11 +78,10 @@ class tensorflow(hoomd.compute._compute):
         self.nneighbor_cutoff = self.graph_info['NN']
         self.atom_number = len(hoomd.context.current.group_all)
         print('neighs', self.nneighbor_cutoff, 'atoms', len(hoomd.context.current.group_all))
-        self.tf_model_directory = tf_model_directory
+
         nlist.subscribe(self.rcut)
         r_cut = float(r_cut)
         self.r_cut = r_cut
-        self.debug_mode = debug_mode
 
         #activate neighbor list
         nlist.update_rcut()
@@ -74,8 +90,6 @@ class tensorflow(hoomd.compute._compute):
 
         # initialize base class
         hoomd.compute._compute.__init__(self)
-        self.tfm = None
-        self.log_filename = log_filename
 
         force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite
         if force_mode == 'add':
@@ -88,10 +102,14 @@ class tensorflow(hoomd.compute._compute):
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
-            hoomd.context.current.system_definition, nlist.cpp_nlist, r_cut, self.nneighbor_cutoff, force_mode_code)
+            hoomd.context.current.system_definition, nlist.cpp_nlist,
+            r_cut, self.nneighbor_cutoff, force_mode_code,
+             self.ipc_reservation)
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
-            hoomd.context.current.system_definition, nlist.cpp_nlist, r_cut, self.nneighbor_cutoff, force_mode_code)
+            hoomd.context.current.system_definition, nlist.cpp_nlist,
+            r_cut, self.nneighbor_cutoff, force_mode_code,
+             self.ipc_reservation)
 
         #get double vs single precision
         self.dtype = tf.float32
@@ -102,9 +120,8 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
         hoomd.context.current.forces.append(self)
 
-        if not _mock_mode:
-            self.restart_tf()
-        self._mock_mode = _mock_mode
+        if not self._mock_mode:
+            self._start_tf()
 
     def rcut(self):
         #adapted from hoomd/md/pair.py
@@ -130,35 +147,30 @@ class tensorflow(hoomd.compute._compute):
         #need to terminate orphan
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
         #self.lock.release
-        self.barrier.abort()
         self.tfm.terminate()
 
-    def restart_tf(self):
-        if self.tfm and self.tfm.is_alive():
-            self.shutdown_tf()
-        if not self.cpp_force:
-            return
-        #setup locks
-        self.force_lock, self.pos_lock = multiprocessing.Lock(), multiprocessing.Lock()
-        self.force_lock.acquire()
+    def _init_tf(self):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
         self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 3)
-        self.tfm = multiprocessing.Process(target=main,
-                                    args=(self.log_filename,
-                                          self.graph_info,
-                                          (self.force_lock, self.pos_lock),
-                                          self.barrier,
-                                          self.cpp_force.getPositionsBuffer(),
-                                          self.cpp_force.getNlistBuffer(),
-                                          self.cpp_force.getForcesBuffer(),
-                                          self.cpp_force.getVirialBuffer(),
-                                          self.dtype,
-                                          self.debug_mode))
-
+        self.queue = multiprocessing.Queue()
+        self.tfm = multiprocessing.Process(target=main, args=(self.queue,self.barrier))
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager. Will make tensor of shape {}x4\n'.format(len(hoomd.context.current.group_all)))
+        hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
 
+    def _start_tf(self):
+        if not self.cpp_force:
+            return
+        args = {'log_filename': self.log_filename,
+                'graph_info': self.graph_info,
+                'positions_buffer': self.cpp_force.getPositionsBuffer(),
+                'nlist_buffer': self.cpp_force.getNlistBuffer(),
+                'forces_buffer': self.cpp_force.getForcesBuffer(),
+                'virial_buffer': self.cpp_force.getVirialBuffer(),
+                'dtype': self.dtype,
+                'debug': self.debug_mode}
+        self.queue.put(args)
+        hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
 
     def start_update(self):
         '''Write to output the current sys information'''
@@ -189,7 +201,19 @@ class tensorflow(hoomd.compute._compute):
 
     def get_virial_array(self):
         array = self.cpp_force.getVirialArray()
-        npa = np.reshape(array, (self.atom_number,9))
+        pitch = self.cpp_force.getVirialPitch()
+        npa = np.zeros((self.atom_number, 3, 3))
+        for i in range(self.atom_number):
+            #see TensorflowCompute.cc for more info
+            npa[i, 0, 0] = array[0 * pitch + i]
+            npa[i, 0, 1] = array[1 * pitch + i]
+            npa[i, 1, 0] = array[1 * pitch + i]
+            npa[i, 0, 2] = array[2 * pitch + i]
+            npa[i, 2, 0] = array[2 * pitch + i]
+            npa[i, 1, 1] = array[3 * pitch + i]
+            npa[i, 1, 2] = array[4 * pitch + i]
+            npa[i, 2, 1] = array[4 * pitch + i]
+            npa[i, 2, 2] = array[5 * pitch + i]
         return npa
 
 

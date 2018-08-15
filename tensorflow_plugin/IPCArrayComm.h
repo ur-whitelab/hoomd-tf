@@ -2,18 +2,63 @@
 #define _IPC_ARRAY_COMM_
 
 #include <hoomd/GPUArray.h>
+//get CUDA_ERROR_CHECK() macro
+#include <hoomd/ExecutionConfiguration.h>
 #include <string.h>
 #include <stdexcept>
+#include <iostream>
 #include <sys/mman.h>
 
 
-// You may wonder why I do not use specialization
-// to treat the CommMode. The answer is that
-// you cannot do partial specialization of a method
+// I do not use specialization
+// to treat the CommMode because you cannot do partial specialization of a method
 // The overhead of the ifs is nothing, since the compiler will
 // see them as if (1 == 0) and if(1 == 1) so they will be optimized.
 
 enum class IPCCommMode{GPU, CPU};
+
+struct IPCReservation{
+    char* _ptr;
+    size_t _index;
+    size_t _size;
+
+    IPCReservation() : _ptr(NULL), _index(0), _size(0) {
+    }
+    IPCReservation(size_t size) : _ptr(NULL), _index(0), _size(size) {
+        _ptr = (char*) mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+            if(_ptr == MAP_FAILED)
+                throw std::runtime_error("Unable to create mmap");
+    }
+
+    ~IPCReservation() {
+        if(_ptr) {
+            munmap((void*) _ptr, _size);
+            _ptr = NULL;
+        }
+    }
+
+    void* allocate(size_t size) {
+        if(size > (_size - _index))
+            return NULL;
+        void* result =  _ptr + _index;
+        _index += size;
+        return result;
+
+    }
+};
+
+// need this without access to context
+#ifdef ENABLE_CUDA
+void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line);
+#define IPC_CHECK_CUDA_ERROR() { \
+    cudaError_t err_sync = cudaGetLastError();  \
+    ipcCheckCudaError(err_sync, __FILE__, __LINE__); \
+    cudaError_t err_async = cudaDeviceSynchronize(); \
+    ipcCheckCudaError(err_async, __FILE__, __LINE__); \
+  }
+#else
+#define IPC_CHECK_CUDA_ERROR()
+#endif //ENABLE_CUDA
 
 // M: Communication mode (GPU or CPU)
 // two-way communication where one owns array and other does not
@@ -23,35 +68,40 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
     public:
 
         IPCArrayComm() :
-            _mm_page(NULL), _array(NULL), _array_size(0), _own_array(false)
+            _mm_page(NULL), _array(NULL), _array_size(0), _own_array(false), _ipcr(NULL)
         {
             checkDevice();
+	    #ifdef ENABLE_CUDA
+	    _ipc_array = NULL;
+	    _ipc_handle = NULL;
+	    #endif
         }
 
         IPCArrayComm(void* mm_page, size_t array_size, std::shared_ptr<const ExecutionConfiguration> exec_conf) :
-            _mm_page(mm_page), _array(NULL), _array_size(array_size), _own_array(true)
+            _mm_page(mm_page), _array(NULL), _array_size(array_size), _own_array(true), _ipcr(NULL)
         {
             checkDevice();
             _array = new GPUArray<T>(array_size, exec_conf);
             allocate();
         }
 
-        IPCArrayComm(GPUArray<T>& gpu_array) :
-            _mm_page(NULL), _array(&gpu_array), _array_size(0), _own_array(false)
+        IPCArrayComm(GPUArray<T>& gpu_array, IPCReservation* ipcr) :
+            _mm_page(NULL), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr)
         {
             checkDevice();
             allocate();
         }
 
-        IPCArrayComm(GPUArray<T>& gpu_array, size_t array_size) :
-            _mm_page(NULL), _array(&gpu_array), _array_size(array_size), _own_array(false)
+        IPCArrayComm(GPUArray<T>& gpu_array, IPCReservation* ipcr, size_t num_elements) :
+            _mm_page(NULL), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr)
         {
-            checkDevice();
+  	    _array_size = num_elements * sizeof(T);
+	    checkDevice();
             allocate();
         }
 
         IPCArrayComm(GPUArray<T>& gpu_array, void* mm_page) :
-            _mm_page(mm_page), _array(&gpu_array), _array_size(0), _own_array(false)
+            _mm_page(mm_page), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(NULL)
         {
             checkDevice();
             allocate();
@@ -66,9 +116,11 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         IPCArrayComm& operator=(IPCArrayComm&& other) {
            checkDevice();
            //copy over variables
+	   std::cerr << this << " is swapping with " << &other << " with ipc_array " << other._ipc_array << std::endl;
             _mm_page = other._mm_page;
             _array = other._array;
             _array_size = other._array_size;
+	    other._array_size = 0;
             _own_array = other._own_array;
             //prevent mm_page from being deallocated in other
             other._mm_page = NULL;
@@ -77,7 +129,9 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
 
             #ifdef ENABLE_CUDA
             _ipc_array = other._ipc_array;
+            other._ipc_array = NULL;
             _ipc_handle = other._ipc_handle;
+            other._ipc_handle = NULL;
             #endif
 
             return *this;
@@ -89,16 +143,6 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             this->deallocate();
         }
 
-        void update_array(GPUArray<T>& array) {
-            if(!_own_array && _array != array) {
-                if(array.getNumElements() != _array->getNumElements()) {
-                    this->dellocate();
-                    allocate();
-                }
-                _array = &array;
-            }
-        }
-
         void receive() {
             if(M == IPCCommMode::CPU) {
                 ArrayHandle<T> handle(*_array, access_location::host,access_mode::overwrite);
@@ -107,6 +151,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                 #ifdef ENABLE_CUDA
                 ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
                 cudaMemcpy(handle.data, _ipc_array, _array->getNumElements() * sizeof(T),  cudaMemcpyDeviceToDevice);
+                IPC_CHECK_CUDA_ERROR();
                 #endif
             }
         }
@@ -133,15 +178,31 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             } else {
             #ifdef ENABLE_CUDA
                 ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
-                cudaMemcpy(_ipc_array, handle.data, getArraySize(),  cudaMemcpyDeviceToDevice);
+                cudaMemcpy(_ipc_array, handle.data, getArraySize(), cudaMemcpyDeviceToDevice);
+                IPC_CHECK_CUDA_ERROR();
             #endif
             }
         }
 
         std::vector<T> getArray() const {
             ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-            std::vector<T> array(handle.data, handle.data + getArraySize());
-            return array;
+	    return std::vector<T>(handle.data, handle.data + _array->getNumElements());
+
+        }
+
+        cudaPointerAttributes getIPCAttributes() {
+            cudaPointerAttributes attr;
+            cudaPointerGetAttributes(&attr, _ipc_array);
+            std::cout << "pointer on device " << attr.device << std::endl;
+            std::cout << "   devPointer:  " << attr.devicePointer << std::endl;
+            std::cout << "   hostPointer:  " << attr.hostPointer << std::endl;
+            if(attr.memoryType == cudaMemoryTypeHost)
+                std::cout << "   memoryType:  "<< "host" << std::endl;
+            else if(attr.memoryType == cudaMemoryTypeDevice)
+                std::cout << "   memoryType:  "<< "device" << std::endl;
+            else
+                std::cout << "   memoryType:  unknown" << std::endl;
+            return attr;
         }
 
         int64_t getAddress() const {
@@ -160,38 +221,57 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         void allocate() {
             if(_array_size == 0)
                 _array_size = sizeof(T) * _array->getNumElements();
-            if(!_mm_page) {
-                _mm_page = mmap(NULL, getMMSize(), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-                if(_mm_page == MAP_FAILED)
-                    throw std::runtime_error("Unable to create mmap");
+            if(M == IPCCommMode::CPU) {
+                if(!_mm_page) {
+                    allocate_mm_page();
+                }
             }
             #ifdef ENABLE_CUDA
+            _ipc_array = NULL;
             if(M == IPCCommMode::GPU) {
+                //flush errors
+                IPC_CHECK_CUDA_ERROR();
                 if(_mm_page) {
                     //we will open the existing mapped memory in cuda
                     _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
                     cudaIpcOpenMemHandle(&_ipc_array, *_ipc_handle, cudaIpcMemLazyEnablePeerAccess);
                 } else {
                     //We will create a shared block
+                    allocate_mm_page();
                     _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
-                    cudaMalloc(&_ipc_array, getArraySize());
-                    cudaIpcGetMemHandle(_ipc_handle, _ipc_array);\
+                    cudaMalloc((void**) &_ipc_array, getArraySize());
                 }
-
+                IPC_CHECK_CUDA_ERROR();
             }
             #endif
         }
 
+        void allocate_mm_page() {
+            if(_ipcr) {
+                _mm_page = _ipcr->allocate(getMMSize());
+                if(!_mm_page)
+                    throw std::runtime_error("Unable to create mmap - IPCReservation not large enough");
+            } else {
+                _mm_page = mmap(NULL, getMMSize(), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+                if(_mm_page == MAP_FAILED)
+                    throw std::runtime_error("Unable to create mmap");
+            }
+        }
+
         void deallocate() {
+	  std::cerr << "about to deallocate" << this << " with " << _ipc_array << " size: " << getArraySize() << std::endl;
+	    if(_ipc_array)
+	        getIPCAttributes();
             if(_mm_page) {
-                munmap(_mm_page, getMMSize());
+	        if(!_ipcr)
+                  munmap(_mm_page, getMMSize());
             }
             if(M == IPCCommMode::GPU) {
                 #ifdef ENABLE_CUDA
-                if(_ipc_array && _own_array)
-                    cudaIpcCloseMemHandle(_ipc_array);
-                else if(_ipc_array && !_own_array)
-                    cudaFree(_ipc_array);
+                if(_ipc_handle && _own_array)
+                    cudaIpcCloseMemHandle(_ipc_handle);
+                else if(_ipc_array)
+		  cudaFree(_ipc_array);
                 #endif
             }
         }
@@ -216,10 +296,13 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         GPUArray<T>* _array;
         size_t _array_size;
         bool _own_array;
+        IPCReservation* _ipcr;
         #ifdef ENABLE_CUDA
         cudaIpcMemHandle_t* _ipc_handle;
         void*   _ipc_array;
         #endif
 };
+
+void export_IPCArrayComm(pybind11::module& m);
 
 #endif //_IPC_ARRAY_COMM_

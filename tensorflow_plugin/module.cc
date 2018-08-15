@@ -17,5 +17,7 @@ PYBIND11_PLUGIN(_tensorflow_plugin)
     export_TensorflowComputeGPU(m);
     #endif
 
+    export_IPCArrayComm(m);
+
     return m.ptr();
     }

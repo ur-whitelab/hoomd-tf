@@ -11,3 +11,4 @@
 
 from .tfcompute import tensorflow
 from .graphbuilder import GraphBuilder
+from .ipcarraycomm import IPCArrayComm

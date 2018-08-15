@@ -15,7 +15,7 @@
 */
 
 #include "TensorflowCompute.h"
-#include "ipcarraycomm/IPCArrayComm.h"
+#include "IPCArrayComm.h"
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
@@ -48,6 +48,7 @@ enum class FORCE_MODE{
     overwrite, add, ignore, output
 };
 
+IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 
 //these functors use 'call' instead of 'operator()' to avoid
 //writing out functor.template operator()<T> (...) which is
@@ -82,7 +83,8 @@ class TensorflowCompute : public ForceCompute
     public:
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
+             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode,
+             IPCReservation* ipc_reservation);
 
         TensorflowCompute() = delete;
 
@@ -108,6 +110,7 @@ class TensorflowCompute : public ForceCompute
         std::vector<Scalar4> getNlistArray() const;
         std::vector<Scalar4> getPositionsArray() const;
         std::vector<Scalar> getVirialArray() const;
+        unsigned int getVirialPitch() const {return m_virial.getPitch();}
 
         pybind11::object _py_self; //pybind objects have to be public with current cc flags
 
@@ -128,6 +131,7 @@ class TensorflowCompute : public ForceCompute
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
         std::string m_log_name;
+        IPCReservation* _ipcr;
 
         IPCArrayComm<M, Scalar4> _positions_comm;
         IPCArrayComm<M, Scalar4> _forces_comm;
@@ -152,7 +156,7 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
     public:
         //! Constructor
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode);
+             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode, IPCReservation* ipc_reservation);
 
         void setAutotunerParams(bool enable, unsigned int period) override;
     protected:
@@ -162,10 +166,6 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
         std::unique_ptr<Autotuner> m_tuner; // Autotuner for block size
         cudaIpcMemHandle_t* _input_handle;
         cudaIpcMemHandle_t* _output_handle;
-        GPUArray<Scalar4> _forces_array;
-        GPUArray<Scalar4> _virial_array;
-        GPUArray<Scalar4> _nlist_array;
-        GPUArray<Scalar4> _positions_array;
     };
 
 //! Export the TensorflowComputeGPU class to python

@@ -9,6 +9,7 @@ set(COMPONENT_NAME tensorflow_plugin)
 set(_${COMPONENT_NAME}_sources
     module.cc
     TensorflowCompute.cc
+    IPCArrayComm.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources
@@ -23,11 +24,6 @@ CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CU
 endif (ENABLE_CUDA)
 
 add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
-
-# I think this will link against md
-#pybind11_add_module(_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
-#set_target_properties(_${COMPONENT_NAME} PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_BASE_DIR};${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_BASE_DIR}/md")
-
 
 # link the library to its dependencies
 target_link_libraries(_${COMPONENT_NAME} _hoomd _md ${HOOMD_LIBRARIES})
@@ -81,6 +77,7 @@ set(files
     __init__.py
     tfcompute.py
     graphbuilder.py
+    ipcarraycomm.py
     tfmanager.py
     )
 
@@ -99,4 +96,3 @@ if (BUILD_TESTING)
 endif()
 
 add_subdirectory(test-cases)
-add_subdirectory(ipcarraycomm)
