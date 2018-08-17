@@ -6,6 +6,9 @@
 
 using namespace tensorflow;
 
+//TODO: This class is not threadsafe.
+//We need to use a resource manager to achive that
+
 
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
@@ -15,6 +18,7 @@ REGISTER_OP("TensorToIpc")
     .Attr("T: {float, double}")
     .Attr("maxsize: int")
     .Attr("address: int")
+    .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c) {
       int32 size;
       c->GetAttr("maxsize", &size);
@@ -28,9 +32,8 @@ REGISTER_OP("TensorToIpc")
 // CPU specialization of actual computation.
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, int64 address, const T* in, T** ipc_memory) {
-    //TODO: access address
-    T* output_buffer = reinterpret_cast<T*> (address);
+  void operator()(const CPUDevice& d, int size, void* out, const T* in, T** ipc_memory) {
+    T* output_buffer = reinterpret_cast<T*> (out);
     std::memcpy(output_buffer, in, sizeof(T) * size);
   }
 };
@@ -41,13 +44,15 @@ struct TF2IPCFunctor<CPUDevice, T> {
 template <typename Device, typename T>
 class TensorToIpcOp : public OpKernel {
  public:
-  explicit TensorToIpcOp(OpKernelConstruction* c) : OpKernel(c), _ipc_memory(NULL) {
+  explicit TensorToIpcOp(OpKernelConstruction* c) : OpKernel(c), _ipc_memory(nullptr) {
 
     //get shape
     c->GetAttr("maxsize", &_input_size);
 
     //get memory address
-    c->GetAttr("address", &_output_address);
+    int64 tmp;
+    c->GetAttr("address", &tmp);
+    _output_memory = reinterpret_cast<void*> (tmp);
 
   }
 
@@ -63,15 +68,15 @@ class TensorToIpcOp : public OpKernel {
     TF2IPCFunctor<Device, T>()(
         context->eigen_device<Device>(),
         input.size(),
-        _output_address,
+        _output_memory,
         input.data(),
-        _ipc_memory);
+        &_ipc_memory);
   }
 
 private:
   int _input_size;
-  int64 _output_address;
-  T** _ipc_memory;
+  void* _output_memory;
+  T* _ipc_memory;
 };
 
 // Register the CPU kernels.
@@ -86,11 +91,9 @@ REGISTER_CPU(double);
 // Register the GPU kernels.
 #ifdef GOOGLE_CUDA
 #define REGISTER_GPU(T)                                          \
-  /* Declare explicit instantiations in kernel_IPC2T.cu.cc. */ \
-  extern template TF2IPCFunctor<GPUDevice, T>;              \
   REGISTER_KERNEL_BUILDER(                                       \
-      Name("TensorToIpc")
-      .Device(DEVICE_GPU).TypeConstraint<T>("T")
+      Name("TensorToIpc") \
+      .Device(DEVICE_GPU).TypeConstraint<T>("T"),	\
       TensorToIpcOp<GPUDevice, T>);
 REGISTER_GPU(float);
 REGISTER_GPU(double);

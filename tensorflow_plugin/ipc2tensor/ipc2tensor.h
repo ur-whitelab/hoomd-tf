@@ -1,15 +1,21 @@
-#ifndef IPC2TENSOR
-#define IPC2TENSOR
+#ifndef IPC2TENSOR_H_
+#define IPC2TENSOR_H_
 
-// I don't know which is needed for int64 and I'm lazy
-//TODO: figure
-#include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/types.h"
 
 
 template <typename Device, typename T>
 struct IPC2TFunctor {
-  void operator()(const Device& d, int size, tensorflow::int64 address, T** ipc_memory, T* out);
+  void operator()(const Device& d, int size, void* address, T** ipc_memory, T* out);
 };
 
+#ifdef GOOGLE_CUDA
+// Partially specialize functor for GpuDevice.
+template <typename T>
+struct IPC2TFunctor<Eigen::GpuDevice, T> {
+  void operator()(const Eigen::GpuDevice& d, int size, void* address, T** ipc_memory, T* out);
+  };
+#endif
 
-#endif //IPC2TENSOR
+
+#endif //IPC2TENSOR_H_ 

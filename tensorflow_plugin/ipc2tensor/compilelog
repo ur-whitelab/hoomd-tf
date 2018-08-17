@@ -1,0 +1,459 @@
+In file included from ipc2tensor.cc:1:0:
+ipc2tensor.h:16:27: error: ‘struct Eigen::GpuDevice’ is not a valid type for a template non-type parameter
+ template <typename Eigen::GpuDevice, typename T>
+                           ^
+ipc2tensor.cc:109:45: error: expected unqualified-id before ‘;’ token
+   extern template IPC2TFunctor<GPUDevice, T>;              \
+                                             ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+In file included from ipc2tensor.cc:2:0:
+ipc2tensor.cc: In lambda function:
+ipc2tensor.cc:115:7: error: expected type-specifier before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:115:7: error: expected ‘;’ before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:115:7: error: expected primary-expression before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:115:29: error: expected primary-expression before ‘>’ token
+       .TypeConstraint<Tshape>("Tshape") \
+                             ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:116:8: error: request for member ‘TypeConstraint’ in ‘("Tshape")’, which is of non-class type ‘const char [7]’
+       .TypeConstraint<T>("T"), \
+        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:118:14: error: expected primary-expression before ‘float’
+ REGISTER_GPU(float, int32);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc:118:14: error: expected ‘;’ before ‘float’
+ REGISTER_GPU(float, int32);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:118:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int32);
+ ^
+ipc2tensor.cc: At global scope:
+ipc2tensor.cc:109:45: error: expected unqualified-id before ‘;’ token
+   extern template IPC2TFunctor<GPUDevice, T>;              \
+                                             ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+In file included from ipc2tensor.cc:2:0:
+ipc2tensor.cc: In lambda function:
+ipc2tensor.cc:115:7: error: expected type-specifier before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:115:7: error: expected ‘;’ before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:115:7: error: expected primary-expression before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:115:29: error: expected primary-expression before ‘>’ token
+       .TypeConstraint<Tshape>("Tshape") \
+                             ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:116:8: error: request for member ‘TypeConstraint’ in ‘("Tshape")’, which is of non-class type ‘const char [7]’
+       .TypeConstraint<T>("T"), \
+        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:119:14: error: expected primary-expression before ‘float’
+ REGISTER_GPU(float, int64);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc:119:14: error: expected ‘;’ before ‘float’
+ REGISTER_GPU(float, int64);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:119:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(float, int64);
+ ^
+ipc2tensor.cc: At global scope:
+ipc2tensor.cc:109:45: error: expected unqualified-id before ‘;’ token
+   extern template IPC2TFunctor<GPUDevice, T>;              \
+                                             ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+In file included from ipc2tensor.cc:2:0:
+ipc2tensor.cc: In lambda function:
+ipc2tensor.cc:115:7: error: expected type-specifier before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:115:7: error: expected ‘;’ before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:115:7: error: expected primary-expression before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:115:29: error: expected primary-expression before ‘>’ token
+       .TypeConstraint<Tshape>("Tshape") \
+                             ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:116:8: error: request for member ‘TypeConstraint’ in ‘("Tshape")’, which is of non-class type ‘const char [7]’
+       .TypeConstraint<T>("T"), \
+        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:120:14: error: expected primary-expression before ‘double’
+ REGISTER_GPU(double, int32);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc:120:14: error: expected ‘;’ before ‘double’
+ REGISTER_GPU(double, int32);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:120:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int32);
+ ^
+ipc2tensor.cc: At global scope:
+ipc2tensor.cc:109:45: error: expected unqualified-id before ‘;’ token
+   extern template IPC2TFunctor<GPUDevice, T>;              \
+                                             ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+In file included from ipc2tensor.cc:2:0:
+ipc2tensor.cc: In lambda function:
+ipc2tensor.cc:115:7: error: expected type-specifier before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:115:7: error: expected ‘;’ before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:115:7: error: expected primary-expression before ‘.’ token
+       .TypeConstraint<Tshape>("Tshape") \
+       ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:115:29: error: expected primary-expression before ‘>’ token
+       .TypeConstraint<Tshape>("Tshape") \
+                             ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:116:8: error: request for member ‘TypeConstraint’ in ‘("Tshape")’, which is of non-class type ‘const char [7]’
+       .TypeConstraint<T>("T"), \
+        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:121:14: error: expected primary-expression before ‘double’
+ REGISTER_GPU(double, int64);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^
+ipc2tensor.cc:121:14: error: expected ‘;’ before ‘double’
+ REGISTER_GPU(double, int64);
+              ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1269:24: note: in definition of macro ‘REGISTER_KERNEL_BUILDER_UNIQ’
+             return new __VA_ARGS__(context);                          \
+                        ^
+/home/awhite38/.conda/envs/hoomd-tf/lib/python3.6/site-packages/tensorflow/include/tensorflow/core/framework/op_kernel.h:1253:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER_UNIQ_HELPER’
+   REGISTER_KERNEL_BUILDER_UNIQ_HELPER(__COUNTER__, kernel_builder, __VA_ARGS__)
+   ^
+ipc2tensor.cc:110:3: note: in expansion of macro ‘REGISTER_KERNEL_BUILDER’
+   REGISTER_KERNEL_BUILDER(                                       \
+   ^
+ipc2tensor.cc:121:1: note: in expansion of macro ‘REGISTER_GPU’
+ REGISTER_GPU(double, int64);
+ ^

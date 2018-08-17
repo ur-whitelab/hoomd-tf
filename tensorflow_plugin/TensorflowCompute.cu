@@ -102,9 +102,6 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
     if (idx >= N)
         return;
 
-    dest[idx * NN + 0].x = 10.0;
-
-/*
     // load in the length of the list
     unsigned int n_neigh = d_n_neigh[idx];
     const unsigned int head_idx = d_head_list[idx];
@@ -158,7 +155,6 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
 
         }
     }
-    */
 }
 
 
@@ -177,11 +173,14 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
     const unsigned int max_tex1d_width,
     double rmax) {
 
-        assert(d_pos);
-        assert(dest);
-        assert(d_n_neigh);
-        assert(d_nlist);
-        assert(d_head_list);
+    assert(d_pos);
+    assert(dest);
+    assert(d_n_neigh);
+    assert(d_nlist);
+    assert(d_head_list);
+
+    //set neighbors to zeros
+    cudaMemset(dest, 0, N * NN * sizeof(Scalar4));    
 
     // texture bind
     if (compute_capability < 350) {
@@ -240,7 +239,6 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         // setup the grid to run the kernel
         dim3 grid( N / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
-        std::cout << "Launching  with " << block_size << " " << N << " " << NN << " " << std::endl;
         gpu_reshape_nlist_kernel<0><<< grid, threads>>>(dest,
                                                  N,
                                                  NN,

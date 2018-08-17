@@ -59,18 +59,14 @@ void TensorflowCompute<M>::reallocate() {
     //but the recieve method does exist
     //so we'll cast away until I make a version
     //of IPCArrayComm that can't override array
-    std::cerr << "poscomm: " << &_positions_comm << std::endl;
     _positions_comm = IPCArrayComm<M,Scalar4>(const_cast<GPUArray<Scalar4>& > (m_pdata->getPositions()), _ipcr);
-    std::cerr << "forces: " << &_forces_comm << std::endl;
     _forces_comm = IPCArrayComm<M,Scalar4>(m_force, _ipcr);    
     GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
     _nlist_array.swap(tmp);
-    std::cerr << "nlistcomm: " << &_nlist_comm << std::endl;
     _nlist_comm = IPCArrayComm<M,Scalar4>(_nlist_array, _ipcr);
     IPC_CHECK_CUDA_ERROR();
     //pass a larger size because sparse matrix is used in HOOMD
     IPC_CHECK_CUDA_ERROR();
-    std::cerr << "virial comm" << &_virial_comm  << std::endl;   
     //virial is made with maxN, not N
     _virial_comm = IPCArrayComm<M,Scalar>(m_virial, _ipcr, (size_t) m_pdata->getMaxN() * 9);
     IPC_CHECK_CUDA_ERROR();
@@ -79,7 +75,6 @@ void TensorflowCompute<M>::reallocate() {
 
 template<IPCCommMode M>
 TensorflowCompute<M>::~TensorflowCompute() {
-  std::cerr << "Deleting tensorflow compute" << std::endl;
     delete _ipcr;
 }
 
@@ -288,7 +283,6 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
         : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, ipc_reservation)
 {
 
-    std::cout << "prepare: " << _nlist_array.getNumElements() << std::endl;
     _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
     if(_nneighs != nneighs) {
       std::cout << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
@@ -311,7 +305,6 @@ void TensorflowComputeGPU::prepareNeighbors() {
     ArrayHandle<unsigned int> d_nlist(m_nlist->getNListArray(), access_location::device, access_mode::read);
     ArrayHandle<unsigned int> d_head_list(m_nlist->getHeadList(), access_location::device, access_mode::read);
     ArrayHandle<Scalar4> d_pos(m_pdata->getPositions(), access_location::device, access_mode::read);
-    std::cout << "prepare: " << _nlist_array.getNumElements() << std::endl;
     m_tuner->begin();
     gpu_reshape_nlist(d_nlist_array.data,
                       d_pos.data,

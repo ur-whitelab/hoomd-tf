@@ -66,8 +66,6 @@ class test_access(unittest.TestCase):
         tfcompute.get_nlist_array()
         tfcompute.get_forces_array()
 
-        print('Able to access all arrays!')
-
 class test_compute(unittest.TestCase):
     def test_compute_force_overwrite(self):
         model_dir = '/tmp/test-simple-potential-model'
@@ -82,8 +80,6 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
-
-
         tfcompute.attach(nlist, r_cut=rcut)
         for i in range(3):
             hoomd.run(1)
@@ -92,6 +88,8 @@ class test_compute(unittest.TestCase):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], rtol=1e-5)
 
     def test_gradient_potential_forces(self):
+        model_dir = '/tmp/test-gradient-potential-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -102,11 +100,9 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=4)
 
-        save_loc = '/tmp/test-gradient-potential-model'
-
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
+        tfcompute.attach(nlist, r_cut=rcut)
         for i in range(2):
-            hoomd.run(100)
+            hoomd.run(1)
             py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-2)
@@ -150,6 +146,8 @@ class test_compute(unittest.TestCase):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_lj_graph(self):
+        model_dir = '/tmp/test-lj-potential-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -160,9 +158,8 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
 
-        save_loc = '/tmp/test-lj-potential-model'
 
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(1)
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
         thermo_scalars = []

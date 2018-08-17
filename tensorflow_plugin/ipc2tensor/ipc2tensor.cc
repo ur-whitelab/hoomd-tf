@@ -32,7 +32,7 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, int64 address, T** ipc_memory, T* out) {
+  void operator()(const CPUDevice& d, int size, void* address, T** ipc_memory, T* out) {
     //TODO: access address
     T* input_buffer = reinterpret_cast<T*> (address);
     std::memcpy(out, input_buffer, size * sizeof(T));
@@ -45,10 +45,12 @@ struct IPC2TFunctor<CPUDevice, T> {
 template <typename Device, typename T, typename Tshape>
 class IpcToTensorOp : public OpKernel {
  public:
-  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context), _ipc_memory(NULL) {
+  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context), _ipc_memory(nullptr) {
 
     //get memory address
-    context->GetAttr("address", &_input_address);
+    int64 tmp;
+    context->GetAttr("address", &tmp);
+    _input_memory = reinterpret_cast<void*> (tmp);
 
   }
 
@@ -58,7 +60,7 @@ class IpcToTensorOp : public OpKernel {
     const Tensor& shape = context->input(0);
 
     // Create an output tensor
-    Tensor* output_tensor = NULL;
+    Tensor* output_tensor = nullptr;
     TensorShape output_shape;
 
 
@@ -78,13 +80,13 @@ class IpcToTensorOp : public OpKernel {
     IPC2TFunctor<Device, T>()(
         context->eigen_device<Device>(),
         output.size(),
-        _input_address,
+        _input_memory,
         &_ipc_memory,
         output.data());
   }
 
 private:
-  int64 _input_address;
+  void* _input_memory;
   T* _ipc_memory;
 };
 
@@ -105,13 +107,10 @@ REGISTER_CPU(double, int64);
 // Register the GPU kernels.
 #ifdef GOOGLE_CUDA
 #define REGISTER_GPU(T, Tshape)                                          \
-  /* Declare explicit instantiations in kernel_IPC2T.cu.cc. */ \
-  extern template IPC2TFunctor<GPUDevice, T>;              \
   REGISTER_KERNEL_BUILDER(                                       \
-      Name("IpcToTensor")
+      Name("IpcToTensor") \
       .Device(DEVICE_GPU) \
       .HostMemory("shape") \
-      .HostMemory("address"), \
       .TypeConstraint<Tshape>("Tshape") \
       .TypeConstraint<T>("T"), \
       IpcToTensorOp<GPUDevice, T, Tshape>);

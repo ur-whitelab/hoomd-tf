@@ -2,13 +2,10 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle
 
-def main(q, barrier):
+def main(q, barrier, device='/gpu:0'):
 
     tfm_args = q.get()
-
-    #tfm = TFManager(graph_info, lock,  barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug)
-    tfm = TFManager(barrier=barrier, **tfm_args)
-
+    tfm = TFManager(barrier=barrier, device=device, **tfm_args)
     tfm.start_loop()
 
 def load_op_library(op):
@@ -22,14 +19,14 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, lock, barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
+    def __init__(self, graph_info, device,barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
         self.log.addHandler(fh)
         self.log.setLevel(logging.INFO)
 
-        self.force_lock, self.pos_lock = lock
+        self.device = device
         self.barrier = barrier
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
@@ -45,13 +42,14 @@ class TFManager:
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
         self.out_nodes = []
-
-        self._prepare_graph()
-        if graph_info['output_forces']:
-            self.log.info('This TF Graph can modify forces.')
-            self._prepare_forces()
-        else:
-            self.log.info('This TF Graph will not modify forces.')
+        
+        with tf.device(self.device):
+            self._prepare_graph()
+            if graph_info['output_forces']:
+                self.log.info('This TF Graph can modify forces.')
+                self._prepare_forces()
+            else:
+                self.log.info('This TF Graph will not modify forces.')
 
         for n in self.graph_info['out_nodes']:
             self.out_nodes.append(tf.get_default_graph().get_tensor_by_name(n))
@@ -59,10 +57,9 @@ class TFManager:
     def _update(self, sess):
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-        #runs += [tf.Print(self.forces, [self.forces])]
+#        self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=200)]
         result = sess.run(self.out_nodes)
 
-        #result = sess.run(self.out_nodes)
         if self.debug:
             #last out_node should be merged summary (set in _attach_tensorboard)
             self.tb_writer.add_summary(result[-1], self.step)
@@ -122,7 +119,6 @@ class TFManager:
             #virial is Nx3x3
             self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer, maxsize=self.N * 9))
             self.log.info('initializing virial tensor_to_ipc: {:x} to {:x}'.format(self.virial_buffer, self.virial_buffer + self.N * 9))
-        #self.out_nodes.append(tf.Print(self.forces, [self.forces]))
 
     def _attach_tensorboard(self, sess):
 

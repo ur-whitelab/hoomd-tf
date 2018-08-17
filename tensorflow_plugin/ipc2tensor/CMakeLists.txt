@@ -28,13 +28,14 @@ include_directories(SYSTEM "${CUDA_INCLUDE_DIRS}/../../")
 
 #Add TF specific options
 SET(TF_CUDA_ADDITIONAL_OPTIONS ${CUDA_ADDITIONAL_OPTIONS} ${TF_CFLAGS} "-D GOOGLE_CUDA=1 --expt-relaxed-constexpr")
-list(APPEND TF_CFLAGS "-lcudart")
+list(APPEND TF_CFLAGS -lcudart -D GOOGLE_CUDA=1)
 CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${TF_CUDA_ADDITIONAL_OPTIONS} SHARED)
 endif (ENABLE_CUDA)
 
 #add library target
 add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 #set the TF compiler/linker flags
+message(STATUS "HOOMD_TF_CUDA_C++_FLAGS: ${TF_CFLAGS}")
 target_compile_options(_${COMPONENT_NAME} PRIVATE ${TF_CFLAGS})
 target_link_libraries(_${COMPONENT_NAME} ${TF_LFLAGS})
 target_link_libraries(_${COMPONENT_NAME} ${HOOMD_LIBRARIES})

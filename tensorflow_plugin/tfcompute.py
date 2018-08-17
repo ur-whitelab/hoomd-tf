@@ -42,6 +42,7 @@ class tensorflow(hoomd.compute._compute):
 
         self.debug_mode = _debug_mode
         self.tf_model_directory = tf_model_directory
+        self.log_filename = log_filename
 
         try:
             with open(os.path.join(tf_model_directory, 'graph_info.p'), 'rb') as f:
@@ -77,7 +78,6 @@ class tensorflow(hoomd.compute._compute):
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
         self.atom_number = len(hoomd.context.current.group_all)
-        print('neighs', self.nneighbor_cutoff, 'atoms', len(hoomd.context.current.group_all))
 
         nlist.subscribe(self.rcut)
         r_cut = float(r_cut)
@@ -152,7 +152,7 @@ class tensorflow(hoomd.compute._compute):
     def _init_tf(self):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 3)
+        self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 10)
         self.queue = multiprocessing.Queue()
         self.tfm = multiprocessing.Process(target=main, args=(self.queue,self.barrier))
         self.tfm.start()
@@ -176,7 +176,6 @@ class tensorflow(hoomd.compute._compute):
         '''Write to output the current sys information'''
         if self._mock_mode:
             return
-
         self.barrier.wait()
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
@@ -224,8 +223,6 @@ class tensorflow(hoomd.compute._compute):
         '''TODO: This must exist somewhere in HOOMD codebase'''
         npa = np.empty((len(array), 4))
         for i, e in enumerate(array):
-            if i == 0:
-                print(i,e.x)
             npa[i,0] = e.x
             npa[i,1] = e.y
             npa[i,2] = e.z
