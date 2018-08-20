@@ -1,7 +1,11 @@
 Tensorflow Plugin
 ==============
 
-This plugin allows using tensorflow to compute forces in a simulation or to compute other quantities, like collective variables to fit a potential for coarse-graining. You must first construct your tensorlfow graph using the `tensorflow_plugin.graphbuilder` class and then add the `tensorflow` compute to your hoomd simulation.
+This plugin allows using tensorflow to compute forces in a simulation
+or to compute other quantities, like collective variables to fit a
+potential for coarse-graining. You must first construct your
+tensorlfow graph using the `tensorflow_plugin.graphbuilder` class and
+then add the `tensorflow` compute to your hoomd simulation.
 
 Building Graph
 =====
@@ -33,17 +37,26 @@ energy = tf.reduce_sum(rij_energy, axis=1)
 forces = graph.compute_forces(energy)
 ```
 
-See in the above example that we have used the `GraphBuilder.safe_div(numerator, denominator)` function which allows us to safely treat a `1 / 0` due to using nearest neighbor distances, which can arise because `nlist` contains 0s for when less than `NN` nearest neighbors are found. Note that because `nlist` is a *full* neighbor list, you should divide by 2 if your energy is a sum of pairwise energies.
+See in the above example that we have used the
+`GraphBuilder.safe_div(numerator, denominator)` function which allows
+us to safely treat a `1 / 0` due to using nearest neighbor distances,
+which can arise because `nlist` contains 0s for when less than `NN`
+nearest neighbors are found. Note that because `nlist` is a *full*
+neighbor list, you should divide by 2 if your energy is a sum of
+pairwise energies.
 
 Virial
 -----
 
-The virial is computed and added to the graph if you use the `compute_forces` function and your energy has a non-zero derivative with respect to `nlist`. You may also explicitly pass the virial when saving, or pass `None` to remove the automatically calculated virial.
+The virial is computed and added to the graph if you use the
+`compute_forces` function and your energy has a non-zero derivative
+with respect to `nlist`. You may also explicitly pass the virial when
+saving, or pass `None` to remove the automatically calculated virial.
 
 Finalizing the Graph
 ----
 
-To finalize and save your graph, you must call the `GraphBuilder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Although your forces can be a `N`x3 or `N`x4, only the first 3 columns will be used. The virial should be an `N` x 3 x 3 tensor.
+To finalize and save your graph, you must call the `GraphBuilder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N` x 3 x 3 tensor.
 
 Complete Examples
 -----
@@ -77,8 +90,14 @@ You may use a saved tensorflow model via:
 import hoomd
 from hoomd.tensorflow_plugin import tensorflow
 
+#must construct prior to initialization
+tfcompute = tensorflow(model_loc)
+
+...hoomd initialization code...
+
 nlist = hoomd.md.nlist.cell()
-tensorflow(model_loc, nlist, r_cut=r_cut, force_mode='output')
+tfcompute.attach(nlist, r_cut=r_cut, force_mode='output')
+
 ```
 
 where `model_loc` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object, `r_cut` is the maximum distance for to consider particles as being neighbors, and `force_mode` is a string that indicates how to treat forces. A value of `'output'` indicates forces will be output from hoomd and input into the tensorflow model. `'add'` means the forces output from the tensorflow model should be added with whatever forces are computed from hoomd, for example if biasing a simulation. `'ignore'` means the forces will not be modified and are not used the tensorflow model, for example if computing collective variables that do not depend on forces. `'overwrite'` means the forces from the tensorflow model will overwrite the forces from hoomd, for example if the tensorflow model is computing the forces instead.
@@ -134,8 +153,5 @@ If you change C++/C code, remake. If you modify python code, copy the new versio
 
 Issues
 ====
-
-* Add GPU!
+* Energy conservation
 * Domain decomposition testing
-* Deal with nlist overflow being unsorted. (sort of done)
-* Make virial and potential energy tests pass
