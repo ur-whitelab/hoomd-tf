@@ -47,7 +47,6 @@ TensorflowCompute<M>::TensorflowCompute(
     }
     // connect to the ParticleData to receive notifications when the maximum number of particles changes
     m_pdata->getMaxParticleNumberChangeSignal().connect<TensorflowCompute, &TensorflowCompute<M>::reallocate>(this);
-    //CUDA ERror from a GPU being destructed in this ctor?
 }
 template <IPCCommMode M>
 void TensorflowCompute<M>::reallocate() {
@@ -64,8 +63,6 @@ void TensorflowCompute<M>::reallocate() {
     GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = IPCArrayComm<M,Scalar4>(_nlist_array, _ipcr);
-    IPC_CHECK_CUDA_ERROR();
-    //pass a larger size because sparse matrix is used in HOOMD
     IPC_CHECK_CUDA_ERROR();
     //virial is made with maxN, not N
     _virial_comm = IPCArrayComm<M,Scalar>(m_virial, _ipcr, (size_t) m_pdata->getMaxN() * 9);
@@ -85,8 +82,8 @@ template<IPCCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->push("TensorflowCompute");
 
-    if (m_prof) m_prof->push("TensorflowCompute<M>::Acquire Lock");
-    _py_self.attr("start_update")();
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Communicating to TF");
+    _py_self.attr("start_update")(timestep);
     if (m_prof) m_prof->pop();
 
     //nneighs == 0 send positions only
@@ -101,8 +98,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     }
 
 
-    if (m_prof) m_prof->push("TensorflowCompute<M>::Acquire Barrier (TF Update)");
-    _py_self.attr("finish_update")();
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
+    _py_self.attr("finish_update")(timestep);
     if (m_prof) m_prof->pop();
     if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 

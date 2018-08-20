@@ -136,7 +136,7 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
         Scalar3 neigh_pos = make_scalar3(neigh_postype.x, neigh_postype.y, neigh_postype.z);
 
         // calculate dr (with periodic boundary conditions)
-        Scalar3 dx = pos - neigh_pos;
+        Scalar3 dx = neigh_pos - pos;
 
         // apply periodic boundary conditions
         dx = box.minImage(dx);

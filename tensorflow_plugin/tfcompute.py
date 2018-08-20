@@ -146,15 +146,13 @@ class tensorflow(hoomd.compute._compute):
     def shutdown_tf(self):
         #need to terminate orphan
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
-        #self.lock.release
         self.tfm.terminate()
 
     def _init_tf(self):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        self.barrier = multiprocessing.Barrier(2, timeout=None if self.debug_mode else 10)
-        self.queue = multiprocessing.Queue()
-        self.tfm = multiprocessing.Process(target=main, args=(self.queue,self.barrier))
+        self.q = multiprocessing.Queue(maxsize=1)
+        self.tfm = multiprocessing.Process(target=main, args=(self.q,))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
 
@@ -169,25 +167,24 @@ class tensorflow(hoomd.compute._compute):
                 'virial_buffer': self.cpp_force.getVirialBuffer(),
                 'dtype': self.dtype,
                 'debug': self.debug_mode}
-        self.queue.put(args)
+        self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
 
-    def start_update(self):
+    def start_update(self, timestep):
         '''Write to output the current sys information'''
         if self._mock_mode:
             return
-        self.barrier.wait()
+        self.q.put(timestep)
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
             raise RuntimeError()
 
-    def finish_update(self):
+    def finish_update(self, timestep):
         '''Allow TF to read output and we wait for it to finish.'''
 
         if self._mock_mode:
             return
-
-        self.barrier.wait()
+        self.q.put(timestep)
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())

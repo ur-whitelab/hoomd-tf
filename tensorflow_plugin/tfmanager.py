@@ -1,12 +1,15 @@
 import tensorflow as tf
 import numpy as np
-import sys, logging, os, pickle
+import sys, logging, os, pickle, cProfile, queue
 
-def main(q, barrier, device='/gpu:0'):
+def main(q, profile=False, device='/gpu:0'):
 
     tfm_args = q.get()
-    tfm = TFManager(barrier=barrier, device=device, **tfm_args)
-    tfm.start_loop()
+    tfm = TFManager(q=q, device=device, **tfm_args)
+    if(profile):
+        cProfile.runctx('tfm.start_loop()', globals(), locals(), filename='tf_profile.out')
+    else:
+        tfm.start_loop()
 
 def load_op_library(op):
     import hoomd.tensorflow_plugin
@@ -19,7 +22,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, device,barrier, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
+    def __init__(self, graph_info, device,q, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -27,7 +30,7 @@ class TFManager:
         self.log.setLevel(logging.INFO)
 
         self.device = device
-        self.barrier = barrier
+        self.q = q
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer
@@ -57,7 +60,7 @@ class TFManager:
     def _update(self, sess):
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-#        self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=200)]
+#        self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         result = sess.run(self.out_nodes)
 
         if self.debug:
@@ -151,9 +154,15 @@ class TFManager:
                             .format(os.path.join(self.model_directory, 'tensorboard')))
                 self._attach_tensorboard(sess)
             while True:
-                self.barrier.wait()
+                #Use tf.while_loop + cuda ipc events
+                try:
+                    timestep = self.q.get(timeout=10)
+                except queue.Empty:
+                    #done with work
+                    self.log.info('Completed TF Update Loop')
+                    break
                 self._update(sess)
-                self.barrier.wait()
+                assert self.q.get(timeout=10) == timestep, 'Desynched TF compute and manager'
 
 
 
