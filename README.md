@@ -150,8 +150,134 @@ python ../tensorflow-plugin/test-py/test_tensorflow.py
 
 If you change C++/C code, remake. If you modify python code, copy the new version to the build directory.
 
+Bluehive Install
+====
+
+Load the modules necessary:
+```bash
+module load anaconda cmake sqlite cuda cudnn git
+```
+
+Set-up virtual python environment *ONCE* to keep packages separate
+```bash
+conda create -n hoomd-tf python=3.6
+```
+
+Then whenever you login and have loaded modules:
+```bash
+source activate hoomd-tf
+```
+
+Now that we're Python, install some pre-requisites:
+
+```bash
+pip install tensorflow-gpu
+```
+
+Compiling
+-----
+```bash
+git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
+```
+
+Put our plugin in the source directory. Make a softlink:
+```
+ln -s $HOME/hoomd-tf/tensorflow_plugin $HOME/hoomd-blue/hoomd
+```
+
+Now compile (from hoomd-blue directory). Modify options for speed if necessary.
+
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
+```
+
+Now compile with make
+```bash
+make
+```
+Put build directory on your python path:
+```bash
+export PYTHONPATH="$PYTHONPATH:`pwd`"
+```
+
+Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files.
 
 Issues
 ====
-* Energy conservation
+* Energy conservation 
+* Use GPU event handles
 * Domain decomposition testing
+
+
+Examples
+====
+
+Just made up, not sure if they work
+
+Force-Matching
+----
+```python
+import tensorflow as tf
+import hoomd.tensorflow_plugin
+graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
+#we want to get mapped forces!
+#map = tf.Variable(tf.ones([N, M]))
+#zero_map_enforcer = ...
+#restricted_map = zero_map_enforcer * map
+# + add some normalization
+map = tf.Placeholder((N, M), dtype=tf.float32)
+#forces from HOOMD are fx,fy,fz,pe where pe is potential energy of particle
+forces = graph.forces[:, :, :3]
+mapped_forces = map * forces #think -> N x 3 * N x M
+# sum_i m_ij * f_ik = cf_jk
+mapped_forces = tf.einsum('ij,ik->jk', map, forces)
+#get model forces
+mapped_positions = tf.einsum('ij,ik->jk', map, graph.positions[:, :3])
+#get mapped neighbor list
+dist_r = tf.reduce_sum(mapped_positions * mapped_positions, axis=1)
+# turn dist_r into column vector
+dist_r = tf.reshape(dist_r, [-1, 1])
+mapped_distances = dist_r - 2*tf.matmul(mapped_positions, tf.transpose(mapped_positions)) + tf.transpose(dist_r)
+#compute our model forces on CG sites
+#our model -> f(r) ->  r * w = f
+#      0->0.5,0.5->1,1->1.5,1.5->infty
+# r -> hr = [ 0,       0.1,    0.8,      0.1]
+#f hr * w
+# distance at each grid point from r
+#send through RElu 
+grid = tf.range(0.5, 10, 0.1, dtype=tf.float32)
+#want an N x N x G
+grid_dist = grid - tf.tile(mapped_distances, grid.shape[0])
+#one of the N x N grid distances -> [0 - r, 0.5 - r , 1.0 - r, 1.5 - r, 2.0 - r]
+#want to do f(delta r) -> [0,1]
+clip_high = tf.Variable(1, name='clip-high')
+grid_clip = tf.clip_by_value(tf.abs(grid_dist), 0, clip_high)
+#afterwards -> r = 1.4, [0, 0.9, 0.4, 0.1, 0.6,]
+#r = 1.3, [0, 0.8, 0.3, 0.2, 0.7]
+#TODO -> see if Prof White assumption is correct -> sum of grid_clip = 2 * clip-high
+grid_normed = grid_clip / 2 / clip_high
+force_weights = tf.Variable(tf.ones(grid.shape), name='force-weights')
+#N x N x G * G x 1 = N x N
+#TODO: we need actual rs
+model_force_mag = tf.matmul(grid_normed, force_weights)
+#once fixed....
+model_forces = ....
+error = tf.reduce_sum(tf.norm(mapped_forces - model_forces, axis=1), axis=0)
+optimizer = tf.train.AdamOptimizer(1e-4).minimize(error)
+
+#need to tell tf to run optimizer
+graph.save('/tmp/force_matching', out_nodes=[optimizer])
+```
+
+To run the model
+```python
+import hoomd, hoomd.md
+from hoomd.tensorflow_plugin import tensorflow
+tfcompute = tensorflow('/tmp/force_matching')
+
+....setup simulation....
+nlist = hoomd.md.nlist.cell()
+tfcompute.attach(nlist, r_cut=r_cut, force_mode='output')
+hoomd.run(1000)
+```
