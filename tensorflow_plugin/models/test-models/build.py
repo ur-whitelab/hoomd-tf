@@ -60,7 +60,8 @@ def lj_graph(N, NN, name):
     r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
     #pairwise energy. Double count -> divide by 2
-    p_energy = 4.0 / 2.0 * (graph.safe_div(1., r**12) - graph.safe_div(1., r**6))
+    inv_r6 = graph.safe_div(1., r**6)
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)

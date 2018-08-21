@@ -2,7 +2,7 @@ import hoomd, hoomd.md, math
 import hoomd.tensorflow_plugin
 
 model_dir = '/tmp/benchmark-lj-potential-model'
-tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
+tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir, _write_tensorboard=True)
 N = 1024
 rcut = 3.0
 hoomd.context.initialize()

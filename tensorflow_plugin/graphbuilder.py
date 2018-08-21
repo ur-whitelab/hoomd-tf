@@ -6,6 +6,8 @@ class GraphBuilder:
 
     def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):
         '''output_forces -> should the graph output forces'''
+        #clear any previous graphs
+        tf.reset_default_graph()
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
@@ -72,11 +74,14 @@ class GraphBuilder:
             0 if `denominator` <= 0, else `numerator` / `denominator`
         Taken from tensorflow/contrib/metrics/python/ops/metric_ops.py
         '''
-        return tf.where(
-            tf.greater(denominator, 0),
-            tf.truediv(numerator, denominator),
-            tf.zeros_like(denominator),
-        name=name)
+        with tf.name_scope('graphbuilder-safe-div'):
+            op = tf.where(
+                tf.greater(denominator, 0),
+                tf.truediv(numerator, denominator),
+                tf.zeros_like(denominator),
+                name=name)
+
+        return op
 
 
 
