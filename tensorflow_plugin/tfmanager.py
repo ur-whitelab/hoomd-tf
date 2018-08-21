@@ -2,10 +2,10 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle, cProfile, queue
 
-def main(q, profile=False, device='/gpu:0'):
+def main(q, write_tensorboard=False, device='/gpu:0', profile=False):
 
     tfm_args = q.get()
-    tfm = TFManager(q=q, device=device, **tfm_args)
+    tfm = TFManager(q=q, device=device, write_tensorboard=write_tensorboard, **tfm_args)
     if(profile):
         cProfile.runctx('tfm.start_loop()', globals(), locals(), filename='tf_profile.out')
     else:
@@ -22,7 +22,10 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, device,q, positions_buffer, nlist_buffer, forces_buffer, virial_buffer, log_filename, dtype, debug):
+    def __init__(self, graph_info, device,q,
+                positions_buffer, nlist_buffer,
+                forces_buffer, virial_buffer, log_filename,
+                dtype, debug, write_tensorboard):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -39,13 +42,14 @@ class TFManager:
         self.step = 0
         self.graph_info = graph_info
         self.dtype = dtype
+        self.write_tensorboard = write_tensorboard
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(positions_buffer,forces_buffer, dtype))
         self.model_directory = self.graph_info['model_directory']
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
         self.out_nodes = []
-        
+
         with tf.device(self.device):
             self._prepare_graph()
             if graph_info['output_forces']:
@@ -63,7 +67,7 @@ class TFManager:
 #        self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         result = sess.run(self.out_nodes)
 
-        if self.debug:
+        if self.write_tensorboard:
             #last out_node should be merged summary (set in _attach_tensorboard)
             self.tb_writer.add_summary(result[-1], self.step)
         self.step += 1
@@ -148,21 +152,31 @@ class TFManager:
                 self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
             if self.debug:
                 from tensorflow.python import debug as tf_debug
-                #sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
+                sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
                 self.log.info('You must (first!) attach tensorboard by running '
                             'tensorboard --logdir {} --debugger_port 6064'
                             .format(os.path.join(self.model_directory, 'tensorboard')))
+            if self.write_tensorboard:
                 self._attach_tensorboard(sess)
             while True:
                 #Use tf.while_loop + cuda ipc events
+                print('reset loop tf for iteration', self.step)
+                sys.stdout.flush()
                 try:
                     timestep = self.q.get(timeout=10)
+                    if self.step == 0:
+                        #first step
+                        self.step = timestep
+                    if self.step > timestep:
+                        #this can happen if multiple runs are called
+                        continue
+                    #assert timestep == self.step, 'Desynched TF compute and manager prior to update: {} {}'.format(timestep, self.step)
                 except queue.Empty:
                     #done with work
                     self.log.info('Completed TF Update Loop')
                     break
                 self._update(sess)
-                assert self.q.get(timeout=10) == timestep, 'Desynched TF compute and manager'
+                assert self.q.get(timeout=10) == self.step - 1, 'Desynched TF compute and manager post update{} {}'.format(timestep, self.step)
 
 
 

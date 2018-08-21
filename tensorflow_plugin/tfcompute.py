@@ -31,7 +31,8 @@ class tensorflow(hoomd.compute._compute):
     # \endcode
     #
     # \a period can be a function: see \ref variable_period_docs for details
-    def __init__(self,tf_model_directory, log_filename='tf_manager.log', _debug_mode=False, _mock_mode=False):
+    def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
+                  _debug_mode=False, _mock_mode=False, _write_tensorboard=False):
 
         #so delete won't fail
         self.tfm = None
@@ -54,7 +55,7 @@ class tensorflow(hoomd.compute._compute):
         self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
 
         if not _mock_mode:
-            self._init_tf()
+            self._init_tf(device, _write_tensorboard)
         self._mock_mode = _mock_mode
 
 
@@ -148,11 +149,11 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
         self.tfm.terminate()
 
-    def _init_tf(self):
+    def _init_tf(self, device, write_tensorboard):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
         self.q = multiprocessing.Queue(maxsize=1)
-        self.tfm = multiprocessing.Process(target=main, args=(self.q,))
+        self.tfm = multiprocessing.Process(target=main, args=(self.q,write_tensorboard, device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
 
@@ -174,6 +175,8 @@ class tensorflow(hoomd.compute._compute):
         '''Write to output the current sys information'''
         if self._mock_mode:
             return
+        print('start update compute', timestep)
+        sys.stdout.flush()
         self.q.put(timestep)
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))

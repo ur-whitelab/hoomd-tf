@@ -62,7 +62,7 @@ class test_access(unittest.TestCase):
         hoomd.run(1)
 
         tfcompute.get_virial_array()
-        tfcompute.get_positions_array()                
+        tfcompute.get_positions_array()
         tfcompute.get_nlist_array()
         tfcompute.get_forces_array()
 
@@ -81,11 +81,14 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
         tfcompute.attach(nlist, r_cut=rcut)
+        #use these to throw off timesteps
+        hoomd.run(1)
+        hoomd.run(1)
         hoomd.run(1)
         sum_forces = None
         for i in range(50):
             hoomd.run(100)
-            py_forces = compute_forces(system, rcut)        
+            py_forces = compute_forces(system, rcut)
             if sum_forces is None:
                 sum_forces = py_forces[:]
             for j in range(N):
@@ -194,7 +197,7 @@ class test_compute(unittest.TestCase):
         lj_forces = np.array(lj_forces)
         #TODO: Forces are off on first snapshot (not in simulation!). Not sure why.
         #For example, running 1 or 2 or 3 steps prior to loop above, still results
-        #in mismatch only in first row in forces array. 
+        #in mismatch only in first row in forces array.
         #might be related to why some of the forces are more mismatched than expected (1 part per thousand)
         #even though others are matched to 8 deciamal places
         for i in range(1, T):
@@ -225,9 +228,9 @@ class test_compute(unittest.TestCase):
             energy.append(log.query('potential_energy') + log.query('kinetic_energy'))
             if i > 1:
                 np.testing.assert_allclose(energy[-1], energy[-2], atol=1e-3)
-        
 
-        
+
+
     def test_lj_pressure(self):
         model_dir = '/tmp/test-lj-potential-model'
         tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)

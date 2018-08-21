@@ -143,10 +143,14 @@ cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAG
 make -j2
 ```
 
-To run the unit tests after make:
+Tests
+====
+To run the unit tests, run
 ```
-python ../tensorflow-plugin/test-py/test_tensorflow.py
+python tensorflow-plugin/test-py/test_tensorflow.py [test_class].[test_name]
 ```
+
+Note that only one test can be run at a time due to the way gpu contexts/forks occur.
 
 If you change C++/C code, remake. If you modify python code, copy the new version to the build directory.
 
@@ -205,7 +209,7 @@ Note: if you modify C++ code, only run make (not cmake). If you modify python, j
 
 Issues
 ====
-* Energy conservation 
+* Energy conservation
 * Use GPU event handles
 * Domain decomposition testing
 
@@ -245,7 +249,7 @@ mapped_distances = dist_r - 2*tf.matmul(mapped_positions, tf.transpose(mapped_po
 # r -> hr = [ 0,       0.1,    0.8,      0.1]
 #f hr * w
 # distance at each grid point from r
-#send through RElu 
+#send through RElu
 grid = tf.range(0.5, 10, 0.1, dtype=tf.float32)
 #want an N x N x G
 grid_dist = grid - tf.tile(mapped_distances, grid.shape[0])
