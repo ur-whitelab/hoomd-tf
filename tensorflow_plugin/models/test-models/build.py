@@ -69,7 +69,6 @@ def lj_graph(N, NN, name):
 
 
 
-
 noforce_graph()
 gradient_potential()
 simple_potential()

@@ -354,7 +354,7 @@ IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs) {
     size_t element = sizeof(Scalar);
     size_t size = 0;
     #ifdef ENABLE_CUDA
-    element = sizeof(cudaIpcMemHandle_t);
+    element = sizeof(cudaIPC_t);
     size += element; //positions
     size += element; //forces
     size += element; // nlist

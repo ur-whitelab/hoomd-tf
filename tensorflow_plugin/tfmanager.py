@@ -159,7 +159,7 @@ class TFManager:
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
             #indicating we are ready to begin
-            self.q.task_done()
+            self.q.task_done()            
             while True:
                 try:
                    timestep = self.q.get(timeout=None if self.debug else 3) #received from finish_update

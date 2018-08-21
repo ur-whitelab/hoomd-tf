@@ -16,6 +16,12 @@
 
 enum class IPCCommMode{GPU, CPU};
 
+struct cudaIPC_t {
+  cudaIpcMemHandle_t mem_handle;
+  cudaIpcEventHandle_t event_handle;
+  cudaStream_t stream = 0;
+};
+
 struct IPCReservation{
     char* _ptr;
     size_t _index;
@@ -130,6 +136,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             other._ipc_array = nullptr;
             _ipc_handle = other._ipc_handle;
             other._ipc_handle = nullptr;
+	    _ipc_event = other._ipc_event;
             #endif
 
             return *this;
@@ -182,6 +189,18 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             }
         }
 
+	void sendAsync() {
+	  if(M == IPCCommMode::CPU) {
+	    send();
+            } else {
+            #ifdef ENABLE_CUDA
+                ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
+                cudaMemcpyAsync(_ipc_array, handle.data, getArraySize(), cudaMemcpyDeviceToDevice, _ipc_handle->stream);		
+                IPC_CHECK_CUDA_ERROR();
+            #endif
+            }
+	}
+
         std::vector<T> getArray() const {
             ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
 	    return std::vector<T>(handle.data, handle.data + _array->getNumElements());
@@ -191,7 +210,13 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         int64_t getAddress() const {
             return reinterpret_cast<int64_t> (_mm_page);
         }
-
+	
+	#ifdef ENABLE_CUDA
+	void setCudaStream(cudaStream_t s) {
+	  _ipc_handle->stream = s;
+	}
+	#endif
+			   
     protected:
 
         void checkDevice() {
@@ -216,14 +241,16 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                 IPC_CHECK_CUDA_ERROR();
                 if(_mm_page) {
                     //we will open the existing mapped memory in cuda
-                    _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
-                    cudaIpcOpenMemHandle(&_ipc_array, *_ipc_handle, cudaIpcMemLazyEnablePeerAccess);
+                    _ipc_handle = reinterpret_cast<cudaIPC_t*> (_mm_page);
+                    cudaIpcOpenMemHandle(&_ipc_array, _ipc_handle->mem_handle, cudaIpcMemLazyEnablePeerAccess);
                 } else {
                     //We will create a shared block
                     allocate_mm_page();
-                    _ipc_handle = reinterpret_cast<cudaIpcMemHandle_t*> (_mm_page);
+                    _ipc_handle = reinterpret_cast<cudaIPC_t*> (_mm_page);
                     cudaMalloc((void**) &_ipc_array, getArraySize());
-		    cudaIpcGetMemHandle(_ipc_handle, _ipc_array);
+		    cudaIpcGetMemHandle(&_ipc_handle->mem_handle, _ipc_array);
+		    cudaEventCreateWithFlags(&_ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
+		    cudaIpcGetEventHandle(&_ipc_handle->event_handle, _ipc_event);
                 }
                 IPC_CHECK_CUDA_ERROR();
             }
@@ -249,10 +276,13 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             }
             if(M == IPCCommMode::GPU) {
                 #ifdef ENABLE_CUDA
-                if(_ipc_handle && _own_array)
-                    cudaIpcCloseMemHandle(_ipc_handle);
-                else if(_ipc_array)
+	        if(_ipc_handle && _own_array) {
+                    cudaIpcCloseMemHandle(_ipc_array);
+   	        }
+                else if(_ipc_array) {
 		  cudaFree(_ipc_array);
+		  cudaEventDestroy(_ipc_event);
+		}
                 #endif
             }
         }
@@ -266,7 +296,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                 return getArraySize();
             else {
                 #ifdef ENABLE_CUDA
-                return sizeof(cudaIpcMemHandle_t);
+	        return sizeof(cudaIPC_t);
                 #endif
             }
             return 0;
@@ -279,7 +309,8 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         bool _own_array;
         IPCReservation* _ipcr;
         #ifdef ENABLE_CUDA
-        cudaIpcMemHandle_t* _ipc_handle;
+        cudaIPC_t* _ipc_handle;
+        cudaEvent_t _ipc_event;
         void*   _ipc_array;
         #endif
 };
