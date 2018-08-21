@@ -111,6 +111,34 @@ Note on Building and Executing Tensorflow Models in Same Script
 
 Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it hoomd.
 
+
+
+Tensorboard
+=====
+
+You can visualize your models with tensorboard. First, add
+`_write_tensorboard=True` the tensorflow plugin constructor. This will
+add a new directory called `tensorboard` to your model directory. 
+
+After running, you can launch tensorboard like so:
+```bash
+tensorboard --logdir=/path/to/model/tensorboard
+```
+
+and then visit `http://localhost:6006` to view the graph. If you are
+running on a server, before launching tensorboard use this ssh command to login:
+```bash
+ssh -L 6006:[remote ip or hostname]:6006 username@remote
+```
+
+and then you can view after launching on the server via your local web browser. 
+
+Interactive Mode
+----
+
+Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to 
+the constructor and the `_debug_mode=True` flag to `attach` command. 
+
 Requirements
 =====
 * Latest tensorflow (cuda 9.0, cudnn7)
