@@ -57,7 +57,9 @@ IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 struct receiveForcesFunctorAdd {
 
     size_t _N;
-    receiveForcesFunctorAdd(size_t N) : _N(N) {}
+    void* _stream;
+    receiveForcesFunctorAdd() {}
+    receiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
 
     //have empty implementation so if CUDA not enabled,
     //we still have a GPU implementation
@@ -70,7 +72,9 @@ struct receiveVirialFunctorAdd {
 
     size_t _N;
     size_t _pitch;
-    receiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch) {}
+    void* _stream;
+    receiveVirialFunctorAdd(){}
+    receiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch), _stream(nullptr) {}
 
     template<IPCCommMode M>
     void call(Scalar* dest, Scalar* src) {}
@@ -119,9 +123,9 @@ class TensorflowCompute : public ForceCompute
     protected:
 
         //used if particle number changes
-        void reallocate();
+        virtual void reallocate();
         //! Take one timestep forward
-        void computeForces(unsigned int timestep) override;
+        virtual void computeForces(unsigned int timestep) override;
 
         virtual void prepareNeighbors();
         virtual void zeroVirial();
@@ -138,6 +142,9 @@ class TensorflowCompute : public ForceCompute
         GPUArray<Scalar4> _nlist_array;
         IPCArrayComm<M, Scalar4> _nlist_comm;
         IPCArrayComm<M, Scalar> _virial_comm;
+
+        receiveVirialFunctorAdd _virial_functor;
+        receiveForcesFunctorAdd _forces_functor;
     };
 
 //! Export the TensorflowCompute class to python
@@ -160,12 +167,14 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
 
         void setAutotunerParams(bool enable, unsigned int period) override;
     protected:
+	void computeForces(unsigned int timestep) override;
+        void reallocate() override;
         void prepareNeighbors() override;
         void zeroVirial() override;
     private:
         std::unique_ptr<Autotuner> m_tuner; // Autotuner for block size
-        cudaIpcMemHandle_t* _input_handle;
-        cudaIpcMemHandle_t* _output_handle;
+	cudaStream_t _streams[4];
+	size_t _nstreams = 4;
     };
 
 //! Export the TensorflowComputeGPU class to python

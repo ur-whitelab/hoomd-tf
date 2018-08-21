@@ -63,10 +63,14 @@ void TensorflowCompute<M>::reallocate() {
     GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = IPCArrayComm<M,Scalar4>(_nlist_array, _ipcr);
-    IPC_CHECK_CUDA_ERROR();
+    CHECK_CUDA_ERROR();
     //virial is made with maxN, not N
     _virial_comm = IPCArrayComm<M,Scalar>(m_virial, _ipcr, (size_t) m_pdata->getMaxN() * 9);
-    IPC_CHECK_CUDA_ERROR();
+    CHECK_CUDA_ERROR();
+
+    //build functors
+    _virial_functor = receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch);
+    _forces_functor = receiveForcesFunctorAdd(m_pdata->getN());
 }
 
 
@@ -82,20 +86,18 @@ template<IPCCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->push("TensorflowCompute");
 
-    if (m_prof) m_prof->push("TensorflowCompute<M>::Communicating to TF");
-    _py_self.attr("start_update")(timestep);
-    if (m_prof) m_prof->pop();
-
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
     //nneighs == 0 send positions only
-    _positions_comm.send();
+    _positions_comm.sendAsync();
     if(_nneighs > 0) {
         //Update the neighborlist
         m_nlist->compute(timestep);
-        if (m_prof) m_prof->push("TensorflowCompute<M>::prepareNeighbors");
+        if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
         prepareNeighbors();
         if (m_prof) m_prof->pop();
-        _nlist_comm.send();
+        _nlist_comm.sendAsync();
     }
+    if (m_prof) m_prof->pop();
 
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
@@ -106,16 +108,16 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     switch(_force_mode) {
         //process results from TF
         case FORCE_MODE::overwrite:
-            _forces_comm.receive();
+            _forces_comm.receiveAsync();
             zeroVirial();
-            _virial_comm.receiveOp(receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch));
+            _virial_comm.receiveOp(_virial_functor);
             break;
         case FORCE_MODE::add:
-            _forces_comm.receiveOp(receiveForcesFunctorAdd(m_pdata->getN()));
-            _virial_comm.receiveOp(receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch));
+            _forces_comm.receiveOp(_forces_functor);
+            _virial_comm.receiveOp(_virial_functor);
             break;
         case FORCE_MODE::output:
-            _forces_comm.send();
+            _forces_comm.sendAsync();
         case FORCE_MODE::ignore:
             break;
     }
@@ -286,6 +288,27 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
       reallocate();
     }
     m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", m_exec_conf));
+
+    //want nlist on stream 0 since a nlist rebuild is
+    //called just before prepareNeighbors
+    _streams[0] = 0;
+    for(unsigned int i = 1; i < _nstreams; i++) {
+      cudaStreamCreate(&(_streams[i]));
+      CHECK_CUDA_ERROR();
+    }
+}
+
+void TensorflowComputeGPU::reallocate()  {
+  TensorflowCompute::reallocate();
+  _nlist_comm.setCudaStream(_streams[0]);  
+  _virial_comm.setCudaStream(_streams[1]);
+  _forces_comm.setCudaStream(_streams[2]);
+
+}
+
+void TensorflowComputeGPU::computeForces(unsigned int timestep)  {
+  TensorflowCompute::computeForces(timestep);
+  cudaDeviceSynchronize();
 }
 
 void TensorflowComputeGPU::setAutotunerParams(bool enable, unsigned int period)
@@ -316,7 +339,8 @@ void TensorflowComputeGPU::prepareNeighbors() {
                       m_tuner->getParam(),
                       m_exec_conf->getComputeCapability(),
                       m_exec_conf->dev_prop.maxTexture1DLinear,
-                      _r_cut);
+                      _r_cut,
+		      _nlist_comm.getCudaStream());
 
     if(m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
@@ -325,7 +349,7 @@ void TensorflowComputeGPU::prepareNeighbors() {
 
 void TensorflowComputeGPU::zeroVirial() {
     ArrayHandle<Scalar> h_virial(m_virial,access_location::device, access_mode::overwrite);
-    cudaMemset(static_cast<void*> (h_virial.data), 0, sizeof(Scalar) * m_virial.getNumElements());
+    cudaMemsetAsync(static_cast<void*> (h_virial.data), 0, sizeof(Scalar) * m_virial.getNumElements(),_virial_comm.getCudaStream());
 }
 
 /* Export the GPU Compute to be visible in the python module
@@ -394,13 +418,14 @@ void receiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) 
 #ifdef ENABLE_CUDA
 template<>
 void receiveForcesFunctorAdd::call<IPCCommMode::GPU>(Scalar4* dest, Scalar4* src) {
-    gpu_add_scalar4(dest, src, _N);
+  gpu_add_scalar4(dest, src, _N, *(static_cast<cudaStream_t*> (_stream)) );
 }
+
 
 
 template<>
 void receiveVirialFunctorAdd::call<IPCCommMode::GPU>(Scalar* dest, Scalar* src) {
-    gpu_add_virial(dest, src, _N, _pitch);
+  gpu_add_virial(dest, src, _N, _pitch, *(static_cast<cudaStream_t*> (_stream)) );
 }
 #endif //ENABLE_CUDA
 

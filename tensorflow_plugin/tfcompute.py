@@ -172,15 +172,6 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
         self.q.join()
 
-
-    def start_update(self, timestep):
-        '''Write to output the current sys information'''
-        if self._mock_mode:
-            return
-        if not self.tfm.is_alive():
-            hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
-            raise RuntimeError()
-
     def finish_update(self, timestep):
         '''Allow TF to read output and we wait for it to finish.'''
 

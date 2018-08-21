@@ -54,6 +54,7 @@ struct IPCReservation{
 
 // need this without access to context
 #ifdef ENABLE_CUDA
+#ifndef NDEBUG
 void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line);
 #define IPC_CHECK_CUDA_ERROR() { \
     cudaError_t err_sync = cudaGetLastError();  \
@@ -62,6 +63,9 @@ void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line);
     ipcCheckCudaError(err_async, __FILE__, __LINE__); \
   }
 #else
+#define IPC_CHECK_CUDA_ERROR()
+#endif //NDDEBUG
+#else //ENABLE_CUDA
 #define IPC_CHECK_CUDA_ERROR()
 #endif //ENABLE_CUDA
 
@@ -161,6 +165,20 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             }
         }
 
+        void receiveAsync() {
+            if(M == IPCCommMode::CPU) {
+                ArrayHandle<T> handle(*_array, access_location::host,access_mode::overwrite);
+                memcpy(handle.data, _mm_page, getMMSize());
+            } else {
+                #ifdef ENABLE_CUDA
+                ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
+                cudaMemcpyAsync(handle.data, _ipc_array, _array->getNumElements() * sizeof(T),  cudaMemcpyDeviceToDevice, _ipc_handle->stream);
+                IPC_CHECK_CUDA_ERROR();
+                #endif
+            }
+        }
+
+
         template <typename Func>
         void receiveOp(Func fun) {
             if(M == IPCCommMode::CPU) {
@@ -171,6 +189,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             } else {
                 #ifdef ENABLE_CUDA
                 ArrayHandle<T> handle(*_array, access_location::device, access_mode::readwrite);
+		fun._stream = &_ipc_handle->stream;// set stream for functor
                 fun.template call<M>(handle.data, static_cast<T*> (_ipc_array));
                 #endif
             }
@@ -215,6 +234,10 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
 	void setCudaStream(cudaStream_t s) {
 	  _ipc_handle->stream = s;
 	}
+	cudaStream_t  getCudaStream() const{
+	  return _ipc_handle->stream;
+	}
+
 	#endif
 			   
     protected:
