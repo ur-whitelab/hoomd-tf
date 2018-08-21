@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import sys, logging, os, pickle, cProfile, queue
+import sys, logging, os, pickle, cProfile, queue, time
 
 def main(q, write_tensorboard=False, device='/gpu:0', profile=False):
 
@@ -64,7 +64,7 @@ class TFManager:
     def _update(self, sess):
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-#        self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
+        #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         result = sess.run(self.out_nodes)
 
         if self.write_tensorboard:
@@ -158,25 +158,17 @@ class TFManager:
                             .format(os.path.join(self.model_directory, 'tensorboard')))
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
+            #indicating we are ready to begin
+            self.q.task_done()
             while True:
-                #Use tf.while_loop + cuda ipc events
-                print('reset loop tf for iteration', self.step)
-                sys.stdout.flush()
                 try:
-                    timestep = self.q.get(timeout=10)
-                    if self.step == 0:
-                        #first step
-                        self.step = timestep
-                    if self.step > timestep:
-                        #this can happen if multiple runs are called
-                        continue
-                    #assert timestep == self.step, 'Desynched TF compute and manager prior to update: {} {}'.format(timestep, self.step)
+                   timestep = self.q.get(timeout=None if self.debug else 3) #received from finish_update
                 except queue.Empty:
                     #done with work
                     self.log.info('Completed TF Update Loop')
                     break
                 self._update(sess)
-                assert self.q.get(timeout=10) == self.step - 1, 'Desynched TF compute and manager post update{} {}'.format(timestep, self.step)
+                self.q.task_done()
 
 
 

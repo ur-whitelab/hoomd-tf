@@ -59,7 +59,7 @@ void TensorflowCompute<M>::reallocate() {
     //so we'll cast away until I make a version
     //of IPCArrayComm that can't override array
     _positions_comm = IPCArrayComm<M,Scalar4>(const_cast<GPUArray<Scalar4>& > (m_pdata->getPositions()), _ipcr);
-    _forces_comm = IPCArrayComm<M,Scalar4>(m_force, _ipcr);    
+    _forces_comm = IPCArrayComm<M,Scalar4>(m_force, _ipcr);
     GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = IPCArrayComm<M,Scalar4>(_nlist_array, _ipcr);
@@ -101,8 +101,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
     _py_self.attr("finish_update")(timestep);
     if (m_prof) m_prof->pop();
-    if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
     switch(_force_mode) {
         //process results from TF
         case FORCE_MODE::overwrite:
@@ -282,7 +282,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
 
     _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
     if(_nneighs != nneighs) {
-      std::cout << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+     m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
       reallocate();
     }
     m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", m_exec_conf));
@@ -403,4 +403,4 @@ void receiveVirialFunctorAdd::call<IPCCommMode::GPU>(Scalar* dest, Scalar* src) 
     gpu_add_virial(dest, src, _N, _pitch);
 }
 #endif //ENABLE_CUDA
- 
+

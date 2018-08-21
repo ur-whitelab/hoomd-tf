@@ -84,39 +84,15 @@ class test_compute(unittest.TestCase):
         #use these to throw off timesteps
         hoomd.run(1)
         hoomd.run(1)
-        hoomd.run(1)
-        sum_forces = None
-        for i in range(50):
-            hoomd.run(100)
+        for i in range(3):
             py_forces = compute_forces(system, rcut)
-            if sum_forces is None:
-                sum_forces = py_forces[:]
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
-            py_forces = compute_forces(system, rcut)
-            sum_forces += py_forces
-
-    def test_gradient_potential_forces(self):
-        model_dir = '/tmp/test-gradient-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=4)
-
-        tfcompute.attach(nlist, r_cut=rcut)
-        for i in range(2):
-            hoomd.run(1)
-            py_forces = compute_forces(system, rcut)
-            for j in range(N):
-                np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-2)
+            hoomd.run(100)
 
     def test_compute_force_ignore(self):
+        model_dir = '/tmp/test-simple-potential-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -127,15 +103,15 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
 
-        save_loc = '/tmp/test-simple-potential-model'
-
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='ignore')
+        tfcompute.attach(nlist, r_cut=rcut, force_mode='ignore')
         for i in range(3):
             hoomd.run(100)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_compute_noforce_graph(self):
+        model_dir = '/tmp/test-noforce-model'
+        tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
         hoomd.context.initialize()
         N = 3 * 3
         NN = N - 1
@@ -146,9 +122,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        save_loc = '/tmp/test-noforce-model'
-
-        tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False, force_mode='output')
+        tfcompute.attach(nlist, r_cut=rcut, force_mode='output')
         for i in range(3):
             hoomd.run(1)
             for j in range(N):
@@ -195,12 +169,7 @@ class test_compute(unittest.TestCase):
             snapshot = system.take_snapshot()
             lj_forces.append([system.particles[j].net_force for j in range(N)])
         lj_forces = np.array(lj_forces)
-        #TODO: Forces are off on first snapshot (not in simulation!). Not sure why.
-        #For example, running 1 or 2 or 3 steps prior to loop above, still results
-        #in mismatch only in first row in forces array.
-        #might be related to why some of the forces are more mismatched than expected (1 part per thousand)
-        #even though others are matched to 8 deciamal places
-        for i in range(1, T):
+        for i in range(T):
             for j in range(N):
                 np.testing.assert_allclose(tf_forces[i,j], lj_forces[i,j], atol=1e-5)
 

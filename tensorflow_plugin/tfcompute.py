@@ -11,7 +11,7 @@ from hoomd.tensorflow_plugin import _tensorflow_plugin
 # Next, since we are extending an Compute, we need to bring in the base class Compute and some other parts from
 # hoomd_script
 from .tfmanager import main
-import sys, math, numpy as np, pickle, multiprocessing, os
+import sys, math, numpy as np, pickle, multiprocessing, os, time
 import hoomd, hoomd.md.nlist
 import tensorflow as tf
 
@@ -152,7 +152,7 @@ class tensorflow(hoomd.compute._compute):
     def _init_tf(self, device, write_tensorboard):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
-        self.q = multiprocessing.Queue(maxsize=1)
+        self.q = multiprocessing.JoinableQueue(maxsize=1)
         self.tfm = multiprocessing.Process(target=main, args=(self.q,write_tensorboard, device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
@@ -170,14 +170,13 @@ class tensorflow(hoomd.compute._compute):
                 'debug': self.debug_mode}
         self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
+        self.q.join()
+
 
     def start_update(self, timestep):
         '''Write to output the current sys information'''
         if self._mock_mode:
             return
-        print('start update compute', timestep)
-        sys.stdout.flush()
-        self.q.put(timestep)
         if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
             raise RuntimeError()
@@ -187,7 +186,8 @@ class tensorflow(hoomd.compute._compute):
 
         if self._mock_mode:
             return
-        self.q.put(timestep)
+        self.q.put(timestep)#start tf
+        self.q.join()
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
