@@ -9,6 +9,6 @@
 # (here: tensorflow_plugin)
 # these are necessary to link?
 
-from .tfcompute import tensorflow
-from .graphbuilder import GraphBuilder
-from .ipcarraycomm import IPCArrayComm
+from .tfcompute import tfcompute
+from .graphbuilder import graph_builder
+from .ipcarraycomm import ipc_array_comm

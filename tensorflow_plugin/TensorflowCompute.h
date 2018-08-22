@@ -55,12 +55,12 @@ IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 //writing out functor.template operator()<T> (...) which is
 //necessary due to some arcane c++ rules. Normally
 // you would write functor(...), when creating a functor.
-struct receiveForcesFunctorAdd {
+struct ReceiveForcesFunctorAdd {
 
     size_t _N;
     void* _stream;
-    receiveForcesFunctorAdd() {}
-    receiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
+    ReceiveForcesFunctorAdd() {}
+    ReceiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
 
     //have empty implementation so if CUDA not enabled,
     //we still have a GPU implementation
@@ -69,13 +69,13 @@ struct receiveForcesFunctorAdd {
 
 };
 
-struct receiveVirialFunctorAdd {
+struct ReceiveVirialFunctorAdd {
 
     size_t _N;
     size_t _pitch;
     void* _stream;
-    receiveVirialFunctorAdd(){}
-    receiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch), _stream(nullptr) {}
+    ReceiveVirialFunctorAdd(){}
+    ReceiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch), _stream(nullptr) {}
 
     template<IPCCommMode M>
     void call(Scalar* dest, Scalar* src) {}
@@ -144,8 +144,8 @@ class TensorflowCompute : public ForceCompute
         IPCArrayComm<M, Scalar4> _nlist_comm;
         IPCArrayComm<M, Scalar> _virial_comm;
 
-        receiveVirialFunctorAdd _virial_functor;
-        receiveForcesFunctorAdd _forces_functor;
+        ReceiveVirialFunctorAdd _virial_functor;
+        ReceiveForcesFunctorAdd _forces_functor;
     };
 
 //! Export the TensorflowCompute class to python

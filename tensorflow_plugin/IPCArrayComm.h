@@ -57,12 +57,12 @@ struct IPCReservation{
 // need this without access to context
 #ifdef ENABLE_CUDA
 #ifndef NDEBUG
-void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line);
+void ipc_check_cuda_error(cudaError_t err, const char *file, unsigned int line);
 #define IPC_CHECK_CUDA_ERROR() { \
     cudaError_t err_sync = cudaGetLastError();  \
-    ipcCheckCudaError(err_sync, __FILE__, __LINE__); \
+    ipc_check_cuda_error(err_sync, __FILE__, __LINE__); \
     cudaError_t err_async = cudaDeviceSynchronize(); \
-    ipcCheckCudaError(err_async, __FILE__, __LINE__); \
+    ipc_check_cuda_error(err_async, __FILE__, __LINE__); \
   }
 #else
 #define IPC_CHECK_CUDA_ERROR()
@@ -79,8 +79,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
     public:
 
         IPCArrayComm() :
-            _mm_page(nullptr), _array(nullptr), _array_size(0), _own_array(false), _ipcr(nullptr)
-        {
+  _mm_page(nullptr), _array(nullptr), _array_size(0), _own_array(false), _ipcr(nullptr) {
             checkDevice();
 	    #ifdef ENABLE_CUDA
 	    _ipc_array = nullptr;
@@ -89,23 +88,20 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         }
 
         IPCArrayComm(void* mm_page, size_t array_size, std::shared_ptr<const ExecutionConfiguration> exec_conf) :
-            _mm_page(mm_page), _array(nullptr), _array_size(array_size), _own_array(true), _ipcr(nullptr)
-        {
+  _mm_page(mm_page), _array(nullptr), _array_size(array_size), _own_array(true), _ipcr(nullptr) {
             checkDevice();
             _array = new GPUArray<T>(array_size, exec_conf);
             allocate();
         }
 
         IPCArrayComm(GPUArray<T>& gpu_array, IPCReservation* ipcr) :
-            _mm_page(nullptr), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr)
-        {
+  _mm_page(nullptr), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr) {
             checkDevice();
             allocate();
         }
 
         IPCArrayComm(GPUArray<T>& gpu_array, IPCReservation* ipcr, size_t num_elements) :
-            _mm_page(nullptr), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr)
-        {
+  _mm_page(nullptr), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(ipcr){
   	    _array_size = num_elements * sizeof(T);
 	    checkDevice();
             allocate();
@@ -254,7 +250,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                 _array_size = sizeof(T) * _array->getNumElements();
             if(M == IPCCommMode::CPU) {
                 if(!_mm_page) {
-                    allocate_mm_page();
+                    allocateMMPage();
                 }
             }
             #ifdef ENABLE_CUDA
@@ -268,7 +264,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
                     cudaIpcOpenMemHandle(&_ipc_array, _ipc_handle->mem_handle, cudaIpcMemLazyEnablePeerAccess);
                 } else {
                     //We will create a shared block
-                    allocate_mm_page();
+                    allocateMMPage();
                     _ipc_handle = reinterpret_cast<cudaIPC_t*> (_mm_page);
                     cudaMalloc((void**) &_ipc_array, getArraySize());
 		    cudaIpcGetMemHandle(&_ipc_handle->mem_handle, _ipc_array);
@@ -280,7 +276,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             #endif
         }
 
-        void allocate_mm_page() {
+        void allocateMMPage() {
             if(_ipcr) {
                 _mm_page = _ipcr->allocate(getMMSize());
                 if(!_mm_page)

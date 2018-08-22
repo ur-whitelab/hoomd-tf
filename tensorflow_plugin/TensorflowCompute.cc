@@ -70,8 +70,8 @@ void TensorflowCompute<M>::reallocate() {
     CHECK_CUDA_ERROR();
 
     //build functors
-    _virial_functor = receiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch);
-    _forces_functor = receiveForcesFunctorAdd(m_pdata->getN());
+    _virial_functor = ReceiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch);
+    _forces_functor = ReceiveForcesFunctorAdd(m_pdata->getN());
 }
 
 
@@ -210,13 +210,12 @@ void TensorflowCompute<M>::prepareNeighbors() {
 template<IPCCommMode M>
 Scalar TensorflowCompute<M>::getLogValue(const std::string& quantity, unsigned int timestep) {
     //not really sure why this has to be implemented by this class...
-    if (quantity == m_log_name)
-        {
+  if (quantity == m_log_name) {
         compute(timestep);
         return calcEnergySum();
         }
-    else
-        {
+  else {
+
         this->m_exec_conf->msg->error() << "tensorflow:" <<  quantity << " is not a valid log quantity"
                     << std::endl;
         throw std::runtime_error("Error getting log value");
@@ -396,7 +395,7 @@ IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs) {
 }
 
 template<>
-void receiveForcesFunctorAdd::call<IPCCommMode::CPU>(Scalar4* dest, Scalar4* src) {
+void ReceiveForcesFunctorAdd::call<IPCCommMode::CPU>(Scalar4* dest, Scalar4* src) {
     for(unsigned int i = 0; i < _N; i++) {
         dest[i].x += src[i].x;
         dest[i].y += src[i].y;
@@ -407,7 +406,7 @@ void receiveForcesFunctorAdd::call<IPCCommMode::CPU>(Scalar4* dest, Scalar4* src
 
 
 template<>
-void receiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) {
+void ReceiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) {
     for(unsigned int i = 0; i < _N; i++) {
         dest[0 * _pitch + i] += src[i * 9 + 0]; //xx
         dest[1 * _pitch + i] += src[i * 9 + 1]; //xy
@@ -420,14 +419,14 @@ void receiveVirialFunctorAdd::call<IPCCommMode::CPU>(Scalar* dest, Scalar* src) 
 
 #ifdef ENABLE_CUDA
 template<>
-void receiveForcesFunctorAdd::call<IPCCommMode::GPU>(Scalar4* dest, Scalar4* src) {
+void ReceiveForcesFunctorAdd::call<IPCCommMode::GPU>(Scalar4* dest, Scalar4* src) {
   gpu_add_scalar4(dest, src, _N, *(static_cast<cudaStream_t*> (_stream)) );
 }
 
 
 
 template<>
-void receiveVirialFunctorAdd::call<IPCCommMode::GPU>(Scalar* dest, Scalar* src) {
+void ReceiveVirialFunctorAdd::call<IPCCommMode::GPU>(Scalar* dest, Scalar* src) {
   gpu_add_virial(dest, src, _N, _pitch, *(static_cast<cudaStream_t*> (_stream)) );
 }
 #endif //ENABLE_CUDA

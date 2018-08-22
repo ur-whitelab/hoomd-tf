@@ -59,6 +59,7 @@ struct IPCTaskLock {
       _store(3);
     }
 
+private:
   void _store(char state) {
     _latch->store(state, std::memory_order_release);
   }

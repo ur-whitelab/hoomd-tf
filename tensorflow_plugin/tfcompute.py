@@ -19,7 +19,7 @@ import tensorflow as tf
 #
 # Every \a period time steps, particle velocities are modified so that they are all zero
 #
-class tensorflow(hoomd.compute._compute):
+class tfcompute(hoomd.compute._compute):
     ##
     #
     # \param _mock_mode Do not set-up tensorflow process

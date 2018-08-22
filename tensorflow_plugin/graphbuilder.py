@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os, pickle
 
-class GraphBuilder:
+class graph_builder:
     '''Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations'''
 
     def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):

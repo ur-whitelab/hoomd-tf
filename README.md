@@ -4,8 +4,8 @@ Tensorflow Plugin
 This plugin allows using tensorflow to compute forces in a simulation
 or to compute other quantities, like collective variables to fit a
 potential for coarse-graining. You must first construct your
-tensorlfow graph using the `tensorflow_plugin.graphbuilder` class and
-then add the `tensorflow` compute to your hoomd simulation.
+tensorlfow graph using the `tensorflow_plugin.graph_builder` class and
+then add the `tfcompute` compute to your hoomd simulation.
 
 Building Graph
 =====
@@ -13,18 +13,18 @@ Building Graph
 To construct a graph, construct a graphbuilder:
 
 ```
-from hoomd.tensorflow_plugin import GraphBuilder
-graph = GraphBuilder(N, NN, output_forces)
+from hoomd.tensorflow_plugin import graph_builder
+graph = graph_builder(N, NN, output_forces)
 ```
 
 where `N` is the number of particles in the simulation, `NN` is the maximum number of nearest neighbors to consider, and `output_forces` indicates if the graph will output forces to use in the simulation. After building the `graph`, it will have three tensors as attributes to use in constructing the tensorflow graph: `nlist`, `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor containing the nearest neighbors. An entry of all zeros indicates that less than `NN` nearest neighbors where present for a particular particle. The 4 right-most dimensions are `x,y,z` and `w`, which is the particle type. Note that the `x,y,z` values are a vector originating at the particle and ending at its neighbor. `positions` and `forces` are `N` x 4 tensors. `forces` *only* is available if the graph does not output forces via `output_forces=False`.
 
 Computing Forces
 -----
-If you graph is outputting forces, you may either compute forces and pass them to `GraphBuilder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `GraphBuilder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
+If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
 ```
-graph = hoomd.tensorflow_plugin.GraphBuilder(N, N - 1)
+graph = hoomd.tensorflow_plugin.graph_builder(N, N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
@@ -38,7 +38,7 @@ forces = graph.compute_forces(energy)
 ```
 
 See in the above example that we have used the
-`GraphBuilder.safe_div(numerator, denominator)` function which allows
+`graph_builder.safe_div(numerator, denominator)` function which allows
 us to safely treat a `1 / 0` due to using nearest neighbor distances,
 which can arise because `nlist` contains 0s for when less than `NN`
 nearest neighbors are found. Note that because `nlist` is a *full*
@@ -56,7 +56,7 @@ saving, or pass `None` to remove the automatically calculated virial.
 Finalizing the Graph
 ----
 
-To finalize and save your graph, you must call the `GraphBuilder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N` x 3 x 3 tensor.
+To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N` x 3 x 3 tensor.
 
 Complete Examples
 -----
@@ -66,7 +66,7 @@ See `tensorflow_plugin/models/test-models/build.py` for more.
 ### Lennard-Jones
 
 ```
-graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
+graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
 nlist = graph.nlist[:, :, :3]
 #get r
 r = tf.norm(nlist, axis=2)
@@ -88,10 +88,10 @@ You may use a saved tensorflow model via:
 
 ```
 import hoomd
-from hoomd.tensorflow_plugin import tensorflow
+from hoomd.tensorflow_plugin import tfcompute
 
 #must construct prior to initialization
-tfcompute = tensorflow(model_loc)
+tfcompute = tfcompute(model_loc)
 
 ...hoomd initialization code...
 
@@ -111,6 +111,9 @@ Note on Building and Executing Tensorflow Models in Same Script
 
 Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it hoomd.
 
+Interprocess Communication
+-----
+*You must be on a system with at least two threads so that the tensorflow and hoomd process can run concurrently.*
 
 
 Tensorboard
@@ -237,13 +240,37 @@ Note: if you modify C++ code, only run make (not cmake). If you modify python, j
 
 Issues
 ====
-* Use GPU event handles
-* Domain decomposition testing
-* Refactor style/names
-* Write better source doc
-* Make ipc2tensor not stateful (use resource manager)
+* Use GPU event handles -> Depends on TF While
+* Domain decomposition testing -> Low priority
+* Refactor style/names, line endings -> Style
+* Write better source doc -> Style
+* Make ipc2tensor not stateful (use resource manager) -> Low priority
 * Explore using ptrs instead of memory addresses, at least
-  to get to python
+  to get to python -> Style
+* TF while -> Next optimization
+* Feed dict  -> Feature required for learning
+* Stride -> Feature required for learning
+* Callbacks -> Feature required for learning
+* context manager -> way to fix shutting down tfmanager bug
+
+Style Issues
+===
+
+C++
+---
+balance between tf/myself/hoomd
+C++ class -> Camel
+C++ methods -> camel
+C++ variables -> snake
+C++ types -> camel _t
+C++ class variables -> snake prefix
+POD struct -> (c++ types) (since that is cuda style)
+C++ functions -> snake (?) because they are only used in py or gpu kernels
+
+Python
+----
+
+py class ->snake
 
 
 Examples
@@ -256,7 +283,7 @@ Force-Matching
 ```python
 import tensorflow as tf
 import hoomd.tensorflow_plugin
-graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
+graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
 #we want to get mapped forces!
 #map = tf.Variable(tf.ones([N, M]))
 #zero_map_enforcer = ...
@@ -309,8 +336,8 @@ graph.save('/tmp/force_matching', out_nodes=[optimizer])
 To run the model
 ```python
 import hoomd, hoomd.md
-from hoomd.tensorflow_plugin import tensorflow
-tfcompute = tensorflow('/tmp/force_matching')
+from hoomd.tensorflow_plugin import tfcompute
+tfcompute = tfcompute('/tmp/force_matching')
 
 ....setup simulation....
 nlist = hoomd.md.nlist.cell()

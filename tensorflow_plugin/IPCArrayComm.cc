@@ -5,7 +5,7 @@
 
 
 #ifdef ENABLE_CUDA
-void ipcCheckCudaError(cudaError_t err, const char *file, unsigned int line) {
+void ipc_check_cuda_error(cudaError_t err, const char *file, unsigned int line) {
     // if there was an error
     if (err != cudaSuccess) {
         // print an error message
