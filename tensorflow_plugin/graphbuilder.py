@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os, pickle
 
-class GraphBuilder:
+class graph_builder:
     '''Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations'''
 
     def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):
@@ -12,7 +12,7 @@ class GraphBuilder:
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
         self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
-        self.virial = None
+        self.virial = None    
         self.positions = tf.zeros ([atom_number, 4], name='positions')
         if not output_forces:
             self.forces = tf.zeros([atom_number, 4], name='forces')

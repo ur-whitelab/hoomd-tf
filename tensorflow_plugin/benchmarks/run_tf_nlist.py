@@ -2,7 +2,7 @@ import hoomd, hoomd.md, math
 import hoomd.tensorflow_plugin
 
 model_dir = '/tmp/benchmark-gradient-potential-model'
-tfcompute = hoomd.tensorflow_plugin.tensorflow(model_dir)
+tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
 N = 1024
 rcut = 5.0
 

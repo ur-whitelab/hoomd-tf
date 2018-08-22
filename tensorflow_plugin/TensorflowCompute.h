@@ -16,6 +16,7 @@
 
 #include "TensorflowCompute.h"
 #include "IPCArrayComm.h"
+#include "IPCTaskLock.h"
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
@@ -54,10 +55,12 @@ IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 //writing out functor.template operator()<T> (...) which is
 //necessary due to some arcane c++ rules. Normally
 // you would write functor(...), when creating a functor.
-struct receiveForcesFunctorAdd {
+struct ReceiveForcesFunctorAdd {
 
     size_t _N;
-    receiveForcesFunctorAdd(size_t N) : _N(N) {}
+    void* _stream;
+    ReceiveForcesFunctorAdd() {}
+    ReceiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
 
     //have empty implementation so if CUDA not enabled,
     //we still have a GPU implementation
@@ -66,16 +69,17 @@ struct receiveForcesFunctorAdd {
 
 };
 
-struct receiveVirialFunctorAdd {
+struct ReceiveVirialFunctorAdd {
 
     size_t _N;
     size_t _pitch;
-    receiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch) {}
+    void* _stream;
+    ReceiveVirialFunctorAdd(){}
+    ReceiveVirialFunctorAdd(size_t N, size_t pitch) : _N(N), _pitch(pitch), _stream(nullptr) {}
 
     template<IPCCommMode M>
     void call(Scalar* dest, Scalar* src) {}
 };
-
 
 template <IPCCommMode M = IPCCommMode::CPU>
 class TensorflowCompute : public ForceCompute
@@ -84,7 +88,7 @@ class TensorflowCompute : public ForceCompute
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode,
-             IPCReservation* ipc_reservation);
+             IPCReservation* ipc_reservation, IPCTaskLock* tasklock);
 
         TensorflowCompute() = delete;
 
@@ -119,9 +123,9 @@ class TensorflowCompute : public ForceCompute
     protected:
 
         //used if particle number changes
-        void reallocate();
+        virtual void reallocate();
         //! Take one timestep forward
-        void computeForces(unsigned int timestep) override;
+        virtual void computeForces(unsigned int timestep) override;
 
         virtual void prepareNeighbors();
         virtual void zeroVirial();
@@ -132,12 +136,16 @@ class TensorflowCompute : public ForceCompute
         FORCE_MODE _force_mode;
         std::string m_log_name;
         IPCReservation* _ipcr;
+        IPCTaskLock* _tasklock;
 
         IPCArrayComm<M, Scalar4> _positions_comm;
         IPCArrayComm<M, Scalar4> _forces_comm;
         GPUArray<Scalar4> _nlist_array;
         IPCArrayComm<M, Scalar4> _nlist_comm;
         IPCArrayComm<M, Scalar> _virial_comm;
+
+        ReceiveVirialFunctorAdd _virial_functor;
+        ReceiveForcesFunctorAdd _forces_functor;
     };
 
 //! Export the TensorflowCompute class to python
@@ -156,16 +164,20 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
     public:
         //! Constructor
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode, IPCReservation* ipc_reservation);
+             Scalar r_cut, unsigned int nneighs,
+             FORCE_MODE force_mode, IPCReservation* ipc_reservation,
+             IPCTaskLock* tasklock);
 
         void setAutotunerParams(bool enable, unsigned int period) override;
     protected:
+	void computeForces(unsigned int timestep) override;
+        void reallocate() override;
         void prepareNeighbors() override;
         void zeroVirial() override;
     private:
         std::unique_ptr<Autotuner> m_tuner; // Autotuner for block size
-        cudaIpcMemHandle_t* _input_handle;
-        cudaIpcMemHandle_t* _output_handle;
+	cudaStream_t _streams[4];
+	size_t _nstreams = 4;
     };
 
 //! Export the TensorflowComputeGPU class to python

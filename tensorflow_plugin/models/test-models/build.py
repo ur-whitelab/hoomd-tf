@@ -3,7 +3,7 @@ import os, hoomd.tensorflow_plugin, pickle
 
 
 def simple_potential():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
+    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2, keepdims=True)
@@ -22,7 +22,7 @@ def simple_potential():
         assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
 
 def benchmark_gradient_potential():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 64)
+    graph = hoomd.tensorflow_plugin.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -32,7 +32,7 @@ def benchmark_gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/benchmark-gradient-potential-model')
 
 def gradient_potential():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1)
+    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
@@ -41,20 +41,20 @@ def gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(9, 9 - 1, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     graph.save('/tmp/test-noforce-model', out_nodes=[energy])
 
 def benchmark_nonlist_graph():
-    graph = hoomd.tensorflow_plugin.GraphBuilder(1024, 0, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(1024, 0, output_forces=False)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
     graph.save('/tmp/benchmark-nonlist-model', out_nodes=[energy])
 
 def lj_graph(N, NN, name):
-    graph = hoomd.tensorflow_plugin.GraphBuilder(N, NN)
+    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -66,7 +66,6 @@ def lj_graph(N, NN, name):
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=name)
-
 
 
 

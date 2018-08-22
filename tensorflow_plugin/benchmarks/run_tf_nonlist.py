@@ -11,7 +11,7 @@ system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
 nlist = hoomd.md.nlist.cell()
 hoomd.md.integrate.mode_standard(dt=0.005)
 hoomd.md.integrate.nve(group=hoomd.group.all())
-tfcompute = hoomd.tensorflow_plugin.tensorflow(save_loc, nlist, r_cut=rcut, debug_mode=False)
+tfcompute = hoomd.tensorflow_plugin.tfcompute(save_loc, nlist, r_cut=rcut, debug_mode=False)
 hoomd.run(1000, profile=True)
 
 hoomd.context.initialize()

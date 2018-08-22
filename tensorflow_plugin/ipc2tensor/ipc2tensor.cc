@@ -31,9 +31,8 @@ using GPUDevice = Eigen::GpuDevice;
 
 // CPU specialization of actual computation.
 template <typename T>
-struct IPC2TFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, void* address, T** ipc_memory, T* out) {
-    //TODO: access address
+struct IPC2TFunctor<CPUDevice, T, T> {
+  void operator()(const CPUDevice& d, int size, void* address, T& ipc_memory, T* out) {
     T* input_buffer = reinterpret_cast<T*> (address);
     std::memcpy(out, input_buffer, size * sizeof(T));
   }
@@ -42,10 +41,10 @@ struct IPC2TFunctor<CPUDevice, T> {
 
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
-template <typename Device, typename T, typename Tshape>
+template <typename Device, typename T, typename Tshape, typename IPCM>
 class IpcToTensorOp : public OpKernel {
  public:
-  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context), _ipc_memory(nullptr) {
+  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context) {
 
     //get memory address
     int64 tmp;
@@ -77,17 +76,17 @@ class IpcToTensorOp : public OpKernel {
     OP_REQUIRES(context, output_tensor->NumElements() <= tensorflow::kint32max,
                 errors::InvalidArgument("Too many elements in tensor"));
     auto output = output_tensor->flat<T>();
-    IPC2TFunctor<Device, T>()(
+    IPC2TFunctor<Device, T, IPCM>()(
         context->eigen_device<Device>(),
         output.size(),
         _input_memory,
-        &_ipc_memory,
+        _ipc_memory,
         output.data());
   }
 
 private:
   void* _input_memory;
-  T* _ipc_memory;
+  IPCM _ipc_memory;
 };
 
 // Register the CPU kernels.
@@ -97,7 +96,7 @@ private:
       .Device(DEVICE_CPU) \
       .TypeConstraint<Tshape>("Tshape") \
       .TypeConstraint<T>("T"), \
-      IpcToTensorOp<CPUDevice, T, Tshape>);
+      IpcToTensorOp<CPUDevice, T, Tshape, T>);
 REGISTER_CPU(float, int32);
 REGISTER_CPU(float, int64);
 REGISTER_CPU(double, int32);
@@ -113,7 +112,7 @@ REGISTER_CPU(double, int64);
       .HostMemory("shape") \
       .TypeConstraint<Tshape>("Tshape") \
       .TypeConstraint<T>("T"), \
-      IpcToTensorOp<GPUDevice, T, Tshape>);
+      IpcToTensorOp<GPUDevice, T, Tshape, cudaIPC_t<T> >);
 REGISTER_GPU(float, int32);
 REGISTER_GPU(float, int64);
 REGISTER_GPU(double, int32);

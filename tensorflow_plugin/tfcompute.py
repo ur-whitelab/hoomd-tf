@@ -19,7 +19,7 @@ import tensorflow as tf
 #
 # Every \a period time steps, particle velocities are modified so that they are all zero
 #
-class tensorflow(hoomd.compute._compute):
+class tfcompute(hoomd.compute._compute):
     ##
     #
     # \param _mock_mode Do not set-up tensorflow process
@@ -53,10 +53,10 @@ class tensorflow(hoomd.compute._compute):
 
         #need to allocate ipc reservation now so it can be forked
         self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
-
+        self.tasklock = _tensorflow_plugin.make_tasklock()
         if not _mock_mode:
             self._init_tf(device, _write_tensorboard)
-        self._mock_mode = _mock_mode
+        self.mock_mode = _mock_mode
 
 
     def attach(self, nlist, r_cut, force_mode='overwrite'):
@@ -105,12 +105,12 @@ class tensorflow(hoomd.compute._compute):
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code,
-             self.ipc_reservation)
+             self.ipc_reservation, self.tasklock)
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code,
-             self.ipc_reservation)
+             self.ipc_reservation, self.tasklock)
 
         #get double vs single precision
         self.dtype = tf.float32
@@ -121,7 +121,7 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
         hoomd.context.current.forces.append(self)
 
-        if not self._mock_mode:
+        if not self.mock_mode:
             self._start_tf()
 
     def rcut(self):
@@ -153,7 +153,7 @@ class tensorflow(hoomd.compute._compute):
         #I can't figure out how to reliably get __del__ to be called,
         #so I set a timeout to clean-up TF manager.
         self.q = multiprocessing.JoinableQueue(maxsize=1)
-        self.tfm = multiprocessing.Process(target=main, args=(self.q,write_tensorboard, device))
+        self.tfm = multiprocessing.Process(target=main, args=(self.q, self.tasklock,write_tensorboard, device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
 
@@ -172,22 +172,14 @@ class tensorflow(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
         self.q.join()
 
-
-    def start_update(self, timestep):
-        '''Write to output the current sys information'''
-        if self._mock_mode:
-            return
-        if not self.tfm.is_alive():
-            hoomd.context.msg.error('TF Session Manager died. See its output log ({})'.format(self.log_filename))
-            raise RuntimeError()
-
     def finish_update(self, timestep):
         '''Allow TF to read output and we wait for it to finish.'''
 
-        if self._mock_mode:
+        if self.mock_mode:
             return
-        self.q.put(timestep)#start tf
-        self.q.join()
+        self.tasklock.await()
+        #self.q.put(timestep)#start tf
+        #self.q.join()
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())

@@ -2,7 +2,7 @@ from hoomd.tensorflow_plugin import _tensorflow_plugin
 import numpy as np
 import hoomd
 
-class IPCArrayComm:
+class ipc_array_comm:
     def __init__(self, nparray, hoomd_context = hoomd.context.exec_conf):
         #get numpy array address
         ptr_address, _ = nparray.__array_interface__['data']

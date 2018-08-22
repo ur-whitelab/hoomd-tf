@@ -3,6 +3,8 @@
 
 // Include the defined classes that are to be exported to python
 #include "TensorflowCompute.h"
+#include "IPCArrayComm.h"
+#include "IPCTaskLock.h"
 
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 
@@ -18,6 +20,8 @@ PYBIND11_PLUGIN(_tensorflow_plugin)
     #endif
 
     export_IPCArrayComm(m);
+
+    export_IPCTaskLock(m);
 
     return m.ptr();
     }

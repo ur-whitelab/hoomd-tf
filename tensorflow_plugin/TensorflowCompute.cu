@@ -30,14 +30,14 @@ void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N) {
     }
 }
 
-cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N) {
+cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N, cudaStream_t s) {
     // setup the grid to run the kernel
     int block_size = 256;
     dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    gpu_add_scalar4_kernel<<< grid, threads >>>(dest, src, _N);
+    gpu_add_scalar4_kernel<<< grid, threads, 0, s >>>(dest, src, _N);
 
     // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
     // cudaSuccess
@@ -59,14 +59,14 @@ void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int _N, unsigned 
     }
 }
 
-cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch) {
+cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch, cudaStream_t s) {
     // setup the grid to run the kernel
     int block_size = 256;
     dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    gpu_add_virial_kernel<<< grid, threads >>>(dest, src, _N, _pitch);
+    gpu_add_virial_kernel<<< grid, threads, 0, s >>>(dest, src, _N, _pitch);
 
     // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
     // cudaSuccess
@@ -159,19 +159,20 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
 
 
 cudaError_t gpu_reshape_nlist(Scalar4* dest,
-    const Scalar4 *d_pos,
-    const unsigned int N,
-    const unsigned int NN,
-    const unsigned int n_ghost,
-    const BoxDim& box,
-    const unsigned int *d_n_neigh,
-    const unsigned int *d_nlist,
-    const unsigned int *d_head_list,
-    const unsigned int size_nlist,
-    const unsigned int block_size,
-    const unsigned int compute_capability,
-    const unsigned int max_tex1d_width,
-    double rmax) {
+			      const Scalar4 *d_pos,
+			      const unsigned int N,
+			      const unsigned int NN,
+			      const unsigned int n_ghost,
+			      const BoxDim& box,
+			      const unsigned int *d_n_neigh,
+			      const unsigned int *d_nlist,
+			      const unsigned int *d_head_list,
+			      const unsigned int size_nlist,
+			      const unsigned int block_size,
+			      const unsigned int compute_capability,
+			      const unsigned int max_tex1d_width,
+			      double rmax,
+			      cudaStream_t stream) {
 
     assert(d_pos);
     assert(dest);
@@ -217,7 +218,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         dim3 grid( N / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
 
-        gpu_reshape_nlist_kernel<1><<< grid, threads>>>(dest,
+        gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
                                                  N,
                                                  NN,
                                                  d_pos,
