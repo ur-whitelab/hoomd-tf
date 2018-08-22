@@ -25,14 +25,15 @@ TensorflowCompute<M>::TensorflowCompute(
     std::shared_ptr<NeighborList> nlist,
     Scalar r_cut,
     unsigned int nneighs, FORCE_MODE force_mode,
-    IPCReservation* ipc_reservation)
+    IPCReservation* ipc_reservation, IPCTaskLock* tasklock)
         : ForceCompute(sysdef),
           _py_self(py_self),
           m_nlist(nlist),
           _r_cut(r_cut),
           _nneighs(nneighs),
           _force_mode(force_mode),
-          _ipcr(ipc_reservation)
+          _ipcr(ipc_reservation),
+          _tasklock(tasklock)
 {
 
     m_exec_conf->msg->notice(2) <<"Starting TensorflowCompute with IPC Memory reservation of " << _ipcr->_size  << "bytes" << std::endl;
@@ -77,6 +78,7 @@ void TensorflowCompute<M>::reallocate() {
 template<IPCCommMode M>
 TensorflowCompute<M>::~TensorflowCompute() {
     delete _ipcr;
+    delete _tasklock;
 }
 
 /*! Perform the needed calculations to zero the system's velocity
@@ -101,7 +103,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
-    _py_self.attr("finish_update")(timestep);
+    //_py_self.attr("finish_update")(timestep);
+    _tasklock->await();
     if (m_prof) m_prof->pop();
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
@@ -244,7 +247,7 @@ std::vector<Scalar> TensorflowCompute<M>::getVirialArray() const {return _virial
 void export_TensorflowCompute(pybind11::module& m)
     {
     pybind11::class_<TensorflowCompute<IPCCommMode::CPU>, std::shared_ptr<TensorflowCompute<IPCCommMode::CPU> > >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, IPCReservation*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, IPCReservation*, IPCTaskLock*>())
         .def("getPositionsBuffer", &TensorflowCompute<IPCCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowCompute<IPCCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowCompute<IPCCommMode::CPU>::getForcesBuffer, pybind11::return_value_policy::reference)
@@ -278,8 +281,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs,
              FORCE_MODE force_mode,
-             IPCReservation* ipc_reservation)
-        : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, ipc_reservation)
+             IPCReservation* ipc_reservation, IPCTaskLock* tasklock)
+        : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, ipc_reservation, tasklock)
 {
 
     _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
@@ -300,7 +303,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
 
 void TensorflowComputeGPU::reallocate()  {
   TensorflowCompute::reallocate();
-  _nlist_comm.setCudaStream(_streams[0]);  
+  _nlist_comm.setCudaStream(_streams[0]);
   _virial_comm.setCudaStream(_streams[1]);
   _forces_comm.setCudaStream(_streams[2]);
 
@@ -357,7 +360,7 @@ void TensorflowComputeGPU::zeroVirial() {
 void export_TensorflowComputeGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, IPCReservation*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, IPCReservation*, IPCTaskLock*>())
         .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowComputeGPU::getForcesBuffer, pybind11::return_value_policy::reference)

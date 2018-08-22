@@ -2,10 +2,10 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle, cProfile, queue, time
 
-def main(q, write_tensorboard=False, device='/gpu:0', profile=False):
+def main(q, tasklock, write_tensorboard=False, device='/gpu:0', profile=False):
 
     tfm_args = q.get()
-    tfm = TFManager(q=q, device=device, write_tensorboard=write_tensorboard, **tfm_args)
+    tfm = TFManager(q=q, tasklock=tasklock, device=device, write_tensorboard=write_tensorboard, **tfm_args)
     if(profile):
         cProfile.runctx('tfm.start_loop()', globals(), locals(), filename='tf_profile.out')
     else:
@@ -22,7 +22,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, device,q,
+    def __init__(self, graph_info, device,q, tasklock,
                 positions_buffer, nlist_buffer,
                 forces_buffer, virial_buffer, log_filename,
                 dtype, debug, write_tensorboard):
@@ -34,6 +34,7 @@ class TFManager:
 
         self.device = device
         self.q = q
+        self.tasklock = tasklock
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer
@@ -159,16 +160,26 @@ class TFManager:
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
             #indicating we are ready to begin
-            self.q.task_done()            
+            self.q.task_done()
+            cumtime = 0
+            i = 0
             while True:
-                try:
-                   timestep = self.q.get(timeout=None if self.debug else 3) #received from finish_update
-                except queue.Empty:
-                    #done with work
-                    self.log.info('Completed TF Update Loop')
-                    break
+                #try:
+                #   timestep = self.q.get(timeout=3)
+                #except queue.Empty:
+                #    #done with work
+                #    self.log.info('Completed TF Update Loop')
+                #    print(cumtime)
+                #    break
+                self.tasklock.start()
+                last_clock = time.perf_counter()
                 self._update(sess)
-                self.q.task_done()
+                cumtime += (time.perf_counter() - last_clock)
+                self.tasklock.end()
+                i += 1
+                if i > 998:
+                    print(cumtime)
+                #self.q.task_done()
 
 
 

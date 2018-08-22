@@ -16,6 +16,7 @@
 
 #include "TensorflowCompute.h"
 #include "IPCArrayComm.h"
+#include "IPCTaskLock.h"
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.h>
@@ -80,7 +81,6 @@ struct receiveVirialFunctorAdd {
     void call(Scalar* dest, Scalar* src) {}
 };
 
-
 template <IPCCommMode M = IPCCommMode::CPU>
 class TensorflowCompute : public ForceCompute
     {
@@ -88,7 +88,7 @@ class TensorflowCompute : public ForceCompute
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode,
-             IPCReservation* ipc_reservation);
+             IPCReservation* ipc_reservation, IPCTaskLock* tasklock);
 
         TensorflowCompute() = delete;
 
@@ -136,6 +136,7 @@ class TensorflowCompute : public ForceCompute
         FORCE_MODE _force_mode;
         std::string m_log_name;
         IPCReservation* _ipcr;
+        IPCTaskLock* _tasklock;
 
         IPCArrayComm<M, Scalar4> _positions_comm;
         IPCArrayComm<M, Scalar4> _forces_comm;
@@ -163,7 +164,9 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
     public:
         //! Constructor
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode, IPCReservation* ipc_reservation);
+             Scalar r_cut, unsigned int nneighs,
+             FORCE_MODE force_mode, IPCReservation* ipc_reservation,
+             IPCTaskLock* tasklock);
 
         void setAutotunerParams(bool enable, unsigned int period) override;
     protected:

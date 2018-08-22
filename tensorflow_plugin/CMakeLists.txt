@@ -10,6 +10,7 @@ set(_${COMPONENT_NAME}_sources
     module.cc
     TensorflowCompute.cc
     IPCArrayComm.cc
+    IPCTaskLock.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources

@@ -14,4 +14,4 @@ hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=
 #lj = hoomd.md.pair.lj(r_cut=3.0, nlist=nlist)
 #lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
 tfcompute.attach(nlist, r_cut=rcut)
-hoomd.run(10000, profile=True)
+hoomd.run(1000, profile=True)

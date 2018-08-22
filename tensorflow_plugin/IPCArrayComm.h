@@ -16,11 +16,13 @@
 
 enum class IPCCommMode{GPU, CPU};
 
+#ifdef ENABLE_CUDA
 struct cudaIPC_t {
   cudaIpcMemHandle_t mem_handle;
   cudaIpcEventHandle_t event_handle;
   cudaStream_t stream = 0;
 };
+#endif
 
 struct IPCReservation{
     char* _ptr;
@@ -110,15 +112,13 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         }
 
         IPCArrayComm(GPUArray<T>& gpu_array, void* mm_page) :
-            _mm_page(mm_page), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(nullptr)
-        {
+            _mm_page(mm_page), _array(&gpu_array), _array_size(0), _own_array(false), _ipcr(nullptr) {
             checkDevice();
             allocate();
         }
 
 
-        IPCArrayComm(IPCArrayComm&& other)
-        {
+        IPCArrayComm(IPCArrayComm&& other) {
             //use the assignment operator
             *this = std::move(other);
         }
@@ -214,7 +214,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
             } else {
             #ifdef ENABLE_CUDA
                 ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
-                cudaMemcpyAsync(_ipc_array, handle.data, getArraySize(), cudaMemcpyDeviceToDevice, _ipc_handle->stream);		
+                cudaMemcpyAsync(_ipc_array, handle.data, getArraySize(), cudaMemcpyDeviceToDevice, _ipc_handle->stream);
                 IPC_CHECK_CUDA_ERROR();
             #endif
             }
@@ -229,7 +229,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
         int64_t getAddress() const {
             return reinterpret_cast<int64_t> (_mm_page);
         }
-	
+
 	#ifdef ENABLE_CUDA
 	void setCudaStream(cudaStream_t s) {
 	  _ipc_handle->stream = s;
@@ -239,7 +239,7 @@ template <IPCCommMode M, typename T> class IPCArrayComm {
 	}
 
 	#endif
-			   
+
     protected:
 
         void checkDevice() {

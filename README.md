@@ -118,7 +118,7 @@ Tensorboard
 
 You can visualize your models with tensorboard. First, add
 `_write_tensorboard=True` the tensorflow plugin constructor. This will
-add a new directory called `tensorboard` to your model directory. 
+add a new directory called `tensorboard` to your model directory.
 
 After running, you can launch tensorboard like so:
 ```bash
@@ -131,13 +131,13 @@ running on a server, before launching tensorboard use this ssh command to login:
 ssh -L 6006:[remote ip or hostname]:6006 username@remote
 ```
 
-and then you can view after launching on the server via your local web browser. 
+and then you can view after launching on the server via your local web browser.
 
 Interactive Mode
 ----
 
-Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to 
-the constructor and the `_debug_mode=True` flag to `attach` command. 
+Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to
+the constructor and the `_debug_mode=True` flag to `attach` command.
 
 Requirements
 =====
@@ -237,9 +237,13 @@ Note: if you modify C++ code, only run make (not cmake). If you modify python, j
 
 Issues
 ====
-* Energy conservation
 * Use GPU event handles
 * Domain decomposition testing
+* Refactor style/names
+* Write better source doc
+* Make ipc2tensor not stateful (use resource manager)
+* Explore using ptrs instead of memory addresses, at least
+  to get to python
 
 
 Examples
