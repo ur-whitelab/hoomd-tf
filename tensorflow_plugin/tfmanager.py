@@ -171,14 +171,13 @@ class TFManager:
                 #    self.log.info('Completed TF Update Loop')
                 #    print(cumtime)
                 #    break
-                self.tasklock.start()
+                if not self.tasklock.start():
+                    self.log.info('Received exit. Leaving TF Update Loop')
+                    break
                 last_clock = time.perf_counter()
                 self._update(sess)
                 cumtime += (time.perf_counter() - last_clock)
                 self.tasklock.end()
-                i += 1
-                if i > 998:
-                    print(cumtime)
                 #self.q.task_done()
 
 

@@ -13,6 +13,8 @@
   //state -> 1 master is ceding, waiting for worker
   //state -> 2 worker is running, master is ceding
   //state -> 3 worker is ceding, waiting for master
+  //state -> 4 call exit
+  //state -> 5 exit acknowledged
 struct IPCTaskLock {
     std::atomic_char* _latch;
     IPCTaskLock() {
@@ -45,12 +47,16 @@ struct IPCTaskLock {
       //move from state 3 to 0 (worker must go from 1 to 2)
       _change_state(3, 0);
     }
+  
+    void exit() {
+      //_change_state(0, 4);
+    }
 
 
     //start work
-    void start() {
+    bool start() {
       //move from state 1 to 2
-      _change_state(1, 2);
+      return _change_state(1, 2);
     }
 
     void end() {
@@ -76,11 +82,14 @@ private:
     *   continue loop
     *
     */
-    void _change_state(char state_start, char state_end) {
+    bool _change_state(char state_start, char state_end) {
       char expected = state_start;
       while(!_latch->compare_exchange_weak(expected, state_end, std::memory_order_acquire)) {
+	//if(expected == 4)
+	//return false;
         expected = state_start;
       }
+      return true;
     }
 };
 

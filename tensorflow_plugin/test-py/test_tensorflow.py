@@ -47,111 +47,111 @@ class test_ipc(unittest.TestCase):
 class test_access(unittest.TestCase):
     def test_access(self):
         model_dir = '/tmp/test-simple-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=True)
-        hoomd.context.initialize('--gpu_error_checking')
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all())
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=True) as tfcompute:
+            hoomd.context.initialize('--gpu_error_checking')
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        tfcompute.attach(nlist, r_cut=rcut)
-        hoomd.run(1)
-
-        tfcompute.get_virial_array()
-        tfcompute.get_positions_array()
-        tfcompute.get_nlist_array()
-        tfcompute.get_forces_array()
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(1)
+            
+            tfcompute.get_virial_array()
+            tfcompute.get_positions_array()
+            tfcompute.get_nlist_array()
+            tfcompute.get_forces_array()
 
 class test_compute(unittest.TestCase):
     def test_compute_force_overwrite(self):
         model_dir = '/tmp/test-simple-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
-        tfcompute.attach(nlist, r_cut=rcut)
-        #use these to throw off timesteps
-        hoomd.run(1)
-        hoomd.run(1)
-        for i in range(3):
-            py_forces = compute_forces(system, rcut)
-            for j in range(N):
-                np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
-            hoomd.run(100)
+            tfcompute.attach(nlist, r_cut=rcut)
+            #use these to throw off timesteps
+            hoomd.run(1)
+            hoomd.run(1)
+            for i in range(3):
+                py_forces = compute_forces(system, rcut)
+                for j in range(N):
+                    np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
+                    hoomd.run(100)
 
     def test_compute_force_ignore(self):
         model_dir = '/tmp/test-simple-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
 
-        tfcompute.attach(nlist, r_cut=rcut, force_mode='ignore')
-        for i in range(3):
-            hoomd.run(100)
-            for j in range(N):
-                np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
+            tfcompute.attach(nlist, r_cut=rcut, force_mode='ignore')
+            for i in range(3):
+                hoomd.run(100)
+                for j in range(N):
+                    np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_compute_noforce_graph(self):
         model_dir = '/tmp/test-noforce-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all())
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
 
-        tfcompute.attach(nlist, r_cut=rcut, force_mode='output')
-        for i in range(3):
-            hoomd.run(1)
-            for j in range(N):
-                np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
+            tfcompute.attach(nlist, r_cut=rcut, force_mode='output')
+            for i in range(3):
+                hoomd.run(1)
+                for j in range(N):
+                    np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_lj_forces(self):
         model_dir = '/tmp/test-lj-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        T = 100
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            T = 100
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
 
 
-        tfcompute.attach(nlist, r_cut=rcut)
-        hoomd.run(2)
-        tf_forces = []
-        for i in range(T):
-            hoomd.run(1)
-            snapshot = system.take_snapshot()
-            tf_forces.append([system.particles[j].net_force for j in range(N)])
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(2)
+            tf_forces = []
+            for i in range(T):
+                hoomd.run(1)
+                snapshot = system.take_snapshot()
+                tf_forces.append([system.particles[j].net_force for j in range(N)])
 
-        tf_forces = np.array(tf_forces)
+            tf_forces = np.array(tf_forces)
         #now run with stock lj
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -175,54 +175,49 @@ class test_compute(unittest.TestCase):
 
     def test_lj_energy(self):
         model_dir = '/tmp/test-lj-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        T = 10
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            T = 10
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-        log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'kinetic_energy'], period=1)
-        tfcompute.attach(nlist, r_cut=rcut)
-        #lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
-        #lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-
-        energy = []
-        for i in range(T):
-            hoomd.run(250)
-            energy.append(log.query('potential_energy') + log.query('kinetic_energy'))
-            if i > 1:
-                np.testing.assert_allclose(energy[-1], energy[-2], atol=1e-3)
-
-
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'kinetic_energy'], period=1)
+            tfcompute.attach(nlist, r_cut=rcut)
+            energy = []
+            for i in range(T):
+                hoomd.run(250)
+                energy.append(log.query('potential_energy') + log.query('kinetic_energy'))
+                if i > 1:
+                    np.testing.assert_allclose(energy[-1], energy[-2], atol=1e-3)
 
     def test_lj_pressure(self):
         model_dir = '/tmp/test-lj-potential-model'
-        tfcompute = hoomd.tensorflow_plugin.tfcompute(model_dir)
-        hoomd.context.initialize()
-        N = 3 * 3
-        NN = N - 1
-        rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3,3])
-        nlist = hoomd.md.nlist.cell(check_period = 1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
 
 
-        tfcompute.attach(nlist, r_cut=rcut)
-        hoomd.run(1)
-        log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
-        thermo_scalars = []
-        tf_virial = []
-        for i in range(5):
-            hoomd.run(3)
-            snapshot = system.take_snapshot()
-            thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(1)
+            log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
+            thermo_scalars = []
+            tf_virial = []
+            for i in range(5):
+                hoomd.run(3)
+                snapshot = system.take_snapshot()
+                thermo_scalars.append([log.query('potential_energy'), log.query('pressure')])
 
         #now run with stock lj
         hoomd.context.initialize()

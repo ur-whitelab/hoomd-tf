@@ -54,10 +54,22 @@ class tfcompute(hoomd.compute._compute):
         #need to allocate ipc reservation now so it can be forked
         self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
         self.tasklock = _tensorflow_plugin.make_tasklock()
-        if not _mock_mode:
-            self._init_tf(device, _write_tensorboard)
         self.mock_mode = _mock_mode
+        self.device = device 
+        self.write_tensorboard = _write_tensorboard
 
+    def __enter__(self):
+        if not self.mock_mode:
+            self._init_tf()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        #trigger end in task lock
+        hoomd.context.msg.notice(2, 'Sending exit signal.')
+        #self.tasklock.exit()
+        if self.tfm and self.tfm.is_alive():
+            hoomd.context.msg.notice(2, 'Shutting down TF.')
+            self.shutdown_tf()        
 
     def attach(self, nlist, r_cut, force_mode='overwrite'):
 
@@ -65,6 +77,9 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.init.is_initialized():
             hoomd.context.msg.error('Must attach TF after initialization\n')
             raise RuntimeError('Error creating TF')
+        if self.tfm is None and not self.mock_mode:
+            raise Exception('You must use the with statement to construct and attach a tfcompute')
+        
 
         #check our parameters
         if self.graph_info['N'] != len(hoomd.context.current.group_all):
@@ -149,11 +164,9 @@ class tfcompute(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
         self.tfm.terminate()
 
-    def _init_tf(self, device, write_tensorboard):
-        #I can't figure out how to reliably get __del__ to be called,
-        #so I set a timeout to clean-up TF manager.
+    def _init_tf(self):
         self.q = multiprocessing.JoinableQueue(maxsize=1)
-        self.tfm = multiprocessing.Process(target=main, args=(self.q, self.tasklock,write_tensorboard, device))
+        self.tfm = multiprocessing.Process(target=main, args=(self.q, self.tasklock,self.write_tensorboard, self.device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
 

@@ -103,8 +103,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
-    //_py_self.attr("finish_update")(timestep);
-    _tasklock->await();
+    _py_self.attr("finish_update")(timestep);
+    //_tasklock->await();
     if (m_prof) m_prof->pop();
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
