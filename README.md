@@ -242,16 +242,9 @@ Issues
 ====
 * Use GPU event handles -> Depends on TF While
 * Domain decomposition testing -> Low priority
-* Refactor style/names, line endings -> Style
 * Write better source doc -> Style
 * Make ipc2tensor not stateful (use resource manager) -> Low priority
-* Explore using ptrs instead of memory addresses, at least
-  to get to python -> Style
-* TF while -> Next optimization
-* Feed dict  -> Feature required for learning DONE
-* Stride -> Feature required for learning DONE
-* Callbacks -> Feature required for learning DONE
-* context manager -> way to fix shutting down tfmanager bug DONE
+* TF while -> Next optimization, Determined to be very difficult and unclear if necessary
 
 Style Issues
 ===

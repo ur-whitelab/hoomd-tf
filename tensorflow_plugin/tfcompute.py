@@ -55,10 +55,11 @@ class tfcompute(hoomd.compute._compute):
 
     def __exit__(self, exc_type, exc_value, traceback):
         #trigger end in task lock
-        hoomd.context.msg.notice(2, 'Sending exit signal.')
-        #self.tasklock.exit()
+        hoomd.context.msg.notice(2, 'Sending exit signal.\n')
+        self.tasklock.exit()
+        time.sleep(1)
         if self.tfm and self.tfm.is_alive():
-            hoomd.context.msg.notice(2, 'Shutting down TF.')
+            hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
             self.shutdown_tf()
 
     ##
@@ -158,7 +159,6 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         #need to terminate orphan
-        hoomd.context.msg.notice(2, 'Shutting down TF Session Manager\n')
         self.tfm.terminate()
 
     def _init_tf(self):

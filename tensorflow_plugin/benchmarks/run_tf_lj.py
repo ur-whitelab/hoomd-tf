@@ -3,7 +3,7 @@ import hoomd.tensorflow_plugin
 
 model_dir = '/tmp/benchmark-lj-potential-model'
 with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-    N = 1024
+    N = 2**14
     rcut = 3.0
     hoomd.context.initialize()
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=1.0),

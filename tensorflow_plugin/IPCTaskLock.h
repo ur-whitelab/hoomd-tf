@@ -45,7 +45,7 @@ struct IPCTaskLock {
   }
 
   void exit() {
-    //_change_state(0, 4);
+    _change_state(0, 4);
   }
 
   // start work
@@ -79,8 +79,8 @@ struct IPCTaskLock {
     char expected = state_start;
     while (!_latch->compare_exchange_weak(expected, state_end,
                                           std::memory_order_acquire)) {
-      // if(expected == 4)
-      // return false;
+      if(expected == 4)
+       return false;
       expected = state_start;
     }
     return true;
