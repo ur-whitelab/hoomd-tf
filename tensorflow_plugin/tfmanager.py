@@ -171,7 +171,7 @@ class TFManager:
                     try:
                         feed_name_dict = self.q.get()
                     except queue.empty:
-                        self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
+                        self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
                         break
                     #convert name keys to actual tensor keys
                     try:
@@ -187,7 +187,7 @@ class TFManager:
             else:
                 while True:
                     if not self.tasklock.start():
-                        self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
+                        self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
                         break
                     last_clock = time.perf_counter()
                     self._update(sess)

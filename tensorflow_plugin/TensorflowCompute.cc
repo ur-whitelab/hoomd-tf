@@ -105,7 +105,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   }
   if (m_prof) m_prof->pop();
 
-  if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update)");
+  if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
   //_tasklock->await();
   if (m_prof) m_prof->pop();
@@ -289,7 +289,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
              Scalar r_cut, unsigned int nneighs,
              FORCE_MODE force_mode, unsigned int period,
              IPCReservation* ipc_reservation, IPCTaskLock* tasklock)
-        : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, period, force_mode, ipc_reservation, tasklock)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, ipc_reservation, tasklock)
 {
 
     _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
