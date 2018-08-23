@@ -47,7 +47,7 @@ struct IPCTaskLock {
       //move from state 3 to 0 (worker must go from 1 to 2)
       _change_state(3, 0);
     }
-  
+
     void exit() {
       //_change_state(0, 4);
     }

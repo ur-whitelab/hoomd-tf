@@ -47,6 +47,14 @@ def noforce_graph():
     energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     graph.save('/tmp/test-noforce-model', out_nodes=[energy])
 
+def feeddict_graph():
+    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
+    forces = graph.forces[:, :3]
+    force_com = tf.reduce_mean(forces, axis=0)
+    thing = tf.placeholder(dtype=tf.float32, name='test-tensor')
+    out = force_com * thing
+    graph.save('/tmp/test-feeddict-model', out_nodes=[out])
+
 def benchmark_nonlist_graph():
     graph = hoomd.tensorflow_plugin.graph_builder(1024, 0, output_forces=False)
     ps = tf.norm(graph.positions, axis=1)
@@ -69,6 +77,7 @@ def lj_graph(N, NN, name):
 
 
 
+feeddict_graph()
 noforce_graph()
 gradient_potential()
 simple_potential()

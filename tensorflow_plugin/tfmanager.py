@@ -25,7 +25,7 @@ class TFManager:
     def __init__(self, graph_info, device,q, tasklock,
                 positions_buffer, nlist_buffer,
                 forces_buffer, virial_buffer, log_filename,
-                dtype, debug, write_tensorboard):
+                dtype, debug, write_tensorboard, use_feed):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -44,6 +44,7 @@ class TFManager:
         self.graph_info = graph_info
         self.dtype = dtype
         self.write_tensorboard = write_tensorboard
+        self.use_feed = use_feed
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(positions_buffer,forces_buffer, dtype))
         self.model_directory = self.graph_info['model_directory']
@@ -62,12 +63,12 @@ class TFManager:
         for n in self.graph_info['out_nodes']:
             self.out_nodes.append(tf.get_default_graph().get_tensor_by_name(n))
 
-    def _update(self, sess):
+    def _update(self, sess, feed_dict=None):
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
-        result = sess.run(self.out_nodes)
+        result = sess.run(self.out_nodes, feed_dict=feed_dict)
 
         if self.write_tensorboard:
             #last out_node should be merged summary (set in _attach_tensorboard)
@@ -93,9 +94,9 @@ class TFManager:
             #if the graph outputs forces
             self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
             self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
-            input_map[self.graph_info['forces']] = self.forces
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
+            input_map[self.graph_info['forces']] = self.forces
 
         #now insert into graph
         try:
@@ -163,23 +164,35 @@ class TFManager:
             #indicating we are ready to begin
             self.q.task_done()
             cumtime = 0
-            i = 0
-            while True:
-                #try:
-                #   timestep = self.q.get(timeout=3)
-                #except queue.Empty:
-                #    #done with work
-                #    self.log.info('Completed TF Update Loop')
-                #    print(cumtime)
-                #    break
-                if not self.tasklock.start():
-                    self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
-                    break
-                last_clock = time.perf_counter()
-                self._update(sess)
-                cumtime += (time.perf_counter() - last_clock)
-                self.tasklock.end()
-                #self.q.task_done()
+
+            if self.use_feed:
+                feed_dict = None
+                while True:
+                    try:
+                        feed_name_dict = self.q.get()
+                    except queue.empty:
+                        self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
+                        break
+                    #convert name keys to actual tensor keys
+                    try:
+                        feed_dict = dict()
+                        for k,v in feed_name_dict.items():
+                            tensor = tf.get_default_graph().get_tensor_by_name(k)
+                            feed_dict[tensor] = v
+                        last_clock = time.perf_counter()
+                        self._update(sess, feed_dict=feed_dict)
+                    finally:
+                        cumtime += (time.perf_counter() - last_clock)
+                        self.q.task_done()
+            else:
+                while True:
+                    if not self.tasklock.start():
+                        self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
+                        break
+                    last_clock = time.perf_counter()
+                    self._update(sess)
+                    cumtime += (time.perf_counter() - last_clock)
+                    self.tasklock.end()
 
 
 

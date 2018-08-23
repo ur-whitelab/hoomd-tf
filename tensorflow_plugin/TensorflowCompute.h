@@ -87,7 +87,7 @@ class TensorflowCompute : public ForceCompute
     public:
         //! Constructor
         TensorflowCompute(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
-             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode,
+             Scalar r_cut, unsigned int nneighs, FORCE_MODE force_mode, unsigned int period,
              IPCReservation* ipc_reservation, IPCTaskLock* tasklock);
 
         TensorflowCompute() = delete;
@@ -134,6 +134,7 @@ class TensorflowCompute : public ForceCompute
         Scalar _r_cut;
         unsigned int _nneighs;
         FORCE_MODE _force_mode;
+        unsigned int _period;
         std::string m_log_name;
         IPCReservation* _ipcr;
         IPCTaskLock* _tasklock;
@@ -165,7 +166,8 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU>
         //! Constructor
         TensorflowComputeGPU(pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,  std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs,
-             FORCE_MODE force_mode, IPCReservation* ipc_reservation,
+             FORCE_MODE force_mode, unsigned int period,
+             IPCReservation* ipc_reservation,
              IPCTaskLock* tasklock);
 
         void setAutotunerParams(bool enable, unsigned int period) override;

@@ -1,23 +1,15 @@
-# Copyright (c) 2009-2017 The Regents of the University of Michigan
-# This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
+# Copyright (c) 2018 University of Rochester
+# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-# this simple python interface just actiavates the c++ TensorflowCompute from cppmodule
-# Check out any of the python code in lib/hoomd-python-module/hoomd_script for moreexamples
-
-# First, we need to import the C++ module. It has the same name as this module (tensorflow_plugin) but with an underscore
-# in front
 from hoomd.tensorflow_plugin import _tensorflow_plugin
-
-# Next, since we are extending an Compute, we need to bring in the base class Compute and some other parts from
-# hoomd_script
 from .tfmanager import main
 import sys, math, numpy as np, pickle, multiprocessing, os, time
 import hoomd, hoomd.md.nlist
 import tensorflow as tf
 
-## Zeroes all particle velocities
+## Integrates tensorflow
 #
-# Every \a period time steps, particle velocities are modified so that they are all zero
+# TODO
 #
 class tfcompute(hoomd.compute._compute):
     ##
@@ -26,9 +18,7 @@ class tfcompute(hoomd.compute._compute):
     #
     # \b tensorflows:
     # \code
-    # tensorflow_plugin.update.tensorflow()
-    # zeroer = tensorflow_plugin.update.tensorflow(period=10)
-    # \endcode
+    # TODO
     #
     # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
@@ -71,7 +61,13 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.msg.notice(2, 'Shutting down TF.')
             self.shutdown_tf()
 
-    def attach(self, nlist, r_cut, force_mode='overwrite'):
+    ##
+    # feed_func = takes in tfcompute (which gives access to forces/positions/nlist)
+    # feed_func should return a dictionary where the key is the tensor name (can be set during graph build stage)
+    # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
+    # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
+    #
+    def attach(self, nlist, r_cut, period=1, feed_func=None, force_mode='overwrite'):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -90,6 +86,7 @@ class tfcompute(hoomd.compute._compute):
         self.enabled = True
         self.log = True
         self.cpp_force = None
+        self.feed_func = feed_func
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
@@ -119,12 +116,12 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
-            r_cut, self.nneighbor_cutoff, force_mode_code,
+            r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.ipc_reservation, self.tasklock)
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
-            r_cut, self.nneighbor_cutoff, force_mode_code,
+            r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.ipc_reservation, self.tasklock)
 
         #get double vs single precision
@@ -180,6 +177,7 @@ class tfcompute(hoomd.compute._compute):
                 'forces_buffer': self.cpp_force.getForcesBuffer(),
                 'virial_buffer': self.cpp_force.getVirialBuffer(),
                 'dtype': self.dtype,
+                'use_feed': self.feed_func is not None,
                 'debug': self.debug_mode}
         self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
@@ -190,9 +188,14 @@ class tfcompute(hoomd.compute._compute):
 
         if self.mock_mode:
             return
-        self.tasklock.await()
-        #self.q.put(timestep)#start tf
-        #self.q.join()
+        if self.feed_func is not None:
+            value = self.feed_func(self)
+            assert value is not None, 'feed_func callable failed to provide value'
+            self.q.put(value, block=False)
+            self.q.join()
+        else:
+            self.tasklock.await()
+
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())

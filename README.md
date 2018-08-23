@@ -248,10 +248,10 @@ Issues
 * Explore using ptrs instead of memory addresses, at least
   to get to python -> Style
 * TF while -> Next optimization
-* Feed dict  -> Feature required for learning
-* Stride -> Feature required for learning
-* Callbacks -> Feature required for learning
-* context manager -> way to fix shutting down tfmanager bug
+* Feed dict  -> Feature required for learning DONE
+* Stride -> Feature required for learning DONE
+* Callbacks -> Feature required for learning DONE
+* context manager -> way to fix shutting down tfmanager bug DONE
 
 Style Issues
 ===
