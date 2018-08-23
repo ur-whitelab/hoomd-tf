@@ -55,7 +55,7 @@ class tfcompute(hoomd.compute._compute):
         self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
         self.tasklock = _tensorflow_plugin.make_tasklock()
         self.mock_mode = _mock_mode
-        self.device = device 
+        self.device = device
         self.write_tensorboard = _write_tensorboard
 
     def __enter__(self):
@@ -69,7 +69,7 @@ class tfcompute(hoomd.compute._compute):
         #self.tasklock.exit()
         if self.tfm and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Shutting down TF.')
-            self.shutdown_tf()        
+            self.shutdown_tf()
 
     def attach(self, nlist, r_cut, force_mode='overwrite'):
 
@@ -79,7 +79,7 @@ class tfcompute(hoomd.compute._compute):
             raise RuntimeError('Error creating TF')
         if self.tfm is None and not self.mock_mode:
             raise Exception('You must use the with statement to construct and attach a tfcompute')
-        
+
 
         #check our parameters
         if self.graph_info['N'] != len(hoomd.context.current.group_all):

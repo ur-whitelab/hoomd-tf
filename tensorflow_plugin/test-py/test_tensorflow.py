@@ -60,7 +60,7 @@ class test_access(unittest.TestCase):
 
             tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(1)
-            
+
             tfcompute.get_virial_array()
             tfcompute.get_positions_array()
             tfcompute.get_nlist_array()
@@ -88,7 +88,7 @@ class test_compute(unittest.TestCase):
                 py_forces = compute_forces(system, rcut)
                 for j in range(N):
                     np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
-                    hoomd.run(100)
+                hoomd.run(100)
 
     def test_compute_force_ignore(self):
         model_dir = '/tmp/test-simple-potential-model'

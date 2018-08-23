@@ -66,6 +66,7 @@ class TFManager:
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
+        #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
         result = sess.run(self.out_nodes)
 
         if self.write_tensorboard:
@@ -172,7 +173,7 @@ class TFManager:
                 #    print(cumtime)
                 #    break
                 if not self.tasklock.start():
-                    self.log.info('Received exit. Leaving TF Update Loop')
+                    self.log.info('Received exit. Leaving TF Update Loop. TF Update time is {}'.format(cumtime))
                     break
                 last_clock = time.perf_counter()
                 self._update(sess)
