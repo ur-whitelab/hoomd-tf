@@ -172,7 +172,7 @@ To run the container:
 
 ```bash
 docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
- -v tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
+ -v /insert/path/to/tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
 ```
 
 The `cap--add` and `security-opt` flags are optional and allow `gdb` debugging.

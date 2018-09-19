@@ -12,8 +12,10 @@ RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86
 RUN chmod +x /srv/miniconda.sh && /srv/miniconda.sh -b -p /usr/local/miniconda
 ENV PATH="/usr/local/miniconda/bin:$PATH"
 
-#use pip, since conda distro is unofficial
+RUN conda create -n py36 python=3.6
+ENV PATH="/usr/local/miniconda/envs/py36/bin:$PATH"
 
+#use pip, since conda distro is unofficial
 #RUN pip install tensorflow-gpu
 RUN pip install tensorflow
 
@@ -27,10 +29,8 @@ RUN conda install -y Pillow \
         networkx \
         scipy \
         pygraphviz \
-        tqdm \
-        && \
-python -m ipykernel.kernelspec && \
-conda clean -a
+        tqdm &&\        
+        conda clean -a 
 
 RUN git clone --recursive https://bitbucket.org/glotzer/hoomd-blue /srv/hoomd-blue
 WORKDIR /srv/hoomd-blue
