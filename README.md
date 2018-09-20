@@ -159,14 +159,14 @@ The second option is to use port forwarding. You can add this flag `-p 6006:6006
 will forward traffic from your container's 6006 port to the host's 6006 port. Again, then you can visit `http://localhost:6006` (linux)
 or `http://127.0.0.1:6006` (windows).
 
-The last method, which usually works when all others fail, is to have all the container's traffic be on the host. You can do this by 
+The last method, which usually works when all others fail, is to have all the container's traffic be on the host. You can do this by
 adding the flag `--net=host` to the run command of the container. Then you can visit  `http://localhost:6006`.
 
 ## Interactive Mode
 
 Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to
-the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following 
-the online instructions for interactive debugging via tensorboard. 
+the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following
+the online instructions for interactive debugging via tensorboard.
 
 ## Requirements
 
@@ -279,13 +279,23 @@ export PYTHONPATH="$PYTHONPATH:`pwd`"
 
 Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files.
 
+## Running on Bluehive
+
+Because hoomd-tf requires at least two threads to run, you must ensure your bluehive reservation allows two threads. This command works for interactive gpu use:
+
+```bash
+interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
+```
+
 ## Issues
 
 * Use GPU event handles -> Depends on TF While
 * Domain decomposition testing -> Low priority
 * Write better source doc -> Style
 * Make ipc2tensor not stateful (use resource manager) -> Low priority
+    Not sure if even correct, since hoomd will handle decomposition
 * TF while -> Next optimization, Determined to be very difficult and unclear if necessary
+* Multigpu for training via server/worker mode
 
 ### C++
 
@@ -329,7 +339,7 @@ mapped_positions = tf.einsum('ij,ik->jk', map, graph.positions[:, :3])
 dist_r = tf.reduce_sum(mapped_positions * mapped_positions, axis=1)
 # turn dist_r into column vector
 dist_r = tf.reshape(dist_r, [-1, 1])
-mapped_distances = dist_r - 2*tf.matmul(mapped_positions, 
+mapped_distances = dist_r - 2*tf.matmul(mapped_positions,
     tf.transpose(mapped_positions)) + tf.transpose(dist_r)
 #compute our model forces on CG sites
 #our model -> f(r) ->  r * w = f
