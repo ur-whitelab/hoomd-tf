@@ -22,6 +22,7 @@ class tfcompute(hoomd.compute._compute):
     #
     # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
+                  bootstrap=None, bootstrap_map=None,
                   _debug_mode=False, _mock_mode=False, _write_tensorboard=False):
 
         #so delete won't fail
@@ -47,6 +48,8 @@ class tfcompute(hoomd.compute._compute):
         self.mock_mode = _mock_mode
         self.device = device
         self.write_tensorboard = _write_tensorboard
+        self.bootstrap = bootstrap
+        self.bootstrap_map = bootstrap_map
 
     def __enter__(self):
         if not self.mock_mode:
@@ -183,7 +186,9 @@ class tfcompute(hoomd.compute._compute):
                 'virial_buffer': self.cpp_force.getVirialBuffer(),
                 'dtype': self.dtype,
                 'use_feed': self.feed_func is not None,
-                'save_period': self.save_period,
+                'bootstrap': self.bootstrap,
+                'bootstrap_map': self.bootstrap_map,
+                'save_period': self.save_period,                
                 'debug': self.debug_mode}
         self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))

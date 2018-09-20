@@ -111,13 +111,12 @@ You may use a saved tensorflow model via:
 import hoomd, hoomd.md
 import hoomd.tensorflow_plugin
 
-#must construct prior to initialization
-with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=True) as tfcompute:
+with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
 
     ...hoomd initialization code...
 
     nlist = hoomd.md.nlist.cell()
-    tfcompute.attach(nlist, r_cut=r_cut, force_mode='output')
+    tfcompute.attach(nlist, r_cut=3)
 
     ...other hoomd code...
 
@@ -126,6 +125,26 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=True) as tfcompute:
 ```
 
 where `model_loc` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object, `r_cut` is the maximum distance for to consider particles as being neighbors, and `force_mode` is a string that indicates how to treat forces. A value of `'output'` indicates forces will be output from hoomd and input into the tensorflow model. `'add'` means the forces output from the tensorflow model should be added with whatever forces are computed from hoomd, for example if biasing a simulation. `'ignore'` means the forces will not be modified and are not used the tensorflow model, for example if computing collective variables that do not depend on forces. `'overwrite'` means the forces from the tensorflow model will overwrite the forces from hoomd, for example if the tensorflow model is computing the forces instead.
+
+### Bootstraping Variables
+
+*TODO* Write unit tests for this.
+
+If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file containing variables which can be loaded into your tfcompute graph. It will be called, then all variables will be initialized and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
+
+```python
+with hoomd.tensorflow_plugin.tfcompute(model_dir,
+    bootstrap='/tmp/trained-model') as tfcompute:
+    ...
+```
+
+```python
+# here the pretrained variable parameters will replace force_parameters
+with hoomd.tensorflow_plugin.tfcompute(model_dir,
+    bootstrap='/tmp/trained-model',
+    bootstrap_map={'parameters':'force_parametrs'}) as tfcompute:
+    ...
+```
 
 ### Examples
 

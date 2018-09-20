@@ -122,7 +122,8 @@ class test_compute(unittest.TestCase):
 
             checkpoints = glob.glob(os.path.join(model_dir, 'model-*.data*'))
 
-            self.assertEqual(len(checkpoints), 5, 'Checkpoint files not being created.')
+            #6 because an extra is written at the end
+            self.assertEqual(len(checkpoints), 6, 'Checkpoint files not being created.')
 
 
 
