@@ -55,6 +55,20 @@ saving, or pass `None` to remove the automatically calculated virial.
 
 To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N` x 3 x 3 tensor.
 
+### Printing
+
+If you would like to print out the values from nodes in your graph, you can
+add a print node to the `out_nodes`. For example:
+
+```python
+...graph building code...
+forces = graph.compute_forces(energy)
+print_node = tf.Print(energy, [energy], summarize=1000)
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
+```
+
+The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
+
 ### Complete Examples
 
 See `tensorflow_plugin/models/test-models/build.py` for more.
@@ -101,7 +115,7 @@ where `model_loc` is the directory where the tensorflow model was saved, `nlist`
 
 ### Examples
 
-See `tensorflow_plugin/test-py/test_tensorflow.py`
+See `tensorflow_plugin/test-py/test_tensorflow.py`.
 
 ### Note on Building and Executing Tensorflow Models in Same Script
 

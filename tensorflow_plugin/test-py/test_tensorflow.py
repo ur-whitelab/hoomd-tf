@@ -5,7 +5,7 @@ import hoomd, hoomd.md
 import hoomd.tensorflow_plugin
 import unittest
 import os, tempfile, shutil, pickle
-import numpy as np, math, scipy
+import numpy as np, math
 import tensorflow as tf
 
 #TODO: write test for changing particle number dynamically
@@ -66,6 +66,7 @@ class test_access(unittest.TestCase):
             tfcompute.get_nlist_array()
             tfcompute.get_forces_array()
 
+
 class test_compute(unittest.TestCase):
     def test_compute_force_overwrite(self):
         model_dir = '/tmp/test-simple-potential-model'
@@ -89,6 +90,23 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
                 hoomd.run(100)
+
+    def test_compute_print(self):
+        model_dir = '/tmp/test-print-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
+
+            tfcompute.attach(nlist, r_cut=rcut)
+            for i in range(3):
+                hoomd.run(2)
 
     def test_compute_force_ignore(self):
         model_dir = '/tmp/test-simple-potential-model'

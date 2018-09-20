@@ -75,6 +75,20 @@ def lj_graph(N, NN, name):
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=name)
 
+def print_graph(N, NN, name):
+    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+    nlist = graph.nlist[:, :, :3]
+    #get r
+    r = tf.norm(nlist, axis=2)
+    #compute 1 / r while safely treating r = 0.
+    #pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.safe_div(1., r**6)
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    #sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    prints = tf.Print(energy, [energy], summarize=1000)
+    graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
 
 
 feeddict_graph()
@@ -85,3 +99,4 @@ benchmark_gradient_potential()
 benchmark_nonlist_graph()
 lj_graph(2**14, 64, '/tmp/benchmark-lj-potential-model')
 lj_graph(9, 9 - 1, '/tmp/test-lj-potential-model')
+print_graph(9, 9 - 1, '/tmp/test-print-model')

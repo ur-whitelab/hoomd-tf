@@ -90,6 +90,9 @@ class graph_builder:
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are outputing forces')
 
+        if type(out_nodes) != list:
+            raise ValueError('out_nodes must be a list')
+
         if self.output_forces:
             if force_tensor.shape[0] != self.atom_number:
                 raise ValueError('Dimension of force_tensor should be same as atom number')
