@@ -12,7 +12,7 @@ class graph_builder:
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
         self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
-        self.virial = None    
+        self.virial = None
         self.positions = tf.zeros ([atom_number, 4], name='positions')
         if not output_forces:
             self.forces = tf.zeros([atom_number, 4], name='forces')

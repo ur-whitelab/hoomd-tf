@@ -68,7 +68,7 @@ class test_access(unittest.TestCase):
 
 
 class test_compute(unittest.TestCase):
-    def test_compute_force_overwrite(self):
+    def test_force_overwrite(self):
         model_dir = '/tmp/test-simple-potential-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
@@ -91,7 +91,22 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
                 hoomd.run(100)
 
-    def test_compute_print(self):
+    def test_throws_force_mode(self):
+        model_dir ='/tmp/benchmark-nonlist-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[32,32])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+
+            self.assertRaises(ValueError, tfcompute.attach(nlist, r_cut=rcut))
+
+
+
+    def test_print(self):
         model_dir = '/tmp/test-print-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
@@ -108,7 +123,7 @@ class test_compute(unittest.TestCase):
             for i in range(3):
                 hoomd.run(2)
 
-    def test_compute_force_ignore(self):
+    def test_force_ignore(self):
         model_dir = '/tmp/test-simple-potential-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
@@ -127,7 +142,7 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
-    def test_compute_noforce_graph(self):
+    def test_noforce_graph(self):
         model_dir = '/tmp/test-noforce-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()

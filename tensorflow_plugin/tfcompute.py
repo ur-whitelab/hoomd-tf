@@ -68,7 +68,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, period=1, feed_func=None, force_mode='overwrite'):
+    def attach(self, nlist, r_cut, period=1, feed_func=None, force_mode=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -105,13 +105,17 @@ class tfcompute(hoomd.compute._compute):
         # initialize base class
         hoomd.compute._compute.__init__(self)
 
-        force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite
+        force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.output
         if force_mode == 'add':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.add
         elif force_mode == 'output':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.output
         elif force_mode == 'none' or force_mode == 'ignore' or force_mode is None:
             force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
+
+        #if graph is not outputting (input) then tfcompute should be outputting them
+        if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.output:
+            raise ValueError('Your graph takes forces as input but you are not sending them from tfcompute')
 
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
