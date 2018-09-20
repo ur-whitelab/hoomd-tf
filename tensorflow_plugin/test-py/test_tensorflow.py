@@ -107,7 +107,7 @@ class test_compute(unittest.TestCase):
 
     def test_trainable(self):
         model_dir ='/tmp/test-trainable-model'
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, _write_tensorboard=True) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -120,7 +120,7 @@ class test_compute(unittest.TestCase):
 
             hoomd.run(5)
 
-            checkpoints = glob.glob(os.path.join(model_dir, 'model.ckpt'))
+            checkpoints = glob.glob(os.path.join(model_dir, 'model-*.data*'))
 
             self.assertEqual(len(checkpoints), 5, 'Checkpoint files not being created.')
 

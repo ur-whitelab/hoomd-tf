@@ -111,9 +111,9 @@ class tfcompute(hoomd.compute._compute):
             force_mode_code = _tensorflow_plugin.FORCE_MODE.add
         elif force_mode == 'output':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.output
-        elif force_mode == 'none' or force_mode == 'ignore' or force_mode is None:
+        elif force_mode == 'none' or force_mode == 'ignore':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
-
+        hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(force_mode_code))
         #if graph is not outputting (input) then tfcompute should be outputting them
         if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.output:
             raise ValueError('Your graph takes forces as input but you are not sending them from tfcompute')

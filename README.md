@@ -69,6 +69,20 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
 
+### Saving Scalars
+
+If you would like to save a scalar over time, like total energy or training loss, you can use the Tensorboard functionality. Add scalars to the Tensorboard summary during the build step:
+
+```python
+tf.summary.scalar('total-energy', tf.reduce_sum(particle_energy))
+```
+
+and then add the `_write_tensorboard=True` flag during the `tfcompute` initialize. The period of tensorboard writes is controlled by the `saving_period` flag to the `tfcompute.attach` command. View the Tensorboard section below to see how to view the resulting scalars.
+
+### Variables and Restarts
+
+In tensorflow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* Thus it is necessary to completely delete your model directory and rebuild if you don't want previously trained variables to be loaded. This behavior means though that restarts will work correctly and if you are re-using a trained model, the newest values will be loaded.
+
 ### Complete Examples
 
 See `tensorflow_plugin/models/test-models/build.py` for more.

@@ -72,13 +72,21 @@ class TFManager:
         result = sess.run(self.out_nodes, feed_dict=feed_dict)
 
         if self.step % self.save_period == 0:
-            if self.saver is not None:
-                self.saver.save(sess, os.path.join(self.model_directory, 'model.ckpt'))
-            if self.write_tensorboard:
-                #last out_node should be merged summary (set in _attach_tensorboard)
-                self.tb_writer.add_summary(result[-1], self.step)
-
+            self._save_model(sess, result)
         self.step += 1
+
+        return result
+
+    def _save_model(self, sess, result):
+        if result is None:
+            return
+        if self.saver is not None:
+            self.log.info('Writing {} variables at step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
+            self.saver.save(sess, os.path.join(self.model_directory, 'model'), global_step=self.step)
+        if self.write_tensorboard:
+            self.log.info('Writing tensorboard at step {}'.format(self.step))
+            #last out_node should be merged summary (set in _attach_tensorboard)
+            self.tb_writer.add_summary(result[-1], self.step)
 
     def _prepare_graph(self):
         ipc_to_tensor_module = load_op_library('ipc2tensor')
@@ -105,10 +113,7 @@ class TFManager:
 
         #now insert into graph
         try:
-            graph_def = tf.GraphDef()
-            with open(os.path.join(self.model_directory,'model.pb2'), 'rb') as f:
-                graph_def.ParseFromString(f.read())
-            self.graph = tf.import_graph_def(graph_def, input_map=input_map, name='')
+            self.graph = tf.train.import_meta_graph(os.path.join(self.model_directory,'model.meta'), input_map=input_map, import_scope='')
         except ValueError:
             raise ValueError('Your graph ({}) must contain the following tensors: forces, nlist, positions'.format(os.path.join(self.model_directory,'model.meta')))
 
@@ -137,8 +142,6 @@ class TFManager:
 
     def _attach_tensorboard(self, sess):
 
-        tf.summary.histogram('forces', self.forces)
-
         self.summaries = tf.summary.merge_all()
         self.tb_writer = tf.summary.FileWriter(os.path.join(self.model_directory, 'tensorboard'),
                                       sess.graph)
@@ -154,18 +157,14 @@ class TFManager:
         config=tf.ConfigProto(gpu_options=gpu_options)
         with tf.Session(config=config) as sess:
             #resore model checkpoint if there are variables
-            if len(self.graph_info['variables']) > 0:
-                #add to global variables
-                tf.add_to_collection()
-
+            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:                             
                 #first initialize
                 self.log.info('Found trainable variables...')
-                sess.run(tf.get_default_graph().get_operation_by_name(self.graph_info['init_op']))
+                sess.run(tf.global_variables_initializer())
                 self.log.info('Trainable vars initialized')
                 self.saver = tf.train.Saver()
                 checkpoint = tf.train.latest_checkpoint(self.model_directory)
                 if checkpoint is not None:
-                    self.log.info('Attempting to restore trainable vars from checkpoint')
                     self.saver.restore(sess, checkpoint)
             else:
                 self.saver = None
@@ -180,6 +179,7 @@ class TFManager:
             #indicating we are ready to begin
             self.q.task_done()
             cumtime = 0
+            result = None
 
             if self.use_feed:
                 feed_dict = None
@@ -188,6 +188,7 @@ class TFManager:
                         feed_name_dict = self.q.get()
                     except queue.empty:
                         self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
+                        self._save_model(sess, result)
                         break
                     #convert name keys to actual tensor keys
                     try:
@@ -196,7 +197,7 @@ class TFManager:
                             tensor = tf.get_default_graph().get_tensor_by_name(k)
                             feed_dict[tensor] = v
                         last_clock = time.perf_counter()
-                        self._update(sess, feed_dict=feed_dict)
+                        result = self._update(sess, feed_dict=feed_dict)
                     finally:
                         cumtime += (time.perf_counter() - last_clock)
                         self.q.task_done()
@@ -204,9 +205,10 @@ class TFManager:
                 while True:
                     if not self.tasklock.start():
                         self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
+                        self._save_model(sess, result)
                         break
                     last_clock = time.perf_counter()
-                    self._update(sess)
+                    result = self._update(sess)
                     cumtime += (time.perf_counter() - last_clock)
                     self.tasklock.end()
 

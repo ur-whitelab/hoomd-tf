@@ -115,8 +115,9 @@ class graph_builder:
                 raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
 
         os.makedirs(model_directory, exist_ok=True)
-        with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
-            f.write(tf.get_default_graph().as_graph_def().SerializeToString())
+        meta_graph_def = tf.train.export_meta_graph(filename=(os.path.join(model_directory, 'model.meta')))
+        #with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
+        #    f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         #save metadata of class
         graph_info = {  'N': self.atom_number,
                         'NN': self.nneighbor_cutoff,
@@ -127,8 +128,7 @@ class graph_builder:
                         'nlist': self.nlist.name,
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
-                        'out_nodes': [x.name for x in out_nodes],
-                        'variables': [v.name for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
+                        'out_nodes': [x.name for x in out_nodes]
                         }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

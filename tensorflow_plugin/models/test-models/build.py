@@ -99,6 +99,7 @@ def trainable_graph(N, NN, name):
     #pairwise energy. Double count -> divide by 2
     inv_r6 = graph.safe_div(1., r**6)
     epsilon = tf.Variable(4.0, name='lj-epsilon')
+    tf.summary.scalar('lj-epsilon', epsilon)
     p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
