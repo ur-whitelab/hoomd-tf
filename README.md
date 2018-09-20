@@ -64,7 +64,7 @@ add a print node to the `out_nodes`. For example:
 ...graph building code...
 forces = graph.compute_forces(energy)
 print_node = tf.Print(energy, [energy], summarize=1000)
-graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 ```
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
