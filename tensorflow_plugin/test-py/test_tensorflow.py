@@ -4,7 +4,7 @@
 import hoomd, hoomd.md
 import hoomd.tensorflow_plugin
 import unittest
-import os, tempfile, shutil, pickle
+import os, tempfile, shutil, pickle, glob
 import numpy as np, math
 import tensorflow as tf
 
@@ -103,6 +103,26 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
             self.assertRaises(ValueError, tfcompute.attach(nlist, r_cut=rcut))
+
+
+    def test_trainable(self):
+        model_dir ='/tmp/test-trainable-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+
+            hoomd.run(5)
+
+            checkpoints = glob.glob(os.path.join(model_dir, 'model.ckpt'))
+
+            self.assertEqual(len(checkpoints), 5, 'Checkpoint files not being created.')
 
 
 

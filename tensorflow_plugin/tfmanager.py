@@ -25,7 +25,7 @@ class TFManager:
     def __init__(self, graph_info, device,q, tasklock,
                 positions_buffer, nlist_buffer,
                 forces_buffer, virial_buffer, log_filename,
-                dtype, debug, write_tensorboard, use_feed):
+                dtype, debug, write_tensorboard, use_feed, save_period):
 
         self.log = logging.getLogger('tensorflow')
         fh = logging.FileHandler(log_filename)
@@ -45,6 +45,7 @@ class TFManager:
         self.dtype = dtype
         self.write_tensorboard = write_tensorboard
         self.use_feed = use_feed
+        self.save_period = save_period
 
         self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(positions_buffer,forces_buffer, dtype))
         self.model_directory = self.graph_info['model_directory']
@@ -70,9 +71,13 @@ class TFManager:
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
         result = sess.run(self.out_nodes, feed_dict=feed_dict)
 
-        if self.write_tensorboard:
-            #last out_node should be merged summary (set in _attach_tensorboard)
-            self.tb_writer.add_summary(result[-1], self.step)
+        if self.step % self.save_period == 0:
+            if self.saver is not None:
+                self.saver.save(sess, os.path.join(self.model_directory, 'model.ckpt'))
+            if self.write_tensorboard:
+                #last out_node should be merged summary (set in _attach_tensorboard)
+                self.tb_writer.add_summary(result[-1], self.step)
+
         self.step += 1
 
     def _prepare_graph(self):
@@ -147,12 +152,23 @@ class TFManager:
         #make it grow as memory is needed instead of consuming all
         gpu_options = tf.GPUOptions(allow_growth=True)
         config=tf.ConfigProto(gpu_options=gpu_options)
-
         with tf.Session(config=config) as sess:
             #resore model checkpoint if there are variables
-            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
+            if len(self.graph_info['variables']) > 0:
+                #add to global variables
+                tf.add_to_collection()
+
+                #first initialize
+                self.log.info('Found trainable variables...')
+                sess.run(tf.get_default_graph().get_operation_by_name(self.graph_info['init_op']))
+                self.log.info('Trainable vars initialized')
                 self.saver = tf.train.Saver()
-                self.saver.restore(sess, tf.train.latest_checkpoint(self.model_directory))
+                checkpoint = tf.train.latest_checkpoint(self.model_directory)
+                if checkpoint is not None:
+                    self.log.info('Attempting to restore trainable vars from checkpoint')
+                    self.saver.restore(sess, checkpoint)
+            else:
+                self.saver = None
             if self.debug:
                 from tensorflow.python import debug as tf_debug
                 sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')

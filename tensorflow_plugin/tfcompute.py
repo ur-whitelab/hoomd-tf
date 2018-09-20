@@ -68,7 +68,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, period=1, feed_func=None, force_mode=None):
+    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None, force_mode=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -88,6 +88,7 @@ class tfcompute(hoomd.compute._compute):
         self.log = True
         self.cpp_force = None
         self.feed_func = feed_func
+        self.save_period = save_period
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
@@ -135,7 +136,7 @@ class tfcompute(hoomd.compute._compute):
             self.dtype = tf.double
 
         #adding to forces causes the computeForces method to be called.
-        hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name);
+        hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
         hoomd.context.current.forces.append(self)
 
         if not self.mock_mode:
@@ -182,6 +183,7 @@ class tfcompute(hoomd.compute._compute):
                 'virial_buffer': self.cpp_force.getVirialBuffer(),
                 'dtype': self.dtype,
                 'use_feed': self.feed_func is not None,
+                'save_period': self.save_period,
                 'debug': self.debug_mode}
         self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))

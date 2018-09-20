@@ -127,7 +127,8 @@ class graph_builder:
                         'nlist': self.nlist.name,
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
-                        'out_nodes': [x.name for x in out_nodes]
+                        'out_nodes': [x.name for x in out_nodes],
+                        'variables': [v.name for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
                         }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
