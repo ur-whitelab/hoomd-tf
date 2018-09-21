@@ -128,21 +128,35 @@ where `model_loc` is the directory where the tensorflow model was saved, `nlist`
 
 ### Bootstraping Variables
 
-*TODO* Write unit tests for this.
-
 If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file containing variables which can be loaded into your tfcompute graph. It will be called, then all variables will be initialized and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
+
+First, here's an example that creates some variables (note these would be trained in a real example)
+
+```python
+import tensorflow as tf
+
+#make some variables
+v = tf.Variable(8.0, name='epsilon')
+s = tf.Variable(2.0, name='sigma')
+
+#initialize and save them
+saver = tf.train.Saver()
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    saver.save(sess, '/tmp/bootstrap/model')
+```
 
 ```python
 with hoomd.tensorflow_plugin.tfcompute(model_dir,
-    bootstrap='/tmp/trained-model') as tfcompute:
+    bootstrap='/tmp/bootstrap/model') as tfcompute:
     ...
 ```
 
 ```python
-# here the pretrained variable parameters will replace force_parameters
+# here the pretrained variable parameters will replace variables with a different name
 with hoomd.tensorflow_plugin.tfcompute(model_dir,
-    bootstrap='/tmp/trained-model',
-    bootstrap_map={'parameters':'force_parametrs'}) as tfcompute:
+    bootstrap='/tmp/bootstrap/model',
+    bootstrap_map={'lj-epsilon':'epsilon', 'lj-sigma':'sigma'}) as tfcompute:
     ...
 ```
 
