@@ -146,12 +146,15 @@ with tf.Session() as sess:
     saver.save(sess, '/tmp/bootstrap/model')
 ```
 
+Now here's how we would load them in the hoomd run script:
 ```python
 with hoomd.tensorflow_plugin.tfcompute(model_dir,
     bootstrap='/tmp/bootstrap/model') as tfcompute:
     ...
 ```
 
+Now here's how we would load them in the hoomd run script if we want to change
+the names of the variables:
 ```python
 # here the pretrained variable parameters will replace variables with a different name
 with hoomd.tensorflow_plugin.tfcompute(model_dir,
