@@ -202,10 +202,10 @@ and then you can view after launching on the server via your local web browser.
 ### Viewing when TF is running in container
 
 If you are running docker, you can make this port available a few different ways. The first is
-to get the IP address if your docker container (google this), which is typically `172.0.0.1`, and then
+to get the IP address of your docker container (google how to do this if not default), which is typically `172.0.0.1`, and then
 visit `http://172.0.0.1:6006` or equivalent if you have a different IP address for your container.
 
-The second option is to use port forwarding. You can add this flag `-p 6006:6006` when running the container which
+The second option is to use port forwarding. You can add a port forward flag, `-p 6006:6006`, when running the container which
 will forward traffic from your container's 6006 port to the host's 6006 port. Again, then you can visit `http://localhost:6006` (linux)
 or `http://127.0.0.1:6006` (windows).
 
@@ -216,13 +216,7 @@ adding the flag `--net=host` to the run command of the container. Then you can v
 
 Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to
 the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following
-the online instructions for interactive debugging via tensorboard.
-
-## Requirements
-
-* Latest tensorflow (cuda 9.0, cudnn7)
-* numpy
-* HOOMD
+the online instructions for interactive debugging via Tensorboard.
 
 ## Docker Image for Development
 
@@ -255,13 +249,13 @@ make -j2
 
 ## Tests
 
-To run the unit tests, run
+To run the unit tests, first run `python tensorflow_plugin/models/test-models/build.py` to build the graphs used in the tests. Then run
 
 ```bash
-python tensorflow-plugin/test-py/test_tensorflow.py [test_class].[test_name]
+python tensorflow_plugin/test-py/test_tensorflow.py [test_class].[test_name]
 ```
 
-Note that only one test can be run at a time due to the way gpu contexts/forks occur.
+to run a unit test. Note that only one test can be run at a time due to the way gpu contexts/forks occur. Some of the tests also have side-effects so you may also need to rebuild your example models directory.
 
 If you change C++/C code, remake. If you modify python code, copy the new version to the build directory.
 
@@ -273,7 +267,7 @@ Load the modules necessary:
 module load anaconda cmake sqlite cuda cudnn git
 ```
 
-Set-up virtual python environment *ONCE* to keep packages separate
+Set-up virtual python environment *ONCE* to keep packages isolated.
 
 ```bash
 conda create -n hoomd-tf python=3.6
