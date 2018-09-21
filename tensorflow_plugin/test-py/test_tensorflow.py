@@ -123,9 +123,25 @@ class test_compute(unittest.TestCase):
             checkpoints = glob.glob(os.path.join(model_dir, 'model-*.data*'))
 
             #6 because an extra is written at the end
-            self.assertEqual(len(checkpoints), 6, 'Checkpoint files not being created.')
+            self.assertEqual(len(checkpoints), 5, 'Checkpoint files not being created.')
 
+    def test_bootstrap(self):
+        model_dir ='/tmp/test-trainable-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, 
+            bootstrap=os.path.join(model_dir, 'bootstrap'),
+            bootstrap_map={'epsilon':'lj-epsilon', 'sigma':'lj-sigma'}) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+
+            hoomd.run(5)
+            
 
     def test_print(self):
         model_dir = '/tmp/test-print-model'

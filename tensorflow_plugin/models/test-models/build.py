@@ -96,15 +96,35 @@ def trainable_graph(N, NN, name):
     #get r
     r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
-    #pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.safe_div(1., r**6)
+    #pairwise energy. Double count -> divide by 2    
     epsilon = tf.Variable(4.0, name='lj-epsilon')
+    sigma = tf.Variable(4.0, name='lj-sigma')
     tf.summary.scalar('lj-epsilon', epsilon)
+
+    inv_r6 = graph.safe_div(sigma**6, r**6)
     p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=name)
+
+def bootstrap_graph(N, NN, directory):
+    #make bootstrap graph
+    tf.reset_default_graph()
+    v = tf.Variable(8.0, name='epsilon')
+    s = tf.Variable(2.0, name='sigma')
+
+    #save it    
+    bootstrap_dir = os.path.join(directory, 'bootstrap')
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        saver.save(sess, os.path.join(bootstrap_dir, 'model'))
+
+
+
+
+
 
 feeddict_graph()
 noforce_graph()
@@ -116,3 +136,4 @@ lj_graph(2**14, 64, '/tmp/benchmark-lj-potential-model')
 lj_graph(9, 9 - 1, '/tmp/test-lj-potential-model')
 print_graph(9, 9 - 1, '/tmp/test-print-model')
 trainable_graph(9, 9 - 1, '/tmp/test-trainable-model')
+bootstrap_graph(9, 9 - 1, '/tmp/test-trainable-model')
