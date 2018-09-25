@@ -66,7 +66,10 @@ class TFManager:
                 self.log.info('This TF Graph will not modify forces.')
 
         for n in self.graph_info['out_nodes']:
-            self.out_nodes.append(tf.get_default_graph().get_tensor_by_name(n))
+            try:
+                self.out_nodes.append(tf.get_default_graph().get_tensor_by_name(n))
+            except ValueError:
+                self.out_nodes.append(tf.get_default_graph().get_operation_by_name(n))
 
     def _update(self, sess, feed_dict=None):
 

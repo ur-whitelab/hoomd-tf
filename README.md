@@ -309,7 +309,7 @@ cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug \
  -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
 ```
 
-Now compile with make
+Now compile with make:
 
 ```bash
 make

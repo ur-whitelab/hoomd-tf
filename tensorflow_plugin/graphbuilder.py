@@ -90,6 +90,9 @@ class graph_builder:
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are outputing forces')
 
+        if force_tensor is not None and not self.output_forces:
+            raise ValueError('You should not provide forces since you set output_forces to be False in constructor')
+
         if type(out_nodes) != list:
             raise ValueError('out_nodes must be a list')
 

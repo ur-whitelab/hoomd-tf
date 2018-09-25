@@ -100,13 +100,13 @@ def trainable_graph(N, NN, name):
     epsilon = tf.Variable(4.0, name='lj-epsilon')
     sigma = tf.Variable(4.0, name='lj-sigma')
     tf.summary.scalar('lj-epsilon', epsilon)
-
     inv_r6 = graph.safe_div(sigma**6, r**6)
     p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=name)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=1.0).minimize(energy)
+    graph.save(force_tensor=forces, model_directory=name, out_nodes=[optimizer])
 
 def bootstrap_graph(N, NN, directory):
     #make bootstrap graph
