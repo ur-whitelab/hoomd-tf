@@ -11,14 +11,19 @@ class graph_builder:
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
-        self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
+        self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')        
         self.virial = None
         self.positions = tf.zeros ([atom_number, 4], name='positions')
         if not output_forces:
             self.forces = tf.zeros([atom_number, 4], name='forces')
         self.output_forces = output_forces
 
-    def compute_forces(self, energy, name='forces'):
+    def compute_forces(self, energy, name='forces', virial=None):
+        if virial is None:
+            if self.output_forces:
+                virial = True
+            else:
+                virial = False
 
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
@@ -32,16 +37,17 @@ class graph_builder:
                 zeros = tf.zeros(tf.shape(nlist_forces))
                 nlist_forces = tf.where(tf.is_nan(nlist_forces), zeros, nlist_forces, name='nlist-pairwise-force-gradient')
                 nlist_reduce = tf.reduce_sum(nlist_forces, axis=1, name='nlist-force-gradient')
-                with tf.name_scope('virial-calc'):
-                    #now treat virial
-                    nlist3 = self.nlist[:, :, :3]
-                    rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
-                    #F / rs
-                    self.nlist_r_mag = tf.norm(nlist3, axis=2, name='nlist-r-mag')
-                    self.nlist_force_mag = tf.norm(nlist_forces, axis=2, name='nlist-force-mag')
-                    F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
-                    #sum over neighbors: F / r * (r (outter) r)
-                    self.virial = -1.0 * tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
+                if virial:
+                    with tf.name_scope('virial-calc'):
+                        #now treat virial
+                        nlist3 = self.nlist[:, :, :3]
+                        rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
+                        #F / rs                        
+                        self.nlist_r_mag = graph_builder.safe_norm(nlist3 + 1.0e-15, axis=2, name='nlist-r-mag')
+                        self.nlist_force_mag = graph_builder.safe_norm(nlist_forces + 1.0e-15, axis=2, name='nlist-force-mag')
+                        F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
+                        #sum over neighbors: F / r * (r (outter) r)
+                        self.virial = -1.0 * tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
         if pos_forces is not None and nlist_forces is not None:
             forces = tf.add(nlist_reduce, pos_forces, name='forces-added')
         elif pos_forces is None:
@@ -83,7 +89,10 @@ class graph_builder:
 
         return op
 
-
+    @staticmethod
+    def safe_norm(tensor, **kwargs):
+        #https://github.com/tensorflow/tensorflow/issues/12071
+        return tf.norm(tensor + 1.0e-15, **kwargs)
 
     def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[]):
 

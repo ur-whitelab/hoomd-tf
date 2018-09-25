@@ -27,7 +27,7 @@ graph = hoomd.tensorflow_plugin.graph_builder(N, N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
-r = tf.norm(nlist, axis=2)
+r = graph.safe_norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
 # halve due to full nlist
 rij_energy = 0.5 * graph.safe_div(1, r)
@@ -93,7 +93,7 @@ See `tensorflow_plugin/models/test-models/build.py` for more.
 graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
 nlist = graph.nlist[:, :, :3]
 #get r
-r = tf.norm(nlist, axis=2)
+r = graph.safe_norm(nlist, axis=2)
 #compute 1 / r while safely treating r = 0.
 #pairwise energy. Double count -> divide by 2
 p_energy = 4.0 / 2.0 * (graph.safe_div(1., r**12) - graph.safe_div(1., r**6))
@@ -356,75 +356,6 @@ C++ functions -> snake (?) because they are only used in py or gpu kernels
 
 py class ->snake
 
-## Examples
+## Known Issues!!
 
-Just made up, not sure if they work
-
-### Force-Matching
-
-```python
-import tensorflow as tf
-import hoomd.tensorflow_plugin
-graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
-#we want to get mapped forces!
-#map = tf.Variable(tf.ones([N, M]))
-#zero_map_enforcer = ...
-#restricted_map = zero_map_enforcer * map
-# + add some normalization
-map = tf.Placeholder((N, M), dtype=tf.float32)
-#forces from HOOMD are fx,fy,fz,pe where pe is potential energy of particle
-forces = graph.forces[:, :, :3]
-mapped_forces = map * forces #think -> N x 3 * N x M
-# sum_i m_ij * f_ik = cf_jk
-mapped_forces = tf.einsum('ij,ik->jk', map, forces)
-#get model forces
-mapped_positions = tf.einsum('ij,ik->jk', map, graph.positions[:, :3])
-#get mapped neighbor list
-dist_r = tf.reduce_sum(mapped_positions * mapped_positions, axis=1)
-# turn dist_r into column vector
-dist_r = tf.reshape(dist_r, [-1, 1])
-mapped_distances = dist_r - 2*tf.matmul(mapped_positions,
-    tf.transpose(mapped_positions)) + tf.transpose(dist_r)
-#compute our model forces on CG sites
-#our model -> f(r) ->  r * w = f
-#      0->0.5,0.5->1,1->1.5,1.5->infty
-# r -> hr = [ 0,       0.1,    0.8,      0.1]
-#f hr * w
-# distance at each grid point from r
-#send through RElu
-grid = tf.range(0.5, 10, 0.1, dtype=tf.float32)
-#want an N x N x G
-grid_dist = grid - tf.tile(mapped_distances, grid.shape[0])
-#one of the N x N grid distances -> [0 - r, 0.5 - r , 1.0 - r, 1.5 - r, 2.0 - r]
-#want to do f(delta r) -> [0,1]
-clip_high = tf.Variable(1, name='clip-high')
-grid_clip = tf.clip_by_value(tf.abs(grid_dist), 0, clip_high)
-#afterwards -> r = 1.4, [0, 0.9, 0.4, 0.1, 0.6,]
-#r = 1.3, [0, 0.8, 0.3, 0.2, 0.7]
-#TODO -> see if Prof White assumption is correct -> sum of grid_clip = 2 * clip-high
-grid_normed = grid_clip / 2 / clip_high
-force_weights = tf.Variable(tf.ones(grid.shape), name='force-weights')
-#N x N x G * G x 1 = N x N
-#TODO: we need actual rs
-model_force_mag = tf.matmul(grid_normed, force_weights)
-#once fixed....
-model_forces = ....
-error = tf.reduce_sum(tf.norm(mapped_forces - model_forces, axis=1), axis=0)
-optimizer = tf.train.AdamOptimizer(1e-4).minimize(error)
-
-#need to tell tf to run optimizer
-graph.save('/tmp/force_matching', out_nodes=[optimizer])
-```
-
-To run the model
-
-```python
-import hoomd, hoomd.md
-from hoomd.tensorflow_plugin import tfcompute
-tfcompute = tfcompute('/tmp/force_matching')
-
-....setup simulation....
-nlist = hoomd.md.nlist.cell()
-tfcompute.attach(nlist, r_cut=r_cut, force_mode='output')
-hoomd.run(1000)
-```
+There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout. 
