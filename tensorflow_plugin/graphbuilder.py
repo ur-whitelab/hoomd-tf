@@ -11,7 +11,7 @@ class graph_builder:
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
-        self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')        
+        self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
         self.virial = None
         self.positions = tf.zeros ([atom_number, 4], name='positions')
         if not output_forces:
@@ -35,14 +35,14 @@ class graph_builder:
             if nlist_forces is not None:
                 nlist_forces = tf.identity(2.0 * nlist_forces, name='nlist-pairwise-force-gradient-raw')
                 zeros = tf.zeros(tf.shape(nlist_forces))
-                nlist_forces = tf.where(tf.is_nan(nlist_forces), zeros, nlist_forces, name='nlist-pairwise-force-gradient')
+                nlist_forces = tf.where(tf.is_finite(nlist_forces), nlist_forces, zeros, name='nlist-pairwise-force-gradient')
                 nlist_reduce = tf.reduce_sum(nlist_forces, axis=1, name='nlist-force-gradient')
                 if virial:
                     with tf.name_scope('virial-calc'):
                         #now treat virial
                         nlist3 = self.nlist[:, :, :3]
                         rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
-                        #F / rs                        
+                        #F / rs
                         self.nlist_r_mag = graph_builder.safe_norm(nlist3 + 1.0e-15, axis=2, name='nlist-r-mag')
                         self.nlist_force_mag = graph_builder.safe_norm(nlist_forces + 1.0e-15, axis=2, name='nlist-force-mag')
                         F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
@@ -70,29 +70,18 @@ class graph_builder:
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
-    def safe_div(numerator, denominator, name='graphbuild-safe-div'):
-        '''Divides two values, returning 0 if the denominator is <= 0.
-        Args:
-            numerator: A real `Tensor`.
-            denominator: A real `Tensor`, with dtype matching `numerator`.
-            name: Name for the returned op.
-        Returns:
-            0 if `denominator` <= 0, else `numerator` / `denominator`
-        Taken from tensorflow/contrib/metrics/python/ops/metric_ops.py
+    def safe_div(numerator, denominator, delta=1e-6, **kwargs):
         '''
-        with tf.name_scope('graphbuilder-safe-div'):
-            op = tf.where(
-                tf.greater(denominator, 0),
-                tf.truediv(numerator, denominator),
-                tf.zeros_like(denominator),
-                name=name)
-
+        There are some numerical instabilities that occur during learning
+        when gradients are propagated. The delta is problem specific.
+        '''
+        op = tf.divide(numerator, denominator + delta, **kwargs)
         return op
 
     @staticmethod
-    def safe_norm(tensor, **kwargs):
+    def safe_norm(tensor, delta=1e-6, **kwargs):
         #https://github.com/tensorflow/tensorflow/issues/12071
-        return tf.norm(tensor + 1.0e-15, **kwargs)
+        return tf.norm(tensor + delta, **kwargs)
 
     def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[]):
 

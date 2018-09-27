@@ -188,7 +188,7 @@ class tfcompute(hoomd.compute._compute):
                 'use_feed': self.feed_func is not None,
                 'bootstrap': self.bootstrap,
                 'bootstrap_map': self.bootstrap_map,
-                'save_period': self.save_period,                
+                'save_period': self.save_period,
                 'debug': self.debug_mode}
         self.q.put(args)
         hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))

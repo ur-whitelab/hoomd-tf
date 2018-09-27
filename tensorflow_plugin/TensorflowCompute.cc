@@ -145,6 +145,8 @@ void TensorflowCompute<M>::prepareNeighbors() {
   ArrayHandle<Scalar4> buffer_array(_nlist_array, access_location::host,
                                     access_mode::overwrite);
   Scalar4* buffer = buffer_array.data;
+  //zero out buffer
+  memset(buffer, 0, _nneighs * m_pdata->getN() * sizeof(Scalar4));
   unsigned int* nnoffset =
       (unsigned int*)calloc(m_pdata->getN(), sizeof(unsigned int));
 
@@ -200,16 +202,6 @@ void TensorflowCompute<M>::prepareNeighbors() {
         buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[k].w;
         nnoffset[k]++;
       }
-    }
-  }
-
-  for (int i = 0; i < (int)m_pdata->getN(); i++) {
-    // fill missing entries
-    for (; nnoffset[i] < _nneighs; nnoffset[i]++) {
-      buffer[i * _nneighs + nnoffset[i]].x = 0;
-      buffer[i * _nneighs + nnoffset[i]].y = 0;
-      buffer[i * _nneighs + nnoffset[i]].z = 0;
-      buffer[i * _nneighs + nnoffset[i]].w = 0;
     }
   }
 

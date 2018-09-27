@@ -25,7 +25,7 @@ class TFManager:
     def __init__(self, graph_info, device,q, tasklock,
                 positions_buffer, nlist_buffer,
                 forces_buffer, virial_buffer, log_filename,
-                dtype, debug, write_tensorboard, use_feed, 
+                dtype, debug, write_tensorboard, use_feed,
                 bootstrap, bootstrap_map,
                 save_period):
 
@@ -152,7 +152,7 @@ class TFManager:
         self.summaries = tf.summary.merge_all()
         self.tb_writer = tf.summary.FileWriter(os.path.join(self.model_directory, 'tensorboard'),
                                       sess.graph)
-        tf.global_variables_initializer()
+        #tf.global_variables_initializer()
         self.out_nodes += [self.summaries]
 
 
@@ -164,21 +164,21 @@ class TFManager:
         config=tf.ConfigProto(gpu_options=gpu_options)
         with tf.Session(config=config) as sess:
             #resore model checkpoint if there are variables
-            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:                             
+            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 #first initialize
                 self.log.info('Found trainable variables...')
                 sess.run(tf.global_variables_initializer())
                 self.log.info('Trainable vars initialized')
                 self.saver = tf.train.Saver()
-                if self.bootstrap is not None:                    
-                    checkpoint = tf.train.latest_checkpoint(self.bootstrap)                    
+                if self.bootstrap is not None:
+                    checkpoint = tf.train.latest_checkpoint(self.bootstrap)
                     if checkpoint is None:
                         raise ValueError('Could not find bootstrap checkpoint {}'.format(self.bootstrap))
                     self.log.info('Using bootstrap checkpoint {}'.format(self.bootstrap))
                     #convert bootstrap map values into actual variables
                     variable_map = None
                     if self.bootstrap_map is not None:
-                        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)                        
+                        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
                         variable_map = dict()
                         for k,vname in self.bootstrap_map.items():
                             value = None
@@ -188,7 +188,7 @@ class TFManager:
                                     value = v
                             if value is None:
                                 raise ValueError('Could not find variable {} in graph while processing bootstrap_map'.format(vname))
-                            variable_map[k] = value                  
+                            variable_map[k] = value
                     bootstrap_saver = tf.train.Saver(variable_map)
                     bootstrap_saver.restore(sess, checkpoint)
                 else:
