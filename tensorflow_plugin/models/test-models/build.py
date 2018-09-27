@@ -110,6 +110,7 @@ def trainable_graph(N, NN, name):
     optimizer = tf.train.AdamOptimizer(1.0).minimize(energy)
     #check = tf.add_check_numerics_ops()
     graph.save(force_tensor=forces, model_directory=name, out_nodes=[optimizer, check])
+    #graph.save(force_tensor=forces, model_directory=name, out_nodes=[check])
 
 def bootstrap_graph(N, NN, directory):
     #make bootstrap graph

@@ -76,16 +76,18 @@ class TFManager:
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
-        result = sess.run(self.out_nodes, feed_dict=feed_dict)
 
         if self.step % self.save_period == 0:
-            self._save_model(sess, result)
+            result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
+            self._save_model(sess, result[-1])
+        else:
+            result = sess.run(self.out_nodes, feed_dict=feed_dict)
         self.step += 1
 
         return result
 
-    def _save_model(self, sess, result):
-        if result is None:
+    def _save_model(self, sess, summaries=None):
+        if summaries is None:
             return
         if self.saver is not None:
             self.log.info('Writing {} variables at step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
@@ -93,7 +95,8 @@ class TFManager:
         if self.write_tensorboard:
             self.log.info('Writing tensorboard at step {}'.format(self.step))
             #last out_node should be merged summary (set in _attach_tensorboard)
-            self.tb_writer.add_summary(result[-1], self.step)
+            self.tb_writer.add_summary(summaries, self.step)
+            self.tb_writer.flush()
 
     def _prepare_graph(self):
         ipc_to_tensor_module = load_op_library('ipc2tensor')
@@ -152,8 +155,6 @@ class TFManager:
         self.summaries = tf.summary.merge_all()
         self.tb_writer = tf.summary.FileWriter(os.path.join(self.model_directory, 'tensorboard'),
                                       sess.graph)
-        #tf.global_variables_initializer()
-        self.out_nodes += [self.summaries]
 
 
     def start_loop(self):
@@ -219,7 +220,7 @@ class TFManager:
                         feed_name_dict = self.q.get()
                     except queue.empty:
                         self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
-                        self._save_model(sess, result)
+                        self._save_model(sess)
                         break
                     #convert name keys to actual tensor keys
                     try:
@@ -236,7 +237,7 @@ class TFManager:
                 while True:
                     if not self.tasklock.start():
                         self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
-                        self._save_model(sess, result)
+                        self._save_model(sess)
                         break
                     last_clock = time.perf_counter()
                     result = self._update(sess)
