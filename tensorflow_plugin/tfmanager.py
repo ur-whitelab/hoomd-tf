@@ -56,6 +56,7 @@ class TFManager:
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
         self.out_nodes = []
+        self.summaries = None
 
         with tf.device(self.device):
             self._prepare_graph()
@@ -78,7 +79,10 @@ class TFManager:
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
 
         if self.step % self.save_period == 0:
-            result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
+            if self.summaries is not None:
+                result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
+            else:
+                result = sess.run(self.out_nodes, feed_dict=feed_dict)
             self._save_model(sess, result[-1])
         else:
             result = sess.run(self.out_nodes, feed_dict=feed_dict)
