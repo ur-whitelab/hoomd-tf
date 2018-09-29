@@ -48,7 +48,7 @@
  * is called.
  */
 
-enum class FORCE_MODE { overwrite, add, ignore, output };
+enum class FORCE_MODE { overwrite, ignore, output };
 
 IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 
@@ -129,6 +129,8 @@ class TensorflowCompute : public ForceCompute {
 
   virtual void prepareNeighbors();
   virtual void zeroVirial();
+
+  void finishUpdate(unsigned int timestep);
 
   std::shared_ptr<NeighborList> m_nlist;
   Scalar _r_cut;

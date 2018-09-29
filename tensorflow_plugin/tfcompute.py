@@ -110,9 +110,7 @@ class tfcompute(hoomd.compute._compute):
         hoomd.compute._compute.__init__(self)
 
         force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.output
-        if force_mode == 'add':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.add
-        elif force_mode == 'output':
+        if force_mode == 'output':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.output
         elif force_mode == 'none' or force_mode == 'ignore':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
@@ -191,21 +189,21 @@ class tfcompute(hoomd.compute._compute):
                 'save_period': self.save_period,
                 'debug': self.debug_mode}
         self.q.put(args)
-        message =  'Starting TF Manager with:\n'
+        message =  ['Starting TF Manager with:']
         for k,v in args.items():
             if k == 'graph_info':
                 continue
             else:
-                message += '\t{: <20}: {: >20}\n'.format(str(k), str(v))
-        message += '\t{: <20}:\n'.format('graph_info')
+                message.append('\t{: <20}: {: >20}'.format(str(k), str(v)))
+        message.append('\t{: <20}:'.format('graph_info'))
         for k,v in args['graph_info'].items():
-            message += '\t  {: <18}: {: >20}\n'.format(str(k), str(v))
-        hoomd.context.msg.notice(2, message)
+            message.append('\t  {: <18}: {: >20}'.format(str(k), str(v)))
+        for m in message:
+            hoomd.context.msg.notice(2, m + '\n')
         self.q.join()
 
     def finish_update(self, timestep):
         '''Allow TF to read output and we wait for it to finish.'''
-
         if self.mock_mode:
             return
         if self.feed_func is not None:

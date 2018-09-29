@@ -41,7 +41,7 @@ TensorflowCompute<M>::TensorflowCompute(
   m_exec_conf->msg->notice(2) << "completed reallocate" << std::endl;
   m_log_name = std::string("tensorflow");
   auto flags = this->m_pdata->getFlags();
-  if (_force_mode == FORCE_MODE::overwrite || _force_mode == FORCE_MODE::add) {
+  if (_force_mode == FORCE_MODE::overwrite) {
     // flags[pdata_flag::isotropic_virial] = 1;
     flags[pdata_flag::pressure_tensor] = 1;
     m_exec_conf->msg->notice(2)
@@ -89,8 +89,22 @@ TensorflowCompute<M>::~TensorflowCompute() {
 */
 template <IPCCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
+
+  // We need to offset positions and net forces if we're sending
+  // forces because net forces are calculated after all computes (like us),
+  // so we don't have access until next step.
   if (timestep % _period != 0) return;
   if (m_prof) m_prof->push("TensorflowCompute");
+
+  // send net forces from last step
+  if(_force_mode == FORCE_MODE::output) {
+      if(timestep > 0) {
+        //get last step's net force and send
+        _forces_comm.receiveArray(m_pdata->getNetForce());
+        _forces_comm.sendAsync();
+        finishUpdate(timestep);
+      }
+  }
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
   // nneighs == 0 send positions only
@@ -103,18 +117,11 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->pop();
     _nlist_comm.sendAsync();
   }
-  if(_force_mode == FORCE_MODE::output) {
-       //get last step's net force and send
-      _forces_comm.receiveArray(m_pdata->getNetForce());
-      _forces_comm.sendAsync();
-  }
 
-  if (m_prof) m_prof->pop();
+  if (m_prof) m_prof->pop(); //prearing data
 
-  if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
-  _py_self.attr("finish_update")(timestep);
-  //_tasklock->await();
-  if (m_prof) m_prof->pop();
+  if (_force_mode != FORCE_MODE::output)
+    finishUpdate(timestep);
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
@@ -125,10 +132,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       zeroVirial();
       _virial_comm.receiveOp(_virial_functor);
       break;
-    case FORCE_MODE::add:
-      _forces_comm.receiveOp(_forces_functor);
-      _virial_comm.receiveOp(_virial_functor);
-      break;
     case FORCE_MODE::output:
       break;
     case FORCE_MODE::ignore:
@@ -137,6 +140,14 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
   if (m_prof) m_prof->pop();  // force update
   if (m_prof) m_prof->pop();  // compute
+}
+
+template <IPCCommMode M>
+void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
+  if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
+  _py_self.attr("finish_update")(timestep);
+  //_tasklock->await();
+  if (m_prof) m_prof->pop();
 }
 
 template <IPCCommMode M>
@@ -268,7 +279,6 @@ void export_TensorflowCompute(pybind11::module& m)
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("overwrite", FORCE_MODE::overwrite)
         .value("output", FORCE_MODE::output)
-        .value("add", FORCE_MODE::add)
         .value("ignore", FORCE_MODE::ignore)
     ;
 

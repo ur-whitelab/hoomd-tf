@@ -124,7 +124,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
 
 ```
 
-where `model_loc` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object, `r_cut` is the maximum distance for to consider particles as being neighbors, and `force_mode` is a string that indicates how to treat forces. A value of `'output'` indicates forces will be output from hoomd and input into the tensorflow model. `'add'` means the forces output from the tensorflow model should be added with whatever forces are computed from hoomd, for example if biasing a simulation. `'ignore'` means the forces will not be modified and are not used the tensorflow model, for example if computing collective variables that do not depend on forces. `'overwrite'` means the forces from the tensorflow model will overwrite the forces from hoomd, for example if the tensorflow model is computing the forces instead.
+where `model_loc` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object, `r_cut` is the maximum distance for to consider particles as being neighbors, and `force_mode` is a string that indicates how to treat forces. A value of `'output'` indicates forces will be output from hoomd and input into the tensorflow model. `'ignore'` means the forces will not be modified and are not used the tensorflow model, for example if computing collective variables that do not depend on forces. `'overwrite'` means the forces from the tensorflow model will overwrite the forces from hoomd, for example if the tensorflow model is computing the forces instead.
 
 ### Bootstraping Variables
 
@@ -356,15 +356,7 @@ C++ functions -> snake (?) because they are only used in py or gpu kernels
 
 py class ->snake
 
-## Known Issues!!
+## Known Issues
 
 ### Exploding Gradients
 There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
-
-### Output Force is 1 step off
-
-The order of HOOMD's integration requires that all computes (e.g., tfcompute) run their computation and then the net force is computed. Thus the forces being sent to the TF graph (in force mode of output) is the previous step's force.
-
-### Add mode does nothing
-
-Force mode of add does nothing and should be removed

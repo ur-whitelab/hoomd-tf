@@ -127,7 +127,7 @@ class test_compute(unittest.TestCase):
 
     def test_bootstrap(self):
         model_dir ='/tmp/test-trainable-model'
-        with hoomd.tensorflow_plugin.tfcompute(model_dir, 
+        with hoomd.tensorflow_plugin.tfcompute(model_dir,
             bootstrap=os.path.join(model_dir, 'bootstrap'),
             bootstrap_map={'epsilon':'lj-epsilon', 'sigma':'lj-sigma'}) as tfcompute:
             hoomd.context.initialize()
@@ -141,7 +141,7 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=1)
 
             hoomd.run(5)
-            
+
 
     def test_print(self):
         model_dir = '/tmp/test-print-model'
@@ -213,11 +213,16 @@ class test_compute(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
 
+            hoomd.run(100)
+
             tfcompute.attach(nlist, r_cut=rcut)
-            for i in range(3):
-                hoomd.run(5)
-                for j in range(N):
-                    self.assertGreater(np.sum(np.abs(tfcompute.get_forces_array()[:,:3])), 0, 'No forces output!')
+
+
+            #make sure positions are offset by one (so net force matches pos)
+            last_force = np.copy(system.particles[1].net_force[:3])
+            hoomd.run(0)
+            tf_force = tfcompute.get_forces_array()[1,:3]
+            np.testing.assert_allclose(last_force, tf_force, rtol=1e-5)
 
     def test_feeddict(self):
         model_dir = '/tmp/test-feeddict-model'

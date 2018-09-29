@@ -50,8 +50,6 @@ class TFManager:
         self.save_period = save_period
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
-
-        self.log.info('Starting TF Session Manager. MMAP is at {:x}, {:x}. Dtype is {}'.format(positions_buffer,forces_buffer, dtype))
         self.model_directory = self.graph_info['model_directory']
         self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
@@ -223,7 +221,8 @@ class TFManager:
                     try:
                         feed_name_dict = self.q.get()
                     except queue.empty:
-                        self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
+                        self.log.info('Received exit. Leaving TF Update Loop. \n')
+                        self.log.info('TF Update time (excluding communication) is {}\n'.format(cumtime))
                         self._save_model(sess)
                         break
                     #convert name keys to actual tensor keys
@@ -240,7 +239,8 @@ class TFManager:
             else:
                 while True:
                     if not self.tasklock.start():
-                        self.log.info('Received exit. Leaving TF Update Loop. \n TF Update time (excluding communication) is {}'.format(cumtime))
+                        self.log.info('Received exit. Leaving TF Update Loop.')
+                        self.log.info('TF Update time (excluding communication) is {:.3f} seconds'.format(cumtime))
                         self._save_model(sess)
                         break
                     last_clock = time.perf_counter()
