@@ -166,6 +166,26 @@ class IPCArrayComm {
     this->deallocate();
   }
 
+  void receiveArray(const GPUArray<T>& array) {
+    if (M == IPCCommMode::CPU) {
+      ArrayHandle<T> handle(*_array, access_location::host,
+                            access_mode::overwrite);
+      ArrayHandle<T> ohandle(array, access_location::host,
+                      access_mode::read);
+      memcpy(handle.data, ohandle.data, _array->getNumElements() * sizeof(T));
+    } else {
+#ifdef ENABLE_CUDA
+      ArrayHandle<T> handle(*_array, access_location::device,
+                            access_mode::overwrite);
+      ArrayHandle<T> ohandle(array, access_location::device,
+                access_mode::read);
+      cudaMemcpy(handle.data, ohandle.data, _array->getNumElements() * sizeof(T),
+                 cudaMemcpyDeviceToDevice);
+      IPC_CHECK_CUDA_ERROR();
+#endif
+    }
+  }
+
   void receive() {
     if (M == IPCCommMode::CPU) {
       ArrayHandle<T> handle(*_array, access_location::host,

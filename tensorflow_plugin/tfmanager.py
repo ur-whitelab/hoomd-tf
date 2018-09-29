@@ -118,8 +118,8 @@ class TFManager:
         input_map = {self.graph_info['nlist']: self.nlist, self.graph_info['positions'] : self.positions}
 
         if not self.graph_info['output_forces']:
-            #if the graph outputs forces
-            self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
+            #if the graph outputs forces, add new node
+            self.log.info('initializing forces ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
             self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])

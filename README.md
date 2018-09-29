@@ -358,4 +358,13 @@ py class ->snake
 
 ## Known Issues!!
 
-There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout. 
+### Exploding Gradients
+There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
+
+### Output Force is 1 step off
+
+The order of HOOMD's integration requires that all computes (e.g., tfcompute) run their computation and then the net force is computed. Thus the forces being sent to the TF graph (in force mode of output) is the previous step's force.
+
+### Add mode does nothing
+
+Force mode of add does nothing and should be removed

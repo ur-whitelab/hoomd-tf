@@ -191,7 +191,16 @@ class tfcompute(hoomd.compute._compute):
                 'save_period': self.save_period,
                 'debug': self.debug_mode}
         self.q.put(args)
-        hoomd.context.msg.notice(2, 'Starting TF Manager with {}\n'.format(args))
+        message =  'Starting TF Manager with:\n'
+        for k,v in args.items():
+            if k == 'graph_info':
+                continue
+            else:
+                message += '\t{: <20}: {: >20}\n'.format(str(k), str(v))
+        message += '\t{: <20}:\n'.format('graph_info')
+        for k,v in args['graph_info'].items():
+            message += '\t  {: <18}: {: >20}\n'.format(str(k), str(v))
+        hoomd.context.msg.notice(2, message)
         self.q.join()
 
     def finish_update(self, timestep):

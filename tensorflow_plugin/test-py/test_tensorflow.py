@@ -198,6 +198,27 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
+    def test_output_graph(self):
+        model_dir = '/tmp/test-noforce-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
+
+            tfcompute.attach(nlist, r_cut=rcut)
+            for i in range(3):
+                hoomd.run(5)
+                for j in range(N):
+                    self.assertGreater(np.sum(np.abs(tfcompute.get_forces_array()[:,:3])), 0, 'No forces output!')
+
     def test_feeddict(self):
         model_dir = '/tmp/test-feeddict-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:

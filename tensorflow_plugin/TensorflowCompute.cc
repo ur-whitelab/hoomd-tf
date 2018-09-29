@@ -36,9 +36,9 @@ TensorflowCompute<M>::TensorflowCompute(
       _tasklock(tasklock) {
   m_exec_conf->msg->notice(2)
       << "Starting TensorflowCompute with IPC Memory reservation of "
-      << _ipcr->_size << "bytes" << std::endl;
+      << _ipcr->_size << " bytes" << std::endl;
   reallocate();
-  std::cout << "completed reallocate" << std::endl;
+  m_exec_conf->msg->notice(2) << "completed reallocate" << std::endl;
   m_log_name = std::string("tensorflow");
   auto flags = this->m_pdata->getFlags();
   if (_force_mode == FORCE_MODE::overwrite || _force_mode == FORCE_MODE::add) {
@@ -103,6 +103,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->pop();
     _nlist_comm.sendAsync();
   }
+  if(_force_mode == FORCE_MODE::output) {
+       //get last step's net force and send
+      _forces_comm.receiveArray(m_pdata->getNetForce());
+      _forces_comm.sendAsync();
+  }
+
   if (m_prof) m_prof->pop();
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
@@ -111,6 +117,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   if (m_prof) m_prof->pop();
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
+
   switch (_force_mode) {
     // process results from TF
     case FORCE_MODE::overwrite:
@@ -123,7 +130,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       _virial_comm.receiveOp(_virial_functor);
       break;
     case FORCE_MODE::output:
-      _forces_comm.sendAsync();
+      break;
     case FORCE_MODE::ignore:
       break;
   }
