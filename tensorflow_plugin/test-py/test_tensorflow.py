@@ -199,6 +199,7 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_output_graph(self):
+        #TODO: Rewrite this to work
         model_dir = '/tmp/test-noforce-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()

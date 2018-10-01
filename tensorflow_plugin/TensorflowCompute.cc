@@ -103,6 +103,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         _forces_comm.receiveArray(m_pdata->getNetForce());
         _forces_comm.sendAsync();
         finishUpdate(timestep);
+        //we sent it using forces_comm. We need to zero it out
+        _forces_comm.memsetArray(0);
       }
   }
 
