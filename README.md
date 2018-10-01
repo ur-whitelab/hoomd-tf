@@ -130,7 +130,7 @@ where `model_loc` is the directory where the tensorflow model was saved, `nlist`
 
 If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file containing variables which can be loaded into your tfcompute graph. It will be called, then all variables will be initialized and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
 
-First, here's an example that creates some variables (note these would be trained in a real example)
+First, here's an example that creates some variables that could be trained offline without Hoomd. In this example, they just use their initial values.
 
 ```python
 import tensorflow as tf
@@ -163,6 +163,90 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir,
     ...
 ```
 
+#### Bootstrapping Variables from Other Models
+
+Here's an example of bootstrapping where you train with Hoomd and then load the variables into a different model:
+
+```python
+# build_models.py
+import tensorflow as tf
+import hoomd.tensorflow_plugin
+
+def make_train_graph(N, NN, directory):
+    # build a model that fits the energy to a linear term
+    graph = hoomd.tensorflow_plugin.graph_builder(N, NN, output_forces=False)
+    # get r
+    nlist = graph.nlist[:, :, :3]
+    r = graph.safe_norm(nlist, axis=2)
+    # build energy model
+    m = tf.Variable(1.0, name='m')
+    b = tf.Variable(0.0, name='b')
+    predicted_particle_energy = tf.reduce_sum(m * r + b, axis=1)
+    # get energy from hoomd
+    particle_energy = graph.forces[:, 3]
+    # make them match
+    loss = tf.losses.mean_squared_error(particle_energy, predicted_particle_energy)
+    optimize = tf.train.AdamOptimizer(1e-3).minimize(loss)
+    graph.save(model_directory=directory, out_nodes=[optimize])
+
+def make_force_graph(N, NN, directory):
+    # this model applies the variables learned in the example above
+    # to compute forces
+    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+    # get r
+    nlist = graph.nlist[:, :, :3]
+    r = graph.safe_norm(nlist, axis=2)
+    # build energy model
+    m = tf.Variable(1.0, name='m')
+    b = tf.Variable(0.0, name='b')
+    predicted_particle_energy = tf.reduce_sum(m * r + b, axis=1)
+    forces = graph.compute_forces(predicted_particle_energy)
+    graph.save(force_tensor=forces, model_directory=directory)
+make_train_graph(64, 16, '/tmp/training')
+make_force_graph(64, 16, '/tmp/inference')
+```
+
+Now here is how we run the training model:
+```python
+#run_train.py
+import hoomd, hoomd.md, hoomd.tensorflow_plugin
+
+
+with hoomd.tensorflow_plugin.tfcompute('/tmp/training') as tfcompute:
+    hoomd.context.initialize()
+    rcut = 3.0
+    system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
+                                       n=[8,8])
+    nlist = hoomd.md.nlist.cell(check_period = 1)
+    lj = hoomd.md.pair.lj(rcut, nlist)
+    lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+    hoomd.md.integrate.mode_standard(dt=0.005)
+    hoomd.md.integrate.nve(
+        group=hoomd.group.all()).randomize_velocities(kT=0.2, seed=42)
+
+    tfcompute.attach(nlist, r_cut=rcut)
+    hoomd.run(100)
+```
+
+Now we load the variables trained in the training run into the model which computes forces:
+
+```python
+#run_inference.py
+with hoomd.tensorflow_plugin.tfcompute('/tmp/inference',
+        bootstrap='/tmp/training') as tfcompute:
+    hoomd.context.initialize()
+    rcut = 3.0
+    system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
+                                       n=[8,8])
+    nlist = hoomd.md.nlist.cell(check_period = 1)
+    #notice we no longer compute forces with hoomd
+    hoomd.md.integrate.mode_standard(dt=0.005)
+    hoomd.md.integrate.nve(
+        group=hoomd.group.all()).randomize_velocities(kT=0.2, seed=42)
+
+    tfcompute.attach(nlist, r_cut=rcut)
+    hoomd.run(100)
+```
 ### Examples
 
 See `tensorflow_plugin/test-py/test_tensorflow.py`.

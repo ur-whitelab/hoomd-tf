@@ -89,12 +89,10 @@ class TFManager:
         return result
 
     def _save_model(self, sess, summaries=None):
-        if summaries is None:
-            return
         if self.saver is not None:
             self.log.info('Writing {} variables at step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
             self.saver.save(sess, os.path.join(self.model_directory, 'model'), global_step=self.step)
-        if self.write_tensorboard:
+        if self.write_tensorboard and summaries is not None:
             self.log.info('Writing tensorboard at step {}'.format(self.step))
             #last out_node should be merged summary (set in _attach_tensorboard)
             self.tb_writer.add_summary(summaries, self.step)
