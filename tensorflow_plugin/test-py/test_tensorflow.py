@@ -107,7 +107,7 @@ class test_compute(unittest.TestCase):
 
     def test_trainable(self):
         model_dir ='/tmp/test-trainable-model'
-        with hoomd.tensorflow_plugin.tfcompute(model_dir, _write_tensorboard=True) as tfcompute:
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, write_tensorboard=True) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),

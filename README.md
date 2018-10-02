@@ -77,7 +77,7 @@ If you would like to save a scalar over time, like total energy or training loss
 tf.summary.scalar('total-energy', tf.reduce_sum(particle_energy))
 ```
 
-and then add the `_write_tensorboard=True` flag during the `tfcompute` initialize. The period of tensorboard writes is controlled by the `saving_period` flag to the `tfcompute.attach` command. View the Tensorboard section below to see how to view the resulting scalars.
+and then add the `write_tensorboard=True` flag during the `tfcompute` initialize. The period of tensorboard writes is controlled by the `saving_period` flag to the `tfcompute.attach` command. View the Tensorboard section below to see how to view the resulting scalars.
 
 ### Variables and Restarts
 
@@ -262,7 +262,7 @@ Due to the side-effects of importing tensorflow, you must build and save your gr
 ## Tensorboard
 
 You can visualize your models with tensorboard. First, add
-`_write_tensorboard=True` the tensorflow plugin constructor. This will
+`write_tensorboard=True` the tensorflow plugin constructor. This will
 add a new directory called `tensorboard` to your model directory.
 
 After running, you can launch tensorboard like so:
@@ -298,7 +298,7 @@ adding the flag `--net=host` to the run command of the container. Then you can v
 
 ## Interactive Mode
 
-Experimental, but you can trace your graph in realtime in a simulation. Add both the `_write_tensorboard=True` to
+Experimental, but you can trace your graph in realtime in a simulation. Add both the `write_tensorboard=True` to
 the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following
 the online instructions for interactive debugging via Tensorboard.
 

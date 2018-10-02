@@ -23,7 +23,7 @@ class tfcompute(hoomd.compute._compute):
     # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
                   bootstrap=None, bootstrap_map=None,
-                  _debug_mode=False, _mock_mode=False, _write_tensorboard=False):
+                  _debug_mode=False, _mock_mode=False, write_tensorboard=False):
 
         #so delete won't fail
         self.tfm = None
@@ -47,7 +47,7 @@ class tfcompute(hoomd.compute._compute):
         self.tasklock = _tensorflow_plugin.make_tasklock()
         self.mock_mode = _mock_mode
         self.device = device
-        self.write_tensorboard = _write_tensorboard
+        self.write_tensorboard = write_tensorboard
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
 
