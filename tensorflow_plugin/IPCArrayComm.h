@@ -195,8 +195,7 @@ class IPCArrayComm {
 #ifdef ENABLE_CUDA
       ArrayHandle<T> handle(*_array, access_location::device,
                             access_mode::overwrite);
-      cudaMemset(static_cast<void*> (handle.data), v, _array->getNumElements() * sizeof(T),
-                 cudaMemcpyDeviceToDevice);
+      cudaMemset(static_cast<void*> (handle.data), v, _array->getNumElements() * sizeof(T));
       IPC_CHECK_CUDA_ERROR();
 #endif
     }
