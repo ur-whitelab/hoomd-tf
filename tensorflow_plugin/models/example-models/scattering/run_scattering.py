@@ -2,9 +2,9 @@ import tensorflow as tf
 import hoomd
 from hoomd.tensorflow_plugin import tfcompute
 
-model_dir = '/home/hgandhi/hoomd-tf/tensorflow_plugin/models/my_model/'
+model_dir = '/scratch/hgandhi/scattering/'
 
-with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, _write_tensorboard=True) as tfcompute:
+with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensorboard=False) as tfcompute:
 
     hoomd.context.initialize("")
     N =8*8
