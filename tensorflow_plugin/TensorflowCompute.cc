@@ -196,7 +196,7 @@ void TensorflowCompute<M>::prepareNeighbors() {
     const unsigned int size = (unsigned int)h_n_neigh.data[i];
     unsigned int j = 0;
     if (_nneighs < size)
-      m_exec_conf->msg->error() << "Overflow in nlist!" << std::endl;
+      m_exec_conf->msg->error() << "Overflow in nlist! Only " << _nneighs << " space but there are " << size << " neighbors." << std::endl;
     for (; j < std::min(_nneighs, size); j++) {
       // access the index of this neighbor
       unsigned int k = h_nlist.data[head_i + j];
