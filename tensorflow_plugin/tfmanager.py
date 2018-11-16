@@ -209,6 +209,7 @@ class TFManager:
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
             #indicating we are ready to begin
+            self.log.info('Completed TF Set-up')
             self.q.task_done()
             cumtime = 0
             result = None
@@ -236,14 +237,17 @@ class TFManager:
                         self.q.task_done()
             else:
                 while True:
+                    print('starting loop')
                     if not self.tasklock.start():
                         self.log.info('Received exit. Leaving TF Update Loop.')
                         self.log.info('TF Update time (excluding communication) is {:.3f} seconds'.format(cumtime))
                         self._save_model(sess)
                         break
                     last_clock = time.perf_counter()
+                    print('starting update')
                     result = self._update(sess)
                     cumtime += (time.perf_counter() - last_clock)
+                    print('updatre complete')
                     self.tasklock.end()
 
 

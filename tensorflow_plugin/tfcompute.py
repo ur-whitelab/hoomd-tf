@@ -3,7 +3,7 @@
 
 from hoomd.tensorflow_plugin import _tensorflow_plugin
 from .tfmanager import main
-import sys, math, numpy as np, pickle, multiprocessing, os, time
+import sys, math, numpy as np, pickle, queue, threading, os, time
 import hoomd, hoomd.md.nlist
 import tensorflow as tf
 
@@ -165,13 +165,13 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         #need to terminate orphan
-        self.tfm.terminate()
+        self.tfm.join(1)
 
     def _init_tf(self):
-        self.q = multiprocessing.JoinableQueue(maxsize=1)
-        self.tfm = multiprocessing.Process(target=main, args=(self.q, self.tasklock,self.write_tensorboard, self.device))
+        self.q = queue.Queue(maxsize=1)
+        self.tfm = threading.Thread(target=main, args=(self.q, self.tasklock,self.write_tensorboard, self.device))
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager.')
+        hoomd.context.msg.notice(2, 'Forked TF Session Manager.\n')
 
     def _start_tf(self):
         if not self.cpp_force:
@@ -201,6 +201,7 @@ class tfcompute(hoomd.compute._compute):
         for m in message:
             hoomd.context.msg.notice(2, m + '\n')
         self.q.join()
+        hoomd.context.msg.notice(2,'TF Session Manager has released control. Starting HOOMD updates\n')
 
     def finish_update(self, timestep):
         '''Allow TF to read output and we wait for it to finish.'''

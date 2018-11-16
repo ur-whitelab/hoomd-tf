@@ -303,20 +303,22 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
      : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, ipc_reservation, tasklock)
 {
 
-    _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
-    if(_nneighs != nneighs) {
-     m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
-      reallocate();
-    }
-    m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", m_exec_conf));
-
     //want nlist on stream 0 since a nlist rebuild is
     //called just before prepareNeighbors
     _streams[0] = 0;
     for(unsigned int i = 1; i < _nstreams; i++) {
+      std::cout << "Uninitialized stream " << _streams[i] << std::endl;
       cudaStreamCreate(&(_streams[i]));
+      std::cout << "Created stream " << _streams[i] << std::endl;
       CHECK_CUDA_ERROR();
     }
+
+    _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
+    if(_nneighs != nneighs) {
+     m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+    }
+    reallocate(); //must be called so streams are correctly set
+    m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", m_exec_conf));
 }
 
 void TensorflowComputeGPU::reallocate()  {

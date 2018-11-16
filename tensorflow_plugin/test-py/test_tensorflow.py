@@ -238,10 +238,12 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
 
-            #multiple average force by particle 0 position
+            #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10, force_mode='output', feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[0, :3]})
+            tfcompute.attach(nlist, r_cut=rcut, period=10, force_mode='output', feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
             hoomd.run(11)
+            #tf_force = tfcompute.get_forces_array()[1,:3]
+            print(tf_force)
 
     def test_lj_forces(self):
         model_dir = '/tmp/test-lj-potential-model'
@@ -312,7 +314,7 @@ class test_compute(unittest.TestCase):
 
     def test_lj_pressure(self):
         model_dir = '/tmp/test-lj-potential-model'
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=True) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1

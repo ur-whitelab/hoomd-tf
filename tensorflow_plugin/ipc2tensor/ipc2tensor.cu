@@ -13,6 +13,7 @@ using GPUDevice = Eigen::GpuDevice;
 struct InputMem_t {
   cudaIpcMemHandle_t mem_handle;
   cudaIpcEventHandle_t event_handle;
+  cudaStream_t stream;
 };
 
 // GPU specialization of actual computation.

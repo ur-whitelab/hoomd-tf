@@ -36,6 +36,7 @@ struct IPCTaskLock {
 
   // Wait for worker process to complete
   void await() {
+    pybind11::gil_scoped_release nogil;
     // no competition here
     _store(1);
     // now latch is state 1
@@ -45,16 +46,19 @@ struct IPCTaskLock {
   }
 
   void exit() {
+    pybind11::gil_scoped_release nogil;
     _change_state(0, 4);
   }
 
   // start work
   bool start() {
+    pybind11::gil_scoped_release nogil;
     // move from state 1 to 2
     return _change_state(1, 2);
   }
 
   void end() {
+    pybind11::gil_scoped_release nogil;
     // move from state 2 to 3
     // no competition
     _store(3);
