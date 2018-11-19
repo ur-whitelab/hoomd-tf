@@ -43,8 +43,8 @@ class graph_builder:
                         nlist3 = self.nlist[:, :, :3]
                         rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
                         #F / rs
-                        self.nlist_r_mag = graph_builder.safe_norm(nlist3 + 1.0e-15, axis=2, name='nlist-r-mag')
-                        self.nlist_force_mag = graph_builder.safe_norm(nlist_forces + 1.0e-15, axis=2, name='nlist-force-mag')
+                        self.nlist_r_mag = graph_builder.safe_norm(nlist3, axis=2, name='nlist-r-mag')
+                        self.nlist_force_mag = graph_builder.safe_norm(nlist_forces, axis=2, name='nlist-force-mag')
                         F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
                         #sum over neighbors: F / r * (r (outter) r)
                         self.virial = -1.0 * tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
@@ -70,13 +70,19 @@ class graph_builder:
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
-    def safe_div(numerator, denominator, delta=1e-6, **kwargs):
+    def safe_div(numerator, denominator, delta=1e-25, **kwargs):
         '''
         There are some numerical instabilities that occur during learning
         when gradients are propagated. The delta is problem specific.
         '''
-        op = tf.divide(numerator, denominator + delta, **kwargs)
+        op = tf.where(
+               tf.greater(denominator, delta),
+               tf.truediv(numerator, denominator),
+               tf.zeros_like(denominator))
+
+        #op = tf.divide(numerator, denominator + delta, **kwargs)
         return op
+
 
     @staticmethod
     def safe_norm(tensor, delta=1e-6, **kwargs):
