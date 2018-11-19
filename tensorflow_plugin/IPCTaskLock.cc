@@ -8,6 +8,7 @@ void export_IPCTaskLock(pybind11::module& m) {
       .def("start", &IPCTaskLock::start)
       .def("end", &IPCTaskLock::end)
       .def("exit", &IPCTaskLock::exit)
+      .def("is_exit", &IPCTaskLock::is_exit)
       .def("await", &IPCTaskLock::await);
 
   m.def("make_tasklock", &make_tasklock,

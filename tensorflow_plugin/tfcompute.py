@@ -58,12 +58,13 @@ class tfcompute(hoomd.compute._compute):
 
     def __exit__(self, exc_type, exc_value, traceback):
         #trigger end in task lock
-        hoomd.context.msg.notice(2, 'Sending exit signal.\n')
-        self.tasklock.exit()
-        time.sleep(1)
-        if self.tfm and self.tfm.is_alive():
-            hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
-            self.shutdown_tf()
+        if self.tfm.is_alive():
+            hoomd.context.msg.notice(2, 'Sending exit signal.\n')
+            self.tasklock.exit()
+            time.sleep(1)
+            if self.tfm and self.tfm.is_alive():
+                hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
+                self.shutdown_tf()
 
     ##
     # feed_func = takes in tfcompute (which gives access to forces/positions/nlist)
@@ -125,11 +126,15 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.ipc_reservation, self.tasklock)
+            if self.device is None:
+                self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.ipc_reservation, self.tasklock)
+            if self.device is None:
+                self.device = '/gpu:0'
 
         #get double vs single precision
         self.dtype = tf.float32
@@ -187,7 +192,8 @@ class tfcompute(hoomd.compute._compute):
                 'bootstrap': self.bootstrap,
                 'bootstrap_map': self.bootstrap_map,
                 'save_period': self.save_period,
-                'debug': self.debug_mode}
+                'debug': self.debug_mode,
+                'device': self.device}
         self.q.put(args)
         message =  ['Starting TF Manager with:']
         for k,v in args.items():
@@ -201,6 +207,8 @@ class tfcompute(hoomd.compute._compute):
         for m in message:
             hoomd.context.msg.notice(2, m + '\n')
         self.q.join()
+        if not self.tfm.isAlive():
+            exit()
         hoomd.context.msg.notice(2,'TF Session Manager has released control. Starting HOOMD updates\n')
 
     def finish_update(self, timestep):
@@ -214,6 +222,9 @@ class tfcompute(hoomd.compute._compute):
             self.q.join()
         else:
             self.tasklock.await()
+        if self.tasklock.is_exit():
+            hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
+            raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
 
     def get_positions_array(self):

@@ -20,7 +20,7 @@ struct cudaIPC_t {
   cudaEvent_t event;
   cudaIPC_t() : array(nullptr) {}
   ~cudaIPC_t() {
-    cudaEventDestroy(event);
+    //cudaEventDestroy(event);
     if (array) cudaIpcCloseMemHandle(array);
   }
 };

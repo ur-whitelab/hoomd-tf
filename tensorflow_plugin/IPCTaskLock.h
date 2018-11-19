@@ -57,6 +57,11 @@ struct IPCTaskLock {
     return _change_state(1, 2);
   }
 
+  bool is_exit() {
+    pybind11::gil_scoped_release nogil;
+    return _latch->load() == 4;
+  }
+
   void end() {
     pybind11::gil_scoped_release nogil;
     // move from state 2 to 3

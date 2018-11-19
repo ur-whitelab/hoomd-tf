@@ -7,7 +7,7 @@
 using namespace tensorflow;
 
 // TODO: This class is not threadsafe.
-// We need to use a resource manager to achive that
+// We need to use a resource manager to achieve that
 
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;

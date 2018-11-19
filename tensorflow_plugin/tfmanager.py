@@ -2,10 +2,10 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle, cProfile, queue, time
 
-def main(q, tasklock, write_tensorboard=False, device='/gpu:0', profile=False):
+def main(q, tasklock, write_tensorboard=False, profile=False):
 
     tfm_args = q.get()
-    tfm = TFManager(q=q, tasklock=tasklock, device=device, write_tensorboard=write_tensorboard, **tfm_args)
+    tfm = TFManager(q=q, tasklock=tasklock, write_tensorboard=write_tensorboard, **tfm_args)
     if(profile):
         cProfile.runctx('tfm.start_loop()', globals(), locals(), filename='tf_profile.out')
     else:
@@ -58,6 +58,7 @@ class TFManager:
 
         with tf.device(self.device):
             self._prepare_graph()
+
             if graph_info['output_forces']:
                 self.log.info('This TF Graph can modify forces.')
                 self._prepare_forces()
@@ -75,7 +76,6 @@ class TFManager:
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
-
         if self.step % self.save_period == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
@@ -245,7 +245,12 @@ class TFManager:
                         break
                     last_clock = time.perf_counter()
                     print('starting update')
-                    result = self._update(sess)
+                    try:
+                        result = self._update(sess)
+                    except Exception as e:
+                        self.tasklock.end()
+                        self.tasklock.exit()
+                        raise e
                     cumtime += (time.perf_counter() - last_clock)
                     print('updatre complete')
                     self.tasklock.end()

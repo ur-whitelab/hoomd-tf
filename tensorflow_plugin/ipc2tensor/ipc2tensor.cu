@@ -28,7 +28,7 @@ void IPC2TFunctor<GPUDevice, T, cudaIPC_t<T> >::operator()(
                          cudaIpcMemLazyEnablePeerAccess);
     cudaIpcOpenEventHandle(&(ipc_memory.event), ipc_handle->event_handle);
   }
-  cudaEventSynchronize(ipc_memory.event);
+  //cudaEventSynchronize(ipc_memory.event);
   cudaMemcpy((void*)(out), (const void*)(ipc_memory.array), size * sizeof(T),
              cudaMemcpyDeviceToDevice);
 }
