@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle, cProfile, queue, time
 
+saver_args = {'max_to_keep': 1000}
+
 def main(q, tasklock, write_tensorboard=False, profile=False):
 
     tfm_args = q.get()
@@ -170,7 +172,7 @@ class TFManager:
                 self.log.info('Found trainable variables...')
                 sess.run(tf.global_variables_initializer())
                 self.log.info('Trainable vars initialized')
-                self.saver = tf.train.Saver()
+                self.saver = tf.train.Saver(**saver_args)
                 if self.bootstrap is not None:
                     checkpoint = tf.train.latest_checkpoint(self.bootstrap)
                     if checkpoint is None:
@@ -189,7 +191,7 @@ class TFManager:
                             if value is None:
                                 raise ValueError('Could not find variable {} in graph while processing bootstrap_map'.format(vname))
                             variable_map[k] = value
-                    bootstrap_saver = tf.train.Saver(variable_map)
+                    bootstrap_saver = tf.train.Saver(variable_map, **saver_args)
                     bootstrap_saver.restore(sess, checkpoint)
                 else:
                     checkpoint = tf.train.latest_checkpoint(self.model_directory)
