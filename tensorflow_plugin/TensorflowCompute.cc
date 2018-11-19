@@ -307,9 +307,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
     //called just before prepareNeighbors
     _streams[0] = 0;
     for(unsigned int i = 1; i < _nstreams; i++) {
-      std::cout << "Uninitialized stream " << _streams[i] << std::endl;
       cudaStreamCreate(&(_streams[i]));
-      std::cout << "Created stream " << _streams[i] << std::endl;
       CHECK_CUDA_ERROR();
     }
 

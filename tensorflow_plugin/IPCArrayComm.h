@@ -289,10 +289,8 @@ class IPCArrayComm {
   int64_t getAddress() const { return reinterpret_cast<int64_t>(_mm_page); }
 
 #ifdef ENABLE_CUDA
-  void setCudaStream(cudaStream_t s) { _ipc_handle->stream = s;
-        std::cout << "set stream " << _ipc_handle->stream << " for object " << this->_ipc_handle << std::endl; }
+  void setCudaStream(cudaStream_t s) { _ipc_handle->stream = s;}
   cudaStream_t getCudaStream() const {
-    std::cout << "stream will be " << _ipc_handle->stream << " from " << this->_ipc_handle << std::endl;
     return _ipc_handle->stream; }
 #endif
 
@@ -334,7 +332,6 @@ class IPCArrayComm {
       }
       IPC_CHECK_CUDA_ERROR();
     }
-    std::cout << "Allocatied ipc hand to be " << this->_ipc_handle << std::endl;
 #endif
   }
 

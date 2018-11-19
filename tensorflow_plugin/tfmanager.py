@@ -184,7 +184,6 @@ class TFManager:
                         for k,vname in self.bootstrap_map.items():
                             value = None
                             for v in variables:
-                                print(v.name)
                                 if v.name == vname + ':0':
                                     value = v
                             if value is None:
@@ -237,14 +236,12 @@ class TFManager:
                         self.q.task_done()
             else:
                 while True:
-                    print('starting loop')
                     if not self.tasklock.start():
                         self.log.info('Received exit. Leaving TF Update Loop.')
                         self.log.info('TF Update time (excluding communication) is {:.3f} seconds'.format(cumtime))
                         self._save_model(sess)
                         break
                     last_clock = time.perf_counter()
-                    print('starting update')
                     try:
                         result = self._update(sess)
                     except Exception as e:
@@ -252,7 +249,6 @@ class TFManager:
                         self.tasklock.exit()
                         raise e
                     cumtime += (time.perf_counter() - last_clock)
-                    print('updatre complete')
                     self.tasklock.end()
 
 
