@@ -14,5 +14,5 @@ with hoomd.tensorflow_plugin.tfcompute('/tmp/eds') as tfcompute:
     hoomd.md.integrate.nve(
         group=hoomd.group.all()).randomize_velocities(kT=0.2, seed=42)
 
-    tfcompute.attach(nlist, r_cut=rcut,force_mode='add')
+    tfcompute.attach(nlist, r_cut=rcut)
     hoomd.run(100)

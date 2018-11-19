@@ -192,7 +192,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
 
-            tfcompute.attach(nlist, r_cut=rcut, force_mode='output')
+            tfcompute.attach(nlist, r_cut=rcut, force_mode='hoomd2tf')
             for i in range(3):
                 hoomd.run(1)
                 for j in range(N):
@@ -240,7 +240,7 @@ class test_compute(unittest.TestCase):
 
             #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10, force_mode='output', feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
+            tfcompute.attach(nlist, r_cut=rcut, period=10, force_mode='hoomd2tf', feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
             hoomd.run(11)
             #tf_force = tfcompute.get_forces_array()[1,:3]
             print(tf_force)

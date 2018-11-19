@@ -110,14 +110,14 @@ class tfcompute(hoomd.compute._compute):
         # initialize base class
         hoomd.compute._compute.__init__(self)
 
-        force_mode_code = _tensorflow_plugin.FORCE_MODE.overwrite if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.output
-        if force_mode == 'output':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.output
+        force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
+        if force_mode == 'hoomd2tf':
+            force_mode_code = _tensorflow_plugin.FORCE_MODE.hoomd2tf
         elif force_mode == 'none' or force_mode == 'ignore':
             force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
         hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(force_mode_code))
         #if graph is not outputting (input) then tfcompute should be outputting them
-        if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.output:
+        if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.hoomd2tf:
             raise ValueError('Your graph takes forces as input but you are not sending them from tfcompute')
 
         # initialize the reflected c++ class

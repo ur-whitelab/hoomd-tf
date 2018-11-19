@@ -48,7 +48,7 @@
  * is called.
  */
 
-enum class FORCE_MODE { overwrite, ignore, output };
+enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
 
 IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
 

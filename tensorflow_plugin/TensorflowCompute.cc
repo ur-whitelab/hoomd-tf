@@ -41,7 +41,7 @@ TensorflowCompute<M>::TensorflowCompute(
   m_exec_conf->msg->notice(2) << "completed reallocate" << std::endl;
   m_log_name = std::string("tensorflow");
   auto flags = this->m_pdata->getFlags();
-  if (_force_mode == FORCE_MODE::overwrite) {
+  if (_force_mode == FORCE_MODE::tf2hoomd) {
     // flags[pdata_flag::isotropic_virial] = 1;
     flags[pdata_flag::pressure_tensor] = 1;
     m_exec_conf->msg->notice(2)
@@ -97,7 +97,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   if (m_prof) m_prof->push("TensorflowCompute");
 
   // send net forces from last step
-  if(_force_mode == FORCE_MODE::output) {
+  if(_force_mode == FORCE_MODE::hoomd2tf) {
       if(timestep > 0) {
         //get last step's net force and send
         _forces_comm.receiveArray(m_pdata->getNetForce());
@@ -122,19 +122,19 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
   if (m_prof) m_prof->pop(); //prearing data
 
-  if (_force_mode != FORCE_MODE::output)
+  if (_force_mode != FORCE_MODE::hoomd2tf)
     finishUpdate(timestep);
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
   switch (_force_mode) {
     // process results from TF
-    case FORCE_MODE::overwrite:
+    case FORCE_MODE::tf2hoomd:
       _forces_comm.receiveAsync();
       zeroVirial();
       _virial_comm.receiveOp(_virial_functor);
       break;
-    case FORCE_MODE::output:
+    case FORCE_MODE::hoomd2tf:
       break;
     case FORCE_MODE::ignore:
       break;
@@ -279,8 +279,8 @@ void export_TensorflowCompute(pybind11::module& m)
         .def("getVirialPitch", &TensorflowCompute<IPCCommMode::CPU>::getVirialPitch)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
-        .value("overwrite", FORCE_MODE::overwrite)
-        .value("output", FORCE_MODE::output)
+        .value("tf2hoomd", FORCE_MODE::tf2hoomd)
+        .value("hoomd2tf", FORCE_MODE::hoomd2tf)
         .value("ignore", FORCE_MODE::ignore)
     ;
 
