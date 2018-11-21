@@ -28,13 +28,19 @@ class TFManager:
                 positions_buffer, nlist_buffer,
                 forces_buffer, virial_buffer, log_filename,
                 dtype, debug, write_tensorboard, use_feed,
-                bootstrap, bootstrap_map,
+                bootstrap, primary, bootstrap_map,
                 save_period):
 
+        self.primary = primary
+
+
         self.log = logging.getLogger('tensorflow')
-        fh = logging.FileHandler(log_filename)
-        self.log.addHandler(fh)
-        self.log.setLevel(logging.INFO)
+        if not primary:
+            self.log.disabled = True
+        else:
+            fh = logging.FileHandler(log_filename)
+            self.log.addHandler(fh)
+            self.log.setLevel(logging.INFO)
 
         self.device = device
         self.q = q
@@ -91,6 +97,10 @@ class TFManager:
         return result
 
     def _save_model(self, sess, summaries=None):
+
+        if not self.primary:
+            return
+
         if self.saver is not None:
             self.log.info('Writing {} variables at step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
             self.saver.save(sess, os.path.join(self.model_directory, 'model'), global_step=self.step)

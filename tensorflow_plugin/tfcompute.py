@@ -4,7 +4,7 @@
 from hoomd.tensorflow_plugin import _tensorflow_plugin
 from .tfmanager import main
 import sys, math, numpy as np, pickle, queue, threading, os, time
-import hoomd, hoomd.md.nlist
+import hoomd, hoomd.md.nlist, hoomd.comm
 import tensorflow as tf
 
 ## Integrates tensorflow
@@ -83,8 +83,8 @@ class tfcompute(hoomd.compute._compute):
 
 
         #check our parameters
-        if self.graph_info['N'] != len(hoomd.context.current.group_all):
-            hoomd.context.msg.error('Number of atoms must be same in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
+        if self.graph_info['N'] < len(hoomd.context.current.group_all):
+            hoomd.context.msg.error('Number of atoms must be equal to or greater in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
             raise RuntimeError('Error creating TF')
 
         #I'm not sure if this is necessary following other files
@@ -193,6 +193,7 @@ class tfcompute(hoomd.compute._compute):
                 'bootstrap_map': self.bootstrap_map,
                 'save_period': self.save_period,
                 'debug': self.debug_mode,
+                'primary': hoomd.comm.get_rank() == 0,
                 'device': self.device}
         self.q.put(args)
         message =  ['Starting TF Manager with:']

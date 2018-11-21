@@ -27,6 +27,7 @@ struct IPCReservation {
   char* _ptr;
   size_t _index;
   size_t _size;
+  std::ostringstream _log;
 
   IPCReservation() : _ptr(nullptr), _index(0), _size(0) {}
   IPCReservation(size_t size) : _ptr(nullptr), _index(0), _size(size) {
@@ -42,8 +43,10 @@ struct IPCReservation {
     }
   }
 
-  void* allocate(size_t size) {
-    if (size > (_size - _index)) return nullptr;
+  void* allocate(size_t size, const std::string& description) {
+    _log << description << ": 0x" << std::hex << _index << "-0x" << std::hex << (_index + size) << " (end: 0x" << std::hex << _size << ")" << std::endl;
+    if (size > (_size - _index))
+      throw std::runtime_error(std::string("Unable to allocate in IPCReservation. This could be because you got more ghost atoms than expected.") +  "\n Previous Reservations: \n" + _log.str());
     void* result = _ptr + _index;
     _index += size;
     return result;
@@ -337,10 +340,7 @@ class IPCArrayComm {
 
   void allocateMMPage() {
     if (_ipcr) {
-      _mm_page = _ipcr->allocate(getMMSize());
-      if (!_mm_page)
-        throw std::runtime_error(
-            "Unable to create mmap - IPCReservation not large enough");
+      _mm_page = _ipcr->allocate(getMMSize(), "mmpage");
     } else {
       _mm_page = mmap(nullptr, getMMSize(), PROT_READ | PROT_WRITE,
                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);

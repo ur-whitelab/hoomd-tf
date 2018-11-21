@@ -57,7 +57,7 @@ def feeddict_graph():
     graph.save('/tmp/test-feeddict-model', out_nodes=[out])
 
 def benchmark_nonlist_graph():
-    graph = hoomd.tensorflow_plugin.graph_builder(1024, 0, output_forces=True)
+    graph = hoomd.tensorflow_plugin.graph_builder(2 * 1024, 0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
     force = graph.compute_forces(energy)
@@ -139,7 +139,7 @@ simple_potential()
 benchmark_gradient_potential()
 benchmark_nonlist_graph()
 lj_graph(2**14, 64, '/tmp/benchmark-lj-potential-model')
-lj_graph(9, 9 - 1, '/tmp/test-lj-potential-model')
+lj_graph(2 * 1024, 128, '/tmp/test-lj-potential-model')
 print_graph(9, 9 - 1, '/tmp/test-print-model')
 trainable_graph(9, 9 - 1, '/tmp/test-trainable-model')
 bootstrap_graph(9, 9 - 1, '/tmp/test-trainable-model')
