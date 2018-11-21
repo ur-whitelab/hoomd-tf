@@ -48,6 +48,8 @@ class graph_builder:
                         F_rs = self.safe_div(self.nlist_force_mag, 2.0 * self.nlist_r_mag)
                         #sum over neighbors: F / r * (r (outter) r)
                         self.virial = -1.0 * tf.einsum('ij,ijkl->ikl', F_rs, rij_outter)
+        if pos_forces is None and nlist_forces is None:
+            raise ValueError('Found no dependence on positions or neighbors so forces cannot be computed')
         if pos_forces is not None and nlist_forces is not None:
             forces = tf.add(nlist_reduce, pos_forces, name='forces-added')
         elif pos_forces is None:
