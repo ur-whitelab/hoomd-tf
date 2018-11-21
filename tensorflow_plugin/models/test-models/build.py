@@ -45,7 +45,8 @@ def noforce_graph():
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
-    graph.save('/tmp/test-noforce-model', out_nodes=[energy])
+    pos_norm = tf.norm(graph.positions, axis=1)
+    graph.save('/tmp/test-noforce-model', out_nodes=[energy, pos_norm])
 
 def feeddict_graph():
     graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
@@ -56,10 +57,11 @@ def feeddict_graph():
     graph.save('/tmp/test-feeddict-model', out_nodes=[out])
 
 def benchmark_nonlist_graph():
-    graph = hoomd.tensorflow_plugin.graph_builder(1024, 0, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(1024, 0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
-    graph.save('/tmp/benchmark-nonlist-model', out_nodes=[energy])
+    force = graph.compute_forces(energy)
+    graph.save('/tmp/benchmark-nonlist-model', force_tensor=force, out_nodes=[energy])
 
 def lj_graph(N, NN, name):
     graph = hoomd.tensorflow_plugin.graph_builder(N, NN)

@@ -104,6 +104,20 @@ class test_compute(unittest.TestCase):
 
             self.assertRaises(ValueError, tfcompute.attach(nlist, r_cut=rcut))
 
+    def test_nonlist(self):
+        model_dir ='/tmp/benchmark-nonlist-model'
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[32,32])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(10)
+
 
     def test_trainable(self):
         model_dir ='/tmp/test-trainable-model'
