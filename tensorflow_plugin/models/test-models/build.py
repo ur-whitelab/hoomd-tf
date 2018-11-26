@@ -89,7 +89,7 @@ def print_graph(N, NN, name):
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    prints = tf.Print(energy, [energy], summarize=1000)
+    prints = tf.print(energy, [energy], summarize=1000)
     graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
 
 def trainable_graph(N, NN, name):

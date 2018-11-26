@@ -58,7 +58,7 @@ class tfcompute(hoomd.compute._compute):
 
     def __exit__(self, exc_type, exc_value, traceback):
         #trigger end in task lock
-        if self.tfm.is_alive():
+        if not self.mock_mode and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
             self.tasklock.exit()
             time.sleep(1)

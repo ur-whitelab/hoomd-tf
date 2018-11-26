@@ -1,7 +1,7 @@
 FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 MAINTAINER Andrew White <andrew.white@rochester.edu>
 
-RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev libtcmalloc-minimal4 && apt-get clean
+RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev libtcmalloc-minimal4 libopenmpi-dev openmpi-bin && apt-get clean
 
 #RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
 #WORKDIR /srv
@@ -16,8 +16,8 @@ RUN conda create -n py36 python=3.6
 ENV PATH="/usr/local/miniconda/envs/py36/bin:$PATH"
 
 #use pip, since conda distro is unofficial
-#RUN pip install tensorflow-gpu
-RUN pip install tensorflow
+RUN pip install tensorflow-gpu
+#RUN pip install tensorflow
 
 RUN conda config --add channels glotzer && conda install -y fresnel gsd freud &&  conda clean -a
 RUN conda install -y Pillow \

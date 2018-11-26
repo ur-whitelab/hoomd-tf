@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 
 // I do not use specialization
 // to treat the CommMode because you cannot do partial specialization of a

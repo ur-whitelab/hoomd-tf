@@ -64,7 +64,9 @@ void TensorflowCompute<M>::reallocate() {
   _positions_comm = IPCArrayComm<M, Scalar4>(
       const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()), _ipcr);
   _forces_comm = IPCArrayComm<M, Scalar4>(m_force, _ipcr);
-  GPUArray<Scalar4> tmp(_nneighs * m_pdata->getN(), m_exec_conf);
+  //In cuda, an array of size 0 breaks things. So even if we aren't using
+  //neighborlist we need to make it size > 0
+  GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getN()), m_exec_conf);
   _nlist_array.swap(tmp);
   _nlist_comm = IPCArrayComm<M, Scalar4>(_nlist_array, _ipcr);
   CHECK_CUDA_ERROR();
@@ -396,6 +398,9 @@ void export_TensorflowComputeGPU(pybind11::module& m)
 
 
 IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs) {
+    //Not pretty, but we have to reserve memory prior to forks and
+    //we have to fork prior to context initialization
+    //thus we need to anticipate how much memory we need without knowing how many atoms we have...
     size_t element = sizeof(Scalar);
     size_t size = 0;
     size_t cuda_size = 0;
