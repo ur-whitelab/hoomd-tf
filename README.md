@@ -339,7 +339,11 @@ To run the unit tests, first run `python tensorflow_plugin/models/test-models/bu
 python -m pytest -v --forked --numprocesses=1 ../tensorflow_plugin/test-py/test_tensorflow.py
 ```
 
-This requires `pytest` and `pytest-xdist` packages to be installed.
+This requires `pytest` and `pytest-xdist` packages to be installed. To run tests with mpi, you must run them one at a time:
+
+```bash
+mpirun -np 2 python ../tensorflow_plugin/test-py/test_tensorflow.py test_compute.test_lj_energy
+```
 
 
 ## Bluehive Install
