@@ -336,12 +336,11 @@ make -j2
 To run the unit tests, first run `python tensorflow_plugin/models/test-models/build.py` to build the graphs used in the tests. Then run
 
 ```bash
-python tensorflow_plugin/test-py/test_tensorflow.py [test_class].[test_name]
+python -m pytest -v --forked --numprocesses=1 ../tensorflow_plugin/test-py/test_tensorflow.py
 ```
 
-to run a unit test. Note that only one test can be run at a time due to the way gpu contexts/forks occur. Some of the tests also have side-effects so you may also need to rebuild your example models directory.
+This requires `pytest` and `pytest-xdist` packages to be installed.
 
-If you change C++/C code, remake. If you modify python code, copy the new version to the build directory.
 
 ## Bluehive Install
 
@@ -405,7 +404,7 @@ Put build directory on your python path:
 export PYTHONPATH="$PYTHONPATH:`pwd`"
 ```
 
-Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files.
+Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files (`tensorflow_plugin/*py` to `build/hoomd/tensorflow_plugin`)
 
 ## Running on Bluehive
 
