@@ -418,15 +418,7 @@ Because hoomd-tf requires at least two threads to run, you must ensure your blue
 interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 ```
 
-## Issues
 
-* Use GPU event handles -> Depends on TF While
-* Domain decomposition testing -> Low priority
-* Write better source doc -> Style
-* Make ipc2tensor not stateful (use resource manager) -> Low priority
-    Not sure if even correct, since hoomd will handle decomposition
-* TF while -> Next optimization, Determined to be very difficult and unclear if necessary
-* Multigpu for training via server/worker mode
 
 ### C++
 
@@ -447,3 +439,12 @@ py class ->snake
 
 ### Exploding Gradients
 There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
+
+### Error handling
+
+We must have forked without initializing hoomd context otherwise tensorflow dies (check this assumption against newer versions of TF). This means that any errors during set-up cannot have access to hoomd context and then MPI_Abort won't be correctly done and we can have bad exits on non-0 ranks. So, some better way needs to be done for this.
+
+### Neighbor Lists
+
+Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
+
