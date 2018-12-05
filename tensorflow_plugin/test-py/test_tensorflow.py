@@ -232,13 +232,6 @@ class test_compute(unittest.TestCase):
 
             tfcompute.attach(nlist, r_cut=rcut)
 
-
-            #make sure positions are offset by one (so net force matches pos)
-            last_force = np.copy(system.particles[1].net_force[:3])
-            hoomd.run(0)
-            tf_force = tfcompute.get_forces_array()[1,:3]
-            np.testing.assert_allclose(last_force, tf_force, rtol=1e-5)
-
     def test_feeddict(self):
         model_dir = '/tmp/test-feeddict-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
