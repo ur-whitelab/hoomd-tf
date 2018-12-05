@@ -348,6 +348,8 @@ mpirun -np 2 python ../tensorflow_plugin/test-py/test_tensorflow.py test_compute
 
 ## Bluehive Install
 
+MAKE SURE YOU HAVE ALREADY CLONED THE HOOMD-TF REPO TO YOUR BLUEHIVE ACCOUNT!
+
 Load the modules necessary:
 
 ```bash
