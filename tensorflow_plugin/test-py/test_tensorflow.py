@@ -255,12 +255,12 @@ class test_compute(unittest.TestCase):
         model_dir = '/tmp/test-lj-potential-model'
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
-            N = 32 * 32
+            N = 3 * 3
             NN = 128
             T = 10
             rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[32,32])
+                                           n=[3,3])
             nlist = hoomd.md.nlist.cell(check_period = 1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
@@ -278,7 +278,7 @@ class test_compute(unittest.TestCase):
         #now run with stock lj
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[32,32])
+                                           n=[3,3])
         nlist = hoomd.md.nlist.cell(check_period = 1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
