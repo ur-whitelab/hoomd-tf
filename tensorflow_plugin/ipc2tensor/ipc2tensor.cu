@@ -11,8 +11,8 @@ using namespace tensorflow;
 using GPUDevice = Eigen::GpuDevice;
 
 struct InputMem_t {
-  cudaIpcMemHandle_t mem_handle;
-  cudaIpcEventHandle_t event_handle;
+  void* mem_handle;
+  cudaEvent_t event_handle;
   cudaStream_t stream;
 };
 
@@ -24,9 +24,9 @@ void IPC2TFunctor<GPUDevice, T, cudaIPC_t<T> >::operator()(
   if (!(ipc_memory.array)) {
     // TODO: Learn TF way to handle cuda errors
     auto ipc_handle = reinterpret_cast<InputMem_t*>(input);
-    cudaIpcOpenMemHandle((void**)(&(ipc_memory.array)), ipc_handle->mem_handle,
-                         cudaIpcMemLazyEnablePeerAccess);
-    cudaIpcOpenEventHandle(&(ipc_memory.event), ipc_handle->event_handle);
+    ipc_memory.array = static_cast<T*>(ipc_handle->mem_handle);
+    std::cout << "Opening"  << std::endl;
+    std::cout << "Opened" << ipc_memory.array  << std::endl;
   }
   //cudaEventSynchronize(ipc_memory.event);
   cudaMemcpy((void*)(out), (const void*)(ipc_memory.array), size * sizeof(T),

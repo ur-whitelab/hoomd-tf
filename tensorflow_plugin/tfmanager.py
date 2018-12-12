@@ -83,7 +83,8 @@ class TFManager:
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
-        #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
+        self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
+        self.out_nodes += [tf.Print(self.positions, [self.positions], summarize=1000)]
         if self.step % self.save_period == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)

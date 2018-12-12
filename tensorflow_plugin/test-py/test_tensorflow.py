@@ -253,7 +253,7 @@ class test_compute(unittest.TestCase):
 
     def test_lj_forces(self):
         model_dir = '/tmp/test-lj-potential-model'
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = 128

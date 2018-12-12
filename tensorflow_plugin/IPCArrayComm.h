@@ -18,8 +18,8 @@ enum class IPCCommMode { GPU, CPU };
 
 #ifdef ENABLE_CUDA
 struct cudaIPC_t {
-  cudaIpcMemHandle_t mem_handle;
-  cudaIpcEventHandle_t event_handle;
+  void* mem_handle;
+  cudaEvent_t event_handle;
   cudaStream_t stream = 0;
 };
 #endif
@@ -322,17 +322,16 @@ class IPCArrayComm {
       if (_mm_page) {
         // we will open the existing mapped memory in cuda
         _ipc_handle = reinterpret_cast<cudaIPC_t*>(_mm_page);
-        cudaIpcOpenMemHandle(&_ipc_array, _ipc_handle->mem_handle,
-                             cudaIpcMemLazyEnablePeerAccess);
+        _ipc_handle->mem_handle = _ipc_array;
       } else {
         // We will create a shared block
         allocateMMPage();
         _ipc_handle = reinterpret_cast<cudaIPC_t*>(_mm_page);
         cudaMalloc((void**)&_ipc_array, getArraySize());
-        cudaIpcGetMemHandle(&_ipc_handle->mem_handle, _ipc_array);
+        _ipc_handle->mem_handle = _ipc_array;
         cudaEventCreateWithFlags(
             &_ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
-        cudaIpcGetEventHandle(&_ipc_handle->event_handle, _ipc_event);
+        _ipc_handle->event_handle = _ipc_event;
       }
       IPC_CHECK_CUDA_ERROR();
     }
@@ -357,7 +356,6 @@ class IPCArrayComm {
     if (M == IPCCommMode::GPU) {
 #ifdef ENABLE_CUDA
       if (_ipc_handle && _own_array) {
-        cudaIpcCloseMemHandle(_ipc_array);
       } else if (_ipc_array) {
         cudaFree(_ipc_array);
         cudaEventDestroy(_ipc_event);

@@ -181,7 +181,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
     assert(d_head_list);
 
     //set neighbors to zeros
-    cudaMemset(dest, 0, N * NN * sizeof(Scalar4));    
+    cudaMemset(dest, 1, N * NN * sizeof(Scalar4));
 
     // texture bind
     if (compute_capability < 350) {

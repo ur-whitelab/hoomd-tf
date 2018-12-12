@@ -309,7 +309,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
     //called just before prepareNeighbors
     _streams[0] = 0;
     for(unsigned int i = 1; i < _nstreams; i++) {
-      cudaStreamCreate(&(_streams[i]));
+      //cudaStreamCreate(&(_streams[i]));
+      _streams[i] = 0;
       CHECK_CUDA_ERROR();
     }
 
