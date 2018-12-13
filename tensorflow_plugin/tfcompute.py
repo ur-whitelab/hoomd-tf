@@ -42,8 +42,6 @@ class tfcompute(hoomd.compute._compute):
         except FileNotFoundError:
             raise RuntimeError('Unable to load model in directory {}'.format(tf_model_directory))
 
-        #need to allocate ipc reservation now so it can be forked
-        self.ipc_reservation = _tensorflow_plugin.reserve_memory(self.graph_info['N'], self.graph_info['NN'])
         self.tasklock = _tensorflow_plugin.make_tasklock()
         self.mock_mode = _mock_mode
         self.device = device
@@ -125,14 +123,14 @@ class tfcompute(hoomd.compute._compute):
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
-             self.ipc_reservation, self.tasklock)
+             self.tasklock)
             if self.device is None:
                 self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
-             self.ipc_reservation, self.tasklock)
+             self.tasklock)
             if self.device is None:
                 self.device = '/gpu:0'
 

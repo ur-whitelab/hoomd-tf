@@ -50,8 +50,6 @@
 
 enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
 
-IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs);
-
 // these functors use 'call' instead of 'operator()' to avoid
 // writing out functor.template operator()<T> (...) which is
 // necessary due to some arcane c++ rules. Normally
@@ -88,7 +86,7 @@ class TensorflowCompute : public ForceCompute {
                     std::shared_ptr<SystemDefinition> sysdef,
                     std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                     unsigned int nneighs, FORCE_MODE force_mode,
-                    unsigned int period, IPCReservation* ipc_reservation,
+                    unsigned int period,
                     IPCTaskLock* tasklock);
 
   TensorflowCompute() = delete;
@@ -138,7 +136,6 @@ class TensorflowCompute : public ForceCompute {
   FORCE_MODE _force_mode;
   unsigned int _period;
   std::string m_log_name;
-  IPCReservation* _ipcr;
   IPCTaskLock* _tasklock;
 
   IPCArrayComm<M, Scalar4> _positions_comm;
@@ -172,7 +169,7 @@ class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU> {
                        std::shared_ptr<SystemDefinition> sysdef,
                        std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                        unsigned int nneighs, FORCE_MODE force_mode,
-                       unsigned int period, IPCReservation* ipc_reservation,
+                       unsigned int period,
                        IPCTaskLock* tasklock);
 
   void setAutotunerParams(bool enable, unsigned int period) override;

@@ -23,7 +23,7 @@ template <IPCCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
     pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist, Scalar r_cut, unsigned int nneighs,
-    FORCE_MODE force_mode, unsigned int period, IPCReservation* ipc_reservation,
+    FORCE_MODE force_mode, unsigned int period,
     IPCTaskLock* tasklock)
     : ForceCompute(sysdef),
       _py_self(py_self),
@@ -32,11 +32,10 @@ TensorflowCompute<M>::TensorflowCompute(
       _nneighs(nneighs),
       _force_mode(force_mode),
       _period(period),
-      _ipcr(ipc_reservation),
       _tasklock(tasklock) {
   m_exec_conf->msg->notice(2)
-      << "Starting TensorflowCompute with IPC Memory reservation of "
-      << _ipcr->_size << " bytes" << std::endl;
+      << "Starting TensorflowCompute "
+      << std::endl;
   reallocate();
   m_exec_conf->msg->notice(2) << "completed reallocate" << std::endl;
   m_log_name = std::string("tensorflow");
@@ -62,17 +61,17 @@ void TensorflowCompute<M>::reallocate() {
   // so we'll cast away until I make a version
   // of IPCArrayComm that can't override array
   _positions_comm = IPCArrayComm<M, Scalar4>(
-      const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()), _ipcr);
-  _forces_comm = IPCArrayComm<M, Scalar4>(m_force, _ipcr);
+      const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()));
+  _forces_comm = IPCArrayComm<M, Scalar4>(m_force);
   //In cuda, an array of size 0 breaks things. So even if we aren't using
   //neighborlist we need to make it size > 0
   GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getN()), m_exec_conf);
   _nlist_array.swap(tmp);
-  _nlist_comm = IPCArrayComm<M, Scalar4>(_nlist_array, _ipcr);
+  _nlist_comm = IPCArrayComm<M, Scalar4>(_nlist_array);
   CHECK_CUDA_ERROR();
   // virial is made with maxN, not N
   _virial_comm =
-      IPCArrayComm<M, Scalar>(m_virial, _ipcr, (size_t)m_pdata->getMaxN() * 9);
+      IPCArrayComm<M, Scalar>(m_virial, (size_t)m_pdata->getMaxN() * 9);
   CHECK_CUDA_ERROR();
 
   // build functors
@@ -82,7 +81,6 @@ void TensorflowCompute<M>::reallocate() {
 
 template <IPCCommMode M>
 TensorflowCompute<M>::~TensorflowCompute() {
-  delete _ipcr;
   delete _tasklock;
 }
 
@@ -132,6 +130,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   switch (_force_mode) {
     // process results from TF
     case FORCE_MODE::tf2hoomd:
+      std::cout << "Receiving forces" << std::endl;
       _forces_comm.receiveAsync();
       zeroVirial();
       _virial_comm.receiveOp(_virial_functor);
@@ -268,7 +267,7 @@ std::vector<Scalar> TensorflowCompute<M>::getVirialArray() const {return _virial
 void export_TensorflowCompute(pybind11::module& m)
     {
     pybind11::class_<TensorflowCompute<IPCCommMode::CPU>, std::shared_ptr<TensorflowCompute<IPCCommMode::CPU> > >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int,  IPCReservation*, IPCTaskLock*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, IPCTaskLock*>())
         .def("getPositionsBuffer", &TensorflowCompute<IPCCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowCompute<IPCCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowCompute<IPCCommMode::CPU>::getForcesBuffer, pybind11::return_value_policy::reference)
@@ -285,8 +284,6 @@ void export_TensorflowCompute(pybind11::module& m)
         .value("hoomd2tf", FORCE_MODE::hoomd2tf)
         .value("ignore", FORCE_MODE::ignore)
     ;
-
-    m.def("reserve_memory", &reserve_memory);
     }
 
 // ********************************
@@ -301,8 +298,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs,
              FORCE_MODE force_mode, unsigned int period,
-             IPCReservation* ipc_reservation, IPCTaskLock* tasklock)
-     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, ipc_reservation, tasklock)
+             IPCTaskLock* tasklock)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, tasklock)
 {
 
     //want nlist on stream 0 since a nlist rebuild is
@@ -381,7 +378,7 @@ void TensorflowComputeGPU::zeroVirial() {
 void export_TensorflowComputeGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<ForceCompute>())
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, IPCReservation*, IPCTaskLock*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, IPCTaskLock*>())
         .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowComputeGPU::getForcesBuffer, pybind11::return_value_policy::reference)
@@ -396,29 +393,6 @@ void export_TensorflowComputeGPU(pybind11::module& m)
     }
 
 #endif // ENABLE_CUDA
-
-
-IPCReservation* reserve_memory(unsigned int natoms, unsigned int nneighs) {
-    //Not pretty, but we have to reserve memory prior to forks and
-    //we have to fork prior to context initialization
-    //thus we need to anticipate how much memory we need without knowing how many atoms we have...
-    size_t element = sizeof(Scalar);
-    size_t size = 0;
-    size_t cuda_size = 0;
-    #ifdef ENABLE_CUDA
-    element = sizeof(cudaIPC_t);
-    cuda_size += element; //positions
-    cuda_size += element; //forces
-    cuda_size += element; // nlist
-    cuda_size += element; //virial
-    #endif //ENABLE_CUDA
-    size += natoms * element * 4; //positions
-    size += natoms * element * 4; //forces
-    size += natoms * nneighs * element * 4; // nlist
-    size += natoms * 9 * element; //virial
-
-    return new IPCReservation(std::max(cuda_size, size));
-}
 
 template<>
 void ReceiveForcesFunctorAdd::call<IPCCommMode::CPU>(Scalar4* dest, Scalar4* src) {
