@@ -64,14 +64,14 @@ class TFManager:
         self.out_nodes = []
         self.summaries = None
 
-        with tf.device(self.device):
-            self._prepare_graph()
 
-            if graph_info['output_forces']:
-                self.log.info('This TF Graph can modify forces.')
-                self._prepare_forces()
-            else:
-                self.log.info('This TF Graph will not modify forces.')
+        self._prepare_graph()
+
+        if graph_info['output_forces']:
+            self.log.info('This TF Graph can modify forces.')
+            self._prepare_forces()
+        else:
+            self.log.info('This TF Graph will not modify forces.')
 
         for n in self.graph_info['out_nodes']:
             try:
@@ -117,19 +117,22 @@ class TFManager:
 
         self.log.info('initializing  positions ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
         self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
-        self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
-        self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
+        with tf.device(self.device):
+            self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
+            self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
         #now cast if graph dtype are different
         if self.graph_info['dtype'] != self.dtype:
-            self.positions = tf.cast(self.positions, self.graph_info['dtype'])
-            self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
+            with tf.device(self.device):
+                self.positions = tf.cast(self.positions, self.graph_info['dtype'])
+                self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
 
         input_map = {self.graph_info['nlist']: self.nlist, self.graph_info['positions'] : self.positions}
 
         if not self.graph_info['output_forces']:
             #if the graph outputs forces, add new node
             self.log.info('initializing forces ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
-            self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
+            with tf.device(self.device):
+                self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
