@@ -49,7 +49,9 @@ set_target_properties(_${COMPONENT_NAME} PROPERTIES PREFIX "" OUTPUT_NAME "_${CO
 if(APPLE)
     set_target_properties(_${COMPONENT_NAME} PROPERTIES SUFFIX ".so")
 endif(APPLE)
+if(ENABLE_CUDA)
 fix_cudart_rpath(_${COMPONENT_NAME})
+endif(ENABLE_CUDA)
 
 # install the library
 install(TARGETS _${COMPONENT_NAME}
