@@ -93,6 +93,7 @@ class IPCArrayComm {
         {
     checkDevice();
     allocate();
+    std::cerr << "Sending size" << _array_size  << "==" << _array->getNumElements() * sizeof(T) << std::endl;
   }
 
   IPCArrayComm(IPCArrayComm&& other) {
@@ -120,6 +121,7 @@ class IPCArrayComm {
   }
 
   ~IPCArrayComm() {
+    std::cerr << "About to destory one that has " << _array_size << std::endl;
     if (_own_array) delete _array;
     this->deallocate();
   }
@@ -163,7 +165,7 @@ class IPCArrayComm {
     if (M == IPCCommMode::CPU) {
       ArrayHandle<T> handle(*_array, access_location::host,
                             access_mode::overwrite);
-      memcpy(handle.data, _shared_array, sizeof(T) * _array_size);
+      memcpy(handle.data, _shared_array,  _array_size);
     } else {
 #ifdef ENABLE_CUDA
       ArrayHandle<T> handle(*_array, access_location::device,
@@ -177,9 +179,7 @@ class IPCArrayComm {
 
   void receiveAsync() {
     if (M == IPCCommMode::CPU) {
-      ArrayHandle<T> handle(*_array, access_location::host,
-                            access_mode::overwrite);
-      memcpy(handle.data, _shared_array, sizeof(T) * _array_size);
+      receive();
     } else {
 #ifdef ENABLE_CUDA
       ArrayHandle<T> handle(*_array, access_location::device,
@@ -213,7 +213,8 @@ class IPCArrayComm {
   void send() {
     if (M == IPCCommMode::CPU) {
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-      memcpy(_shared_array, handle.data, sizeof(T) * _array_size);
+      std::cerr << "Sending size" << _array_size  << "==" << _array->getNumElements()  * sizeof(T) << std::endl;
+      memcpy(_shared_array, handle.data, _array_size);
     } else {
 #ifdef ENABLE_CUDA
       ArrayHandle<T> handle(*_array, access_location::device,
@@ -272,7 +273,7 @@ class IPCArrayComm {
     if (_array_size == 0) _array_size = sizeof(T) * _array->getNumElements();
     if (M == IPCCommMode::CPU) {
       if(!_shared_array)
-        _shared_array = calloc(_array_size, sizeof(T));
+        _shared_array = calloc(_array_size / sizeof(T), sizeof(T));
     }
 #ifdef ENABLE_CUDA
   cudaEvent_t ipc_event;
@@ -302,10 +303,10 @@ class IPCArrayComm {
     }
     if (M == IPCCommMode::GPU) {
 #ifdef ENABLE_CUDA
-      if (_ipc_handle && _own_array) {
+      if (_ipc_handle) {
         cudaFree(_shared_array);
         cudaEventDestroy(_ipc_handle->event_handle);
-        free(_shared_array);
+        free(_ipc_handle);
       }
 #endif
     }

@@ -130,7 +130,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   switch (_force_mode) {
     // process results from TF
     case FORCE_MODE::tf2hoomd:
-      std::cout << "Receiving forces" << std::endl;
       _forces_comm.receiveAsync();
       zeroVirial();
       _virial_comm.receiveOp(_virial_functor);
