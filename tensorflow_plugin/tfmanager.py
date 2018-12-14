@@ -82,7 +82,7 @@ class TFManager:
     def _update(self, sess, feed_dict=None):
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-        self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
+        #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
         #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
         #self.out_nodes += [tf.Print(self.positions, [self.positions], summarize=1000)]
         if self.step % self.save_period == 0:
@@ -231,7 +231,9 @@ class TFManager:
                 while True:
                     try:
                         feed_name_dict = self.q.get()
-                    except queue.empty:
+                        if feed_name_dict is None:
+                            raise queue.Empty()
+                    except queue.Empty:
                         self.log.info('Received exit. Leaving TF Update Loop. \n')
                         self.log.info('TF Update time (excluding communication) is {}\n'.format(cumtime))
                         self._save_model(sess)

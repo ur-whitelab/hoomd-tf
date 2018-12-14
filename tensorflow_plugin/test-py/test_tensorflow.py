@@ -256,7 +256,7 @@ class test_compute(unittest.TestCase):
         with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
-            NN = 128
+            NN = 8
             T = 10
             rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),

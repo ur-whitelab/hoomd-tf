@@ -62,9 +62,9 @@ class IPCArrayComm {
 #endif
   }
 
-  IPCArrayComm(size_t array_size,
+  IPCArrayComm(void* _shared_array, size_t array_size,
                std::shared_ptr<const ExecutionConfiguration> exec_conf)
-      : _shared_array(nullptr),
+      : _shared_array(_shared_array),
         _array(nullptr),
         _array_size(array_size),
         _own_array(true)

@@ -168,6 +168,9 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         #need to terminate orphan
+        if self.feed_func is not None and not self.q.full():
+            hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
+            self.q.put(None)
         self.tfm.join(1)
 
     def _init_tf(self):

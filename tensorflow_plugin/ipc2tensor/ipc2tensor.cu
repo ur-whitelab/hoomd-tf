@@ -25,8 +25,6 @@ void IPC2TFunctor<GPUDevice, T, cudaIPC_t<T> >::operator()(
     // TODO: Learn TF way to handle cuda errors
     auto ipc_handle = reinterpret_cast<InputMem_t*>(input);
     ipc_memory.array = static_cast<T*>(ipc_handle->mem_handle);
-    std::cout << "Opening"  << std::endl;
-    std::cout << "Opened" << ipc_memory.array  << std::endl;
   }
   //cudaEventSynchronize(ipc_memory.event);
   cudaMemcpy((void*)(out), (const void*)(ipc_memory.array), size * sizeof(T),

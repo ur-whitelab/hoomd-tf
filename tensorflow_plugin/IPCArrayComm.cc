@@ -25,7 +25,7 @@ void export_IPCArrayComm(pybind11::module& m) {
   pybind11::class_<IPCArrayComm<IPCCommMode::CPU, double>,
                    std::shared_ptr<IPCArrayComm<IPCCommMode::CPU, double> > >(
       m, "IPCArrayCommCPU")
-      .def(pybind11::init<size_t,
+      .def(pybind11::init<void*, size_t,
                           std::shared_ptr<const ExecutionConfiguration> >())
       .def("getArray", &IPCArrayComm<IPCCommMode::CPU, double>::getArray,
            pybind11::return_value_policy::take_ownership)
