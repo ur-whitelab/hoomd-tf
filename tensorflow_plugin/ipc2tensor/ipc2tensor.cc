@@ -38,9 +38,7 @@ template <typename T>
 struct IPC2TFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, IPCStruct_t* ipc_memory,
                   T* out) {
-    std::cerr << "here we are segfault?..." << size;
     std::memcpy(out, ipc_memory->mem_handle, size * sizeof(T));
-    std::cerr << "...no" << std::endl;
   }
 };
 
@@ -54,7 +52,6 @@ class IpcToTensorOp : public OpKernel {
     int64 tmp;
     context->GetAttr("address", &tmp);
     _input_memory = reinterpret_cast<IPCStruct_t*>(tmp);
-    std::cout << "number of elements is " << _input_memory->num_elements << std::endl;
   }
 
   void Compute(OpKernelContext* context) override {
@@ -69,7 +66,6 @@ class IpcToTensorOp : public OpKernel {
                     "Shape specification to IpcToTensor should be vector"));
 
     // TODO: Is there a performance hit for this?
-    std::cout << "number of elements is " << _input_memory->num_elements << std::endl;
     TensorShapeUtils::MakeShape(shape.vec<Tshape>(), &tmp_shape);
     TensorShape output_shape;
     if(tmp_shape.dims() == 2)
@@ -79,8 +75,6 @@ class IpcToTensorOp : public OpKernel {
 
 
     output_shape.AppendShape(tmp_shape);
-
-    std::cout << "shape at run time is " << output_shape.dims() << " " << output_shape.dim_size(0) << " " << output_shape.dim_size(1)   << std::endl;
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, output_shape, &output_tensor));

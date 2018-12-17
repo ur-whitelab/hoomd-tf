@@ -25,7 +25,6 @@ def compute_forces(system, rcut):
                 f = -r / rd
                 forces[i, :] += f
                 forces[j, :] -= f
-                print(i, j, rd, rcut, f)
     return forces
 
 class test_ipc(unittest.TestCase):

@@ -92,7 +92,6 @@ class tfcompute(hoomd.compute._compute):
         if self.graph_info['N'] is None:
             self.graph_info['N'] = self.atom_number
 
-        print(self.rcut, r_cut)
         nlist.subscribe(self.rcut)
         r_cut = float(r_cut)
         self.r_cut = r_cut
@@ -157,7 +156,6 @@ class tfcompute(hoomd.compute._compute):
             for j in range(i,ntypes):
                 # get the r_cut value
                 r_cut_dict.set_pair(type_list[i],type_list[j],self.r_cut)
-        print('returning', r_cut_dict)
         return r_cut_dict
 
     def __del__(self):

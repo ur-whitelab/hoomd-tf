@@ -165,10 +165,10 @@ class TFManager:
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #pf = tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
         #self.out_nodes += [tf.Print(pf, [pf], summarize=1000)]
-        self.out_nodes += [tf.Print(self.forces, [self.forces, tf.shape(self.forces)], summarize=1000)]
-        neighs_rs = tf.norm(self.nlist[:,:,:3], axis=2, keepdims=True)
-        self.out_nodes += [tf.Print(neighs_rs, [neighs_rs], summarize=1000)]
-        self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
+        #self.out_nodes += [tf.Print(self.forces, [self.forces, tf.shape(self.forces)], summarize=1000)]
+        #neighs_rs = tf.norm(self.nlist[:,:,:3], axis=2, keepdims=True)
+        #self.out_nodes += [tf.Print(neighs_rs, [neighs_rs], summarize=1000)]
+        #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
 
     def _attach_tensorboard(self, sess):
 

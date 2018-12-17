@@ -16,7 +16,7 @@ void IPC2TFunctor<GPUDevice, T >::operator()(
     const GPUDevice& d, int size, IPCStruct_t* ipc_memory,T* out) {
 
   //cudaEventSynchronize(ipc_memory.event);
-  cudaMemcpy((void*)(out), (const void*)(ipc_memory->array), ipc_memory->num_elements * sizeof(T),
+  cudaMemcpy((void*)(out), (const void*)(ipc_memory->array), size * sizeof(T),
              cudaMemcpyDeviceToDevice);
 }
 

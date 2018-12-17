@@ -210,7 +210,6 @@ void TensorflowCompute<M>::prepareNeighbors() {
 
       // apply periodic boundary conditions
       dx = box.minImage(dx);
-      std::cerr << i << " " << k << " " << dx.x * dx.x + dx.y * dx.y + dx.z * dx.z << " " << _r_cut * _r_cut << std::endl;
       if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
       buffer[i * _nneighs + nnoffset[i]].x = dx.x;
       buffer[i * _nneighs + nnoffset[i]].y = dx.y;
@@ -218,10 +217,7 @@ void TensorflowCompute<M>::prepareNeighbors() {
       buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
       nnoffset[i]++;
       //TODO: Why is k so big?
-      if(k >= m_pdata->getN())
-        std::cerr << "Why is k so bigg???!!" << std::endl;
       if (m_nlist->getStorageMode() == NeighborList::half && k < m_pdata->getN()) {
-        std::cerr << nnoffset[k] <<  " HALF TIME  BOIS " << nnoffset[i] << std::endl;
         buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
         buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
         buffer[k * _nneighs + nnoffset[k]].z = -dx.z;

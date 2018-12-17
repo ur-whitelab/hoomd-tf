@@ -280,7 +280,6 @@ class IPCArrayComm {
     _ipc_handle->mem_handle = _shared_array;
     _ipc_handle->num_elements = _array_size / sizeof(T);
     _ipc_handle->element_size = sizeof(T);
-    std::cout << "Allocating with size of" <<  _ipc_handle->num_elements << std::endl;
   }
 
   void deallocate() {

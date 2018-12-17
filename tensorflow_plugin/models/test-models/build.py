@@ -12,10 +12,7 @@ def simple_potential():
         with tf.name_scope('remove-nans') as scope:
             zeros = tf.zeros_like(nlist)
             real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
-        print(real_fr.shape)
-        print(nlist.shape)
         forces = tf.reduce_sum(real_fr, axis=1, name='forces')
-        print(forces.shape)
     graph.save(force_tensor=forces, model_directory='/tmp/test-simple-potential-model')
 
     #check graph info
@@ -141,7 +138,7 @@ gradient_potential()
 simple_potential()
 benchmark_gradient_potential()
 benchmark_nonlist_graph()
-lj_graph(2**14, 64, '/tmp/benchmark-lj-potential-model')
+lj_graph(2**14, 256, '/tmp/benchmark-lj-potential-model')
 lj_graph(3 * 3, 8, '/tmp/test-lj-potential-model')
 print_graph(9, 9 - 1, '/tmp/test-print-model')
 trainable_graph(9, 9 - 1, '/tmp/test-trainable-model')

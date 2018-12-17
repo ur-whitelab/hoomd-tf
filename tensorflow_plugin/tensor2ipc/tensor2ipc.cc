@@ -25,7 +25,6 @@ REGISTER_OP("TensorToIpc")
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, IPCStruct_t* out, const T* in) {
-    std::cerr << "Copying out to forces" << size << std::endl;
     std::memcpy(out->mem_handle, in, sizeof(T) * size);
   }
 };
