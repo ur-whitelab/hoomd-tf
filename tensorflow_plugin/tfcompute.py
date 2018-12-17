@@ -79,12 +79,6 @@ class tfcompute(hoomd.compute._compute):
         if self.tfm is None and not self.mock_mode:
             raise Exception('You must use the with statement to construct and attach a tfcompute')
 
-
-        #check our parameters
-        if self.graph_info['N'] < len(hoomd.context.current.group_all):
-            hoomd.context.msg.error('Number of atoms must be equal to or greater in TF model ({}) and HOOMD system ({})\n'.format(self.graph_info['N'], len(hoomd.context.current.group_all)))
-            raise RuntimeError('Error creating TF')
-
         #I'm not sure if this is necessary following other files
         self.enabled = True
         self.log = True
@@ -95,7 +89,10 @@ class tfcompute(hoomd.compute._compute):
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
         self.atom_number = len(hoomd.context.current.group_all)
+        if self.graph_info['N'] is None:
+            self.graph_info['N'] = self.atom_number
 
+        print(self.rcut, r_cut)
         nlist.subscribe(self.rcut)
         r_cut = float(r_cut)
         self.r_cut = r_cut
@@ -160,6 +157,7 @@ class tfcompute(hoomd.compute._compute):
             for j in range(i,ntypes):
                 # get the r_cut value
                 r_cut_dict.set_pair(type_list[i],type_list[j],self.r_cut)
+        print('returning', r_cut_dict)
         return r_cut_dict
 
     def __del__(self):

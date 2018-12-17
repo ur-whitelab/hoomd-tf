@@ -7,15 +7,18 @@ class graph_builder:
     def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):
         '''output_forces -> should the graph output forces'''
         #clear any previous graphs
+        atom_number = None
         tf.reset_default_graph()
         self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
-        self.nlist = tf.zeros ([atom_number, nneighbor_cutoff, 4], name='nlist')
+        x = tf.placeholder(tf.float32, shape=[atom_number, 4])
+        y = tf.placeholder(tf.float32, shape=[atom_number, nneighbor_cutoff, 4])
+        self.nlist = tf.zeros_like (y, name='nlist')
         self.virial = None
-        self.positions = tf.zeros ([atom_number, 4], name='positions')
+        self.positions = tf.zeros_like(x, name='positions')
         if not output_forces:
-            self.forces = tf.zeros([atom_number, 4], name='forces')
+            self.forces = tf.zeros_like(x, name='forces')
         self.output_forces = output_forces
 
     def compute_forces(self, energy, name='forces', virial=None):
@@ -61,14 +64,12 @@ class graph_builder:
         if len(energy.shape) > 1:
             #reduce energy to be correct shape
             print('WARNING: Your energy is multidimensional per particle. Hopefully that is intentional')
-            energy = tf.reshape(tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))), [forces.shape[0], 1])
+            energy = tf.reshape(tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))), [tf.shape(forces)[0], 1])
             forces = tf.concat([forces[:,:3], energy], -1)
         elif len(energy.shape) == 1 and energy.shape[0] == 1:
-            forces = tf.concat([forces[:,:3], tf.tile(energy, forces.shape[0])], -1)
-        elif energy.shape[0] == forces.shape[0]:
-            forces = tf.concat([forces[:,:3], tf.reshape(energy, [forces.shape[0], 1])], -1)
+            forces = tf.concat([forces[:,:3], tf.tile(energy, tf.shape(forces)[0])], -1)
         else:
-            raise ValueError('energy must either be scalar or have first dimension of atom_number')
+            forces = tf.concat([forces[:,:3], tf.reshape(energy, [tf.shape(forces)[0], 1])], -1)
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
@@ -105,7 +106,8 @@ class graph_builder:
         if self.output_forces:
             if force_tensor.shape[0] != self.atom_number:
                 raise ValueError('Dimension of force_tensor should be same as atom number')
-
+            if len(force_tensor.shape) != 2:
+                raise ValueError('force_tensor should be N x 3 or N x 4. You gave a ' + ','.join([str(x) for x in force_tensor.shape]))
             if force_tensor.shape[1] == 3:
                 #add w information if it was removed
                 with tf.name_scope('add-ws'):

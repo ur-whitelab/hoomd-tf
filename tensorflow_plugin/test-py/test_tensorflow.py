@@ -25,6 +25,7 @@ def compute_forces(system, rcut):
                 f = -r / rd
                 forces[i, :] += f
                 forces[j, :] -= f
+                print(i, j, rd, rcut, f)
     return forces
 
 class test_ipc(unittest.TestCase):
@@ -88,6 +89,7 @@ class test_compute(unittest.TestCase):
             for i in range(3):
                 py_forces = compute_forces(system, rcut)
                 for j in range(N):
+                    print(j, system.particles[j].net_force, py_forces[j, :])
                     np.testing.assert_allclose(system.particles[j].net_force, py_forces[j, :], atol=1e-5)
                 hoomd.run(100)
 

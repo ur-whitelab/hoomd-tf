@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include "IPCStruct.h"
 
 // I do not use specialization
 // to treat the CommMode because you cannot do partial specialization of a
@@ -15,14 +16,6 @@
 // as if (1 == 0) and if(1 == 1) so they will be optimized.
 
 enum class IPCCommMode { GPU, CPU };
-
-#ifdef ENABLE_CUDA
-struct cudaIPC_t {
-  void* mem_handle;
-  cudaEvent_t event_handle;
-  cudaStream_t stream = 0;
-};
-#endif
 
 // need this without access to context
 #ifdef ENABLE_CUDA
@@ -52,19 +45,18 @@ class IPCArrayComm {
  public:
   IPCArrayComm()
       : _shared_array(nullptr),
+        _ipc_handle(nullptr),
         _array(nullptr),
         _array_size(0),
         _own_array(false)
         {
     checkDevice();
-#ifdef ENABLE_CUDA
-    _ipc_handle = nullptr;
-#endif
   }
 
   IPCArrayComm(void* _shared_array, size_t array_size,
                std::shared_ptr<const ExecutionConfiguration> exec_conf)
       : _shared_array(_shared_array),
+        _ipc_handle(nullptr),
         _array(nullptr),
         _array_size(array_size),
         _own_array(true)
@@ -77,6 +69,7 @@ class IPCArrayComm {
   IPCArrayComm(GPUArray<T>& gpu_array,
                size_t num_elements)
       : _shared_array(nullptr),
+        _ipc_handle(nullptr),
        _array(&gpu_array),
         _array_size(0),
         _own_array(false) {
@@ -87,13 +80,13 @@ class IPCArrayComm {
 
   IPCArrayComm(GPUArray<T>& gpu_array)
       : _shared_array(nullptr),
+        _ipc_handle(nullptr),
        _array(&gpu_array),
         _array_size(0),
         _own_array(false)
         {
     checkDevice();
     allocate();
-    std::cerr << "Sending size" << _array_size  << "==" << _array->getNumElements() * sizeof(T) << std::endl;
   }
 
   IPCArrayComm(IPCArrayComm&& other) {
@@ -111,17 +104,13 @@ class IPCArrayComm {
     other._own_array = false;
     _shared_array = other._shared_array;
     other._shared_array = nullptr;
-
-#ifdef ENABLE_CUDA
     _ipc_handle = other._ipc_handle;
     other._ipc_handle = nullptr;
-#endif
 
     return *this;
   }
 
   ~IPCArrayComm() {
-    std::cerr << "About to destory one that has " << _array_size << std::endl;
     if (_own_array) delete _array;
     this->deallocate();
   }
@@ -213,7 +202,6 @@ class IPCArrayComm {
   void send() {
     if (M == IPCCommMode::CPU) {
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-      std::cerr << "Sending size" << _array_size  << "==" << _array->getNumElements()  * sizeof(T) << std::endl;
       memcpy(_shared_array, handle.data, _array_size);
     } else {
 #ifdef ENABLE_CUDA
@@ -246,12 +234,7 @@ class IPCArrayComm {
   }
 
   int64_t getAddress() const {
-    if(M == IPCCommMode::CPU)
-      return reinterpret_cast<int64_t>(_shared_array);
-    #ifdef ENABLE_CUDA
-    else if(M == IPCCommMode::GPU)
       return reinterpret_cast<int64_t>(_ipc_handle);
-    #endif
   }
 
 #ifdef ENABLE_CUDA
@@ -270,6 +253,7 @@ class IPCArrayComm {
   }
 
   void allocate() {
+    _ipc_handle = static_cast<IPCStruct_t*> (malloc(sizeof(IPCStruct_t)));
     if (_array_size == 0) _array_size = sizeof(T) * _array->getNumElements();
     if (M == IPCCommMode::CPU) {
       if(!_shared_array)
@@ -280,10 +264,8 @@ class IPCArrayComm {
     if (M == IPCCommMode::GPU) {
       // flush errors
       IPC_CHECK_CUDA_ERROR();
-      _ipc_handle = static_cast<cudaIPC_t*> (malloc(sizeof(cudaIPC_t)));
       if (_shared_array) {
         // we will open the existing mapped memory in cuda
-        _ipc_handle->mem_handle = _shared_array;
       } else {
         // We will create a shared block
         cudaMalloc((void**)&_shared_array, _array_size);
@@ -295,6 +277,10 @@ class IPCArrayComm {
       IPC_CHECK_CUDA_ERROR();
     }
 #endif
+    _ipc_handle->mem_handle = _shared_array;
+    _ipc_handle->num_elements = _array_size / sizeof(T);
+    _ipc_handle->element_size = sizeof(T);
+    std::cout << "Allocating with size of" <<  _ipc_handle->num_elements << std::endl;
   }
 
   void deallocate() {
@@ -306,21 +292,20 @@ class IPCArrayComm {
       if (_ipc_handle) {
         cudaFree(_shared_array);
         cudaEventDestroy(_ipc_handle->event_handle);
-        free(_ipc_handle);
       }
 #endif
     }
+    if(_ipc_handle)
+      free(_ipc_handle);
   }
 
   void* _shared_array;
 
  private:
+  IPCStruct_t* _ipc_handle;
   GPUArray<T>* _array;
   size_t _array_size;
   bool _own_array;
-#ifdef ENABLE_CUDA
-  cudaIPC_t* _ipc_handle;
-#endif
 };
 
 void export_IPCArrayComm(pybind11::module& m);

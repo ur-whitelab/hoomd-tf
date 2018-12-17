@@ -81,10 +81,6 @@ class TFManager:
 
     def _update(self, sess, feed_dict=None):
 
-        #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-        #self.out_nodes += [tf.Print(self.forces, [self.forces], summarize=1000)]
-        #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
-        #self.out_nodes += [tf.Print(self.positions, [self.positions], summarize=1000)]
         if self.step % self.save_period == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
@@ -115,11 +111,11 @@ class TFManager:
         ipc_to_tensor_module = load_op_library('ipc2tensor')
         ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
 
-        self.log.info('initializing  positions ipc_to_tensor at address {:x} with size {} x 4'.format(self.positions_buffer, self.N))
-        self.log.info('initializing nlist ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
         with tf.device(self.device):
-            self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[self.N, 4], T=self.dtype, name='positions-input')
-            self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.N, self.nneighs, 4], T=self.dtype, name='nlist-input')
+            self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[4], T=self.dtype, name='positions-input')
+            self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.nneighs, 4], T=self.dtype, name='nlist-input')
+            self.log.info('initialized positions ipc_to_tensor at address {:x} with shape {} on {}'.format(self.positions_buffer, self.positions.shape, self.device))
+            self.log.info('initialized nlist ipc_to_tensor at address {:x} with shape {} on {}'.format(self.nlist_buffer, self.nlist.shape, self.device))
         #now cast if graph dtype are different
         if self.graph_info['dtype'] != self.dtype:
             with tf.device(self.device):
@@ -132,7 +128,7 @@ class TFManager:
             #if the graph outputs forces, add new node
             self.log.info('initializing forces ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
             with tf.device(self.device):
-                self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[self.N, 4], T=self.dtype, name='forces-input')
+                self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[4], T=self.dtype, name='forces-input')
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
@@ -159,12 +155,20 @@ class TFManager:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
         tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
-        self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer, maxsize=self.N * 4))
+        self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer))
         self.log.info('initializing force tensor_to_ipc: {:x} to {:x}'.format(self.forces_buffer, self.forces_buffer + self.N * 4))
         if self.graph_info['virial'] is not None:
             #virial is Nx3x3
-            self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer, maxsize=self.N * 9))
+            self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer))
             self.log.info('initializing virial tensor_to_ipc: {:x} to {:x}'.format(self.virial_buffer, self.virial_buffer + self.N * 9))
+
+        #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
+        #pf = tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
+        #self.out_nodes += [tf.Print(pf, [pf], summarize=1000)]
+        self.out_nodes += [tf.Print(self.forces, [self.forces, tf.shape(self.forces)], summarize=1000)]
+        neighs_rs = tf.norm(self.nlist[:,:,:3], axis=2, keepdims=True)
+        self.out_nodes += [tf.Print(neighs_rs, [neighs_rs], summarize=1000)]
+        self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
 
     def _attach_tensorboard(self, sess):
 

@@ -10,9 +10,12 @@ def simple_potential():
         #no need to use netwon's law because nlist should be double counted
         fr = tf.multiply(-1.0, tf.multiply(tf.reciprocal(neighs_rs), nlist), name='nan-pairwise-forces')
         with tf.name_scope('remove-nans') as scope:
-            zeros = tf.zeros(tf.shape(nlist))
+            zeros = tf.zeros_like(nlist)
             real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
+        print(real_fr.shape)
+        print(nlist.shape)
         forces = tf.reduce_sum(real_fr, axis=1, name='forces')
+        print(forces.shape)
     graph.save(force_tensor=forces, model_directory='/tmp/test-simple-potential-model')
 
     #check graph info
@@ -36,7 +39,7 @@ def gradient_potential():
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
-        energy = 0.5 * graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
+        energy = 0.5 * graph.safe_div(numerator=tf.ones_like(neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
@@ -44,7 +47,7 @@ def noforce_graph():
     graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
-    energy = graph.safe_div(numerator=tf.ones(neighs_rs.shape, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
+    energy = graph.safe_div(numerator=tf.ones_like(neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     pos_norm = tf.norm(graph.positions, axis=1)
     graph.save('/tmp/test-noforce-model', out_nodes=[energy, pos_norm])
 
@@ -89,7 +92,7 @@ def print_graph(N, NN, name):
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    prints = tf.print(energy, [energy], summarize=1000)
+    prints = tf.Print(energy, [energy], summarize=1000)
     graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
 
 def trainable_graph(N, NN, name):

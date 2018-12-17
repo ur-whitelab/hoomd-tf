@@ -195,9 +195,11 @@ void TensorflowCompute<M>::prepareNeighbors() {
     // loop over all of the neighbors of this particle
     const unsigned int size = (unsigned int)h_n_neigh.data[i];
     unsigned int j = 0;
+
     if (_nneighs < size)
       m_exec_conf->msg->error() << "Overflow in nlist! Only " << _nneighs << " space but there are " << size << " neighbors." << std::endl;
-    for (; j < std::min(_nneighs, size); j++) {
+    for (; j < size; j++) {
+
       // access the index of this neighbor
       unsigned int k = h_nlist.data[head_i + j];
 
@@ -208,14 +210,18 @@ void TensorflowCompute<M>::prepareNeighbors() {
 
       // apply periodic boundary conditions
       dx = box.minImage(dx);
+      std::cerr << i << " " << k << " " << dx.x * dx.x + dx.y * dx.y + dx.z * dx.z << " " << _r_cut * _r_cut << std::endl;
       if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
       buffer[i * _nneighs + nnoffset[i]].x = dx.x;
       buffer[i * _nneighs + nnoffset[i]].y = dx.y;
       buffer[i * _nneighs + nnoffset[i]].z = dx.z;
       buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
       nnoffset[i]++;
-
-      if (m_nlist->getStorageMode() == NeighborList::half) {
+      //TODO: Why is k so big?
+      if(k >= m_pdata->getN())
+        std::cerr << "Why is k so bigg???!!" << std::endl;
+      if (m_nlist->getStorageMode() == NeighborList::half && k < m_pdata->getN()) {
+        std::cerr << nnoffset[k] <<  " HALF TIME  BOIS " << nnoffset[i] << std::endl;
         buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
         buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
         buffer[k * _nneighs + nnoffset[k]].z = -dx.z;
