@@ -11,13 +11,11 @@ class graph_builder:
         tf.reset_default_graph()
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
-        x = tf.placeholder(tf.float32, shape=[atom_number, 4])
-        y = tf.placeholder(tf.float32, shape=[atom_number, nneighbor_cutoff, 4])
-        self.nlist = tf.zeros_like (y, name='nlist')
+        self.nlist = tf.placeholder (tf.float32, shape=[atom_number, nneighbor_cutoff, 4], name='nlist-input')
         self.virial = None
-        self.positions = tf.zeros_like(x, name='positions')
+        self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4], name='positions-input')
         if not output_forces:
-            self.forces = tf.zeros_like(x, name='forces')
+            self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.output_forces = output_forces
 
     def compute_forces(self, energy, name='forces', virial=None):
