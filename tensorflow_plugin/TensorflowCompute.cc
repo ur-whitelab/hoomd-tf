@@ -309,8 +309,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
     //called just before prepareNeighbors
     _streams[0] = 0;
     for(unsigned int i = 1; i < _nstreams; i++) {
-      //cudaStreamCreate(&(_streams[i]));
-      _streams[i] = 0;
+      cudaStreamCreate(&(_streams[i]));
+      //_streams[i] = 0;
       CHECK_CUDA_ERROR();
     }
 
@@ -327,6 +327,7 @@ void TensorflowComputeGPU::reallocate()  {
   _nlist_comm.setCudaStream(_streams[0]);
   _virial_comm.setCudaStream(_streams[1]);
   _forces_comm.setCudaStream(_streams[2]);
+  _positions_comm.setCudaStream(_streams[3]);
 
 }
 

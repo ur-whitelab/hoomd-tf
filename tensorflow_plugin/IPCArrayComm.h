@@ -280,6 +280,7 @@ class IPCArrayComm {
     _ipc_handle->mem_handle = _shared_array;
     _ipc_handle->num_elements = _array_size / sizeof(T);
     _ipc_handle->element_size = sizeof(T);
+    _ipc_handle->stream = 0;
   }
 
   void deallocate() {
