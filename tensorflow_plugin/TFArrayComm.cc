@@ -5,9 +5,9 @@
 
 #ifdef ENABLE_CUDA
 
-using namespace hoomd_tf;
+namespace hoomd_tf{
 
-void hoomd_tf::tf_check_cuda_error(cudaError_t err, const char* file,
+void tf_check_cuda_error(cudaError_t err, const char* file,
                           unsigned int line) {
   // if there was an error
   if (err != cudaSuccess) {
@@ -24,7 +24,7 @@ void hoomd_tf::tf_check_cuda_error(cudaError_t err, const char* file,
 
 void* int2ptr(int64_t address) { return reinterpret_cast<void*>(address); }
 
-void hoomd_tf::export_TFArrayComm(pybind11::module& m) {
+void export_TFArrayComm(pybind11::module& m) {
   pybind11::class_<TFArrayComm<TFCommMode::CPU, double>,
                    std::shared_ptr<TFArrayComm<TFCommMode::CPU, double> > >(
       m, "TFArrayCommCPU")
@@ -36,4 +36,5 @@ void hoomd_tf::export_TFArrayComm(pybind11::module& m) {
       .def("receive", &TFArrayComm<TFCommMode::CPU, double>::receive);
 
   m.def("int2ptr", &int2ptr);
+}
 }
