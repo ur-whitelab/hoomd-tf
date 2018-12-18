@@ -16,7 +16,7 @@ from hoomd.tensorflow_plugin import graph_builder
 graph = graph_builder(NN, output_forces)
 ```
 
-where `N` is the number of particles in the simulation, `NN` is the maximum number of nearest neighbors to consider, and `output_forces` indicates if the graph will output forces to use in the simulation. After building the `graph`, it will have three tensors as attributes to use in constructing the tensorflow graph: `nlist`, `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor containing the nearest neighbors. An entry of all zeros indicates that less than `NN` nearest neighbors where present for a particular particle. The 4 right-most dimensions are `x,y,z` and `w`, which is the particle type. Particle type is an integer starting at 0. Note that the `x,y,z` values are a vector originating at the particle and ending at its neighbor. `positions` and `forces` are `N` x 4 tensors. `forces` *only* is available if the graph does not output forces via `output_forces=False`.
+where `NN` is the maximum number of nearest neighbors to consider, and `output_forces` indicates if the graph will output forces to use in the simulation. After building the `graph`, it will have three tensors as attributes to use in constructing the tensorflow graph: `nlist`, `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor containing the nearest neighbors. An entry of all zeros indicates that less than `NN` nearest neighbors where present for a particular particle. The 4 right-most dimensions are `x,y,z` and `w`, which is the particle type. Particle type is an integer starting at 0. Note that the `x,y,z` values are a vector originating at the particle and ending at its neighbor. `positions` and `forces` are `N` x 4 tensors. `forces` *only* is available if the graph does not output forces via `output_forces=False`.
 
 ### Computing Forces
 
@@ -440,11 +440,11 @@ py class ->snake
 ## Known Issues
 
 ### Exploding Gradients
-There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
+There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
 
 ### Error handling
 
-We must have forked without initializing hoomd context otherwise tensorflow dies (check this assumption against newer versions of TF). This means that any errors during set-up cannot have access to hoomd context and then MPI_Abort won't be correctly done and we can have bad exits on non-0 ranks. So, some better way needs to be done for this.
+Now that forking is not done, we should revert to using the hoomd error reporting mechanism
 
 ### Neighbor Lists
 
@@ -452,5 +452,4 @@ Using a max-size neighbor list is non-ideal, especially in CG simulations where 
 
 ### Misc
 
-1. Remove the N dependence from graphbuilder.py and examples
-2. Remove misnomer "IPC" from code now that we no longer do it
+1. Remove misnomer "IPC" from code now that we no longer do it
