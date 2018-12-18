@@ -107,14 +107,14 @@ class TFManager:
             self.tb_writer.flush()
 
     def _prepare_graph(self):
-        ipc_to_tensor_module = load_op_library('ipc2tensor')
-        ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
+        hoomd_to_tf_module = load_op_library('hoomd2tf')
+        hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
         with tf.device(self.device):
-            self.positions = ipc_to_tensor(address=self.positions_buffer, shape=[4], T=self.dtype, name='positions-input')
-            self.nlist = ipc_to_tensor(address=self.nlist_buffer, shape=[self.nneighs, 4], T=self.dtype, name='nlist-input')
-            self.log.info('initialized positions ipc_to_tensor at address {:x} with shape {} on {}'.format(self.positions_buffer, self.positions.shape, self.device))
-            self.log.info('initialized nlist ipc_to_tensor at address {:x} with shape {} on {}'.format(self.nlist_buffer, self.nlist.shape, self.device))
+            self.positions = hoomd_to_tf(address=self.positions_buffer, shape=[4], T=self.dtype, name='positions-input')
+            self.nlist = hoomd_to_tf(address=self.nlist_buffer, shape=[self.nneighs, 4], T=self.dtype, name='nlist-input')
+            self.log.info('initialized positions hoomd_to_tf at address {:x} with shape {} on {}'.format(self.positions_buffer, self.positions.shape, self.device))
+            self.log.info('initialized nlist hoomd_to_tf at address {:x} with shape {} on {}'.format(self.nlist_buffer, self.nlist.shape, self.device))
         #now cast if graph dtype are different
         if self.graph_info['dtype'] != self.dtype:
             with tf.device(self.device):
@@ -126,8 +126,8 @@ class TFManager:
         if not self.graph_info['output_forces']:
             #if the graph outputs forces, add new node
             with tf.device(self.device):
-                self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[4], T=self.dtype, name='forces-input')
-                self.log.info('initialized forces ipc_to_tensor at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
+                self.forces = hoomd_to_tf(address=self.forces_buffer, shape=[4], T=self.dtype, name='forces-input')
+                self.log.info('initialized forces hoomd_to_tf at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
@@ -152,16 +152,16 @@ class TFManager:
                 self.log.warning('No virial computed in graph. Pressure may be inaccurate!')
         except ValueError:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
-        tensor_to_ipc_module = load_op_library('tensor2ipc')
-        tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
+        tf_to_hoomd_module = load_op_library('tf2hoomd')
+        tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         with tf.device(self.device):
-            self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer))
-            self.log.info('initialized forces tensor_to_ipc at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
+            self.out_nodes.append(tf_to_hoomd(self.forces, address=self.forces_buffer))
+            self.log.info('initialized forces tf_to_hoomd at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
         if self.graph_info['virial'] is not None:
             #virial is Nx3x3
             with tf.device(self.device):
-                self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer))
-                self.log.info('initialized virial tensor_to_ipc at address {:x} with shape {} on {}'.format(self.virial_buffer, self.virial.shape, self.device))
+                self.out_nodes.append(tf_to_hoomd(self.virial, address=self.virial_buffer))
+                self.log.info('initialized virial tf_to_hoomd at address {:x} with shape {} on {}'.format(self.virial_buffer, self.virial.shape, self.device))
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #pf = tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')

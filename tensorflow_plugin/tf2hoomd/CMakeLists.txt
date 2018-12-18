@@ -1,9 +1,9 @@
-set(COMPONENT_NAME tensor2ipc_op)
+set(COMPONENT_NAME tf2hoomd_op)
 set(_${COMPONENT_NAME}_sources
-    tensor2ipc.cc
+    tf2hoomd.cc
     )
 set(_${COMPONENT_NAME}_cu_sources
-    tensor2ipc.cu
+    tf2hoomd.cu
     )
 
 

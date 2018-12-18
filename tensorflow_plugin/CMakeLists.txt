@@ -9,8 +9,8 @@ set(COMPONENT_NAME tensorflow_plugin)
 set(_${COMPONENT_NAME}_sources
     module.cc
     TensorflowCompute.cc
-    IPCArrayComm.cc
-    IPCTaskLock.cc
+    TFArrayComm.cc
+    TaskLock.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources
@@ -61,8 +61,8 @@ install(TARGETS _${COMPONENT_NAME}
 ##############################
 # The Tensorflow
 
-add_subdirectory(ipc2tensor)
-add_subdirectory(tensor2ipc)
+add_subdirectory(hoomd2tf)
+add_subdirectory(tf2hoomd)
 
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package
@@ -80,7 +80,7 @@ set(files
     __init__.py
     tfcompute.py
     graphbuilder.py
-    ipcarraycomm.py
+    tfarraycomm.py
     tfmanager.py
     )
 

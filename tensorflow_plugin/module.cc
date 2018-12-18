@@ -3,10 +3,12 @@
 
 // Include the defined classes that are to be exported to python
 #include "TensorflowCompute.h"
-#include "IPCArrayComm.h"
-#include "IPCTaskLock.h"
+#include "TFArrayComm.h"
+#include "TaskLock.h"
 
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
+
+using namespace hoomd_tf;
 
 // specify the python module. Note that the name must expliclty match the PROJECT() name provided in CMakeLists
 // (with an underscore in front)
@@ -19,9 +21,9 @@ PYBIND11_PLUGIN(_tensorflow_plugin)
     export_TensorflowComputeGPU(m);
     #endif
 
-    export_IPCArrayComm(m);
+    export_TFArrayComm(m);
 
-    export_IPCTaskLock(m);
+    export_TaskLock(m);
 
     return m.ptr();
     }

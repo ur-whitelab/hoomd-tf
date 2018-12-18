@@ -3,12 +3,12 @@ import numpy as np
 from ipc_tester import IpcTester
 
 ipct = IpcTester(32)
-ipc_to_tensor_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/ipc2tensor/lib_ipc2tensor_op.so')
-ipc_to_tensor = ipc_to_tensor_module.ipc_to_tensor
-tensor_to_ipc_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tensor2ipc/lib_tensor2ipc_op.so')
-tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
+hoomd_to_tf_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/hoomd2tf/lib_hoomd2tf_op.so')
+hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
+tf_to_hoomd_module = tf.load_op_library('/srv/hoomd-blue/build/hoomd/tensorflow_plugin/tf2hoomd/lib_tf2hoomd_op.so')
+tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
 
-graph_input = ipc_to_tensor(address=ipct.get_input_buffer(), size=32, T=np.float32)
+graph_input = hoomd_to_tf(address=ipct.get_input_buffer(), size=32, T=np.float32)
 
 print('prior', ipct.get_output_array())
 with tf.Session() as sess:
@@ -19,7 +19,7 @@ with tf.Session() as sess:
 
   print([n.name for n in tf.get_default_graph().as_graph_def().node])
   out = tf.get_default_graph().get_tensor_by_name('output:0')
-  graph_output = tensor_to_ipc(out, address=ipct.get_output_buffer(), size=32)
+  graph_output = tf_to_hoomd(out, address=ipct.get_output_buffer(), size=32)
 
   #print(ipct.get_input_array())
   print('about to print out')

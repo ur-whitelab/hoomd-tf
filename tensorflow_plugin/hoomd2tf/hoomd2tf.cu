@@ -2,7 +2,7 @@
 #define EIGEN_USE_GPU
 
 #include <iostream>
-#include "ipc2tensor.h"
+#include "hoomd2tf.h"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -12,16 +12,16 @@ using GPUDevice = Eigen::GpuDevice;
 
 // GPU specialization of actual computation.
 template <typename T>
-void IPC2TFunctor<GPUDevice, T >::operator()(
-    const GPUDevice& d, int size, IPCStruct_t* ipc_memory,T* out) {
+void HOOMD2TFFunctor<GPUDevice, T >::operator()(
+    const GPUDevice& d, int size, CommStruct_t* in_memory,T* out) {
 
-  //cudaEventSynchronize(ipc_memory.event);
-  cudaMemcpy((void*)(out), (const void*)(ipc_memory->mem_handle), size * sizeof(T),
+  //cudaEventSynchronize(in_memory.event);
+  cudaMemcpy((void*)(out), (const void*)(in_memory->mem_handle), size * sizeof(T),
              cudaMemcpyDeviceToDevice);
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.
-template struct IPC2TFunctor<GPUDevice, float> ;
-template struct IPC2TFunctor<GPUDevice, double> ;
+template struct HOOMD2TFFunctor<GPUDevice, float> ;
+template struct HOOMD2TFFunctor<GPUDevice, double> ;
 
 #endif  // GOOGLE_CUDA

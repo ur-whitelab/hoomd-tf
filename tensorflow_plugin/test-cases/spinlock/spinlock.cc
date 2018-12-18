@@ -1,14 +1,16 @@
-#include "../../IPCTaskLock.h"
+#include "../../TaskLock.h"
 #include <sys/mman.h>
 #include <stdint.h>
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 
+using namespace hoomd_tf;
+
 void export_Spinlock(pybind11::module& m) {
-    pybind11::class_<IPCTaskLock>(m, "TaskLock")
+    pybind11::class_<TaskLock>(m, "TaskLock")
     .def(pybind11::init())
-    .def("start", &IPCTaskLock::start)
-    .def("end", &IPCTaskLock::end)
-    .def("await", &IPCTaskLock::await);
+    .def("start", &TaskLock::start)
+    .def("end", &TaskLock::end)
+    .def("await", &TaskLock::await);
 }
 
 

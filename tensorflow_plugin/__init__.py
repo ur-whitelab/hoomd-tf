@@ -11,4 +11,4 @@
 
 from .tfcompute import tfcompute
 from .graphbuilder import graph_builder
-from .ipcarraycomm import ipc_array_comm
+from .tfarraycomm import tf_array_comm

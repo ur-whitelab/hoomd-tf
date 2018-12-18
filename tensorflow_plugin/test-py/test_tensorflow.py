@@ -27,21 +27,21 @@ def compute_forces(system, rcut):
                 forces[j, :] -= f
     return forces
 
-class test_ipc(unittest.TestCase):
-    def test_ipc_array_comm(self):
+class test_comm(unittest.TestCase):
+    def test_array_comm(self):
         hoomd.context.initialize('--mode=cpu')
         shared = np.zeros(10)
-        ipc = hoomd.tensorflow_plugin.ipc_array_comm(shared,  hoomd.context.exec_conf)
+        array = hoomd.tensorflow_plugin.tf_array_comm(shared,  hoomd.context.exec_conf)
 
-        np.testing.assert_allclose(shared, ipc.getArray())
+        np.testing.assert_allclose(shared, array.getArray())
 
         shared[4] = 10.0
-        ipc.receive()
-        np.testing.assert_allclose(shared, ipc.getArray())
+        array.receive()
+        np.testing.assert_allclose(shared, array.getArray())
 
         ref = shared[:]
         shared[:] = -1
-        ipc.send()
+        array.send()
         np.testing.assert_allclose(shared, ref)
 
 class test_access(unittest.TestCase):

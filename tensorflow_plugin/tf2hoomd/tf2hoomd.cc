@@ -1,4 +1,4 @@
-#include "tensor2ipc.h"
+#include "tf2hoomd.h"
 #include <sys/mman.h>
 #include <typeinfo>
 #include "tensorflow/core/framework/op_kernel.h"
@@ -12,7 +12,7 @@ using namespace tensorflow;
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
 
-REGISTER_OP("TensorToIpc")
+REGISTER_OP("TfToHoomd")
     .Input("input: T")
     .Attr("T: {float, double}")
     .Attr("address: int")
@@ -24,7 +24,7 @@ REGISTER_OP("TensorToIpc")
 // CPU specialization of actual computation.
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, IPCStruct_t* out, const T* in) {
+  void operator()(const CPUDevice& d, int size, CommStruct_t* out, const T* in) {
     std::memcpy(out->mem_handle, in, sizeof(T) * size);
   }
 };
@@ -32,15 +32,15 @@ struct TF2IPCFunctor<CPUDevice, T> {
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
 template <typename Device, typename T>
-class TensorToIpcOp : public OpKernel {
+class TfToHoomdOp : public OpKernel {
  public:
-  explicit TensorToIpcOp(OpKernelConstruction* c)
+  explicit TfToHoomdOp(OpKernelConstruction* c)
       : OpKernel(c), _output_memory(nullptr) {
 
     // get memory address
     int64 tmp;
     c->GetAttr("address", &tmp);
-    _output_memory = reinterpret_cast<IPCStruct_t*>(tmp);
+    _output_memory = reinterpret_cast<CommStruct_t*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -58,14 +58,14 @@ class TensorToIpcOp : public OpKernel {
 
  private:
   int _input_size;
-  IPCStruct_t* _output_memory;
+  CommStruct_t* _output_memory;
 };
 
 // Register the CPU kernels.
 #define REGISTER_CPU(T)                                              \
   REGISTER_KERNEL_BUILDER(                                           \
-      Name("TensorToIpc").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      TensorToIpcOp<CPUDevice, T>);
+      Name("TfToHoomd").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      TfToHoomdOp<CPUDevice, T>);
 REGISTER_CPU(float);
 REGISTER_CPU(double);
 
@@ -73,8 +73,8 @@ REGISTER_CPU(double);
 #ifdef GOOGLE_CUDA
 #define REGISTER_GPU(T)                                              \
   REGISTER_KERNEL_BUILDER(                                           \
-      Name("TensorToIpc").Device(DEVICE_GPU).TypeConstraint<T>("T"), \
-      TensorToIpcOp<GPUDevice, T>);
+      Name("TfToHoomd").Device(DEVICE_GPU).TypeConstraint<T>("T"), \
+      TfToHoomdOp<GPUDevice, T>);
 REGISTER_GPU(float);
 REGISTER_GPU(double);
 #endif  // GOOGLE_CUDA

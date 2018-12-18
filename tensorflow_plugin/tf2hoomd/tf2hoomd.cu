@@ -2,7 +2,7 @@
 #define EIGEN_USE_GPU
 
 #include <iostream>
-#include "tensor2ipc.h"
+#include "tf2hoomd.h"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -14,7 +14,7 @@ using GPUDevice = Eigen::GpuDevice;
 // TODO Add cuda error checks here
 template <typename T>
 void TF2IPCFunctor<GPUDevice, T>::operator()(const GPUDevice& d, int size,
-    IPCStruct_t* handle, const T* in) {
+    CommStruct_t* handle, const T* in) {
   cudaMemcpy(handle->mem_handle, (const void*)(in), size * sizeof(T),
              cudaMemcpyDeviceToDevice);
 }

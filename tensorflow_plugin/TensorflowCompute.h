@@ -23,8 +23,8 @@
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
-#include "IPCArrayComm.h"
-#include "IPCTaskLock.h"
+#include "TFArrayComm.h"
+#include "TaskLock.h"
 #include "TensorflowCompute.h"
 
 // pybind11 is used to create the python bindings to the C++ object,
@@ -35,164 +35,169 @@
 #include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
 #endif
 
-// (if you really don't want to include the whole hoomd.h, you can include
-// individual files IF AND ONLY IF hoomd_config.h is included first) For
-// example: #include <hoomd/Compute.h>
 
-// Second, we need to declare the class. One could just as easily use any class
-// in HOOMD as a template here, there are no restrictions on what a template can
-// do
+namespace hoomd_tf {
 
-//! A nonsense particle Compute written to demonstrate how to write a plugin
-/*! This Compute simply sets all of the particle's velocities to 0 when update()
- * is called.
- */
+  // (if you really don't want to include the whole hoomd.h, you can include
+  // individual files IF AND ONLY IF hoomd_config.h is included first) For
+  // example: #include <hoomd/Compute.h>
 
-enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
+  // Second, we need to declare the class. One could just as easily use any class
+  // in HOOMD as a template here, there are no restrictions on what a template can
+  // do
 
-// these functors use 'call' instead of 'operator()' to avoid
-// writing out functor.template operator()<T> (...) which is
-// necessary due to some arcane c++ rules. Normally
-// you would write functor(...), when creating a functor.
-struct ReceiveForcesFunctorAdd {
-  size_t _N;
-  void* _stream;
-  ReceiveForcesFunctorAdd() {}
-  ReceiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
+  //! A nonsense particle Compute written to demonstrate how to write a plugin
+  /*! This Compute simply sets all of the particle's velocities to 0 when update()
+  * is called.
+  */
 
-  // have empty implementation so if CUDA not enabled,
-  // we still have a GPU implementation
-  template <IPCCommMode M>
-  void call(Scalar4* dest, Scalar4* src) {}
-};
+  enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
 
-struct ReceiveVirialFunctorAdd {
-  size_t _N;
-  size_t _pitch;
-  void* _stream;
-  ReceiveVirialFunctorAdd() {}
-  ReceiveVirialFunctorAdd(size_t N, size_t pitch)
-      : _N(N), _pitch(pitch), _stream(nullptr) {}
+  // these functors use 'call' instead of 'operator()' to avoid
+  // writing out functor.template operator()<T> (...) which is
+  // necessary due to some arcane c++ rules. Normally
+  // you would write functor(...), when creating a functor.
+  struct ReceiveForcesFunctorAdd {
+    size_t _N;
+    void* _stream;
+    ReceiveForcesFunctorAdd() {}
+    ReceiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
 
-  template <IPCCommMode M>
-  void call(Scalar* dest, Scalar* src) {}
-};
+    // have empty implementation so if CUDA not enabled,
+    // we still have a GPU implementation
+    template <TFCommMode M>
+    void call(Scalar4* dest, Scalar4* src) {}
+  };
 
-template <IPCCommMode M = IPCCommMode::CPU>
-class TensorflowCompute : public ForceCompute {
- public:
-  //! Constructor
-  TensorflowCompute(pybind11::object& py_self,
-                    std::shared_ptr<SystemDefinition> sysdef,
-                    std::shared_ptr<NeighborList> nlist, Scalar r_cut,
-                    unsigned int nneighs, FORCE_MODE force_mode,
-                    unsigned int period,
-                    IPCTaskLock* tasklock);
+  struct ReceiveVirialFunctorAdd {
+    size_t _N;
+    size_t _pitch;
+    void* _stream;
+    ReceiveVirialFunctorAdd() {}
+    ReceiveVirialFunctorAdd(size_t N, size_t pitch)
+        : _N(N), _pitch(pitch), _stream(nullptr) {}
 
-  TensorflowCompute() = delete;
+    template <TFCommMode M>
+    void call(Scalar* dest, Scalar* src) {}
+  };
 
-  //! Destructor
-  virtual ~TensorflowCompute();
+  template <TFCommMode M = TFCommMode::CPU>
+  class TensorflowCompute : public ForceCompute {
+  public:
+    //! Constructor
+    TensorflowCompute(pybind11::object& py_self,
+                      std::shared_ptr<SystemDefinition> sysdef,
+                      std::shared_ptr<NeighborList> nlist, Scalar r_cut,
+                      unsigned int nneighs, FORCE_MODE force_mode,
+                      unsigned int period,
+                      TaskLock* tasklock);
 
-  Scalar getLogValue(const std::string& quantity,
-                     unsigned int timestep) override;
+    TensorflowCompute() = delete;
 
-  int64_t getForcesBuffer() const;
-  int64_t getPositionsBuffer() const;
-  int64_t getVirialBuffer() const;
-  int64_t getNlistBuffer() const;
+    //! Destructor
+    virtual ~TensorflowCompute();
 
-  bool isDoublePrecision() const {
-#ifdef SINGLE_PRECISION
-    return false;
-#else
-    return true;
-#endif  // SINGLE_PRECISION
-  }
+    Scalar getLogValue(const std::string& quantity,
+                      unsigned int timestep) override;
 
-  std::vector<Scalar4> getForcesArray() const;
-  std::vector<Scalar4> getNlistArray() const;
-  std::vector<Scalar4> getPositionsArray() const;
-  std::vector<Scalar> getVirialArray() const;
-  unsigned int getVirialPitch() const { return m_virial.getPitch(); }
+    int64_t getForcesBuffer() const;
+    int64_t getPositionsBuffer() const;
+    int64_t getVirialBuffer() const;
+    int64_t getNlistBuffer() const;
 
-  pybind11::object
-      _py_self;  // pybind objects have to be public with current cc flags
+    bool isDoublePrecision() const {
+  #ifdef SINGLE_PRECISION
+      return false;
+  #else
+      return true;
+  #endif  // SINGLE_PRECISION
+    }
 
- protected:
-  // used if particle number changes
-  virtual void reallocate();
-  //! Take one timestep forward
-  virtual void computeForces(unsigned int timestep) override;
+    std::vector<Scalar4> getForcesArray() const;
+    std::vector<Scalar4> getNlistArray() const;
+    std::vector<Scalar4> getPositionsArray() const;
+    std::vector<Scalar> getVirialArray() const;
+    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
 
-  virtual void prepareNeighbors();
-  virtual void zeroVirial();
+    pybind11::object
+        _py_self;  // pybind objects have to be public with current cc flags
 
-  void finishUpdate(unsigned int timestep);
+  protected:
+    // used if particle number changes
+    virtual void reallocate();
+    //! Take one timestep forward
+    virtual void computeForces(unsigned int timestep) override;
 
-  std::shared_ptr<NeighborList> m_nlist;
-  Scalar _r_cut;
-  unsigned int _nneighs;
-  FORCE_MODE _force_mode;
-  unsigned int _period;
-  std::string m_log_name;
-  IPCTaskLock* _tasklock;
+    virtual void prepareNeighbors();
+    virtual void zeroVirial();
 
-  IPCArrayComm<M, Scalar4> _positions_comm;
-  IPCArrayComm<M, Scalar4> _forces_comm;
-  GPUArray<Scalar4> _nlist_array;
-  IPCArrayComm<M, Scalar4> _nlist_comm;
-  IPCArrayComm<M, Scalar> _virial_comm;
+    void finishUpdate(unsigned int timestep);
 
-  ReceiveVirialFunctorAdd _virial_functor;
-  ReceiveForcesFunctorAdd _forces_functor;
-};
+    std::shared_ptr<NeighborList> m_nlist;
+    Scalar _r_cut;
+    unsigned int _nneighs;
+    FORCE_MODE _force_mode;
+    unsigned int _period;
+    std::string m_log_name;
+    TaskLock* _tasklock;
 
-//! Export the TensorflowCompute class to python
-void export_TensorflowCompute(pybind11::module& m);
+    TFArrayComm<M, Scalar4> _positions_comm;
+    TFArrayComm<M, Scalar4> _forces_comm;
+    GPUArray<Scalar4> _nlist_array;
+    TFArrayComm<M, Scalar4> _nlist_comm;
+    TFArrayComm<M, Scalar> _virial_comm;
 
-// Third, this class offers a GPU accelerated method in order to demonstrate how
-// to include CUDA code in pluins we need to declare a separate class for that
-// (but only if ENABLE_CUDA is set)
+    ReceiveVirialFunctorAdd _virial_functor;
+    ReceiveForcesFunctorAdd _forces_functor;
+  };
 
-#ifdef ENABLE_CUDA
+  //! Export the TensorflowCompute class to python
+  void export_TensorflowCompute(pybind11::module& m);
 
-//! A GPU accelerated nonsense particle Compute written to demonstrate how to
-//! write a plugin w/ CUDA code
-/*! This Compute simply sets all of the particle's velocities to 0 (on the GPU)
- * when update() is called.
- */
-class TensorflowComputeGPU : public TensorflowCompute<IPCCommMode::GPU> {
- public:
-  //! Constructor
-  TensorflowComputeGPU(pybind11::object& py_self,
-                       std::shared_ptr<SystemDefinition> sysdef,
-                       std::shared_ptr<NeighborList> nlist, Scalar r_cut,
-                       unsigned int nneighs, FORCE_MODE force_mode,
-                       unsigned int period,
-                       IPCTaskLock* tasklock);
+  // Third, this class offers a GPU accelerated method in order to demonstrate how
+  // to include CUDA code in pluins we need to declare a separate class for that
+  // (but only if ENABLE_CUDA is set)
 
-  void setAutotunerParams(bool enable, unsigned int period) override;
+  #ifdef ENABLE_CUDA
 
- protected:
-  void computeForces(unsigned int timestep) override;
-  void reallocate() override;
-  void prepareNeighbors() override;
-  void zeroVirial() override;
+  //! A GPU accelerated nonsense particle Compute written to demonstrate how to
+  //! write a plugin w/ CUDA code
+  /*! This Compute simply sets all of the particle's velocities to 0 (on the GPU)
+  * when update() is called.
+  */
+  class TensorflowComputeGPU : public TensorflowCompute<TFCommMode::GPU> {
+  public:
+    //! Constructor
+    TensorflowComputeGPU(pybind11::object& py_self,
+                        std::shared_ptr<SystemDefinition> sysdef,
+                        std::shared_ptr<NeighborList> nlist, Scalar r_cut,
+                        unsigned int nneighs, FORCE_MODE force_mode,
+                        unsigned int period,
+                        TaskLock* tasklock);
 
- private:
-  std::unique_ptr<Autotuner> m_tuner;  // Autotuner for block size
-  cudaStream_t _streams[4];
-  size_t _nstreams = 4;
-};
+    void setAutotunerParams(bool enable, unsigned int period) override;
 
-//! Export the TensorflowComputeGPU class to python
-void export_TensorflowComputeGPU(pybind11::module& m);
+  protected:
+    void computeForces(unsigned int timestep) override;
+    void reallocate() override;
+    void prepareNeighbors() override;
+    void zeroVirial() override;
 
-template class TensorflowCompute<IPCCommMode::GPU>;
-#endif  // ENABLE_CUDA
+  private:
+    std::unique_ptr<Autotuner> m_tuner;  // Autotuner for block size
+    cudaStream_t _streams[4];
+    size_t _nstreams = 4;
+  };
 
-// force implementation
-template class TensorflowCompute<IPCCommMode::CPU>;
+  //! Export the TensorflowComputeGPU class to python
+  void export_TensorflowComputeGPU(pybind11::module& m);
+
+  template class TensorflowCompute<TFCommMode::GPU>;
+  #endif  // ENABLE_CUDA
+
+  // force implementation
+  template class TensorflowCompute<TFCommMode::CPU>;
+
+}
 
 #endif  // _TENSORFLOW_COMPUTE_H_

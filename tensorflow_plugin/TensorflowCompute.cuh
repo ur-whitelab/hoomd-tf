@@ -27,6 +27,4 @@ extern "C" cudaError_t gpu_reshape_nlist(Scalar4* dest,
                                          double rmax,
 					 cudaStream_t stream);
 
-
-
 #endif // _TENSORFLOW_COMPUTE_CUH_

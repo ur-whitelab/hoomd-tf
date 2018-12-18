@@ -1,4 +1,4 @@
-#include "ipc2tensor.h"
+#include "hoomd2tf.h"
 #include <string.h>
 #include <sys/mman.h>
 #include <typeinfo>
@@ -10,7 +10,7 @@
 
 using namespace tensorflow;
 
-REGISTER_OP("IpcToTensor")
+REGISTER_OP("HoomdToTf")
     .Attr("T: {float, double}")
     .Attr("Tshape: {int32, int64}")
     .Input("shape: Tshape")
@@ -35,23 +35,23 @@ using GPUDevice = Eigen::GpuDevice;
 
 // CPU specialization of actual computation.
 template <typename T>
-struct IPC2TFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, IPCStruct_t* ipc_memory,
+struct HOOMD2TFFunctor<CPUDevice, T> {
+  void operator()(const CPUDevice& d, int size, CommStruct_t* in_memory,
                   T* out) {
-    std::memcpy(out, ipc_memory->mem_handle, size * sizeof(T));
+    std::memcpy(out, in_memory->mem_handle, size * sizeof(T));
   }
 };
 
 // OpKernel definition.
 // template parameter <T> is the datatype of the tensors.
 template <typename Device, typename T, typename Tshape>
-class IpcToTensorOp : public OpKernel {
+class HoomdToTfOp : public OpKernel {
  public:
-  explicit IpcToTensorOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit HoomdToTfOp(OpKernelConstruction* context) : OpKernel(context) {
     // get memory address
     int64 tmp;
     context->GetAttr("address", &tmp);
-    _input_memory = reinterpret_cast<IPCStruct_t*>(tmp);
+    _input_memory = reinterpret_cast<CommStruct_t*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -63,7 +63,7 @@ class IpcToTensorOp : public OpKernel {
 
     OP_REQUIRES(context, TensorShapeUtils::IsVector(shape.shape()),
                 errors::InvalidArgument(
-                    "Shape specification to IpcToTensor should be vector"));
+                    "Shape specification to HoomdToTf should be vector"));
 
     // TODO: Is there a performance hit for this?
     TensorShapeUtils::MakeShape(shape.vec<Tshape>(), &tmp_shape);
@@ -83,22 +83,22 @@ class IpcToTensorOp : public OpKernel {
     OP_REQUIRES(context, output_tensor->NumElements() <= tensorflow::kint32max,
                 errors::InvalidArgument("Too many elements in tensor"));
     auto output = output_tensor->flat<T>();
-    IPC2TFunctor<Device, T>()(context->eigen_device<Device>(),
+    HOOMD2TFFunctor<Device, T>()(context->eigen_device<Device>(),
                                     output.size(), _input_memory,
                                     output.data());
   }
 
  private:
-  IPCStruct_t* _input_memory;
+  CommStruct_t* _input_memory;
 };
 
 // Register the CPU kernels.
 #define REGISTER_CPU(T, Tshape)                                 \
-  REGISTER_KERNEL_BUILDER(Name("IpcToTensor")                   \
+  REGISTER_KERNEL_BUILDER(Name("HoomdToTf")                   \
                               .Device(DEVICE_CPU)               \
                               .TypeConstraint<Tshape>("Tshape") \
                               .TypeConstraint<T>("T"),          \
-                          IpcToTensorOp<CPUDevice, T, Tshape>);
+                          HoomdToTfOp<CPUDevice, T, Tshape>);
 REGISTER_CPU(float, int32);
 REGISTER_CPU(float, int64);
 REGISTER_CPU(double, int32);
@@ -107,12 +107,12 @@ REGISTER_CPU(double, int64);
 // Register the GPU kernels.
 #ifdef GOOGLE_CUDA
 #define REGISTER_GPU(T, Tshape)                                 \
-  REGISTER_KERNEL_BUILDER(Name("IpcToTensor")                   \
+  REGISTER_KERNEL_BUILDER(Name("HoomdToTf")                   \
                               .Device(DEVICE_GPU)               \
                               .HostMemory("shape")              \
                               .TypeConstraint<Tshape>("Tshape") \
                               .TypeConstraint<T>("T"),          \
-                          IpcToTensorOp<GPUDevice, T, Tshape>);
+                          HoomdToTfOp<GPUDevice, T, Tshape>);
 REGISTER_GPU(float, int32);
 REGISTER_GPU(float, int64);
 REGISTER_GPU(double, int32);
