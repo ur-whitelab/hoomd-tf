@@ -59,7 +59,6 @@ class TFManager:
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
         self.model_directory = self.graph_info['model_directory']
-        self.N = self.graph_info['N']
         self.nneighs = self.graph_info['NN']
         self.out_nodes = []
         self.summaries = None
@@ -126,9 +125,9 @@ class TFManager:
 
         if not self.graph_info['output_forces']:
             #if the graph outputs forces, add new node
-            self.log.info('initializing forces ipc_to_tensor at address {:x} with size {} x 4'.format(self.nlist_buffer, self.nneighs * self.N))
             with tf.device(self.device):
                 self.forces = ipc_to_tensor(address=self.forces_buffer, shape=[4], T=self.dtype, name='forces-input')
+                self.log.info('initialized forces ipc_to_tensor at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
@@ -155,12 +154,14 @@ class TFManager:
             raise ValueError('Your graph must contain the following tensors: forces, nlist, positions')
         tensor_to_ipc_module = load_op_library('tensor2ipc')
         tensor_to_ipc = tensor_to_ipc_module.tensor_to_ipc
-        self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer))
-        self.log.info('initializing force tensor_to_ipc: {:x} to {:x}'.format(self.forces_buffer, self.forces_buffer + self.N * 4))
+        with tf.device(self.device):
+            self.out_nodes.append(tensor_to_ipc(self.forces, address=self.forces_buffer))
+            self.log.info('initialized forces tensor_to_ipc at address {:x} with shape {} on {}'.format(self.forces_buffer, self.forces.shape, self.device))
         if self.graph_info['virial'] is not None:
             #virial is Nx3x3
-            self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer))
-            self.log.info('initializing virial tensor_to_ipc: {:x} to {:x}'.format(self.virial_buffer, self.virial_buffer + self.N * 9))
+            with tf.device(self.device):
+                self.out_nodes.append(tensor_to_ipc(self.virial, address=self.virial_buffer))
+                self.log.info('initialized virial tensor_to_ipc at address {:x} with shape {} on {}'.format(self.virial_buffer, self.virial.shape, self.device))
 
         #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
         #pf = tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')

@@ -13,7 +13,7 @@ To construct a graph, construct a graphbuilder:
 
 ```python
 from hoomd.tensorflow_plugin import graph_builder
-graph = graph_builder(N, NN, output_forces)
+graph = graph_builder(NN, output_forces)
 ```
 
 where `N` is the number of particles in the simulation, `NN` is the maximum number of nearest neighbors to consider, and `output_forces` indicates if the graph will output forces to use in the simulation. After building the `graph`, it will have three tensors as attributes to use in constructing the tensorflow graph: `nlist`, `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor containing the nearest neighbors. An entry of all zeros indicates that less than `NN` nearest neighbors where present for a particular particle. The 4 right-most dimensions are `x,y,z` and `w`, which is the particle type. Particle type is an integer starting at 0. Note that the `x,y,z` values are a vector originating at the particle and ending at its neighbor. `positions` and `forces` are `N` x 4 tensors. `forces` *only* is available if the graph does not output forces via `output_forces=False`.
@@ -23,7 +23,7 @@ where `N` is the number of particles in the simulation, `NN` is the maximum numb
 If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
 ```python
-graph = hoomd.tensorflow_plugin.graph_builder(N, N - 1)
+graph = hoomd.tensorflow_plugin.graph_builder(N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
@@ -90,7 +90,7 @@ See `tensorflow_plugin/models/test-models/build.py` for more.
 ### Lennard-Jones
 
 ```python
-graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+graph = hoomd.tensorflow_plugin.graph_builder(NN)
 nlist = graph.nlist[:, :, :3]
 #get r
 r = graph.safe_norm(nlist, axis=2)
@@ -172,9 +172,9 @@ Here's an example of bootstrapping where you train with Hoomd and then load the 
 import tensorflow as tf
 import hoomd.tensorflow_plugin
 
-def make_train_graph(N, NN, directory):
+def make_train_graph(NN, directory):
     # build a model that fits the energy to a linear term
-    graph = hoomd.tensorflow_plugin.graph_builder(N, NN, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(NN, output_forces=False)
     # get r
     nlist = graph.nlist[:, :, :3]
     r = graph.safe_norm(nlist, axis=2)
@@ -189,10 +189,10 @@ def make_train_graph(N, NN, directory):
     optimize = tf.train.AdamOptimizer(1e-3).minimize(loss)
     graph.save(model_directory=directory, out_nodes=[optimize])
 
-def make_force_graph(N, NN, directory):
+def make_force_graph(NN, directory):
     # this model applies the variables learned in the example above
     # to compute forces
-    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
     # get r
     nlist = graph.nlist[:, :, :3]
     r = graph.safe_norm(nlist, axis=2)

@@ -4,12 +4,11 @@ import os, pickle
 class graph_builder:
     '''Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations'''
 
-    def __init__(self, atom_number, nneighbor_cutoff, output_forces=True):
+    def __init__(self, nneighbor_cutoff, output_forces=True):
         '''output_forces -> should the graph output forces'''
         #clear any previous graphs
         atom_number = None
         tf.reset_default_graph()
-        self.atom_number = atom_number
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
         x = tf.placeholder(tf.float32, shape=[atom_number, 4])
@@ -104,8 +103,6 @@ class graph_builder:
             raise ValueError('out_nodes must be a list')
 
         if self.output_forces:
-            if force_tensor.shape[0] != self.atom_number:
-                raise ValueError('Dimension of force_tensor should be same as atom number')
             if len(force_tensor.shape) != 2:
                 raise ValueError('force_tensor should be N x 3 or N x 4. You gave a ' + ','.join([str(x) for x in force_tensor.shape]))
             if force_tensor.shape[1] == 3:
@@ -120,7 +117,7 @@ class graph_builder:
                 else:
                     print('WARNING: You did not provide a virial for {}, so per particle virials will not be correct'.format(model_directory))
             else:
-                assert virial.shape == [self.atom_number, self.nneighbor_cutoff, 3, 3]
+                assert virial.shape == [None, self.nneighbor_cutoff, 3, 3]
         else:
             if len(out_nodes) == 0:
                 raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
@@ -130,8 +127,7 @@ class graph_builder:
         #with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         #    f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         #save metadata of class
-        graph_info = {  'N': self.atom_number,
-                        'NN': self.nneighbor_cutoff,
+        graph_info = {  'NN': self.nneighbor_cutoff,
                         'model_directory': model_directory,
                         'forces': self.forces.name,
                         'positions': self.positions.name,

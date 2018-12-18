@@ -89,8 +89,6 @@ class tfcompute(hoomd.compute._compute):
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
         self.atom_number = len(hoomd.context.current.group_all)
-        if self.graph_info['N'] is None:
-            self.graph_info['N'] = self.atom_number
 
         nlist.subscribe(self.rcut)
         r_cut = float(r_cut)

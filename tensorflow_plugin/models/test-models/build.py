@@ -3,7 +3,7 @@ import os, hoomd.tensorflow_plugin, pickle
 
 
 def simple_potential():
-    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1)
+    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2, keepdims=True)
@@ -32,7 +32,7 @@ def benchmark_gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/benchmark-gradient-potential-model')
 
 def gradient_potential():
-    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1)
+    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
@@ -41,7 +41,7 @@ def gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph():
-    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones_like(neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
@@ -49,7 +49,7 @@ def noforce_graph():
     graph.save('/tmp/test-noforce-model', out_nodes=[energy, pos_norm])
 
 def feeddict_graph():
-    graph = hoomd.tensorflow_plugin.graph_builder(9, 9 - 1, output_forces=False)
+    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
     force_com = tf.reduce_mean(forces, axis=0)
     thing = tf.placeholder(dtype=tf.float32, name='test-tensor')
@@ -57,14 +57,14 @@ def feeddict_graph():
     graph.save('/tmp/test-feeddict-model', out_nodes=[out])
 
 def benchmark_nonlist_graph():
-    graph = hoomd.tensorflow_plugin.graph_builder(2 * 1024, 0, output_forces=True)
+    graph = hoomd.tensorflow_plugin.graph_builder(0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
     force = graph.compute_forces(energy)
     graph.save('/tmp/benchmark-nonlist-model', force_tensor=force, out_nodes=[energy])
 
-def lj_graph(N, NN, name):
-    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+def lj_graph(NN, name):
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -77,8 +77,8 @@ def lj_graph(N, NN, name):
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=name)
 
-def print_graph(N, NN, name):
-    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+def print_graph(NN, name):
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -92,8 +92,8 @@ def print_graph(N, NN, name):
     prints = tf.Print(energy, [energy], summarize=1000)
     graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
 
-def trainable_graph(N, NN, name):
-    graph = hoomd.tensorflow_plugin.graph_builder(N, NN)
+def trainable_graph(NN, name):
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = graph.safe_norm(nlist, axis=2)
@@ -114,7 +114,7 @@ def trainable_graph(N, NN, name):
     graph.save(force_tensor=forces, model_directory=name, out_nodes=[optimizer, check])
     #graph.save(force_tensor=forces, model_directory=name, out_nodes=[check])
 
-def bootstrap_graph(N, NN, directory):
+def bootstrap_graph(NN, directory):
     #make bootstrap graph
     tf.reset_default_graph()
     v = tf.Variable(8.0, name='epsilon')
@@ -138,8 +138,8 @@ gradient_potential()
 simple_potential()
 benchmark_gradient_potential()
 benchmark_nonlist_graph()
-lj_graph(2**14, 64, '/tmp/benchmark-lj-potential-model')
-lj_graph(3 * 3, 8, '/tmp/test-lj-potential-model')
-print_graph(9, 9 - 1, '/tmp/test-print-model')
-trainable_graph(9, 9 - 1, '/tmp/test-trainable-model')
-bootstrap_graph(9, 9 - 1, '/tmp/test-trainable-model')
+lj_graph(64, '/tmp/benchmark-lj-potential-model')
+lj_graph(8, '/tmp/test-lj-potential-model')
+print_graph(9 - 1, '/tmp/test-print-model')
+trainable_graph(9 - 1, '/tmp/test-trainable-model')
+bootstrap_graph(9 - 1, '/tmp/test-trainable-model')
