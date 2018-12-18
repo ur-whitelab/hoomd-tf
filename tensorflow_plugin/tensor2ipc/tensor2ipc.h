@@ -4,12 +4,6 @@
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/shape_inference.h"
-
-// need to make sure the hoomd-specific cuda flags get set for include
-#ifdef GOOGLE_CUDA
-#define ENABLE_CUDA
-#endif
-
 #include "../IPCStruct.h"
 
 using namespace tensorflow;

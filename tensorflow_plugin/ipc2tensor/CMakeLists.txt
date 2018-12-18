@@ -11,6 +11,9 @@ set(_${COMPONENT_NAME}_cu_sources
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_compile_flags()))" OUTPUT_VARIABLE TF_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()))" OUTPUT_VARIABLE TF_LFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+#set tf flag so we know we're compilng tf code
+add_definitions( -DTF_COMPILE=1 )
+
 #separate flags
 SEPARATE_ARGUMENTS( TF_CFLAGS )
 SEPARATE_ARGUMENTS( TF_LFLAGS )

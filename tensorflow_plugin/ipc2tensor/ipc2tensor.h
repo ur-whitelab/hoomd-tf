@@ -2,12 +2,6 @@
 #define IPC2TENSOR_H_
 
 #include "tensorflow/core/framework/types.h"
-
-// need to make sure the hoomd-specific cuda flags get set for include
-#ifdef GOOGLE_CUDA
-#define ENABLE_CUDA
-#endif
-
 #include "../IPCStruct.h"
 
 template <typename Device, typename T>
@@ -17,7 +11,6 @@ struct IPC2TFunctor {
 };
 
 #ifdef GOOGLE_CUDA
-#define ENABLE_CUDA
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
