@@ -449,7 +449,3 @@ Now that forking is not done, we should revert to using the hoomd error reportin
 ### Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
-
-### Misc
-
-1. Remove misnomer "IPC" from code now that we no longer do it
