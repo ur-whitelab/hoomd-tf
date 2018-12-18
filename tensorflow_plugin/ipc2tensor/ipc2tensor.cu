@@ -16,12 +16,12 @@ void IPC2TFunctor<GPUDevice, T >::operator()(
     const GPUDevice& d, int size, IPCStruct_t* ipc_memory,T* out) {
 
   //cudaEventSynchronize(ipc_memory.event);
-  cudaMemcpy((void*)(out), (const void*)(ipc_memory->array), size * sizeof(T),
+  cudaMemcpy((void*)(out), (const void*)(ipc_memory->mem_handle), size * sizeof(T),
              cudaMemcpyDeviceToDevice);
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.
-template struct IPC2TFunctor<GPUDevice, float> >;
-template struct IPC2TFunctor<GPUDevice, double> >;
+template struct IPC2TFunctor<GPUDevice, float> ;
+template struct IPC2TFunctor<GPUDevice, double> ;
 
 #endif  // GOOGLE_CUDA

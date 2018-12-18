@@ -450,3 +450,7 @@ We must have forked without initializing hoomd context otherwise tensorflow dies
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
 
+### Misc
+
+1. Remove the N dependence from graphbuilder.py and examples
+2. Remove misnomer "IPC" from code now that we no longer do it
