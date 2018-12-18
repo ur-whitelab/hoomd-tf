@@ -65,7 +65,7 @@ void TensorflowCompute<M>::reallocate() {
   _forces_comm = IPCArrayComm<M, Scalar4>(m_force);
   //In cuda, an array of size 0 breaks things. So even if we aren't using
   //neighborlist we need to make it size > 0
-  GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getN()), m_exec_conf);
+  GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
   _nlist_array.swap(tmp);
   _nlist_comm = IPCArrayComm<M, Scalar4>(_nlist_array);
   CHECK_CUDA_ERROR();
@@ -75,8 +75,8 @@ void TensorflowCompute<M>::reallocate() {
   CHECK_CUDA_ERROR();
 
   // build functors
-  _virial_functor = ReceiveVirialFunctorAdd(m_pdata->getN(), m_virial_pitch);
-  _forces_functor = ReceiveForcesFunctorAdd(m_pdata->getN());
+  _virial_functor = ReceiveVirialFunctorAdd(m_pdata->getMaxN(), m_virial_pitch);
+  _forces_functor = ReceiveForcesFunctorAdd(m_pdata->getMaxN());
 }
 
 template <IPCCommMode M>
@@ -166,9 +166,9 @@ void TensorflowCompute<M>::prepareNeighbors() {
                                     access_mode::overwrite);
   Scalar4* buffer = buffer_array.data;
   //zero out buffer
-  memset(buffer, 0, _nneighs * m_pdata->getN() * sizeof(Scalar4));
+  memset(buffer, 0, _nlist_array.getNumElements() * sizeof(Scalar4));
   unsigned int* nnoffset =
-      (unsigned int*)calloc(m_pdata->getN(), sizeof(unsigned int));
+      (unsigned int*)calloc(m_pdata->getMaxN(), sizeof(unsigned int));
 
   // These snippets taken from md/TablePotentials.cc
 
@@ -210,6 +210,8 @@ void TensorflowCompute<M>::prepareNeighbors() {
 
       // apply periodic boundary conditions
       dx = box.minImage(dx);
+      if((i * _nneighs + nnoffset[i]) >=  _nlist_array.getNumElements())
+        std::cout << "Error: " << i << " " <<  m_pdata->getMaxN() << " " << (i * _nneighs + nnoffset[i]) << " " << _nlist_array.getNumElements() << std::endl;
       if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
       buffer[i * _nneighs + nnoffset[i]].x = dx.x;
       buffer[i * _nneighs + nnoffset[i]].y = dx.y;
