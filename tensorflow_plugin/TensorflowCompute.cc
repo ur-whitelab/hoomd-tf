@@ -62,18 +62,18 @@ void TensorflowCompute<M>::reallocate() {
   // but the recieve method does exist
   // so we'll cast away until I make a version
   // of TFArrayComm that can't override array
-  _positions_comm = TFArrayComm<M, Scalar4>(
+  _positions_comm = TFArrayComm<M, decltype(m_pdata->getPositions())>(
       const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()));
-  _forces_comm = TFArrayComm<M, Scalar4>(m_force);
+  _forces_comm = TFArrayComm<M, decltype(m_force)>(m_force);
   //In cuda, an array of size 0 breaks things. So even if we aren't using
   //neighborlist we need to make it size > 0
   GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
   _nlist_array.swap(tmp);
-  _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array);
+  _nlist_comm = TFArrayComm<M, decltype(_nlist_array)>(_nlist_array);
   CHECK_CUDA_ERROR();
   // virial is made with maxN, not N
   _virial_comm =
-      TFArrayComm<M, Scalar>(m_virial, (size_t)m_pdata->getMaxN() * 9);
+      TFArrayComm<M, decltype(m_virial)>(m_virial, (size_t)m_pdata->getMaxN() * 9);
   CHECK_CUDA_ERROR();
 
   // build functors
