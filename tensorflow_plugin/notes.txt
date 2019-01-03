@@ -21,7 +21,7 @@ message *m = mmap(NULL, sizeof(message), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_AN
 4. CustomOp will do...?
     -> takes a constant -> memory address from python
     -> for CC -> We use underliyng mmap + memcpy (https://github.com/tensorflow/tensorflow/blob/dcc414587f50673271a31ab767909ec89c956324/tensorflow/core/framework/tensor_testutil.h#L57)
-    -> for GPU -> we replace mmap with cudaIpcMemhandle and custom op will load cuda ipcmemory and copy to output tensor 
+    -> for GPU -> we replace mmap with cudaIpcMemhandle and custom op will load cuda ipcmemory and copy to output tensor
 5. CustomOP will be setup....?
     -> in Python module entry point which is called by multiprocess
 
@@ -40,8 +40,14 @@ CustomOP-reader (C++): -> output must be known at compile time ? -> no only rank
     input-tensor: list of memory addresses (rank 1) ->scalar
     input-tensor: scalar -> shape of output
     update: copy memory address to output tensor
-    
+
 CustomOP-writer (C++): -> output is nothing
     input-tensor: force-size
     input-tensor: memory address for output
     update: memcpy to output memory address
+
+
+    General structs
+    --
+
+    Specialize templates for TF to deal with scalar, Scalar4. How do we pass the struct through python? Pybind it? Can pybind do templates? Yes, as long as they are explicitly instantiated. What about in Python? Explicit named types. That pybind code will need to be available in TF?

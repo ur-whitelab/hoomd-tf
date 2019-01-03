@@ -25,6 +25,23 @@ namespace hoomd_tf {
 
     CommStruct_t() {}
 
+    CommStruct_t& operator=(TFArrayComm& other) {
+      mem_handle = other.mem_handle;
+      num_elements = other.num_elements;
+      num_dims = other.num_dims;
+      element_size = other.element_size;
+      name = other.name;
+      #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
+      event_handle = other.event_handle;
+      stream = other.stream;
+      #endif
+
+      other.mem_handle = nullptr;
+      other.mem_size = 0;
+
+      return *this;
+    }
+
     void* mem_handle;
     const size_t* num_elements;
     size_t num_dims;

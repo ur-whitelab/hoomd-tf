@@ -66,8 +66,8 @@ namespace hoomd_tf {
     }
 
     TFArrayComm(GPUArray<T>& gpu_array,
-                size_t num_elements)
-        : _comm_struct._mem_handle(nullptr),
+                size_t* num_elements, size_t, num_dims const char* name)
+        : _comm_struct(nullptr, num_elements, num_dims, sizeof(T)),
           _comm_struct(nullptr),
         _array(&gpu_array),
           _comm_struct.mem_size(0),
@@ -96,14 +96,10 @@ namespace hoomd_tf {
       checkDevice();
       // copy over variables
       _array = other._array;
-      _comm_struct.mem_size = other._comm_struct.mem_size;
-      other._comm_struct.mem_size = 0;
+      _comm_struct = other._comm_struct;
       _own_array = other._own_array;
       // prevent other from deleting array
       other._own_array = false;
-      _comm_struct._mem_handle = other._comm_struct._mem_handle;
-      other._comm_struct._mem_handle = nullptr;
-      _comm_struct = other._comm_struct;
       other._comm_struct = nullptr;
 
       return *this;
