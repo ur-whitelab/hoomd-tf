@@ -4,7 +4,6 @@ from hoomd.tensorflow_plugin import tfcompute
 import tensorflow as tf
 from sys import argv as argv
 from math import sqrt
-import time.time
 
 if(len(argv) != 2):
     print('Usage: basic_ann_ff.py [N_PARTICLES]')
@@ -18,10 +17,9 @@ inference_dir = '/tmp/ann-inference'.format(N)
 
 np.random.seed(42)
 
-start_time = time.time()
 with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')
-    sqrt_N = sqrt(N)#MAKE SURE THIS IS A WHOLE NUMBER???
+    sqrt_N = int(sqrt(N))#MAKE SURE THIS IS A WHOLE NUMBER???
     rcut = 3.0
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[sqrt_N, sqrt_N])
@@ -42,7 +40,3 @@ with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) 
     #run for 5k steps with dumped trajectory and logged PE and T
     hoomd.run(5000)
 
-end_time = time.time()
-
-with open('{}-particles_run_time.txt'.format(N), 'w+') as f:
-    f.write('Elapsed time with {} particles: {} seconds'.format(N,end_time-start_time))

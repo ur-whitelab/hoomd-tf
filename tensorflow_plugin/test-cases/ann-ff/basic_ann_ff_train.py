@@ -4,7 +4,6 @@ from hoomd.tensorflow_plugin import tfcompute
 import tensorflow as tf
 from math import sqrt
 from sys import argv as argv
-import time
 
 if(len(argv) != 2):
     print('Usage: basic_ann_ff.py [N_PARTICLES]')
@@ -16,8 +15,6 @@ N = int(argv[1])
 model_dir = '/tmp/ann-training'
 
 np.random.seed(42)
-
-start_time = time.time()
 
 with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensorboard=True) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')
@@ -43,8 +40,3 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     hoomd.dump.gsd(filename='TRAINING_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
     #train on 5k timesteps
     hoomd.run(5000)
-
-end_time = time.time()
-
-with open('{}-particles_time.txt'.format(N), 'w+') as f:
-    f.write('Elapsed time with {} particles: {} seconds'.format(N,end_time-start_time))
