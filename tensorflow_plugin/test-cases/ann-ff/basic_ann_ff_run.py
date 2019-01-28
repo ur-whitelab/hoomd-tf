@@ -1,5 +1,4 @@
 import hoomd, hoomd.md, hoomd.dump, hoomd.group
-import numpy as np
 from hoomd.tensorflow_plugin import tfcompute
 import tensorflow as tf
 from sys import argv as argv
@@ -12,10 +11,8 @@ if(len(argv) != 2):
 N = int(argv[1])
 
 
-training_dir = '/tmp/ann-training'.format(N)
-inference_dir = '/tmp/ann-inference'.format(N)
-
-np.random.seed(42)
+training_dir = '/tmp/ann-training'
+inference_dir = '/tmp/ann-inference'
 
 with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')
@@ -39,4 +36,3 @@ with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) 
     hoomd.dump.gsd(filename='INFERENCE_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
     #run for 5k steps with dumped trajectory and logged PE and T
     hoomd.run(5000)
-

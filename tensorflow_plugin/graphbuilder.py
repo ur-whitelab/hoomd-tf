@@ -70,7 +70,7 @@ class graph_builder:
         return tf.identity(forces, name='computed-forces')
 
     @staticmethod
-    def safe_div(numerator, denominator, delta=1e-25, **kwargs):
+    def safe_div(numerator, denominator, delta=1e-5, **kwargs):
         '''
         There are some numerical instabilities that occur during learning
         when gradients are propagated. The delta is problem specific.
@@ -85,7 +85,7 @@ class graph_builder:
 
 
     @staticmethod
-    def safe_norm(tensor, delta=1e-6, **kwargs):
+    def safe_norm(tensor, delta=1e-7, **kwargs):
         #https://github.com/tensorflow/tensorflow/issues/12071
         return tf.norm(tensor + delta, **kwargs)
 
