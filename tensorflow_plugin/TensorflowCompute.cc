@@ -62,23 +62,20 @@ void TensorflowCompute<M>::reallocate() {
   // but the recieve method does exist
   // so we'll cast away until I make a version
   // of TFArrayComm that can't override array
-  _positions_comm = TFArrayComm<M, decltype(m_pdata->getPositions())>(
-      const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()));
-  _forces_comm = TFArrayComm<M, decltype(m_force)>(m_force);
-  //In cuda, an array of size 0 breaks things. So even if we aren't using
+  _positions_comm = TFArrayComm<M, Scalar4>(
+      const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()), "positions");
+  _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
+  //In cuda, an array of size 0 breaks things. So even if we aren"t using
   //neighborlist we need to make it size > 0
   GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
   _nlist_array.swap(tmp);
-  _nlist_comm = TFArrayComm<M, decltype(_nlist_array)>(_nlist_array);
+  _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
   CHECK_CUDA_ERROR();
   // virial is made with maxN, not N
-  _virial_comm =
-      TFArrayComm<M, decltype(m_virial)>(m_virial, (size_t)m_pdata->getMaxN() * 9);
+  GPUArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
+  _virial_array.swap(tmp2);
+  _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
   CHECK_CUDA_ERROR();
-
-  // build functors
-  _virial_functor = ReceiveVirialFunctorAdd(m_pdata->getMaxN(), m_virial_pitch);
-  _forces_functor = ReceiveForcesFunctorAdd(m_pdata->getMaxN());
 }
 
 template <TFCommMode M>
@@ -103,7 +100,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       if(timestep > 0) {
         //get last step's net force and send
         _forces_comm.receiveArray(m_pdata->getNetForce());
-        _forces_comm.sendAsync();
         finishUpdate(timestep);
         //we sent it using forces_comm. We need to zero it out
         _forces_comm.memsetArray(0);
@@ -112,14 +108,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
   // nneighs == 0 send positions only
-  _positions_comm.sendAsync();
   if (_nneighs > 0) {
     // Update the neighborlist
     m_nlist->compute(timestep);
     if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
     prepareNeighbors();
     if (m_prof) m_prof->pop();
-    _nlist_comm.sendAsync();
   }
 
   if (m_prof) m_prof->pop(); //prearing data
@@ -129,19 +123,9 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
-  switch (_force_mode) {
-    // process results from TF
-    case FORCE_MODE::tf2hoomd:
-      _forces_comm.receiveAsync();
-      zeroVirial();
-      _virial_comm.receiveOp(_virial_functor);
-      break;
-    case FORCE_MODE::hoomd2tf:
-      break;
-    case FORCE_MODE::ignore:
-      break;
+  if(_force_mode == FORCE_MODE::tf2hoomd) {
+      receiveVirial();
   }
-
   if (m_prof) m_prof->pop();  // force update
   if (m_prof) m_prof->pop();  // compute
 }
@@ -155,10 +139,19 @@ void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
 }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::zeroVirial() {
-  ArrayHandle<Scalar> h_virial(m_virial, access_location::host,
+void TensorflowCompute<M>::receiveVirial() {
+  ArrayHandle<Scalar> dest(m_virial, access_location::host,
                                access_mode::overwrite);
-  memset((void*)h_virial.data, 0, sizeof(Scalar) * m_virial.getNumElements());
+  ArrayHandle<Scalar> src(_virial_array, access_location::host,
+  access_mode::read);
+  for(unsigned int i = 0; i < m_pdata->getN(); i++) {
+      dest.data[0 * getVirialPitch() + i] += src.data[i * 9 + 0]; //xx
+      dest.data[1 * getVirialPitch() + i] += src.data[i * 9 + 1]; //xy
+      dest.data[2 * getVirialPitch() + i] += src.data[i * 9 + 2]; //xz
+      dest.data[3 * getVirialPitch() + i] += src.data[i * 9 + 4]; //yy
+      dest.data[4 * getVirialPitch() + i] += src.data[i * 9 + 5]; //yz
+      dest.data[5 * getVirialPitch() + i] += src.data[i * 9 + 8]; //zz
+  }
 }
 
 template <TFCommMode M>
@@ -374,11 +367,11 @@ void TensorflowComputeGPU::prepareNeighbors() {
     m_tuner->end();
 }
 
-void TensorflowComputeGPU::zeroVirial() {
-    ArrayHandle<Scalar> h_virial(m_virial,access_location::device, access_mode::overwrite);
-    cudaMemsetAsync(static_cast<void*> (h_virial.data), 0, sizeof(Scalar) * m_virial.getNumElements(),_virial_comm.getCudaStream());
+void TensorflowComputeGPU::receiveVirial() {
+  ArrayHandle<Scalar> h_virial(m_virial, access_location::device, access_mode::overwrite);
+  ArrayHandle<Scalar> tf_h_virial(_virial_array, access_location::device, access_mode::read);
+  gpu_add_virial(h_virial.data, tf_h_virial.data, m_pdata->getN(), getVirialPitch(), _virial_comm.getCudaStream());
 }
-
 /* Export the GPU Compute to be visible in the python module
  */
 void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
@@ -399,45 +392,3 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
     }
 
 #endif // ENABLE_CUDA
-
-
-namespace hoomd_tf{
-  template<>
-  void ReceiveForcesFunctorAdd::call<TFCommMode::CPU>(Scalar4* dest, Scalar4* src) {
-      for(unsigned int i = 0; i < _N; i++) {
-          dest[i].x += src[i].x;
-          dest[i].y += src[i].y;
-          dest[i].z += src[i].z;
-          dest[i].w += src[i].w;
-      }
-  }
-
-
-  template<>
-  void ReceiveVirialFunctorAdd::call<TFCommMode::CPU>(Scalar* dest, Scalar* src) {
-      for(unsigned int i = 0; i < _N; i++) {
-          dest[0 * _pitch + i] += src[i * 9 + 0]; //xx
-          dest[1 * _pitch + i] += src[i * 9 + 1]; //xy
-          dest[2 * _pitch + i] += src[i * 9 + 2]; //xz
-          dest[3 * _pitch + i] += src[i * 9 + 4]; //yy
-          dest[4 * _pitch + i] += src[i * 9 + 5]; //yz
-          dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
-      }
-  }
-
-  #ifdef ENABLE_CUDA
-  template<>
-  void ReceiveForcesFunctorAdd::call<TFCommMode::GPU>(Scalar4* dest, Scalar4* src) {
-    gpu_add_scalar4(dest, src, _N, *(static_cast<cudaStream_t*> (_stream)) );
-  }
-
-
-
-  template<>
-  void ReceiveVirialFunctorAdd::call<TFCommMode::GPU>(Scalar* dest, Scalar* src) {
-    gpu_add_virial(dest, src, _N, _pitch, *(static_cast<cudaStream_t*> (_stream)) );
-  }
-
-  #endif //ENABLE_CUDA
-
-}

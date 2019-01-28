@@ -43,15 +43,14 @@ namespace hoomd_tf {
   // own_array: if it owns the array, it does not own the underlying data. Thus
   // can use array as mapping
   //! own_array: it has reference to underlying data.
-  template <TFCommMode M, class A>
+  template <TFCommMode M, typename T>
   class TFArrayComm {
-    typedef typename A::value_type T;
   public:
     TFArrayComm() {
       checkDevice();
     }
 
-    TFArrayComm(A& gpu_array, const char* name)
+    TFArrayComm(GPUArray<T>& gpu_array, const char* name)
         : _comm_struct(gpu_array, name),
         _array(&gpu_array) {
       checkDevice();
@@ -66,7 +65,7 @@ namespace hoomd_tf {
       checkDevice();
       // copy over variables
       _array = other._array;
-      _comm_struct = other._comm_struct.;
+      _comm_struct = other._comm_struct;
       return *this;
     }
 
@@ -74,7 +73,7 @@ namespace hoomd_tf {
       this->deallocate();
     }
 
-    void receiveArray(const A& array) {
+    void receiveArray(const GPUArray<T>& array) {
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(_array, access_location::host,
                               access_mode::overwrite);
@@ -156,11 +155,10 @@ namespace hoomd_tf {
     }
 
     using value_type = T;
-    using array_type = A;
 
   private:
-    CommStruct_t& _comm_struct;
-    A& _array;
+    CommStructDerived<T>& _comm_struct;
+    GPUArray<T>& _array;
   };
 
   void export_TFArrayComm(pybind11::module& m);
