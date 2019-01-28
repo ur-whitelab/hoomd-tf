@@ -24,8 +24,8 @@ REGISTER_OP("TfToHoomd")
 // CPU specialization of actual computation.
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, CommStruct_t* out, const T* in) {
-    std::memcpy(out->mem_handle, in, sizeof(T) * size);
+  void operator()(const CPUDevice& d, int size, CommStruct* out, const T* in) {
+    out->write_cpu_memory(in, sizeof(T) * size);
   }
 };
 
@@ -40,7 +40,7 @@ class TfToHoomdOp : public OpKernel {
     // get memory address
     int64 tmp;
     c->GetAttr("address", &tmp);
-    _output_memory = reinterpret_cast<CommStruct_t*>(tmp);
+    _output_memory = reinterpret_cast<CommStruct*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -58,7 +58,7 @@ class TfToHoomdOp : public OpKernel {
 
  private:
   int _input_size;
-  CommStruct_t* _output_memory;
+  CommStruct* _output_memory;
 };
 
 // Register the CPU kernels.

@@ -14,9 +14,8 @@ using GPUDevice = Eigen::GpuDevice;
 // TODO Add cuda error checks here
 template <typename T>
 void TF2IPCFunctor<GPUDevice, T>::operator()(const GPUDevice& d, int size,
-    CommStruct_t* handle, const T* in) {
-  cudaMemcpy(handle->mem_handle, (const void*)(in), size * sizeof(T),
-             cudaMemcpyDeviceToDevice);
+    CommStruct* handle, const T* in) {
+  handle->write_gpu_memory(in, size * sizeof(T));
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.

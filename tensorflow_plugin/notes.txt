@@ -50,4 +50,17 @@ CustomOP-writer (C++): -> output is nothing
     General structs
     --
 
-    Specialize templates for TF to deal with scalar, Scalar4. How do we pass the struct through python? Pybind it? Can pybind do templates? Yes, as long as they are explicitly instantiated. What about in Python? Explicit named types. That pybind code will need to be available in TF?
+    Specialize templates for TF to deal with scalar, Scalar4. How do we pass the struct through python? Pybind it? Can pybind do templates? Yes, as long as they are explicitly instantiated. What about in Python? Explicit named types. That pybind code will need to be available in TF? No, TF only takes
+    in primitive typesin register_op. It might be possible to create a "resource" wrapper for each
+    TFArray.
+
+    No, we'll use a factory. The TF takes an integer representing type. Then we call factory
+    with that integer, which creates the corret type. That type will contain a variable indicating
+    scalar4, scalar, etc.
+
+    Questions to answer:
+    1. How do we share events/streams? We could have the factory add these (?)
+    2. How do we manage dispatching GPU/CPU kernels?
+    3. How do we manage receiving/send with special instructions (ala virial)?
+
+    What about void* ptr in commstruct and then we use factory to get appropiate handle? Yes.

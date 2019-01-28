@@ -36,9 +36,9 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct HOOMD2TFFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, CommStruct_t* in_memory,
+  void operator()(const CPUDevice& d, int size, CommStruct* in_memory,
                   T* out) {
-    std::memcpy(out, in_memory->mem_handle, size * sizeof(T));
+    in_memory->read_cpu_memory(out, size * sizeof(T));
   }
 };
 
@@ -51,7 +51,7 @@ class HoomdToTfOp : public OpKernel {
     // get memory address
     int64 tmp;
     context->GetAttr("address", &tmp);
-    _input_memory = reinterpret_cast<CommStruct_t*>(tmp);
+    _input_memory = reinterpret_cast<CommStruct*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -89,7 +89,7 @@ class HoomdToTfOp : public OpKernel {
   }
 
  private:
-  CommStruct_t* _input_memory;
+  CommStruct* _input_memory;
 };
 
 // Register the CPU kernels.

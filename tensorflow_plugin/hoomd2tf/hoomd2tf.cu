@@ -13,11 +13,10 @@ using GPUDevice = Eigen::GpuDevice;
 // GPU specialization of actual computation.
 template <typename T>
 void HOOMD2TFFunctor<GPUDevice, T >::operator()(
-    const GPUDevice& d, int size, CommStruct_t* in_memory,T* out) {
+    const GPUDevice& d, int size, CommStruct* in_memory,T* out) {
 
   //cudaEventSynchronize(in_memory.event);
-  cudaMemcpy((void*)(out), (const void*)(in_memory->mem_handle), size * sizeof(T),
-             cudaMemcpyDeviceToDevice);
+  in_memory->read_gpu_memory(out, size * sizeof(T));
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.
