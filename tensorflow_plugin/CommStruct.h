@@ -64,27 +64,22 @@ namespace hoomd_tf {
 
   template <typename T>
   struct CommStructDerived : CommStruct {
-    GPUArray<T>& array;
-
-    CommStructDerived() : array(GPUArray<Scalar>(1))
-    {
-
-    }
+    GPUArray<T>& _array;
 
     void read_gpu_memory(void *dest, size_t n) {
-      ArrayHandle<T> handle(array, access_location::device, access_mode::read);
+      ArrayHandle<T> handle(_array, access_location::device, access_mode::read);
       cudaMemcpy(dest, handle.data, n, cudaMemcpyDeviceToDevice);
     }
     void read_cpu_memory(const void* src, size_t n) {
-      ArrayHandle<T> handle(array, access_location::host, access_mode::read);
+      ArrayHandle<T> handle(_array, access_location::host, access_mode::read);
       memcpy(handle.data, src, n);
     }
     void write_gpu_memory(void* dest, size_t n) {
-      ArrayHandle<T> handle(array, access_location::device, access_mode::overwrite);
+      ArrayHandle<T> handle(_array, access_location::device, access_mode::overwrite);
 
     }
     void write_cpu_memory(void* dest, size_t n) {
-      ArrayHandle<T> handle(array, access_location::host, access_mode::overwrite);
+      ArrayHandle<T> handle(_array, access_location::host, access_mode::overwrite);
       memcpy(dest, handle.data, n);
     }
   };
