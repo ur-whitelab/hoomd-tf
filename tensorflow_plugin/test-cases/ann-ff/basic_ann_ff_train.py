@@ -30,19 +30,19 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     lj = hoomd.md.pair.lj(rcut, nlist)#basic LJ forces from HOOMD
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
     hoomd.md.integrate.mode_standard(dt=0.005)
-    hoomd.md.integrate.langevin(group=hoomd.group.all(), kT=0.2, seed=42)
+    hoomd.md.integrate.langevin(group=hoomd.group.all(), kT=0.5, seed=42)
     #hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=1.2, seed=42)
     #equilibrate for 4k steps first
     hoomd.run(4000)
     #now attach the trainable model
-    tfcompute.attach(nlist, r_cut=rcut, save_period=1, period=100)
+    tfcompute.attach(nlist, r_cut=rcut, save_period=10, period=100, feed_func=lambda x: {'keep_prob:0': 0.8})
     #hoomd.analyze.log(filename='TRAINING_log.log',
     #                  quantities = ['potential_energy','temperature'],
     #                  period=100,
     #                  overwrite=True)
     #hoomd.dump.gsd(filename='TRAINING_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
     #train on 5k timesteps
-    hoomd.run(50000, profile=True)
+    hoomd.run(100000)#, profile=True)
     #tain on 5k timesteps and benchmark with 20 repeats
     #benchmark_results = hoomd.benchmark.series(warmup=6000, repeat=5,steps=5000, limit_hours=2)
     

@@ -28,7 +28,7 @@ with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) 
     #equilibrate for 4k steps first
     hoomd.run(4000)
     
-    tfcompute.attach(nlist, r_cut=rcut)
+    tfcompute.attach(nlist, r_cut=rcut, feed_func=lambda x: {'keep_prob:0': 0.5})
     hoomd.analyze.log(filename='INFERENCE_log.log',
                       quantities = ['potential_energy','temperature'],
                       period=10,

@@ -59,7 +59,7 @@ def make_train_graph(NN, N_hidden):
     biases['b3']= tf.Variable(tf.random_uniform([N_hidden], minval=minval, maxval=maxval), name='bias_b3')
     biases['out']= tf.Variable(tf.random_uniform([1], minval=minval, maxval=maxval), name='bias_out')
 
-    keep_prob = tf.Variable(1.0, trainable=False, name='keep_prob')
+    keep_prob = tf.placeholder(dtype=tf.float32, name='keep_prob', shape=[])
     #specify the network structure
     
     input_layer = multilayer_perceptron_layer_biased(r_inv, weights['h1'], biases['b1'], keep_prob)
@@ -74,10 +74,11 @@ def make_train_graph(NN, N_hidden):
     calculated_energies = tf.reduce_sum(nn_energies, axis=1, name='calculated_energies')
     print('calculated_energies shape: {}'.format(calculated_energies.shape))
     calculated_forces = graph.compute_forces(calculated_energies)
-    printer = tf.Print(calculated_forces, [calculated_forces], summarize=10, message = 'calculated_forces is: ')
+    #printer = tf.Print(calculated_forces, [calculated_forces], summarize=10, message = 'calculated_forces is: ')
     #compare calculated forces to HOOMD's forces
     cost = tf.losses.mean_squared_error(graph.forces, calculated_forces)
     #need to minimize the cost
+    
     optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(cost)
     #print summaries for tensorboard
     tf.summary.scalar('cost', cost)
@@ -87,7 +88,7 @@ def make_train_graph(NN, N_hidden):
     printer2 = tf.Print(cost, [cost], summarize=100, message = "cost is: ")
     #check = tf.add_check_numerics_ops()
     
-    graph.save(model_directory='/tmp/ann-training', out_nodes=[optimizer, histo, histo2, histo3, printer, printer2])#check, printer, 
+    graph.save(model_directory='/tmp/ann-training', out_nodes=[optimizer, histo, histo2, histo3, printer2])#check, printer, 
 
 def make_force_graph(NN, N_hidden):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
@@ -110,7 +111,7 @@ def make_force_graph(NN, N_hidden):
     biases['b3']= tf.Variable(tf.random_uniform([N_hidden], minval=minval, maxval=maxval), name='bias_b3')
     biases['out']= tf.Variable(tf.random_uniform([1], minval=minval, maxval=maxval), name='bias_out')
 
-    keep_prob = tf.Variable(1.0, name='keep_prob', trainable=False)
+    keep_prob = tf.placeholder(dtype=tf.float32, name='keep_prob', shape=[])
     
     input_layer = multilayer_perceptron_layer_biased(r_inv, weights['h1'], biases['b1'], keep_prob)
     first_hidden_layer = multilayer_perceptron_layer_biased(input_layer, weights['h2'], biases['b2'], keep_prob)
