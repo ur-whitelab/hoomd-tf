@@ -2,8 +2,6 @@
 #ifndef CommStruct_H_H
 #define CommStruct_H_H
 
-#include <hoomd/GPUArray.h>
-
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
 #include <cuda_runtime.h>
 #endif
@@ -20,7 +18,7 @@ namespace hoomd_tf {
       element_size(element_size),
       name(name) {
       size_t size = 1;
-      for(unsigned int i; i < num_dims; i++)
+      for(unsigned int i = 0; i < num_dims; i++)
         size *= num_elements[i];
       mem_size = size * element_size;
     }
@@ -42,10 +40,10 @@ namespace hoomd_tf {
       return *this;
     }
 
-    virtual void* read_gpu_memory(void *dest, size_t n);
-    virtual void* read_cpu_memory(void *dest, size_t n);
-    virtual void* write_gpu_memory(const void *src, size_t n);
-    virtual void* write_cpu_memory(const void *src, size_t n);
+    virtual void read_gpu_memory(void *dest, size_t n);
+    virtual void read_cpu_memory(void *dest, size_t n);
+    virtual void write_gpu_memory(const void *src, size_t n);
+    virtual void write_cpu_memory(const void *src, size_t n);
 
     const int* num_elements; //would be better as size_t, but need this for TF
     int num_dims;
@@ -59,6 +57,8 @@ namespace hoomd_tf {
     #endif
   };
 
+  #ifndef GOOGLE_CUDA
+  #include <hoomd/GPUArray.h>
   template <typename T>
   struct CommStructDerived : CommStruct {
     GPUArray<T>* _array;
@@ -99,5 +99,7 @@ namespace hoomd_tf {
 
   template<> CommStructDerived<Scalar4>::CommStructDerived(GPUArray<Scalar4>&, const char*);
   template<> CommStructDerived<Scalar>::CommStructDerived(GPUArray<Scalar>&, const char*);
+  #endif //GOOGLE_CUDA
 }
-#endif
+
+#endif //guard
