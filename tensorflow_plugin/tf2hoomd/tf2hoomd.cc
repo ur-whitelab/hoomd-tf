@@ -47,7 +47,7 @@ class TfToHoomdOp : public OpKernel {
     const Tensor& input_tensor = context->input(0);
     auto input = input_tensor.flat<T>();
 
-    if (input.size() > _output_memory->num_elements * _output_memory->element_size ) {
+    if (input.size() > _output_memory->mem_size / _output_memory->element_size ) {
       errors::InvalidArgument(
           "Tensor input size is too large for output buffer!");
     }

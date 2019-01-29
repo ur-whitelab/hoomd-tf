@@ -46,13 +46,14 @@ namespace hoomd_tf {
   template <TFCommMode M, typename T>
   class TFArrayComm {
   public:
+
     TFArrayComm() {
       checkDevice();
     }
 
     TFArrayComm(GPUArray<T>& gpu_array, const char* name)
         : _comm_struct(gpu_array, name),
-        _array(&gpu_array) {
+          _array(&gpu_array) {
       checkDevice();
       allocate();
     }
@@ -65,7 +66,7 @@ namespace hoomd_tf {
       checkDevice();
       // copy over variables
       _array = other._array;
-      _comm_struct = other._comm_struct;
+      _comm_struct = std::move(other._comm_struct);
       return *this;
     }
 
@@ -75,14 +76,14 @@ namespace hoomd_tf {
 
     void receiveArray(const GPUArray<T>& array) {
       if (M == TFCommMode::CPU) {
-        ArrayHandle<T> handle(_array, access_location::host,
+        ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::host,
                         access_mode::read);
         memcpy(handle.data, ohandle.data, _comm_struct.mem_size);
       } else {
         #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(_array, access_location::device,
+        ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::device,
                   access_mode::read);
@@ -95,12 +96,12 @@ namespace hoomd_tf {
 
       void memsetArray(int v) {
       if (M == TFCommMode::CPU) {
-        ArrayHandle<T> handle(_array, access_location::host,
+        ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
         memset( static_cast<void*> (handle.data), v, _comm_struct.mem_size);
       } else {
         #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(_array, access_location::device,
+        ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         cudaMemset(static_cast<void*> (handle.data), v, _comm_struct.mem_size);
         TF_CHECK_CUDA_ERROR();
@@ -109,12 +110,14 @@ namespace hoomd_tf {
     }
 
     std::vector<T> getArray() const {
-      ArrayHandle<T> handle(_array, access_location::host, access_mode::read);
+      ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
       return std::vector<T>(handle.data, handle.data + _array->getNumElements());
     }
 
     int64_t getAddress() const {
-        return reinterpret_cast<int64_t>(_comm_struct);
+        //this insanity is because I need to cast to base class
+        //then get pointer to that.
+        return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&_comm_struct));
     }
 
     #ifdef ENABLE_CUDA
@@ -157,8 +160,8 @@ namespace hoomd_tf {
     using value_type = T;
 
   private:
-    CommStructDerived<T>& _comm_struct;
-    GPUArray<T>& _array;
+    CommStructDerived<T> _comm_struct;
+    GPUArray<T>* _array;
   };
 
   void export_TFArrayComm(pybind11::module& m);

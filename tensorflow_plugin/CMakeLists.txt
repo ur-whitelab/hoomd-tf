@@ -8,6 +8,7 @@ set(COMPONENT_NAME tensorflow_plugin)
 
 set(_${COMPONENT_NAME}_sources
     module.cc
+    CommStruct.cc
     TensorflowCompute.cc
     TFArrayComm.cc
     TaskLock.cc

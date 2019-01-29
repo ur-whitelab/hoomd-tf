@@ -66,18 +66,10 @@ class HoomdToTfOp : public OpKernel {
                     "Shape specification to HoomdToTf should be vector"));
 
     // TODO: Is there a performance hit for this?
-    TensorShapeUtils::MakeShape(shape.vec<Tshape>(), &tmp_shape);
-    TensorShape output_shape;
-    if(tmp_shape.dims() == 2)
-      output_shape = TensorShape({static_cast<int> (_input_memory->num_elements) / tmp_shape.dim_size(0)});
-    else
-      output_shape = TensorShape({static_cast<int> (_input_memory->num_elements)});
-
-
-    output_shape.AppendShape(tmp_shape);
+    TensorShapeUtils::MakeShape(_input_memory->num_elements, _input_memory->num_dims, &tmp_shape);
 
     OP_REQUIRES_OK(context,
-                   context->allocate_output(0, output_shape, &output_tensor));
+                   context->allocate_output(0, tmp_shape, &output_tensor));
 
     // Do the computation
     OP_REQUIRES(context, output_tensor->NumElements() <= tensorflow::kint32max,
