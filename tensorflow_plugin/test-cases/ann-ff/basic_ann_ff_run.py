@@ -11,8 +11,8 @@ if(len(argv) != 2):
 N = int(argv[1])
 
 
-training_dir = '/tmp/ann-training'
-inference_dir = '/tmp/ann-inference'
+training_dir = '/scratch/rbarret8/ann-training'
+inference_dir = '/scratch/rbarret8/ann-inference'
 
 with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')

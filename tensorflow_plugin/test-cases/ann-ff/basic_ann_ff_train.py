@@ -13,7 +13,7 @@ if(len(argv) != 2):
 N = int(argv[1])
 
 
-model_dir = '/tmp/ann-training'
+model_dir = '/scratch/rbarret8/ann-training'
 
 np.random.seed(42)
 
@@ -30,7 +30,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     lj = hoomd.md.pair.lj(rcut, nlist)#basic LJ forces from HOOMD
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
     hoomd.md.integrate.mode_standard(dt=0.005)
-    hoomd.md.integrate.langevin(group=hoomd.group.all(), kT=0.5, seed=42)
+    hoomd.md.integrate.langevin(group=hoomd.group.all(), kT=1.0, seed=42)
     #hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=1.2, seed=42)
     #equilibrate for 4k steps first
     hoomd.run(4000)
@@ -42,7 +42,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     #                  overwrite=True)
     #hoomd.dump.gsd(filename='TRAINING_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
     #train on 5k timesteps
-    hoomd.run(100000)#, profile=True)
+    hoomd.run(500000)#, profile=True)
     #tain on 5k timesteps and benchmark with 20 repeats
     #benchmark_results = hoomd.benchmark.series(warmup=6000, repeat=5,steps=5000, limit_hours=2)
     

@@ -8,8 +8,12 @@ import os, pickle
 import matplotlib.pyplot as plt
 
 
-training_dir = '/tmp/ann-training'
-inference_dir = '/tmp/ann-inference'
+if(len(argv) != 2):
+    print("Must specify a checkpoint number (-1 for latest)")
+    exit()
+
+training_dir = '/scratch/rbarret8/ann-training'
+inference_dir = '/scratch/rbarret8/ann-inference'
 
 #with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) as tfcompute:
     #hoomd.context.initialize()
@@ -33,9 +37,9 @@ inference_dir = '/tmp/ann-inference'
     #run for 3k steps and get our data
 #calculated_forces = tf.get_variable('calculated_forces:0', shape = [2])
 #calculated_energies = tf.get_variable('calculated_energies', shape=[2])
-#tf.inspect_checkpoint.print_tensors_in_checkpoint_file('/tmp/ann-training')
-tf.train.import_meta_graph(os.path.join('/tmp/ann-training/','model.meta'),import_scope='')
-with open('/tmp/ann-training/graph_info.p', 'rb') as f:
+#tf.inspect_checkpoint.print_tensors_in_checkpoint_file('/scratch/rbarret8/ann-training')
+tf.train.import_meta_graph(os.path.join('/scratch/rbarret8/ann-training/','model.meta'),import_scope='')
+with open('/scratch/rbarret8/ann-training/graph_info.p', 'rb') as f:
     var_dict= pickle.load(f)
 print(var_dict)
 
@@ -45,13 +49,21 @@ r_inv_tensor = tf.get_default_graph().get_tensor_by_name('r_inv:0')
 nlist_tensor = tf.get_default_graph().get_tensor_by_name(var_dict['nlist'])
 NN = var_dict['NN']
 energy_arr = []
-checkpoint_num = 200
+
+checkpoint_num = int(argv[1])
+
 with tf.Session() as sess:
-    checkpoint_str = '/tmp/ann-training/model-{}'.format(checkpoint_num)
-    checkpoint = tf.train.load_checkpoint(checkpoint_str)
-    print(checkpoint)
     saver = tf.train.Saver()
-    saver.restore(sess, checkpoint_str)
+    if(checkpoint_num == -1):
+        checkpoint_str = '/scratch/rbarret8/ann-training/'
+        checkpoint = tf.train.latest_checkpoint(checkpoint_str)
+        saver.restore(sess, checkpoint)
+        checkpoint_num = 'latest'
+    else:
+        checkpoint_str = '/scratch/rbarret8/ann-training/model-{}'.format(checkpoint_num)
+        checkpoint = tf.train.load_checkpoint(checkpoint_str)
+        print(checkpoint)        
+        saver.restore(sess, checkpoint_str)
     pos_arr = np.linspace(0., 3.0, 300)
     np_nlist = np.zeros((2, NN, 4))
     nlist = {}

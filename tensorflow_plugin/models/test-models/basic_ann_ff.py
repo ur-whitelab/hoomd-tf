@@ -78,8 +78,9 @@ def make_train_graph(NN, N_hidden):
     #compare calculated forces to HOOMD's forces
     cost = tf.losses.mean_squared_error(graph.forces, calculated_forces)
     #need to minimize the cost
-    
-    optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(cost)
+    step = tf.Variable(0, trainable=False)
+    rate = tf.train.exponential_decay(0.15, step, 1, 0.9999)
+    optimizer = tf.train.AdamOptimizer(learning_rate=rate).minimize(cost, global_step=step)
     #print summaries for tensorboard
     tf.summary.scalar('cost', cost)
     histo = tf.summary.histogram('calculated forces', calculated_forces)
@@ -88,7 +89,7 @@ def make_train_graph(NN, N_hidden):
     printer2 = tf.Print(cost, [cost], summarize=100, message = "cost is: ")
     #check = tf.add_check_numerics_ops()
     
-    graph.save(model_directory='/tmp/ann-training', out_nodes=[optimizer, histo, histo2, histo3, printer2])#check, printer, 
+    graph.save(model_directory='/scratch/rbarret8/ann-training', out_nodes=[optimizer, histo, histo2, histo3, printer2])#check, printer, 
 
 def make_force_graph(NN, N_hidden):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
@@ -123,7 +124,7 @@ def make_force_graph(NN, N_hidden):
     calculated_forces = graph.compute_forces(calculated_energies)
     printer = tf.Print(calculated_forces, [calculated_forces], summarize=10, message = 'calculated_forces is: ')
     #no cost nor minimizer this time
-    graph.save(model_directory='/tmp/ann-inference', force_tensor=calculated_forces, out_nodes=[printer])
+    graph.save(model_directory='/scratch/rbarret8/ann-inference', force_tensor=calculated_forces, out_nodes=[printer])
 
 make_train_graph(NN, N_hidden)
 make_force_graph(NN, N_hidden)
