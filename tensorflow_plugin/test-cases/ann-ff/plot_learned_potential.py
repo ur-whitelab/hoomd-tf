@@ -8,38 +8,15 @@ import os, pickle
 import matplotlib.pyplot as plt
 
 
-if(len(argv) != 2):
-    print("Must specify a checkpoint number (-1 for latest)")
+if(len(argv) != 3):
+    print("Usage: plot_learned_potential.py [checkpoint_directory] [checkpoint_number] (-1 for latest)")
     exit()
 
-training_dir = '/scratch/rbarret8/ann-training'
-inference_dir = '/scratch/rbarret8/ann-inference'
+training_dir = argv[1]#e.g. '/scratch/rbarret8/ann-training'
+checkpoint_num = int(argv[2])
 
-#with hoomd.tensorflow_plugin.tfcompute(inference_dir, bootstrap = training_dir) as tfcompute:
-    #hoomd.context.initialize()
-    #make a hoomd system of just 2 particles and generate U(r)
-    # rcut = 5.0
-    # snapshot = hoomd.data.make_snapshot(N=2, particle_types=['A'], box=hoomd.data.boxdim(L=5))
-    # snapshot.particles.position[0] = [0.,0.,0.]
-    # snapshot.particles.position[1] = [0.01,0.,0.]
-    # snapshot.particles.velocity[1] = [1., 0., 0.]
-    #hoomd.init.read_snapshot(snapshot)
-    #all_atoms = hoomd.group.all()
-    #nlist = hoomd.md.nlist.cell(check_period = 1)
-    #tfcompute.attach(nlist, r_cut=rcut)
-    #hoomd.md.integrate.nve(group=all_atoms, limit=None)#, zero_force=True)
-    #hoomd.analyze.log(filename='NN_potential.log',
-                      # quantities = ['potential_energy', 'N', 'momentum'],
-                      # period=1,
-                      # overwrite=True)
-    #hoomd.dump.gsd(filename='POTENTIAL_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
-    #hoomd.run(3000)
-    #run for 3k steps and get our data
-#calculated_forces = tf.get_variable('calculated_forces:0', shape = [2])
-#calculated_energies = tf.get_variable('calculated_energies', shape=[2])
-#tf.inspect_checkpoint.print_tensors_in_checkpoint_file('/scratch/rbarret8/ann-training')
-tf.train.import_meta_graph(os.path.join('/scratch/rbarret8/ann-training/','model.meta'),import_scope='')
-with open('/scratch/rbarret8/ann-training/graph_info.p', 'rb') as f:
+tf.train.import_meta_graph(os.path.join('{}/'.format(training_dir),'model.meta'),import_scope='')
+with open('{}/graph_info.p'.format(training_dir), 'rb') as f:
     var_dict= pickle.load(f)
 print(var_dict)
 
@@ -50,17 +27,16 @@ nlist_tensor = tf.get_default_graph().get_tensor_by_name(var_dict['nlist'])
 NN = var_dict['NN']
 energy_arr = []
 
-checkpoint_num = int(argv[1])
 
 with tf.Session() as sess:
     saver = tf.train.Saver()
     if(checkpoint_num == -1):
-        checkpoint_str = '/scratch/rbarret8/ann-training/'
+        checkpoint_str = training_dir #'/scratch/rbarret8/ann-training/'
         checkpoint = tf.train.latest_checkpoint(checkpoint_str)
         saver.restore(sess, checkpoint)
         checkpoint_num = 'latest'
     else:
-        checkpoint_str = '/scratch/rbarret8/ann-training/model-{}'.format(checkpoint_num)
+        checkpoint_str = '{}/model-{}'.format(training_dir, checkpoint_num)
         checkpoint = tf.train.load_checkpoint(checkpoint_str)
         print(checkpoint)        
         saver.restore(sess, checkpoint_str)
@@ -68,7 +44,7 @@ with tf.Session() as sess:
     np_nlist = np.zeros((2, NN, 4))
     nlist = {}
     
-    for i in range(1, 300):
+    for i in range(1, 300):#don't forget the distance is double 
         np_nlist[0,0,1] = pos_arr[i]
         np_nlist[1,0,1] = -pos_arr[i]
         nlist[nlist_tensor] = np_nlist
@@ -82,7 +58,7 @@ def lj_energy(r):
     return(4 * ( (r)**(-12) - (r)**(-6) ))
 
 plt.figure()
-plt.plot(pos_arr[1:], energy_arr - energy_arr[-1], label='Neural Network Potential')
+plt.plot(2*pos_arr[1:], energy_arr - energy_arr[-1], label='Neural Network Potential')
 plt.plot(pos_arr[1:], lj_energy(pos_arr[1:]), label='Lennard-Jones Potential')
 
 NN_min_idx = np.argmin(energy_arr)
@@ -93,7 +69,7 @@ lj_min_idx = np.argmin(lj_energy(pos_arr[1:]))
 lj_min = pos_arr[lj_min_idx]
 NN_min = pos_arr[NN_min_idx]
 
-plt.scatter(NN_min, energy_arr[NN_min_idx] - energy_arr[-1], label = 'NN minimum: {:.5}'.format(NN_min))
+plt.scatter(2*NN_min, energy_arr[NN_min_idx] - energy_arr[-1], label = 'NN minimum: {:.5}'.format(NN_min))
 plt.scatter(lj_min, lj_energy(lj_min), label = 'LJ minimum: {:.5}'.format(lj_min))
 
 print('X value at min of calculated LJ: {}'.format(lj_min))
