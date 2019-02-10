@@ -31,19 +31,16 @@ class test_comm(unittest.TestCase):
     def test_array_comm(self):
         hoomd.context.initialize('--mode=cpu')
         shared = np.zeros(10)
+        #make TF Array
         array = hoomd.tensorflow_plugin.tf_array_comm(shared,  hoomd.context.exec_conf)
 
+        #get the array and make sure it's intact
         np.testing.assert_allclose(shared, array.getArray())
 
+        #modify the array and check it is good
         shared[4] = 10.0
-        array.receive()
         np.testing.assert_allclose(shared, array.getArray())
-
-        ref = shared[:]
-        shared[:] = -1
-        array.send()
-        np.testing.assert_allclose(shared, ref)
-
+        
 class test_access(unittest.TestCase):
     def test_access(self):
         model_dir = '/tmp/test-simple-potential-model'

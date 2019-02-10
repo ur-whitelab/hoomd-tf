@@ -66,6 +66,7 @@ class HoomdToTfOp : public OpKernel {
                     "Shape specification to HoomdToTf should be vector"));
 
     // TODO: Is there a performance hit for this?
+    _input_memory->print(std::cout) << std::endl;
     TensorShapeUtils::MakeShape(_input_memory->num_elements, _input_memory->num_dims, &tmp_shape);
 
     OP_REQUIRES_OK(context,

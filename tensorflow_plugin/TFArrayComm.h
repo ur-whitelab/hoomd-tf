@@ -117,6 +117,7 @@ namespace hoomd_tf {
     int64_t getAddress() const {
         //this insanity is because I need to cast to base class
         //then get pointer to that.
+        _comm_struct.print(std::cout) << std::endl;
         return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&_comm_struct));
     }
 

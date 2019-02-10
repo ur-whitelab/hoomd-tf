@@ -13,5 +13,4 @@ namespace hoomd_tf{
     _array(&array),
     CommStruct({array.getNumElements(), 1}, 2, sizeof(Scalar), name) {
     }
-
 }

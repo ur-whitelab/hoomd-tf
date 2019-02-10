@@ -234,20 +234,7 @@ class tfcompute(hoomd.compute._compute):
 
     def get_virial_array(self):
         array = self.cpp_force.getVirialArray()
-        pitch = self.cpp_force.getVirialPitch()
-        npa = np.zeros((self.atom_number, 3, 3))
-        for i in range(self.atom_number):
-            #see TensorflowCompute.cc for more info
-            npa[i, 0, 0] = array[0 * pitch + i]
-            npa[i, 0, 1] = array[1 * pitch + i]
-            npa[i, 1, 0] = array[1 * pitch + i]
-            npa[i, 0, 2] = array[2 * pitch + i]
-            npa[i, 2, 0] = array[2 * pitch + i]
-            npa[i, 1, 1] = array[3 * pitch + i]
-            npa[i, 1, 2] = array[4 * pitch + i]
-            npa[i, 2, 1] = array[4 * pitch + i]
-            npa[i, 2, 2] = array[5 * pitch + i]
-        return npa
+        return array
 
 
     def update_coeffs(self):
