@@ -27,22 +27,6 @@ def compute_forces(system, rcut):
                 forces[j, :] -= f
     return forces
 
-class test_comm(unittest.TestCase):
-    def test_array_comm(self):
-        '''
-        This test checks the 
-        '''
-        hoomd.context.initialize('--mode=cpu')
-        shared = np.zeros(10)
-        #make TF Array
-        array = hoomd.tensorflow_plugin.tf_array_comm(shared,  hoomd.context.exec_conf)
-
-        #get the array and make sure it's intact
-        np.testing.assert_allclose(shared, array.getArray())
-
-        #modify the array and check it is good
-        shared[4] = 10.0
-        np.testing.assert_allclose(shared, array.getArray())
 
 class test_access(unittest.TestCase):
     def test_access(self):
