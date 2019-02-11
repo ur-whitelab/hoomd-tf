@@ -280,7 +280,6 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
         .value("hoomd2tf", FORCE_MODE::hoomd2tf)
-        .value("ignore", FORCE_MODE::ignore)
     ;
     }
 

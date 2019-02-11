@@ -70,7 +70,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None, force_mode=None):
+    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -103,10 +103,6 @@ class tfcompute(hoomd.compute._compute):
         hoomd.compute._compute.__init__(self)
 
         force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        if force_mode == 'hoomd2tf':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        elif force_mode == 'none' or force_mode == 'ignore':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
         hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(force_mode_code))
         #if graph is not outputting (input) then tfcompute should be outputting them
         if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.hoomd2tf:

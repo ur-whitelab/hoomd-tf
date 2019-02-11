@@ -51,7 +51,7 @@ namespace hoomd_tf {
   * is called.
   */
 
-  enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
+  enum class FORCE_MODE { tf2hoomd, hoomd2tf };
 
   template <TFCommMode M = TFCommMode::CPU>
   class TensorflowCompute : public ForceCompute {

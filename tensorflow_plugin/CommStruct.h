@@ -14,16 +14,21 @@ namespace hoomd_tf {
 
   struct CommStruct {
 
-    CommStruct(const std::vector<int> num_elements_t,
-                int num_dims, size_t element_size,
+    CommStruct(int num_dims, size_t element_size,
                 const char* name) :
-      num_elements(num_elements_t.data()),
       num_dims(num_dims),
       element_size(element_size),
       name(name) {
+    }
+
+    void set_num_elements(int* num_elements_t) {
       size_t size = 1;
-      for(unsigned int i = 0; i < num_dims; i++)
+      num_elements = new int[num_dims];
+      for(unsigned int i = 0; i < num_dims; i++) {
+        num_elements[i] = num_elements_t[i];
         size *= num_elements[i];
+      }
+
       mem_size = size * element_size;
     }
 
@@ -45,7 +50,7 @@ namespace hoomd_tf {
     }
 
   std::ostream& print(std::ostream& os) const {
-    os << name <<  ":\n  " << "Dims: ";
+    os << name <<  ":\n  " << "Dims: [";
     for(unsigned int i = 0; i < num_dims; i++) {
       os << num_elements[i] << " ";
     }
@@ -57,7 +62,7 @@ namespace hoomd_tf {
     virtual void write_gpu_memory(const void *src, size_t n) = 0;
     virtual void write_cpu_memory(const void *src, size_t n) = 0;
 
-    const int* num_elements; //would be better as size_t, but need this for TF
+    int* num_elements; //would be better as size_t, but need this for TF
     int num_dims;
     size_t element_size;
     size_t mem_size;
