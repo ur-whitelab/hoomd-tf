@@ -17,9 +17,9 @@ using namespace hoomd_tf;
     \brief Definition of TensorflowCompute
 */
 // ********************************
-// here follows the code for TensorflowCompute on the CPU
+// here follows the code for TensorflowCompute
 
-/*! \param sysdef System to zero the velocities of
+/*! \param sysdef Systemf
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
@@ -65,8 +65,8 @@ void TensorflowCompute<M>::reallocate() {
   _positions_comm = TFArrayComm<M, Scalar4>(
       const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()), "positions");
   _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
-  //In cuda, an array of size 0 breaks things. So even if we aren"t using
-  //neighborlist we need to make it size > 0
+  // In cuda, an array of size 0 breaks things. So even if we aren"t using
+  // neighborlist we need to make it size > 0
   GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
   _nlist_array.swap(tmp);
   _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
@@ -75,6 +75,7 @@ void TensorflowCompute<M>::reallocate() {
   GPUArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
   _virial_array.swap(tmp2);
   _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
+  _virial_comm.memsetArray(0);
   CHECK_CUDA_ERROR();
 }
 
@@ -83,25 +84,29 @@ TensorflowCompute<M>::~TensorflowCompute() {
   delete _tasklock;
 }
 
-/*! Perform the needed calculations to zero the system's velocity
+/*! Perform the needed calculations 
     \param timestep Current time step of the simulation
 */
 template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
+  if (timestep % _period != 0) return;
+  if (m_prof) m_prof->push("TensorflowCompute");
+
   // We need to offset positions and net forces if we're sending
   // forces because net forces are calculated after all computes (like us),
   // so we don't have access until next step.
-  if (timestep % _period != 0) return;
-  if (m_prof) m_prof->push("TensorflowCompute");
 
   // send net forces from last step
   if(_force_mode == FORCE_MODE::hoomd2tf) {
       if(timestep > 0) {
-        //get last step's net force and send
+        // get last step's net force and send
         _forces_comm.receiveArray(m_pdata->getNetForce());
+        // Forces are ready and we prepared nlist from previous computeForces
         finishUpdate(timestep);
-        //we sent it using forces_comm. We need to zero it out
+        // we sent it using forces_comm. We need to zero it out.
+        // This is not necessary, but in the future we may want to allow
+        // both sending and receiving forces. 
         _forces_comm.memsetArray(0);
       }
   }
@@ -118,11 +123,13 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
   if (m_prof) m_prof->pop(); //prearing data
 
+  // positions and forces are ready. Now we send
   if (_force_mode != FORCE_MODE::hoomd2tf)
     finishUpdate(timestep);
 
   if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
+  // now we receive virial from the update.
   if(_force_mode == FORCE_MODE::tf2hoomd) {
       receiveVirial();
   }
@@ -134,7 +141,7 @@ template <TFCommMode M>
 void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
-  //_tasklock->await();
+  // _tasklock->await();
   if (m_prof) m_prof->pop();
 }
 

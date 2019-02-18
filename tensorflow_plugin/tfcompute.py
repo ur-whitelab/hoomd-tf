@@ -218,7 +218,6 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
-
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
@@ -229,15 +228,13 @@ class tfcompute(hoomd.compute._compute):
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
-        array = self.cpp_force.getVirialArray()
-        return array
-
+        array = np.array(self.cpp_force.getVirialArray())
+        return array.reshape((-1, 9))
 
     def update_coeffs(self):
         pass
 
     def scalar4_vec_to_np(self,array):
-        '''TODO: This must exist somewhere in HOOMD codebase'''
         npa = np.empty((len(array), 4))
         for i, e in enumerate(array):
             npa[i,0] = e.x

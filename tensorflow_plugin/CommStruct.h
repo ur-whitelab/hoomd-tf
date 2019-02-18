@@ -18,7 +18,8 @@ namespace hoomd_tf {
                 const char* name) :
       num_dims(num_dims),
       element_size(element_size),
-      name(name) {
+      name(name),
+      mem_size(0) {
     }
 
     void set_num_elements(int* num_elements_t) {
@@ -26,10 +27,12 @@ namespace hoomd_tf {
       num_elements = new int[num_dims];
       for(unsigned int i = 0; i < num_dims; i++) {
         num_elements[i] = num_elements_t[i];
+        std::cout << "num_dims " << i << " " << num_dims << " cur size: " << size << std::endl;
         size *= num_elements[i];
       }
 
       mem_size = size * element_size;
+      std::cout << mem_size << std::endl;
     }
 
     CommStruct() {
@@ -40,6 +43,7 @@ namespace hoomd_tf {
       num_elements = other.num_elements;
       num_dims = other.num_dims;
       element_size = other.element_size;
+      mem_size = other.mem_size;
       name = other.name;
       #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
       event_handle = other.event_handle;
@@ -54,7 +58,7 @@ namespace hoomd_tf {
     for(unsigned int i = 0; i < num_dims; i++) {
       os << num_elements[i] << " ";
     }
-    os << "]\n  " << "Element Size: " << element_size << "\n";
+    os << "]\n  " << "Element Size: " << element_size << "\n" << "Total Size: " << mem_size << "\n";
     return os;
   }
     virtual void read_gpu_memory(void *dest, size_t n) = 0;
