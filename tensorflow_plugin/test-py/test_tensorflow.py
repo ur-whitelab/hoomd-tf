@@ -199,7 +199,7 @@ class test_compute(unittest.TestCase):
 
             #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10)
+            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1,:3]
 
