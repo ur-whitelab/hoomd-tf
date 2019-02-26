@@ -8,7 +8,7 @@ using namespace hoomd_tf;
 
 template <typename Device, typename T>
 struct HOOMD2TFFunctor {
-  void operator()(const Device& d, int size, CommStruct_t* address,
+  void operator()(const Device& d, int size, CommStruct* address,
                   T* out);
 };
 
@@ -20,7 +20,7 @@ struct HOOMD2TFFunctor {
 // Partially specialize functor for GpuDevice.
 template <typename T>
 struct HOOMD2TFFunctor<Eigen::GpuDevice, T> {
-  void operator()(const Eigen::GpuDevice& d, int size, CommStruct_t* address,
+  void operator()(const Eigen::GpuDevice& d, int size, CommStruct* address,
                   T* out);
 };
 #endif

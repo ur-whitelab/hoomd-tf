@@ -46,48 +46,14 @@ namespace hoomd_tf {
   template <TFCommMode M, typename T>
   class TFArrayComm {
   public:
-    TFArrayComm()
-        : _shared_array(nullptr),
-          _ipc_handle(nullptr),
-          _array(nullptr),
-          _array_size(0),
-          _own_array(false)
-          {
+
+    TFArrayComm() {
       checkDevice();
     }
 
-    TFArrayComm(void* _shared_array, size_t array_size,
-                std::shared_ptr<const ExecutionConfiguration> exec_conf)
-        : _shared_array(_shared_array),
-          _ipc_handle(nullptr),
-          _array(nullptr),
-          _array_size(array_size),
-          _own_array(true)
-          {
-      checkDevice();
-      _array = new GPUArray<T>(array_size, exec_conf);
-      allocate();
-    }
-
-    TFArrayComm(GPUArray<T>& gpu_array,
-                size_t num_elements)
-        : _shared_array(nullptr),
-          _ipc_handle(nullptr),
-        _array(&gpu_array),
-          _array_size(0),
-          _own_array(false) {
-      _array_size = num_elements * sizeof(T);
-      checkDevice();
-      allocate();
-    }
-
-    TFArrayComm(GPUArray<T>& gpu_array)
-        : _shared_array(nullptr),
-          _ipc_handle(nullptr),
-        _array(&gpu_array),
-          _array_size(0),
-          _own_array(false)
-          {
+    TFArrayComm(GPUArray<T>& gpu_array, const char* name)
+        : _comm_struct(gpu_array, name),
+          _array(&gpu_array) {
       checkDevice();
       allocate();
     }
@@ -100,21 +66,11 @@ namespace hoomd_tf {
       checkDevice();
       // copy over variables
       _array = other._array;
-      _array_size = other._array_size;
-      other._array_size = 0;
-      _own_array = other._own_array;
-      // prevent other from deleting array
-      other._own_array = false;
-      _shared_array = other._shared_array;
-      other._shared_array = nullptr;
-      _ipc_handle = other._ipc_handle;
-      other._ipc_handle = nullptr;
-
+      _comm_struct = std::move(other._comm_struct);
       return *this;
     }
 
     ~TFArrayComm() {
-      if (_own_array) delete _array;
       this->deallocate();
     }
 
@@ -124,14 +80,14 @@ namespace hoomd_tf {
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::host,
                         access_mode::read);
-        memcpy(handle.data, ohandle.data, _array->getNumElements() * sizeof(T));
+        memcpy(handle.data, ohandle.data, _comm_struct.mem_size);
       } else {
         #ifdef ENABLE_CUDA
         ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::device,
                   access_mode::read);
-        cudaMemcpy(handle.data, ohandle.data, _array->getNumElements() * sizeof(T),
+        cudaMemcpy(handle.data, ohandle.data, _comm_struct.mem_size,
                   cudaMemcpyDeviceToDevice);
         TF_CHECK_CUDA_ERROR();
         #endif
@@ -142,90 +98,12 @@ namespace hoomd_tf {
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
-        memset( static_cast<void*> (handle.data), v, _array->getNumElements() * sizeof(T));
+        memset( static_cast<void*> (handle.data), v, _comm_struct.mem_size);
       } else {
         #ifdef ENABLE_CUDA
         ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
-        cudaMemset(static_cast<void*> (handle.data), v, _array->getNumElements() * sizeof(T));
-        TF_CHECK_CUDA_ERROR();
-        #endif
-      }
-    }
-
-    void receive() {
-      if (M == TFCommMode::CPU) {
-        ArrayHandle<T> handle(*_array, access_location::host,
-                              access_mode::overwrite);
-        memcpy(handle.data, _shared_array,  _array_size);
-      } else {
-        #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(*_array, access_location::device,
-                              access_mode::overwrite);
-        cudaMemcpy(handle.data, _shared_array, _array->getNumElements() * sizeof(T),
-                  cudaMemcpyDeviceToDevice);
-        TF_CHECK_CUDA_ERROR();
-        #endif
-      }
-    }
-
-    void receiveAsync() {
-      if (M == TFCommMode::CPU) {
-        receive();
-      } else {
-        #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(*_array, access_location::device,
-                              access_mode::overwrite);
-        cudaMemcpyAsync(handle.data, _shared_array,
-                        _array->getNumElements() * sizeof(T),
-                        cudaMemcpyDeviceToDevice, _ipc_handle->stream);
-        TF_CHECK_CUDA_ERROR();
-        #endif
-      }
-    }
-
-    template <typename Func>
-    void receiveOp(Func fun) {
-      if (M == TFCommMode::CPU) {
-        ArrayHandle<T> handle(*_array, access_location::host,
-                              access_mode::readwrite);
-        // have to use funny fun.template because compiler thinks
-        // that the '<' means less than instead of start of template arguments
-        fun.template call<M>(handle.data, static_cast<T*>(_shared_array));
-      } else {
-        #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(*_array, access_location::device,
-                              access_mode::readwrite);
-        fun._stream = &_ipc_handle->stream;  // set stream for functor
-        fun.template call<M>(handle.data, static_cast<T*>(_shared_array));
-        #endif
-      }
-    }
-
-    void send() {
-      if (M == TFCommMode::CPU) {
-        ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-        memcpy(_shared_array, handle.data, _array_size);
-      } else {
-        #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(*_array, access_location::device,
-                              access_mode::read);
-        cudaMemcpy(_shared_array, handle.data, _array_size,
-                  cudaMemcpyDeviceToDevice);
-        TF_CHECK_CUDA_ERROR();
-        #endif
-      }
-    }
-
-    void sendAsync() {
-      if (M == TFCommMode::CPU) {
-        send();
-      } else {
-        #ifdef ENABLE_CUDA
-        ArrayHandle<T> handle(*_array, access_location::device,
-                              access_mode::read);
-        cudaMemcpyAsync(_shared_array, handle.data, _array_size,
-                        cudaMemcpyDeviceToDevice, _ipc_handle->stream);
+        cudaMemset(static_cast<void*> (handle.data), v, _comm_struct.mem_size);
         TF_CHECK_CUDA_ERROR();
         #endif
       }
@@ -237,13 +115,16 @@ namespace hoomd_tf {
     }
 
     int64_t getAddress() const {
-        return reinterpret_cast<int64_t>(_ipc_handle);
+        //_comm_struct.print(std::cout) << std::endl;
+        //this insanity is because I need to cast to base class
+        //then get pointer to that.
+        return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&_comm_struct));
     }
 
     #ifdef ENABLE_CUDA
-    void setCudaStream(cudaStream_t s) { _ipc_handle->stream = s;}
+    void setCudaStream(cudaStream_t s) { _comm_struct.stream = s;}
     cudaStream_t getCudaStream() const {
-      return _ipc_handle->stream; }
+      return _comm_struct.stream; }
     #endif
 
   protected:
@@ -256,59 +137,32 @@ namespace hoomd_tf {
     }
 
     void allocate() {
-      _ipc_handle = static_cast<CommStruct_t*> (malloc(sizeof(CommStruct_t)));
-      if (_array_size == 0) _array_size = sizeof(T) * _array->getNumElements();
-      if (M == TFCommMode::CPU) {
-        if(!_shared_array)
-          _shared_array = calloc(_array_size / sizeof(T), sizeof(T));
-      }
       #ifdef ENABLE_CUDA
-      cudaEvent_t ipc_event;
       if (M == TFCommMode::GPU) {
+        cudaEvent_t ipc_event;
         // flush errors
         TF_CHECK_CUDA_ERROR();
-        if (_shared_array) {
-          // we will open the existing mapped memory in cuda
-        } else {
-          // We will create a shared block
-          cudaMalloc((void**)&_shared_array, _array_size);
-          _ipc_handle->mem_handle = _shared_array;
-          cudaEventCreateWithFlags(
-              &ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
-          _ipc_handle->event_handle = ipc_event;
-        }
+        cudaEventCreateWithFlags(
+            &ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
+        _comm_struct.event_handle = ipc_event;
         TF_CHECK_CUDA_ERROR();
       }
-      _ipc_handle->stream = 0;
       #endif
-      _ipc_handle->mem_handle = _shared_array;
-      _ipc_handle->num_elements = _array_size / sizeof(T);
-      _ipc_handle->element_size = sizeof(T);
     }
 
     void deallocate() {
-      if (M == TFCommMode::CPU && _shared_array) {
-        free(_shared_array);
-      }
       if (M == TFCommMode::GPU) {
-      #ifdef ENABLE_CUDA
-        if (_ipc_handle) {
-          cudaFree(_shared_array);
-          cudaEventDestroy(_ipc_handle->event_handle);
-        }
-      #endif
+        #ifdef ENABLE_CUDA
+        cudaEventDestroy(_comm_struct.event_handle);
+        #endif
       }
-      if(_ipc_handle)
-        free(_ipc_handle);
     }
 
-    void* _shared_array;
+    using value_type = T;
 
   private:
-    CommStruct_t* _ipc_handle;
+    CommStructDerived<T> _comm_struct;
     GPUArray<T>* _array;
-    size_t _array_size;
-    bool _own_array;
   };
 
   void export_TFArrayComm(pybind11::module& m);
