@@ -11,14 +11,14 @@ using namespace hoomd_tf;
 
 template <typename Device, typename T>
 struct TF2IPCFunctor {
-  void operator()(const Device& d, int size, CommStruct_t* address, const T* in
+  void operator()(const Device& d, int size, CommStruct* address, const T* in
                   );
 };
 
 #ifdef GOOGLE_CUDA
 template <typename T>
 struct TF2IPCFunctor<Eigen::GpuDevice, T> {
-  void operator()(const Eigen::GpuDevice& d, int size, CommStruct_t* address,
+  void operator()(const Eigen::GpuDevice& d, int size, CommStruct* address,
                   const T* in);
 };
 #endif

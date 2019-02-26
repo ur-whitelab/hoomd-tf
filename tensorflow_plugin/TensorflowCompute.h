@@ -51,35 +51,7 @@ namespace hoomd_tf {
   * is called.
   */
 
-  enum class FORCE_MODE { tf2hoomd, ignore, hoomd2tf };
-
-  // these functors use 'call' instead of 'operator()' to avoid
-  // writing out functor.template operator()<T> (...) which is
-  // necessary due to some arcane c++ rules. Normally
-  // you would write functor(...), when creating a functor.
-  struct ReceiveForcesFunctorAdd {
-    size_t _N;
-    void* _stream;
-    ReceiveForcesFunctorAdd() {}
-    ReceiveForcesFunctorAdd(size_t N) : _N(N), _stream(nullptr) {}
-
-    // have empty implementation so if CUDA not enabled,
-    // we still have a GPU implementation
-    template <TFCommMode M>
-    void call(Scalar4* dest, Scalar4* src) {}
-  };
-
-  struct ReceiveVirialFunctorAdd {
-    size_t _N;
-    size_t _pitch;
-    void* _stream;
-    ReceiveVirialFunctorAdd() {}
-    ReceiveVirialFunctorAdd(size_t N, size_t pitch)
-        : _N(N), _pitch(pitch), _stream(nullptr) {}
-
-    template <TFCommMode M>
-    void call(Scalar* dest, Scalar* src) {}
-  };
+  enum class FORCE_MODE { tf2hoomd, hoomd2tf };
 
   template <TFCommMode M = TFCommMode::CPU>
   class TensorflowCompute : public ForceCompute {
@@ -129,7 +101,7 @@ namespace hoomd_tf {
     virtual void computeForces(unsigned int timestep) override;
 
     virtual void prepareNeighbors();
-    virtual void zeroVirial();
+    virtual void receiveVirial();
 
     void finishUpdate(unsigned int timestep);
 
@@ -144,11 +116,9 @@ namespace hoomd_tf {
     TFArrayComm<M, Scalar4> _positions_comm;
     TFArrayComm<M, Scalar4> _forces_comm;
     GPUArray<Scalar4> _nlist_array;
+    GPUArray<Scalar> _virial_array;
     TFArrayComm<M, Scalar4> _nlist_comm;
     TFArrayComm<M, Scalar> _virial_comm;
-
-    ReceiveVirialFunctorAdd _virial_functor;
-    ReceiveForcesFunctorAdd _forces_functor;
   };
 
   //! Export the TensorflowCompute class to python
@@ -181,7 +151,7 @@ namespace hoomd_tf {
     void computeForces(unsigned int timestep) override;
     void reallocate() override;
     void prepareNeighbors() override;
-    void zeroVirial() override;
+    void receiveVirial() override;
 
   private:
     std::unique_ptr<Autotuner> m_tuner;  // Autotuner for block size

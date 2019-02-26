@@ -36,9 +36,9 @@ using GPUDevice = Eigen::GpuDevice;
 // CPU specialization of actual computation.
 template <typename T>
 struct HOOMD2TFFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, CommStruct_t* in_memory,
+  void operator()(const CPUDevice& d, int size, CommStruct* in_memory,
                   T* out) {
-    std::memcpy(out, in_memory->mem_handle, size * sizeof(T));
+    in_memory->read_cpu_memory(out, size * sizeof(T));
   }
 };
 
@@ -51,7 +51,7 @@ class HoomdToTfOp : public OpKernel {
     // get memory address
     int64 tmp;
     context->GetAttr("address", &tmp);
-    _input_memory = reinterpret_cast<CommStruct_t*>(tmp);
+    _input_memory = reinterpret_cast<CommStruct*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -66,18 +66,10 @@ class HoomdToTfOp : public OpKernel {
                     "Shape specification to HoomdToTf should be vector"));
 
     // TODO: Is there a performance hit for this?
-    TensorShapeUtils::MakeShape(shape.vec<Tshape>(), &tmp_shape);
-    TensorShape output_shape;
-    if(tmp_shape.dims() == 2)
-      output_shape = TensorShape({static_cast<int> (_input_memory->num_elements) / tmp_shape.dim_size(0)});
-    else
-      output_shape = TensorShape({static_cast<int> (_input_memory->num_elements)});
-
-
-    output_shape.AppendShape(tmp_shape);
+    TensorShapeUtils::MakeShape(_input_memory->num_elements, _input_memory->num_dims, &tmp_shape);
 
     OP_REQUIRES_OK(context,
-                   context->allocate_output(0, output_shape, &output_tensor));
+                   context->allocate_output(0, tmp_shape, &output_tensor));
 
     // Do the computation
     OP_REQUIRES(context, output_tensor->NumElements() <= tensorflow::kint32max,
@@ -89,7 +81,7 @@ class HoomdToTfOp : public OpKernel {
   }
 
  private:
-  CommStruct_t* _input_memory;
+  CommStruct* _input_memory;
 };
 
 // Register the CPU kernels.

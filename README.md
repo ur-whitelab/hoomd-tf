@@ -1,6 +1,5 @@
 # Tensorflow Plugin
 
-
 This plugin allows using tensorflow to compute forces in a simulation
 or to compute other quantities, like collective variables to fit a
 potential for coarse-graining. You must first construct your
@@ -124,7 +123,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
 
 ```
 
-where `model_loc` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object, `r_cut` is the maximum distance for to consider particles as being neighbors, and `force_mode` is a string that indicates how to treat forces. `force_mode` need not be set and is by default matched to what you specified in your graph. A value of `'hoomd2tf'` indicates forces will be output from hoomd and input into the tensorflow model. `'ignore'` means the forces will not be modified and are not used the tensorflow model, for example if computing collective variables that do not depend on forces. `'tf2hoomd'` means the forces from the tensorflow model will overwrite the forces from hoomd, for example if the tensorflow model is computing the forces instead.
+where `model_dir` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object.
 
 ### Bootstraping Variables
 
@@ -249,15 +248,11 @@ with hoomd.tensorflow_plugin.tfcompute('/tmp/inference',
 ```
 ### Examples
 
-See `tensorflow_plugin/test-py/test_tensorflow.py`.
+See `tensorflow_plugin/models`
 
 ### Note on Building and Executing Tensorflow Models in Same Script
 
-Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it hoomd.
-
-### Interprocess Communication
-
-*You must be on a system with at least two threads so that the tensorflow and hoomd process can run concurrently.*
+Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it with hoomd.
 
 ## Tensorboard
 
@@ -300,7 +295,7 @@ adding the flag `--net=host` to the run command of the container. Then you can v
 
 Experimental, but you can trace your graph in realtime in a simulation. Add both the `write_tensorboard=True` to
 the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following
-the online instructions for interactive debugging via Tensorboard.
+the online instructions for interactive debugging from Tensorboard.
 
 ## Docker Image for Development
 
@@ -420,8 +415,7 @@ Because hoomd-tf requires at least two threads to run, you must ensure your blue
 interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 ```
 
-
-
+## Syntax Naming
 ### C++
 
 balance between tf/myself/hoomd

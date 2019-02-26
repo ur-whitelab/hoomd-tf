@@ -112,7 +112,7 @@ class TFManager:
 
         with tf.device(self.device):
             self.positions = hoomd_to_tf(address=self.positions_buffer, shape=[4], T=self.dtype, name='positions-input')
-            self.nlist = hoomd_to_tf(address=self.nlist_buffer, shape=[self.nneighs, 4], T=self.dtype, name='nlist-input')
+            self.nlist = tf.reshape(hoomd_to_tf(address=self.nlist_buffer, shape=[self.nneighs * 4], T=self.dtype, name='nlist-input'), [-1, self.nneighs, 4])
             self.log.info('initialized positions hoomd_to_tf at address {:x} with shape {} on {}'.format(self.positions_buffer, self.positions.shape, self.device))
             self.log.info('initialized nlist hoomd_to_tf at address {:x} with shape {} on {}'.format(self.nlist_buffer, self.nlist.shape, self.device))
         #now cast if graph dtype are different

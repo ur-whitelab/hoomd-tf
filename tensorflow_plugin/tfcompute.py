@@ -28,8 +28,8 @@ class tfcompute(hoomd.compute._compute):
         #so delete won't fail
         self.tfm = None
 
-        if hoomd.init.is_initialized():
-            raise RuntimeError('Must create TF before hoomd initialization')
+        #if hoomd.init.is_initialized():
+        #    raise RuntimeError('Must create TF before hoomd initialization')
 
 
         self.debug_mode = _debug_mode
@@ -70,7 +70,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None, force_mode=None):
+    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -103,10 +103,6 @@ class tfcompute(hoomd.compute._compute):
         hoomd.compute._compute.__init__(self)
 
         force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        if force_mode == 'hoomd2tf':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        elif force_mode == 'none' or force_mode == 'ignore':
-            force_mode_code = _tensorflow_plugin.FORCE_MODE.ignore
         hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(force_mode_code))
         #if graph is not outputting (input) then tfcompute should be outputting them
         if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.hoomd2tf:
@@ -222,7 +218,6 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
-
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
@@ -233,28 +228,13 @@ class tfcompute(hoomd.compute._compute):
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
-        array = self.cpp_force.getVirialArray()
-        pitch = self.cpp_force.getVirialPitch()
-        npa = np.zeros((self.atom_number, 3, 3))
-        for i in range(self.atom_number):
-            #see TensorflowCompute.cc for more info
-            npa[i, 0, 0] = array[0 * pitch + i]
-            npa[i, 0, 1] = array[1 * pitch + i]
-            npa[i, 1, 0] = array[1 * pitch + i]
-            npa[i, 0, 2] = array[2 * pitch + i]
-            npa[i, 2, 0] = array[2 * pitch + i]
-            npa[i, 1, 1] = array[3 * pitch + i]
-            npa[i, 1, 2] = array[4 * pitch + i]
-            npa[i, 2, 1] = array[4 * pitch + i]
-            npa[i, 2, 2] = array[5 * pitch + i]
-        return npa
-
+        array = np.array(self.cpp_force.getVirialArray())
+        return array.reshape((-1, 9))
 
     def update_coeffs(self):
         pass
 
     def scalar4_vec_to_np(self,array):
-        '''TODO: This must exist somewhere in HOOMD codebase'''
         npa = np.empty((len(array), 4))
         for i, e in enumerate(array):
             npa[i,0] = e.x

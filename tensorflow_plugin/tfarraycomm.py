@@ -12,7 +12,7 @@ class tf_array_comm:
             hoomd.context.initialize()
             hoomd_context = hoomd.context.exec_conf
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_ref = _tensorflow_plugin.TFArrayCommCPU(_tensorflow_plugin.int2ptr(ptr_address), nparray.dtype.itemsize * len(nparray), hoomd_context)
+            self.cpp_ref = _tensorflow_plugin.TFArrayCommCPU(_tensorflow_plugin.int2ptr(ptr_address))
         else:
             raise RuntimeError('Can only build TFArray Comm on CPU')
     def send(self):
