@@ -27,12 +27,10 @@ namespace hoomd_tf {
       num_elements = new int[num_dims];
       for(unsigned int i = 0; i < num_dims; i++) {
         num_elements[i] = num_elements_t[i];
-        std::cout << "num_dims " << i << " " << num_dims << " cur size: " << size << std::endl;
         size *= num_elements[i];
       }
 
       mem_size = size * element_size;
-      std::cout << mem_size << std::endl;
     }
 
     CommStruct() {
@@ -109,7 +107,7 @@ namespace hoomd_tf {
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
       cudaMemcpy(handle.data, src, n, cudaMemcpyDeviceToDevice);
     }
-    #else 
+    #else
     void read_gpu_memory(void *dest, size_t n) override {
       throw "Should not call read_gpu_memory without CUDA";
     }

@@ -1,6 +1,5 @@
 # Tensorflow Plugin
 
-
 This plugin allows using tensorflow to compute forces in a simulation
 or to compute other quantities, like collective variables to fit a
 potential for coarse-graining. You must first construct your

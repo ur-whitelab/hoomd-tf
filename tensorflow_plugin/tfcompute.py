@@ -28,8 +28,8 @@ class tfcompute(hoomd.compute._compute):
         #so delete won't fail
         self.tfm = None
 
-        if hoomd.init.is_initialized():
-            raise RuntimeError('Must create TF before hoomd initialization')
+        #if hoomd.init.is_initialized():
+        #    raise RuntimeError('Must create TF before hoomd initialization')
 
 
         self.debug_mode = _debug_mode
