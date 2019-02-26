@@ -131,7 +131,6 @@ def bootstrap_graph(NN, directory):
 
 
 
-
 feeddict_graph()
 noforce_graph()
 gradient_potential()

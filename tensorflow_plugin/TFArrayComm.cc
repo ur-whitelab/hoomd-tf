@@ -19,6 +19,7 @@ void tf_check_cuda_error(cudaError_t err, const char* file,
     // throw an error exception
     throw(std::runtime_error("CUDA Error"));
   }
+}
 #endif
 
   void* int2ptr(int64_t address) { return reinterpret_cast<void*>(address); }
