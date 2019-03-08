@@ -42,7 +42,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     #                  overwrite=True)
     #hoomd.dump.gsd(filename='TRAINING_trajectory.gsd', period=10, group=hoomd.group.all(), overwrite=True)
     #train on 5k timesteps
-    hoomd.run(500000)#, profile=True)
+    hoomd.run(50000)#, profile=True)
     #tain on 5k timesteps and benchmark with 20 repeats
     #benchmark_results = hoomd.benchmark.series(warmup=6000, repeat=5,steps=5000, limit_hours=2)
     
