@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-1 -*-
-# Maintainer: Andrew White
+# Copyright (c) 2018 Andrew White at the University of Rochester
+# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 import hoomd, hoomd.md
 import hoomd.tensorflow_plugin
@@ -7,8 +7,6 @@ import unittest
 import os, tempfile, shutil, pickle, glob
 import numpy as np, math
 import tensorflow as tf
-
-#TODO: write test for changing particle number dynamically
 
 def compute_forces(system, rcut):
     '''1 / r^2 force'''
@@ -271,7 +269,7 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(energy[-1], energy[-2], atol=1e-3)
 
     def test_lj_pressure(self):
-        #TODO The virials are off by 1e-6, leading to pressure differences of 1e-3. 
+        #TODO The virials are off by 1e-6, leading to pressure differences of 1e-3.
         #I can't figure out why, but since PE and forces are matching exactly, I'll leave the tol
         #set that high.
         model_dir = '/tmp/test-lj-potential-model'
@@ -307,7 +305,7 @@ class test_compute(unittest.TestCase):
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
 
-        
+
         log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
         for i in range(5):
             hoomd.run(3)

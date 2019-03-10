@@ -1,3 +1,6 @@
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 #ifndef _IPC_ARRAY_COMM_
 #define _IPC_ARRAY_COMM_
 
@@ -11,11 +14,15 @@
 #include "CommStruct.h"
 
 
+/*! \file TFArrayComm.h
+    \brief Declaration of TFArrayComm class
+*/
+
 namespace hoomd_tf {
 
   // I do not use specialization
   // to treat the CommMode because you cannot do partial specialization of a
-  // method The overhead of the ifs is nothing, since the compiler will see them
+  // method. The overhead of the ifs is nothing, since the compiler will see them
   // as if (1 == 0) and if(1 == 1) so they will be optimized.
 
   enum class TFCommMode { GPU, CPU };
@@ -38,19 +45,23 @@ namespace hoomd_tf {
   #define TF_CHECK_CUDA_ERROR()
   #endif  // ENABLE_CUDA
 
-  // M: Communication mode (GPU or CPU)
-  // two-way communication where one owns array and other does not
-  // own_array: if it owns the array, it does not own the underlying data. Thus
-  // can use array as mapping
-  //! own_array: it has reference to underlying data.
+  /*! Template class for TFCompute
+  *  \tfparam M If TF is on CPU or GPU.
+  */
   template <TFCommMode M, typename T>
   class TFArrayComm {
   public:
 
+  /*! Default constructor. Just checks GPU exists if used
+  */
     TFArrayComm() {
       checkDevice();
     }
 
+  /*! Normal constructor.
+  * \param gpu_array The local array which will store communicated data
+  * \param name The name of the array
+  */
     TFArrayComm(GPUArray<T>& gpu_array, const char* name)
         : _comm_struct(gpu_array, name),
           _array(&gpu_array) {
@@ -74,6 +85,8 @@ namespace hoomd_tf {
       this->deallocate();
     }
 
+    /*! Copy contents of given array to our array
+    */
     void receiveArray(const GPUArray<T>& array) {
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(*_array, access_location::host,
@@ -109,11 +122,15 @@ namespace hoomd_tf {
       }
     }
 
+    /*! Returns our underlying array as a vector
+    */
     std::vector<T> getArray() const {
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
       return std::vector<T>(handle.data, handle.data + _array->getNumElements());
     }
 
+    /*! Return memory address of the CommStruct wrapper around our array
+    */
     int64_t getAddress() const {
         //_comm_struct.print(std::cout) << std::endl;
         //this insanity is because I need to cast to base class

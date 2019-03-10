@@ -1,3 +1,6 @@
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 #ifndef __TASKLOCK_H_
 #define __TASKLOCK_H_
 

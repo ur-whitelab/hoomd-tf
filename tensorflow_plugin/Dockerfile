@@ -1,14 +1,13 @@
 FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 MAINTAINER Andrew White <andrew.white@rochester.edu>
 
-RUN apt-get update && apt-get install -y git cmake gcc sqlite3 wget libsqlite3-dev bash-completion g++ zlib1g-dev libtcmalloc-minimal4 libopenmpi-dev openmpi-bin && apt-get clean
+RUN apt-get update && apt-get install -y git cmake gcc\
+     sqlite3 wget libsqlite3-dev bash-completion g++ \
+     zlib1g-dev libtcmalloc-minimal4 libopenmpi-dev \
+     openmpi-bin && apt-get clean
 
-#RUN git clone https://github.com/FloopCZ/tensorflow_cc.git /srv/tensorflow_cc
-#WORKDIR /srv
-#ADD ./build-tools/install-ubuntu.sh .
-#RUN chmod +x ./install-ubuntu.sh && ./install-ubuntu.sh --shared --cuda
-
-RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /srv/miniconda.sh
+RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+         -O /srv/miniconda.sh
 RUN chmod +x /srv/miniconda.sh && /srv/miniconda.sh -b -p /usr/local/miniconda
 ENV PATH="/usr/local/miniconda/bin:$PATH"
 
@@ -19,7 +18,8 @@ ENV PATH="/usr/local/miniconda/envs/py36/bin:$PATH"
 RUN pip install tensorflow-gpu
 #RUN pip install tensorflow
 
-RUN conda config --add channels glotzer && conda install -y fresnel gsd freud &&  conda clean -a
+RUN conda config --add channels glotzer && \
+        conda install -y fresnel gsd freud &&  conda clean -a
 RUN conda install -y Pillow \
         h5py \
         ipykernel \
@@ -58,7 +58,6 @@ CMD ["jupyter", "notebook", "--allow-root", "--ip=0.0.0.0"]
 
 #cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=OFF -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
 
-#to get gdb
+#to get and use gdb
 #docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined  -v /home/whitead/hoomd-tf/tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
 #apt install gdb python3-dbg
-#GIT_SSH_COMMAND='ssh -i private_key_file' git clone host:repo.git

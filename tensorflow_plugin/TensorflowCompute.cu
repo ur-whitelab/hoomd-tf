@@ -1,5 +1,5 @@
-// Copyright (c) 2009-2017 The Regents of the University of Michigan
-// This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 #include "TensorflowCompute.cuh"
 #include <iostream>
@@ -9,14 +9,6 @@
     \brief CUDA kernels for TensorflowCompute
 */
 
-// First, the kernel code for zeroing the velocities on the GPU
-//! Kernel that zeroes velocities on the GPU
-/*! \param d_vel Velocity-mass array from the ParticleData
-    \param N Number of particles
-
-    This kernel executes one thread per particle and zeros the velocity of each. It can be run with any 1D block size
-    as long as block_size * num_blocks is >= the number of particles.
-*/
 extern "C" __global__
 void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;

@@ -1,3 +1,5 @@
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 #ifndef CommStruct_H_H
 #define CommStruct_H_H
@@ -12,6 +14,18 @@
 
 namespace hoomd_tf {
 
+  /*! \file CommStruct.h
+      \brief CommStruct declaration
+
+    */
+
+
+   /*! CommStruct class
+   *   This is a wrapper around a hoomd array that has
+   *   convienence functions for getting dimensions, types,
+   *   and copying
+   *
+   */
   struct CommStruct {
 
     CommStruct(int num_dims, size_t element_size,
@@ -51,6 +65,8 @@ namespace hoomd_tf {
       return *this;
     }
 
+  // I cannot figure out how to get operator
+  // overloading printing to work for derived classes.
   std::ostream& print(std::ostream& os) const {
     os << name <<  ":\n  " << "Dims: [";
     for(unsigned int i = 0; i < num_dims; i++) {
@@ -85,11 +101,12 @@ namespace hoomd_tf {
     GPUArray<T>* _array;
 
     CommStructDerived(GPUArray<T>& array, const char* name) {
+      //Disallow unspecialized construction with explicit array
       T::unimplemented_function;
     }
 
     CommStructDerived() {
-
+      //Only here for class variables that have CommStrucDerived
     }
 
     CommStructDerived& operator=(const CommStructDerived<T>& other) {
@@ -125,6 +142,7 @@ namespace hoomd_tf {
     }
   };
 
+  //Forward declare specialized templates
   template<> CommStructDerived<Scalar4>::CommStructDerived(GPUArray<Scalar4>&, const char*);
   template<> CommStructDerived<Scalar>::CommStructDerived(GPUArray<Scalar>&, const char*);
 }

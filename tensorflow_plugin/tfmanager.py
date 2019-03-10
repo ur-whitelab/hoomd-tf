@@ -1,3 +1,6 @@
+# Copyright (c) 2018 Andrew White at the University of Rochester
+# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 import tensorflow as tf
 import numpy as np
 import sys, logging, os, pickle, cProfile, queue, time

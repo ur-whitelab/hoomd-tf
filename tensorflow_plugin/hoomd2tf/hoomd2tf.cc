@@ -1,3 +1,6 @@
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 #include "hoomd2tf.h"
 #include <string.h>
 #include <sys/mman.h>

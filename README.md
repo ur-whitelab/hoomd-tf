@@ -443,3 +443,5 @@ Now that forking is not done, we should revert to using the hoomd error reportin
 ### Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
+
+&copy; Andrew White at University of Rochester
