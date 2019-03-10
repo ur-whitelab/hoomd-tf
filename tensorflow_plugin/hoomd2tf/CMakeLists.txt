@@ -1,3 +1,5 @@
+# Maintainer: Andrew White
+
 set(COMPONENT_NAME hoomd2tf_op)
 set(_${COMPONENT_NAME}_sources
     hoomd2tf.cc
