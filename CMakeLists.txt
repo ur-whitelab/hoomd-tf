@@ -1,3 +1,5 @@
+# Maintanier: Andrew White
+
 project(example_plugin)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.2 FATAL_ERROR)
 

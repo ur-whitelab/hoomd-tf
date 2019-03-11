@@ -1,6 +1,5 @@
-// Copyright (c) 2009-2017 The Regents of the University of Michigan
-// This file is part of the HOOMD-blue project, released under the BSD 3-Clause
-// License.
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 #include "TensorflowCompute.h"
 #ifdef ENABLE_CUDA
@@ -14,12 +13,19 @@
 using namespace hoomd_tf;
 
 /*! \file TensorflowCompute.cc
-    \brief Definition of TensorflowCompute
+    \brief Contains code for TensorflowCompute
 */
 // ********************************
 // here follows the code for TensorflowCompute
 
-/*! \param sysdef Systemf
+/*! \param py_self Python object tfcompute. So that methods can be called
+    \param sysdef SystemDefinition this compute will act on. Must not be NULL.
+    \param nlist Neighborlist
+    \param r_cut Cutoff for processing nlist which is then passed to TF
+    \param nneighs Maximum size for neighbors passed to TF
+    \param force_mode Whether we should be computed forces in TF or sending them to TF
+    \param period The period between TF updates
+    \param tasklock Currently unused. When this was multiporcess, this allowed simultaneous updates
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
@@ -54,6 +60,7 @@ TensorflowCompute<M>::TensorflowCompute(
   m_pdata->getMaxParticleNumberChangeSignal()
       .connect<TensorflowCompute, &TensorflowCompute<M>::reallocate>(this);
 }
+
 template <TFCommMode M>
 void TensorflowCompute<M>::reallocate() {
   assert(m_pdata);
@@ -84,7 +91,7 @@ TensorflowCompute<M>::~TensorflowCompute() {
   delete _tasklock;
 }
 
-/*! Perform the needed calculations 
+/*! Perform the needed calculations
     \param timestep Current time step of the simulation
 */
 template <TFCommMode M>
@@ -106,7 +113,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         finishUpdate(timestep);
         // we sent it using forces_comm. We need to zero it out.
         // This is not necessary, but in the future we may want to allow
-        // both sending and receiving forces. 
+        // both sending and receiving forces.
         _forces_comm.memsetArray(0);
       }
   }
@@ -249,6 +256,7 @@ Scalar TensorflowCompute<M>::getLogValue(const std::string& quantity,
   }
 }
 
+//these below are how we communicate memory addresses to TF
 template<TFCommMode M>
 int64_t TensorflowCompute<M>::getForcesBuffer() const { return _forces_comm.getAddress();}
 template<TFCommMode M>
@@ -295,8 +303,6 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
 
 #ifdef ENABLE_CUDA
 
-/*! \param sysdef System to zero the velocities of
-*/
 TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             std::shared_ptr<SystemDefinition> sysdef,
             std::shared_ptr<NeighborList> nlist,

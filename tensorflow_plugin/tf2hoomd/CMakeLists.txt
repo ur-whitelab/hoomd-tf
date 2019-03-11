@@ -1,3 +1,5 @@
+# Maintainer: Andrew White
+
 set(COMPONENT_NAME tf2hoomd_op)
 set(_${COMPONENT_NAME}_sources
     tf2hoomd.cc

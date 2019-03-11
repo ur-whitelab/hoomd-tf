@@ -1,5 +1,5 @@
-// Copyright (c) 2009-2017 The Regents of the University of Michigan
-// This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
+// Copyright (c) 2018 Andrew White at the University of Rochester
+//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 #ifndef _TENSORFLOW_COMPUTE_CUH_
 #define _TENSORFLOW_COMPUTE_CUH_

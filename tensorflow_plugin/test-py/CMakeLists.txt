@@ -1,3 +1,5 @@
+# Maintainer: Andrew White
+
 enable_testing()
 
 macro(add_script_test_cpu_mpi script)

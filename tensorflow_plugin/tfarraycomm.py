@@ -1,8 +1,13 @@
+# Copyright (c) 2018 Andrew White at the University of Rochester
+# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 from hoomd.tensorflow_plugin import _tensorflow_plugin
 import numpy as np
 import hoomd
 
 class tf_array_comm:
+    '''tf_array_comm is used to incorporate some native code into pytest framework
+    '''
     def __init__(self, nparray, hoomd_context = hoomd.context.exec_conf):
         #get numpy array address
         ptr_address, _ = nparray.__array_interface__['data']

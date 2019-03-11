@@ -1,11 +1,24 @@
+# Copyright (c) 2018 Andrew White at the University of Rochester
+# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 import tensorflow as tf
 import os, pickle
 
 class graph_builder:
-    '''Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations'''
+    '''This is a python class that builds the TF graph.
+
+    Use safe_div class method to avoid nan forces if doing 1/r or equivalent force calculations
+    '''
 
     def __init__(self, nneighbor_cutoff, output_forces=True):
-        '''output_forces -> should the graph output forces'''
+        '''
+        Parameters
+        ------------
+        nneighbor_cutoff
+            The maximum number of neigbhors to consider (can be 0)
+        output_forces
+            True if your graph will compute forces to be used in TF
+        '''
         #clear any previous graphs
         atom_number = None
         tf.reset_default_graph()
@@ -17,8 +30,36 @@ class graph_builder:
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.output_forces = output_forces
+        self._nlist_rinv = None
 
-    def compute_forces(self, energy, name='forces', virial=None):
+    @property
+    def nlist_rinv(self):
+        ''' Returns an N x NN tensor of 1 / r for each neighbor
+        '''
+        if self._nlist_rinv is None:
+            r = self.safe_norm(graph.nlist[:,:,:3], axis=2)
+            self._nlist_rinv = self.safe_div(1, r)
+        return self._nlist_rinv
+
+
+    def compute_forces(self, energy, virial=None):
+        ''' Computes pairwise or position-dependent forces (field) given
+        a potential energy function that computes per-particle or overall energy
+
+        Parameters
+        ----------
+        energy
+            The potential energy
+        virial
+             None - (default) virial contribution will be computed if the graph outputs forces
+             Can be set with True/False instead. Note that the virial term that depends on positions is
+             not computed.
+        Returns
+        --------
+        The TF force tensor. Note that the virial part will be stored as the class attribute virial and will
+        be saved automatically.
+
+        '''
         if virial is None:
             if self.output_forces:
                 virial = True
@@ -72,7 +113,7 @@ class graph_builder:
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
         '''
-        There are some numerical instabilities that occur during learning
+        There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
         '''
         op = tf.where(
@@ -86,11 +127,31 @@ class graph_builder:
 
     @staticmethod
     def safe_norm(tensor, delta=1e-7, **kwargs):
+                '''
+        There are some numerical instabilities that can occur during learning
+        when gradients are propagated. The delta is problem specific.
+        NOTE: delta of safe_div must be > sqrt(3) * (safe_norm delta)
         #https://github.com/tensorflow/tensorflow/issues/12071
+        '''
         return tf.norm(tensor + delta, **kwargs)
 
     def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[]):
+        '''Save the graph model to specified directory.
 
+        Parameters
+        ----------
+        model_directory
+            Multiple files will be saved, including a dictionary with information specific to hoomd-tf and TF
+            model files.
+        force_tensor
+            The forces that should be sent to hoomd
+        virial
+            The virial which should be sent to hoomd. If None and you called compute_forces, then
+            the virial computed from that function will be saved.
+        out_nodes
+            Any additional TF graph nodes that should be executed.
+            For example, optimizers, printers, etc.
+        '''
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are outputing forces')
 

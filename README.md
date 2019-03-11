@@ -434,6 +434,7 @@ py class ->snake
 ## Known Issues
 
 ### Exploding Gradients
+
 There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
 
 ### Error handling
@@ -443,3 +444,9 @@ Now that forking is not done, we should revert to using the hoomd error reportin
 ### Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
+
+### Same file TF Graphs
+
+Now that we don't use IPC, we should be able to build graphs and run hoomd in the same file. Need to test this. Currently tfcompute reads some information from a dictionary stored in model folder, but perhaps we could write a constructor which takes in a graphbuilder object instead.
+
+&copy; Andrew White at University of Rochester

@@ -1,4 +1,4 @@
-# Copyright (c) 2018 University of Rochester
+# Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from hoomd.tensorflow_plugin import _tensorflow_plugin
@@ -12,15 +12,6 @@ import tensorflow as tf
 # TODO
 #
 class tfcompute(hoomd.compute._compute):
-    ##
-    #
-    # \param _mock_mode Do not set-up tensorflow process
-    #
-    # \b tensorflows:
-    # \code
-    # TODO
-    #
-    # \a period can be a function: see \ref variable_period_docs for details
     def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
                   bootstrap=None, bootstrap_map=None,
                   _debug_mode=False, _mock_mode=False, write_tensorboard=False):
@@ -124,12 +115,12 @@ class tfcompute(hoomd.compute._compute):
             if self.device is None:
                 self.device = '/gpu:0'
 
-        #get double vs single precision
+        # get double vs single precision
         self.dtype = tf.float32
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.double
 
-        #adding to forces causes the computeForces method to be called.
+        # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
         hoomd.context.current.forces.append(self)
 
@@ -137,7 +128,7 @@ class tfcompute(hoomd.compute._compute):
             self._start_tf()
 
     def rcut(self):
-        #adapted from hoomd/md/pair.py
+        # adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
         ntypes = hoomd.context.current.system_definition.getParticleData().getNTypes()
         type_list = []
@@ -157,7 +148,7 @@ class tfcompute(hoomd.compute._compute):
             self.shutdown_tf()
 
     def shutdown_tf(self):
-        #need to terminate orphan
+        # need to terminate orphan
         if self.feed_func is not None and not self.q.full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
             self.q.put(None)
