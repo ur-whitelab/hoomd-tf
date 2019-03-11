@@ -30,6 +30,17 @@ class graph_builder:
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.output_forces = output_forces
+        self._nlist_rinv = None
+
+    @property
+    def nlist_rinv(self):
+        ''' Returns an N x NN tensor of 1 / r for each neighbor
+        '''
+        if self._nlist_rinv is None:
+            r = self.safe_norm(graph.nlist[:,:,:3], axis=2)
+            self._nlist_rinv = self.safe_div(1, r)
+        return self._nlist_rinv
+
 
     def compute_forces(self, energy, virial=None):
         ''' Computes pairwise or position-dependent forces (field) given
