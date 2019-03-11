@@ -130,7 +130,7 @@ class graph_builder:
 
     @staticmethod
     def safe_norm(tensor, delta=1e-7, **kwargs):
-                '''
+        '''
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
         NOTE: delta of safe_div must be > sqrt(3) * (safe_norm delta)

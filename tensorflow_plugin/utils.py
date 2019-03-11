@@ -3,6 +3,8 @@
 
 import tensorflow as tf
 import numpy as np
+from os import path
+import pickle
 
 
 def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkpoint = -1, feed_dict = {}):
@@ -28,7 +30,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
     # just in case
     tf.reset_default_graph()
     # load graph
-    tf.train.import_meta_graph(os.path.join('{}/'.format(model_directory),'model.meta'), import_scope='')
+    tf.train.import_meta_graph(path.join('{}/'.format(model_directory),'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if not ':' in potential_tensor_name:
@@ -59,9 +61,9 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
         for i,ri in enumerate(r):
-            np_nlist[0,0,1] = r / 2
-            np_nlist[1,0,1] = r / 2
+            np_nlist[0,0,1] = ri / 2
+            np_nlist[1,0,1] = ri / 2
             # run including passed in feed_dict
-            result = sess.run(energy_tensor, feed_dict = {**feed_dict, nlist_tensor: np_nlist} )
-            potential[i] = result
+            result = sess.run(potential_tensor, feed_dict = {**feed_dict, nlist_tensor: np_nlist} )
+            potential[i] = result[0]
     return potential
