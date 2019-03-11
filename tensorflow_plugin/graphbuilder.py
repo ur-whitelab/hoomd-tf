@@ -42,7 +42,7 @@ class graph_builder:
         return self._nlist_rinv
 
 
-    def compute_forces(self, energy, virial=None):
+    def compute_forces(self, energy, virial=None,positions=None,nlist=None):
         ''' Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle or overall energy
 
@@ -65,14 +65,17 @@ class graph_builder:
                 virial = True
             else:
                 virial = False
-
+        if nlist is None:
+            nlist=self.nlist
+        if positions is None:
+            positions=self.positions
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
-            pos_forces = tf.gradients(tf.negative(energy), self.positions)[0]
+            pos_forces = tf.gradients(tf.negative(energy), positions)[0]
             if pos_forces is not None:
                 pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
             #minus sign cancels when going from force on neighbor to force on origin in nlist
-            nlist_forces = tf.gradients(energy, self.nlist)[0]
+            nlist_forces = tf.gradients(energy, nlist)[0]
             if nlist_forces is not None:
                 nlist_forces = tf.identity(2.0 * nlist_forces, name='nlist-pairwise-force-gradient-raw')
                 zeros = tf.zeros(tf.shape(nlist_forces))
@@ -81,7 +84,7 @@ class graph_builder:
                 if virial:
                     with tf.name_scope('virial-calc'):
                         #now treat virial
-                        nlist3 = self.nlist[:, :, :3]
+                        nlist3 = nlist[:, :, :3]
                         rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
                         #F / rs
                         self.nlist_r_mag = graph_builder.safe_norm(nlist3, axis=2, name='nlist-r-mag')
