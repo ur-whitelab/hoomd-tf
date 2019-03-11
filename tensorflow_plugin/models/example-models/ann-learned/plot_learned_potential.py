@@ -41,6 +41,7 @@ with tf.Session() as sess:
         print(checkpoint)        
         saver.restore(sess, checkpoint_str)
     pos_arr = np.linspace(0., 3.0, 300)
+    long_pos_arr = np.linspace(0., 6.0, 600)
     np_nlist = np.zeros((2, NN, 4))
     nlist = {}
     
@@ -59,7 +60,7 @@ def lj_energy(r):
 
 plt.figure()
 plt.plot(2*pos_arr[1:], energy_arr - energy_arr[-1], label='Neural Network Potential')
-plt.plot(pos_arr[1:], lj_energy(pos_arr[1:]), label='Lennard-Jones Potential')
+plt.plot(long_pos_arr[1:], lj_energy(long_pos_arr[1:]), label='Lennard-Jones Potential')
 
 NN_min_idx = np.argmin(energy_arr)
 # if pos_arr[NN_min_idx] <= 0.2:#pointed the wrong way
@@ -69,8 +70,8 @@ lj_min_idx = np.argmin(lj_energy(pos_arr[1:]))
 lj_min = pos_arr[lj_min_idx]
 NN_min = pos_arr[NN_min_idx]
 
-plt.scatter(2*NN_min, energy_arr[NN_min_idx] - energy_arr[-1], label = 'NN minimum: {:.5}'.format(NN_min))
-plt.scatter(lj_min, lj_energy(lj_min), label = 'LJ minimum: {:.5}'.format(lj_min))
+#plt.scatter(2*NN_min, energy_arr[NN_min_idx] - energy_arr[-1], label = 'NN minimum: {:.5}'.format(NN_min))
+#plt.scatter(lj_min, lj_energy(lj_min), label = 'LJ minimum: {:.5}'.format(lj_min))
 
 print('X value at min of calculated LJ: {}'.format(lj_min))
 print('X value at min of Neural Net LJ: {}'.format(NN_min))

@@ -44,3 +44,6 @@ Images
 
 #VScode
 *.vscode
+
+#pycache files
+__pycache__/
