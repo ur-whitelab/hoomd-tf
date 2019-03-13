@@ -94,7 +94,7 @@ and then add the `write_tensorboard=True` flag during the `tfcompute` initialize
 
 In tensorflow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graphbuilder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graphbuild.save` or pass `move_previous = False` as a parameter.
 
-Variables are how you can save data without using Tensorboard. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean. 
+Variables are how you can save data without using Tensorboard. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean.
 
 ### Complete Examples
 
@@ -421,6 +421,18 @@ Because hoomd-tf requires at least two threads to run, you must ensure your blue
 interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 ```
 
+## TODO
+
+1. Make code consistent with contributors [guidelines for hoomd](https://github.com/glotzerlab/hoomd-blue/blob/maint/SourceConventions.md)
+    1. Put commit hooks in
+    2. Write doxygen comments until you barf
+    3. Use emacs style file to restyle all code
+2. Make python packages used actual dependencies
+3. Remove tasklock
+4. Add timing tests
+5. Add coverage
+6. Add c++ tests (?) Should not have any non python accessible code
+
 ## Syntax Naming
 ### C++
 
@@ -450,7 +462,7 @@ gvs = optimizer.compute_gradients(cost)
 capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
 train_op = optimizer.apply_gradients(capped_gvs)
 ```
-which will also prevent exploding gradients. Remember that if training something like a Lennard-Jones potential or other `1/r` potential that high gradients are possible. Use small learning rates and probably clip the grads. 
+which will also prevent exploding gradients. Remember that if training something like a Lennard-Jones potential or other `1/r` potential that high gradients are possible. Use small learning rates and probably clip the grads.
 
 ### Error handling
 

@@ -41,7 +41,6 @@ class graph_builder:
             self._nlist_rinv = self.safe_div(1, r)
         return self._nlist_rinv
 
-
     def compute_forces(self, energy, virial=None,positions=None,nlist=None,name=None):
         ''' Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle or overall energy
@@ -72,7 +71,7 @@ class graph_builder:
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
             if positions is not False:
-                
+
                 pos_forces = tf.gradients(tf.negative(energy), positions)[0]
             else:
                 pos_forces = None
@@ -189,7 +188,7 @@ class graph_builder:
                 raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
 
         os.makedirs(model_directory, exist_ok=True)
-        
+
         if move_previous and len(os.listdir(model_directory)) > 0:
             bkup_int = 0
             bkup_str = 'previous_model_{}'.format(bkup_int)
@@ -201,8 +200,8 @@ class graph_builder:
                 if os.path.isfile(os.path.join(model_directory, i)):
                     os.rename(os.path.join(model_directory, i),
                               os.path.join(model_directory, bkup_str, i))
-            print('Note: Backed-up {} previous model to {}'.format(model_directory, os.path.join(model_directory, bkup_str)))            
-            
+            print('Note: Backed-up {} previous model to {}'.format(model_directory, os.path.join(model_directory, bkup_str)))
+
 
         meta_graph_def = tf.train.export_meta_graph(filename=(os.path.join(model_directory, 'model.meta')))
         #with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:

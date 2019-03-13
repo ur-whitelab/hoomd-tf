@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 from os import path
 import pickle
+import hoomd
 
 
 def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkpoint = -1, feed_dict = {}):
@@ -67,3 +68,41 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
             result = sess.run(potential_tensor, feed_dict = {**feed_dict, nlist_tensor: np_nlist} )
             potential[i] = result[0]
     return potential
+
+
+def find_molecules(system):
+    '''Given a hoomd system, this will return a mapping from molecule index to particle index
+
+        This is a slow function and should only be called once.
+    '''
+    mapping = []
+    mapped = set()
+    N = len(system.particles)
+    unmapped = set(range(N))
+    pi = 0
+    while len(mapped) != N:
+        pi = unmapped.pop()
+        mapped.add(pi)
+        mapping.append([pi])
+        # traverse bond group
+        # until no more found
+        keep_going = True
+        while keep_going:
+            for bond in system.bonds:
+                # see if bond contains pi and an unseen atom
+                if (pi == bond.a and bond.b in unmapped) or \
+                    (pi == bond.b and bond.a in unmapped):
+                    pi = bond.a if pi == bond.b else bond.b
+                    unmapped.remove(pi)
+                    mapped.add(pi)
+                    mapping[-1].append(pi)
+                    keep_going = True
+                    break
+                keep_going = False
+    return mapping
+
+
+
+        # find a new particle index
+
+
