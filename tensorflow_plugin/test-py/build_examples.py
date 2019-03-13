@@ -5,7 +5,7 @@ import tensorflow as tf
 import os, hoomd.tensorflow_plugin, pickle
 
 
-def simple_potential():
+def simple_potential(directory='/tmp/test-simple-potential-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -16,7 +16,8 @@ def simple_potential():
             zeros = tf.zeros_like(nlist)
             real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
         forces = tf.reduce_sum(real_fr, axis=1, name='forces')
-    graph.save(force_tensor=forces, model_directory='/tmp/test-simple-potential-model')
+    graph.save(force_tensor=forces, model_directory=directory)
+    return directory
 
     #check graph info
     with open('/tmp/test-simple-potential-model/graph_info.p', 'rb') as f:
@@ -43,30 +44,33 @@ def gradient_potential():
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
-def noforce_graph():
+def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones_like(neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
     pos_norm = tf.norm(graph.positions, axis=1)
-    graph.save('/tmp/test-noforce-model', out_nodes=[energy, pos_norm])
+    graph.save(directory, out_nodes=[energy, pos_norm])
+    return directory
 
-def feeddict_graph():
+def feeddict_graph(directory='/tmp/test-feeddict-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
     force_com = tf.reduce_mean(forces, axis=0)
     thing = tf.placeholder(dtype=tf.float32, name='test-tensor')
     out = force_com * thing
-    graph.save('/tmp/test-feeddict-model', out_nodes=[out])
+    graph.save(directory, out_nodes=[out])
+    return directory
 
-def benchmark_nonlist_graph():
+def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
     force = graph.compute_forces(energy)
-    graph.save('/tmp/benchmark-nonlist-model', force_tensor=force, out_nodes=[energy])
+    graph.save(directory, force_tensor=force, out_nodes=[energy])
+    return directory
 
-def lj_graph(NN, name):
+def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
@@ -78,9 +82,10 @@ def lj_graph(NN, name):
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=name)
+    graph.save(force_tensor=forces, model_directory=directory)
+    return directory
 
-def print_graph(NN, name):
+def print_graph(NN, directory='/tmp/test-print-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
@@ -93,9 +98,10 @@ def print_graph(NN, name):
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
     prints = tf.Print(energy, [energy], summarize=1000)
-    graph.save(force_tensor=forces, model_directory=name, out_nodes=[prints])
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[prints])
+    return directory
 
-def trainable_graph(NN, name):
+def trainable_graph(NN, directory='/tmp/test-trainable-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
@@ -112,12 +118,15 @@ def trainable_graph(NN, name):
     check = tf.check_numerics(p_energy, 'Your tensor is invalid')
     forces = graph.compute_forces(energy)
     tf.summary.histogram('forces', forces)
-    optimizer = tf.train.AdamOptimizer(1.0).minimize(energy)
+    optimizer = tf.train.AdamOptimizer(1e-4)
+    gvs = optimizer.compute_gradients(energy)
+    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    train_op = optimizer.apply_gradients(capped_gvs)
     #check = tf.add_check_numerics_ops()
-    graph.save(force_tensor=forces, model_directory=name, out_nodes=[optimizer, check])
-    #graph.save(force_tensor=forces, model_directory=name, out_nodes=[check])
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[train_op, check])
+    return directory
 
-def bootstrap_graph(NN, directory):
+def bootstrap_graph(NN, directory='/tmp/test-trainable-model'):
     #make bootstrap graph
     tf.reset_default_graph()
     v = tf.Variable(8.0, name='epsilon')
@@ -129,19 +138,5 @@ def bootstrap_graph(NN, directory):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver.save(sess, os.path.join(bootstrap_dir, 'model'))
+    return bootstrap_dir
 
-
-
-
-
-feeddict_graph()
-noforce_graph()
-gradient_potential()
-simple_potential()
-benchmark_gradient_potential()
-benchmark_nonlist_graph()
-lj_graph(64, '/tmp/benchmark-lj-potential-model')
-lj_graph(8, '/tmp/test-lj-potential-model')
-print_graph(9 - 1, '/tmp/test-print-model')
-trainable_graph(9 - 1, '/tmp/test-trainable-model')
-bootstrap_graph(9 - 1, '/tmp/test-trainable-model')

@@ -15,7 +15,19 @@ from hoomd.tensorflow_plugin import graph_builder
 graph = graph_builder(NN, output_forces)
 ```
 
-where `NN` is the maximum number of nearest neighbors to consider, and `output_forces` indicates if the graph will output forces to use in the simulation. After building the `graph`, it will have three tensors as attributes to use in constructing the tensorflow graph: `nlist`, `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor containing the nearest neighbors. An entry of all zeros indicates that less than `NN` nearest neighbors where present for a particular particle. The 4 right-most dimensions are `x,y,z` and `w`, which is the particle type. Particle type is an integer starting at 0. Note that the `x,y,z` values are a vector originating at the particle and ending at its neighbor. `positions` and `forces` are `N` x 4 tensors. `forces` *only* is available if the graph does not output forces via `output_forces=False`.
+where `NN` is the maximum number of nearest neighbors to consider, and
+`output_forces` indicates if the graph will output forces to use in
+the simulation. After building the `graph`, it will have three tensors
+as attributes to use in constructing the tensorflow graph: `nlist`,
+`positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
+containing the nearest neighbors. An entry of all zeros indicates that
+less than `NN` nearest neighbors where present for a particular
+particle. The 4 right-most dimensions are `x,y,z` and `w`, which is
+the particle type. Particle type is an integer starting at 0. Note
+that the `x,y,z` values are a vector originating at the particle and
+ending at its neighbor. `positions` and `forces` are `N` x 4
+tensors. `forces` *only* is available if the graph does not output
+forces via `output_forces=False`.
 
 ### Computing Forces
 
@@ -26,7 +38,7 @@ graph = hoomd.tensorflow_plugin.graph_builder(N - 1)
 #remove w since we don't care about types
 nlist = graph.nlist[:, :, :3]
 #get r
-r = graph.safe_norm(nlist, axis=2)
+r = tf.norm(nlist, axis=2)
 #compute 1. / r while safely treating r = 0.
 # halve due to full nlist
 rij_energy = 0.5 * graph.safe_div(1, r)
@@ -52,7 +64,7 @@ saving, or pass `None` to remove the automatically calculated virial.
 
 ### Finalizing the Graph
 
-To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N` x 3 x 3 tensor.
+To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
 
 ### Printing
 
@@ -68,7 +80,7 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
 
-### Saving Scalars
+### Saving Scalars in Tensorboard
 
 If you would like to save a scalar over time, like total energy or training loss, you can use the Tensorboard functionality. Add scalars to the Tensorboard summary during the build step:
 
@@ -80,22 +92,21 @@ and then add the `write_tensorboard=True` flag during the `tfcompute` initialize
 
 ### Variables and Restarts
 
-In tensorflow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* Thus it is necessary to completely delete your model directory and rebuild if you don't want previously trained variables to be loaded. This behavior means though that restarts will work correctly and if you are re-using a trained model, the newest values will be loaded.
+In tensorflow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graphbuilder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graphbuild.save` or pass `move_previous = False` as a parameter.
+
+Variables are how you can save data without using Tensorboard. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean. 
 
 ### Complete Examples
 
-See `tensorflow_plugin/models/test-models/build.py` for more.
+See [tensorflow_plugin/models] and [tensorflow_plugins/test-py/build_examples.py] more.
 
-### Lennard-Jones
+### Lennard-Jones with 1 Particle Type
 
 ```python
 graph = hoomd.tensorflow_plugin.graph_builder(NN)
-nlist = graph.nlist[:, :, :3]
-#get r
-r = graph.safe_norm(nlist, axis=2)
-#compute 1 / r while safely treating r = 0.
-#pairwise energy. Double count -> divide by 2
-p_energy = 4.0 / 2.0 * (graph.safe_div(1., r**12) - graph.safe_div(1., r**6))
+#use convenience rinv
+r_inv = graph.nlist_rinv
+p_energy = 4.0 / 2.0 * (r_inv**12 - r_inv**6)
 #sum over pairwise energy
 energy = tf.reduce_sum(p_energy, axis=1)
 forces = graph.compute_forces(energy)
@@ -127,9 +138,9 @@ where `model_dir` is the directory where the tensorflow model was saved, `nlist`
 
 ### Bootstraping Variables
 
-If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file containing variables which can be loaded into your tfcompute graph. It will be called, then all variables will be initialized and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
+If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file path or model directory path (latest checkpoint is used) containing variables which can be loaded into your tfcompute graph. Your model will be built, then all variables will be initialized, and then your bootstrap checkpoint will be loaded and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
 
-First, here's an example that creates some variables that could be trained offline without Hoomd. In this example, they just use their initial values.
+Here's an example that creates some variables that could be trained offline without Hoomd. In this example, they just use their initial values.
 
 ```python
 import tensorflow as tf
@@ -246,13 +257,6 @@ with hoomd.tensorflow_plugin.tfcompute('/tmp/inference',
     tfcompute.attach(nlist, r_cut=rcut)
     hoomd.run(100)
 ```
-### Examples
-
-See `tensorflow_plugin/models`
-
-### Note on Building and Executing Tensorflow Models in Same Script
-
-Due to the side-effects of importing tensorflow, you must build and save your graph in a separate python process first before running it with hoomd.
 
 ## Tensorboard
 
@@ -439,6 +443,15 @@ py class ->snake
 
 There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
 
+You can also clip gradients instead of using safe_norm:
+```python
+optimizer = tf.train.AdamOptimizer(1e-4)
+gvs = optimizer.compute_gradients(cost)
+capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+train_op = optimizer.apply_gradients(capped_gvs)
+```
+which will also prevent exploding gradients. Remember that if training something like a Lennard-Jones potential or other `1/r` potential that high gradients are possible. Use small learning rates and probably clip the grads. 
+
 ### Error handling
 
 Now that forking is not done, we should revert to using the hoomd error reporting mechanism
@@ -446,9 +459,5 @@ Now that forking is not done, we should revert to using the hoomd error reportin
 ### Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
-
-### Same file TF Graphs
-
-Now that we don't use IPC, we should be able to build graphs and run hoomd in the same file. Need to test this. Currently tfcompute reads some information from a dictionary stored in model folder, but perhaps we could write a constructor which takes in a graphbuilder object instead.
 
 &copy; Andrew White at University of Rochester

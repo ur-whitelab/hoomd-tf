@@ -39,6 +39,7 @@ class tfcompute(hoomd.compute._compute):
         self.write_tensorboard = write_tensorboard
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
+        self.feed_func = None
 
     def __enter__(self):
         if not self.mock_mode:

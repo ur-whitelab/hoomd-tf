@@ -142,7 +142,7 @@ class graph_builder:
         '''
         return tf.norm(tensor + delta, **kwargs)
 
-    def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[]):
+    def save(self, model_directory, force_tensor = None, virial = None, out_nodes=[], move_previous=True):
         '''Save the graph model to specified directory.
 
         Parameters
@@ -189,6 +189,21 @@ class graph_builder:
                 raise ValueError('You must provide nodes to run (out_nodes) if you are not outputting forces')
 
         os.makedirs(model_directory, exist_ok=True)
+        
+        if move_previous and len(os.listdir(model_directory)) > 0:
+            bkup_int = 0
+            bkup_str = 'previous_model_{}'.format(bkup_int)
+            while bkup_str in os.listdir(model_directory):
+                bkup_int += 1
+                bkup_str = 'previous_model_{}'.format(bkup_int)
+            os.makedirs(os.path.join(model_directory, bkup_str))
+            for i in os.listdir(model_directory):
+                if os.path.isfile(os.path.join(model_directory, i)):
+                    os.rename(os.path.join(model_directory, i),
+                              os.path.join(model_directory, bkup_str, i))
+            print('Note: Backed-up {} previous model to {}'.format(model_directory, os.path.join(model_directory, bkup_str)))            
+            
+
         meta_graph_def = tf.train.export_meta_graph(filename=(os.path.join(model_directory, 'model.meta')))
         #with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         #    f.write(tf.get_default_graph().as_graph_def().SerializeToString())
