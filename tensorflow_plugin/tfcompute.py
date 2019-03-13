@@ -39,7 +39,7 @@ class tfcompute(hoomd.compute._compute):
         self.write_tensorboard = write_tensorboard
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
-        self.feed_func = None
+        self.feed_dict = None
 
     def __enter__(self):
         if not self.mock_mode:
@@ -57,12 +57,12 @@ class tfcompute(hoomd.compute._compute):
                 self.shutdown_tf()
 
     ##
-    # feed_func = takes in tfcompute (which gives access to forces/positions/nlist)
-    # feed_func should return a dictionary where the key is the tensor name (can be set during graph build stage)
+    # feed_dict = takes in tfcompute (which gives access to forces/positions/nlist)
+    # feed_dict should return a dictionary where the key is the tensor name (can be set during graph build stage)
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_func=None):
+    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_dict=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -75,7 +75,7 @@ class tfcompute(hoomd.compute._compute):
         self.enabled = True
         self.log = True
         self.cpp_force = None
-        self.feed_func = feed_func
+        self.feed_dict = feed_dict
         self.save_period = save_period
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
@@ -150,7 +150,7 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         # need to terminate orphan
-        if self.feed_func is not None and not self.q.full():
+        if self.feed_dict is not None and not self.q.full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
             self.q.put(None)
         self.tfm.join(1)
@@ -171,7 +171,7 @@ class tfcompute(hoomd.compute._compute):
                 'forces_buffer': self.cpp_force.getForcesBuffer(),
                 'virial_buffer': self.cpp_force.getVirialBuffer(),
                 'dtype': self.dtype,
-                'use_feed': self.feed_func is not None,
+                'use_feed': self.feed_dict is not None,
                 'bootstrap': self.bootstrap,
                 'bootstrap_map': self.bootstrap_map,
                 'save_period': self.save_period,
@@ -199,9 +199,12 @@ class tfcompute(hoomd.compute._compute):
         '''Allow TF to read output and we wait for it to finish.'''
         if self.mock_mode:
             return
-        if self.feed_func is not None:
-            value = self.feed_func(self)
-            assert value is not None, 'feed_func callable failed to provide value'
+        if self.feed_dict is not None:
+            if type(self.feed_dict) == dict:
+                value = self.feed_dict
+            else:
+                value = self.feed_dict(self)
+                assert value is not None, 'feed_dict callable failed to provide value'
             self.q.put(value, block=False)
             self.q.join()
         else:

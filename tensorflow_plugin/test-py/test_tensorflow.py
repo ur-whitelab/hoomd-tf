@@ -163,6 +163,25 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
+    def test_feeddict_func(self):
+        model_dir = build_examples.feeddict_graph()
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
+
+            #multiple average force by particle 4 position
+            #just for fun
+            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
+            hoomd.run(11)
+            tf_force = tfcompute.get_forces_array()[1,:3]
+
     def test_feeddict(self):
         model_dir = build_examples.feeddict_graph()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
@@ -178,7 +197,7 @@ class test_compute(unittest.TestCase):
 
             #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_func=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[4, :3]})
+            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict={'test-tensor:0': [1,2,3]})
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1,:3]
 
