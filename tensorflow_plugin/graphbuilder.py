@@ -42,7 +42,7 @@ class graph_builder:
         return self._nlist_rinv
 
 
-    def compute_forces(self, energy, virial=None,positions=None,nlist=None):
+    def compute_forces(self, energy, virial=None,positions=None,nlist=None,name=None):
         ''' Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle or overall energy
 
@@ -71,9 +71,13 @@ class graph_builder:
             positions=self.positions
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
-            pos_forces = tf.gradients(tf.negative(energy), positions)[0]
+            if positions is not False:
+                
+                pos_forces = tf.gradients(tf.negative(energy), positions)[0]
+            else:
+                pos_forces = None
             if pos_forces is not None:
-                pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
+                    pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
             #minus sign cancels when going from force on neighbor to force on origin in nlist
             nlist_forces = tf.gradients(energy, nlist)[0]
             if nlist_forces is not None:

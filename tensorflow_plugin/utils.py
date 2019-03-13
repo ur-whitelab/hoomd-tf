@@ -35,7 +35,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
         model_params = pickle.load(f)
     if not ':' in potential_tensor_name:
         potential_tensor_name += ':0'
-    potential_tensor = tf.get_default_graph().get_tensor_by_name('calculated_energies:0')
+    potential_tensor = tf.get_default_graph().get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph().get_tensor_by_name(model_params['nlist'])
 
     #build nlist
