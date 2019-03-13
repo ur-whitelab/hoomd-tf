@@ -99,4 +99,3 @@ if (BUILD_TESTING)
     add_subdirectory(test-py)
 endif()
 
-add_subdirectory(test-cases)
