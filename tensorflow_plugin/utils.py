@@ -216,3 +216,16 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
         total_i += len(masses)
 
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
+
+
+def center_of_mass(positions, mapping, system):
+    # https://en.wikipedia.org/wiki/Center_of_mass#Systems_with_periodic_boundary_conditions
+    box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
+    theta = positions / box_dim * 2 * np.pi
+    xi = tf.math.cos(theta)
+    zeta = tf.math.sin(theta)
+    ximean = tf.sparse.matmul(mapping, xi)
+    zetamean = tf.sparse.matmul(mapping, zeta)
+    print(zetamean.shape)
+    thetamean = tf.math.atan2(-ximean, -zetamean)
+    return thetamean / 2  / np.pi * box_dim

@@ -101,5 +101,32 @@ class test_mappings(unittest.TestCase):
         map_slice = dense_mapping[:mapping_matrix.shape[0], -mapping_matrix.shape[1]:]
         assert np.sum(map_slice) < 1e-10
 
+    def test_com(self):
+        # I write this as an N x M
+        # However, we need to have them as M x N, hence the
+        # transpose
+        mapping_matrix = np.array([
+            [1, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 0],
+            [0, 1, 0]]).transpose()
+        mapping = htf.find_molecules(self.system)
+        s = htf.sparse_mapping([mapping_matrix for _ in mapping], mapping, self.system)
+        # see if we can build it
+        N = len(self.system.particles)
+        p = tf.placeholder(tf.float32, shape=[N, 3])
+        com = htf.center_of_mass(p, s, self.system)
+        with tf.Session() as sess:
+            positions = self.system.take_snapshot().particles.position
+            com = sess.run(com, feed_dict={p:positions})
+        print(com)
+        assert False
+
 if __name__ == '__main__':
     unittest.main()
