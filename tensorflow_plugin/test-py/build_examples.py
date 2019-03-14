@@ -105,7 +105,7 @@ def trainable_graph(NN, directory='/tmp/test-trainable-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
-    r = graph.safe_norm(nlist, axis=2)
+    r = tf.norm(nlist, axis=2)
     #compute 1 / r while safely treating r = 0.
     #pairwise energy. Double count -> divide by 2
     epsilon = tf.Variable(1.0, name='lj-epsilon')

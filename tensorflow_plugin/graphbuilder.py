@@ -124,7 +124,7 @@ class graph_builder:
         '''
         op = tf.where(
                tf.greater(denominator, delta),
-               tf.truediv(numerator, denominator),
+               tf.truediv(numerator, denominator + delta),
                tf.zeros_like(denominator))
 
         #op = tf.divide(numerator, denominator + delta, **kwargs)
