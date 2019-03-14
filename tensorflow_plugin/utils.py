@@ -99,10 +99,71 @@ def find_molecules(system):
                     keep_going = True
                     break
                 keep_going = False
+    # sort it to be ascending in min atom index in molecule
+    for m in mapping:
+        m.sort()
+    mapping.sort(key=lambda x: min(x))
     return mapping
 
+def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
+    ''' This will create the necessary indices and values for defining a sparse tensor in
+    tensorflow that is a mass-weighted M x N mapping operator.
 
+    Parameters
+    -----------
+    molecule_mapping
+        This is a list of L x M matrices, where M is the number of atoms in the molecule and L
+        is the number of coarse-grain sites that should come out of the mapping.
+        There should be one matrix per molecule. The ordering of the atoms should follow
+        what is defined in the output from find_molecules
+    molecule_mapping_index
+        This is the output from find_molecules.
+    system
+        The hoomd system. This is used to get mass values for the mapping, if you would like to
+        weight by mass of the atoms.
+    Returns
+    -------
+        A sparse tensorflow tensor of dimension N x N, where N is number of atoms
+    '''
+    import numpy as np
+    assert type(molecule_mapping[0]) == np.ndarray
 
-        # find a new particle index
+    # get system size
+    N = sum([len(m) for m in molecule_mapping_index])
+    M = sum([m.shape[0] for m in molecule_mapping])
 
+    # create indices
+    indices = []
+    values = []
+    total_i = 0
+    for mmi,mm in zip(molecule_mapping_index, molecule_mapping):
+        idx = []
+        vs = []
+        masses = [0 for _ in range(mm.shape[0])]
+        # iterate over CG particles
+        for i in range(mm.shape[0]):
+            # iterate over atoms
+            for j in range(mm.shape[1]):
+                # check if non-zero
+                if mm[i, j] > 0:
+                    # index -> CG particle, atom index
+                    idx.append([i + total_i, mmi[j]])
+                    if system is not None:
+                        vs.append(system.particles[mmi[j]].mass)
+                    else:
+                        vs.append(1)
+        # now add up masses
+        for i in range(len(idx)):
+            #get masses from previous values
+            masses[idx[i][0] - total_i] += vs[i]
+        # make sure things are valid
+        assert sum([m == 0 for m in masses]) == 0
+        # now scale values by mases
+        for i in range(len(idx)):
+            vs[i] /= masses[idx[i][0] - total_i]
+        # all donw
+        indices.extend(idx)
+        values.extend(vs)
+        total_i += len(masses)
 
+    return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])

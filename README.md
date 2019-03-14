@@ -6,6 +6,13 @@ potential for coarse-graining. You must first construct your
 tensorlfow graph using the `tensorflow_plugin.graph_builder` class and
 then add the `tfcompute` compute to your hoomd simulation.
 
+## Requirements
+
+```
+tensorflow >= 1.13.1
+numpy
+```
+
 ## Building Graph
 
 To construct a graph, construct a graphbuilder:
@@ -257,6 +264,10 @@ with hoomd.tensorflow_plugin.tfcompute('/tmp/inference',
     tfcompute.attach(nlist, r_cut=rcut)
     hoomd.run(100)
 ```
+
+## Utilities
+
+There are a few convenience functions in the `hoomd.tensorflow_plugin.utils` for plotting potential energies of pairwise potentials and constructing CG mappings.
 
 ## Tensorboard
 
