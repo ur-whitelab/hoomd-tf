@@ -376,17 +376,15 @@ make -j2
 
 ## Tests
 
-To run the unit tests, first run `python tensorflow_plugin/models/test-models/build.py` to build the graphs used in the tests. Then run
+To run the unit tests:
 
 ```bash
-python -m pytest -v --forked --numprocesses=1 ../tensorflow_plugin/test-py/test_tensorflow.py
+pytest ../tensorflow_plugin/test-py/
 ```
 
-This requires `pytest` and `pytest-xdist` packages to be installed. To run tests with mpi, you must run them one at a time:
+MPI is not currently supported for units tests for the last ~10 or so commits!
 
-```bash
-mpirun -np 2 python ../tensorflow_plugin/test-py/test_tensorflow.py test_compute.test_lj_energy
-```
+TODO: Fix this! Models need to be built only on root node.
 
 
 ## Bluehive Install

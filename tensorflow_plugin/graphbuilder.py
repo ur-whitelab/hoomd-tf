@@ -44,6 +44,35 @@ class graph_builder:
             self._nlist_rinv = self.safe_div(1.0, r)
         return self._nlist_rinv
 
+    def masked_nlist(self, type_i = None, type_j = None, nlist = None, type_tensor = None):
+        '''Returns a neighbor list masked by the given types.
+
+        Parameters
+        ---------
+        name
+            The name of the tensor
+        type_i, type_j
+            Use these to select only a certain particle type.
+        nlist
+            By default it will use self.nlist
+        type_tensor
+            An N x 1 tensor containing the types of the nlist origin. If None,
+            then self.positions will be used
+        '''
+        if nlist is None:
+            nlist = self.nlist
+        if type_tensor is None:
+            type_tensor = self.positions[:,3]
+        if type_i is not None:
+            fnlist = tf.boolean_mask(nlist, tf.equal(type_tensor, type_i))
+        if type_j is not None:
+            # cannot use boolean mask due to size
+            mask = tf.cast(tf.equal(nlist[:,:,3],type_j), tf.float32)
+            # make it correct size to mask
+            mask = tf.reshape(tf.tile(mask, [1, nlist.shape[2]]), [-1, self.nneighbor_cutoff, nlist.shape[2]])
+            nlist = nlist * mask
+        return nlist
+
     def compute_rdf(self, r_range, name, nbins=100, type_i = None, type_j = None, nlist = None, positions = None):
         '''Creates a tensor that has the rdf for a given frame
 
@@ -56,7 +85,11 @@ class graph_builder:
         type_i, type_j
             Use these to select only a certain particle type.
         nlist
-            By default it will use the nlist built-in
+            By default it will use self.nlist
+        positions
+            By default will used built-in positions. This tensor is only used
+            to get the origin particle's type. So if you're making your own,
+            just make sure column 4 has the type index.
         '''
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
@@ -65,14 +98,7 @@ class graph_builder:
         if positions is None:
             positions = self.positions
         # filter types
-        if type_i is not None:
-            fnlist = tf.boolean_mask(nlist, tf.equal(positions[:,3], type_i))
-        if type_j is not None:
-            # cannot use boolean mask due to size
-            mask = tf.cast(tf.equal(nlist[:,:,3],type_j), tf.float32)
-            # make it correct size to mask
-            mask = tf.reshape(tf.tile(mask, [1, nlist.shape[2]]), [-1, self.nneighbor_cutoff, nlist.shape[2]])
-            nlist = nlist * mask
+        nlist = self.masked_nlist(type_i, type_j, nlist)
         r = tf.norm(nlist[:,:,:3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins), tf.float32)
         shell_rs = tf.linspace(r_range[0], r_range[1], nbins)
@@ -83,7 +109,20 @@ class graph_builder:
         return result
 
     def running_mean(self, tensor, name):
-        '''Return a variable to store the running mean of the given tensor'''
+        '''Computes running mean of the given tensor
+
+        Parameters
+        ----------
+            tensor
+                The tensor for which you're computing running mean
+            name
+                The name of the variable in which the running mean will be stored
+
+        Returns
+        -------
+            A variable containing the running mean
+
+        '''
 
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor), validate_shape=False)
         update_op = store.assign_add( (tensor - store) / self.tensor_step)
@@ -115,18 +154,17 @@ class graph_builder:
             else:
                 virial = False
         if nlist is None:
-            nlist=self.nlist
+            nlist = self.nlist
         if positions is None:
-            positions=self.positions
+            positions = self.positions
         with tf.name_scope('force-gradient'):
             #compute -gradient wrt positions
             if positions is not False:
-
                 pos_forces = tf.gradients(tf.negative(energy), positions)[0]
             else:
                 pos_forces = None
             if pos_forces is not None:
-                    pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
+                pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
             #minus sign cancels when going from force on neighbor to force on origin in nlist
             nlist_forces = tf.gradients(energy, nlist)[0]
             if nlist_forces is not None:
