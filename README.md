@@ -269,6 +269,37 @@ with hoomd.tensorflow_plugin.tfcompute('/tmp/inference',
 
 There are a few convenience functions in the `hoomd.tensorflow_plugin.utils` for plotting potential energies of pairwise potentials and constructing CG mappings.
 
+
+### Running mean
+
+To compute the running mean of some property, use `graph.running_mean(...)`
+and load it with `load_variables`:
+
+```python
+# set-up graph to compute energy
+...
+graph.running_mean(energy, 'avg-energy')
+# run the simulation
+...
+variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-energy'])
+print(variables)
+```
+
+### RDF
+
+To compute an RDF, use the `graph.compute_rdf(...)` method:
+
+```python
+# set-up graph to compute energy
+...
+rdf = graph.compute_rdf([1,10], 'rdf', nbins=200)
+graph.running_mean(rdf, 'avg-rdf')
+# run the simulation
+...
+variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf'])
+print(variables)
+```
+
 ## Tensorboard
 
 You can visualize your models with tensorboard. First, add

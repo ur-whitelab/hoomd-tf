@@ -7,6 +7,40 @@ from os import path
 import pickle
 import hoomd
 
+def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
+     # just in case
+    tf.reset_default_graph()
+    # load graph
+    tf.train.import_meta_graph(path.join('{}/'.format(model_directory),'model.meta'), import_scope='')
+    # add colons if missing
+    tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
+    run_dict = {n:tf.get_default_graph().get_tensor_by_name(n) for n in tf_names}
+
+    with tf.Session() as sess:
+        saver = tf.train.Saver()
+        if(checkpoint == -1):
+            # get latest
+            checkpoint_str = model_directory
+            checkpoint = tf.train.latest_checkpoint(checkpoint_str)
+            saver.restore(sess, checkpoint)
+            checkpoint = 'latest'
+        elif type(checkpoint) == int:
+            # get specific checkpoint number
+            checkpoint_str = '{}/model-{}'.format(model_directory, checkpoint)
+            checkpoint = tf.train.load_checkpoint(checkpoint_str)
+            saver.restore(sess, checkpoint_str)
+        else:
+            checkpoint_str = checkpoint
+            checkpoint = tf.train.load_checkpoint(checkpoint_str)
+            saver.restore(sess, checkpoint_str)
+        result = sess.run(run_dict, feed_dict={})
+    # re add without colon if necessary
+    combined_result = {}
+    for k,v in result.items():
+        combined_result[k] = v
+        combined_result[k.split(':')[0]] = v
+    return combined_result
+
 
 def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkpoint = -1, feed_dict = {}):
     ''' Compute the pairwise potential at r for the given model.
@@ -47,13 +81,13 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
     with tf.Session() as sess:
         saver = tf.train.Saver()
         if(checkpoint == -1):
-            #get latest
+            # get latest
             checkpoint_str = model_directory
             checkpoint = tf.train.latest_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint)
             checkpoint = 'latest'
         elif type(checkpoint) == int:
-            #get specific checkpoint number
+            # get specific checkpoint number
             checkpoint_str = '{}/model-{}'.format(model_directory, checkpoint)
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
@@ -154,7 +188,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
                         vs.append(1)
         # now add up masses
         for i in range(len(idx)):
-            #get masses from previous values
+            # get masses from previous values
             masses[idx[i][0] - total_i] += vs[i]
         # make sure things are valid
         assert sum([m == 0 for m in masses]) == 0

@@ -31,15 +31,65 @@ class graph_builder:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.output_forces = output_forces
         self._nlist_rinv = None
+        self.tensor_step = tf.get_variable('htf-step', dtype=tf.float32, initializer=0.0)
+        update_step_op = self.tensor_step.assign_add(1.0)
+        self.out_nodes = [update_step_op]
 
     @property
     def nlist_rinv(self):
         ''' Returns an N x NN tensor of 1 / r for each neighbor
         '''
         if self._nlist_rinv is None:
-            r = self.safe_norm(graph.nlist[:,:,:3], axis=2)
-            self._nlist_rinv = self.safe_div(1, r)
+            r = tf.norm(self.nlist[:,:,:3], axis=2)
+            self._nlist_rinv = self.safe_div(1.0, r)
         return self._nlist_rinv
+
+    def compute_rdf(self, r_range, name, nbins=100, type_i = None, type_j = None, nlist = None, positions = None):
+        '''Creates a tensor that has the rdf for a given frame
+
+        Parameters
+        ----------
+        bins
+            The bins to use for the RDF
+        name
+            The name of the tensor
+        type_i, type_j
+            Use these to select only a certain particle type.
+        nlist
+            By default it will use the nlist built-in
+        '''
+        # to prevent type errors later on
+        r_range = [float(r) for r in r_range]
+        if nlist is None:
+            nlist = self.nlist
+        if positions is None:
+            positions = self.positions
+        # filter types
+        if type_i is not None:
+            fnlist = tf.boolean_mask(nlist, tf.equal(positions[:,3], type_i))
+        if type_j is not None:
+            # cannot use boolean mask due to size
+            mask = tf.cast(tf.equal(nlist[:,:,3],type_j), tf.float32)
+            # make it correct size to mask
+            mask = tf.reshape(tf.tile(mask, [1, nlist.shape[2]]), [-1, self.nneighbor_cutoff, nlist.shape[2]])
+            nlist = nlist * mask
+        r = tf.norm(nlist[:,:,:3], axis=2)
+        hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins), tf.float32)
+        shell_rs = tf.linspace(r_range[0], r_range[1], nbins)
+        vols = shell_rs[1:]**3 - shell_rs[:-1]**3
+        # remove 0s
+        result = hist[1:] / vols
+        self.out_nodes.append(result)
+        return result
+
+    def running_mean(self, tensor, name):
+        '''Return a variable to store the running mean of the given tensor'''
+
+        store = tf.get_variable(name, initializer=tf.zeros_like(tensor), validate_shape=False)
+        update_op = store.assign_add( (tensor - store) / self.tensor_step)
+        self.out_nodes.append(update_op)
+        return store
+
 
     def compute_forces(self, energy, virial=None,positions=None,nlist=None,name=None):
         ''' Computes pairwise or position-dependent forces (field) given
@@ -166,6 +216,9 @@ class graph_builder:
 
         if type(out_nodes) != list:
             raise ValueError('out_nodes must be a list')
+
+        # add any attribute out_nodes
+        out_nodes += self.out_nodes
 
         if self.output_forces:
             if len(force_tensor.shape) != 2:

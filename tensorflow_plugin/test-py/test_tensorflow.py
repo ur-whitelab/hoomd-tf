@@ -245,6 +245,39 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(tf_forces[i,j], lj_forces[i,j], atol=1e-5)
 
+    def test_running_mean(self):
+        model_dir = build_examples.lj_running_mean(9 - 1)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            hoomd.run(10)
+        # now load checkpoint
+        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['average-energy', 'htf-step:0'])
+        assert variables['htf-step'] == 11.0
+
+    def test_rdf(self):
+        model_dir = build_examples.lj_rdf(9 - 1)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=3)
+            hoomd.run(10)
+        # now load checkpoint
+        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf:0', 'htf-step:0'])
+        assert variables['avg-rdf:0'][3] > 0
+
+
     def test_lj_energy(self):
         model_dir = build_examples.lj_graph(9 - 1)
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:

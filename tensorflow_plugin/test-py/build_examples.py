@@ -85,6 +85,32 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
+def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    #pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.nlist_rinv**6
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    #sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    avg_energy = graph.running_mean(energy, 'average-energy')
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[avg_energy])
+    return directory
+
+def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
+    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    #pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.nlist_rinv**6
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    #sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    #compute rdf between type 0 and 0
+    rdf = graph.compute_rdf([3, 5], 'rdf', 10, 0, 0)
+    avg_rdf = graph.running_mean(rdf, 'avg-rdf')
+    graph.save(force_tensor=forces, model_directory=directory)
+    return directory
+
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = hoomd.tensorflow_plugin.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
@@ -120,7 +146,7 @@ def trainable_graph(NN, directory='/tmp/test-trainable-model'):
     tf.summary.histogram('forces', forces)
     optimizer = tf.train.AdamOptimizer(1e-4)
     gvs = optimizer.compute_gradients(energy)
-    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    capped_gvs = [(tf.clip_by_value(gvs, -1., 1.), var) for grad, var in gvs]
     train_op = optimizer.apply_gradients(capped_gvs)
     #check = tf.add_check_numerics_ops()
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[train_op, check])
