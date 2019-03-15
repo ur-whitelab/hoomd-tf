@@ -74,14 +74,15 @@ class graph_builder:
         return nlist
 
     def compute_rdf(self, r_range, name, nbins=100, type_i = None, type_j = None, nlist = None, positions = None):
-        '''Creates a tensor that has the rdf for a given frame
+        '''Creates a tensor that has the rdf for a given frame.
 
         Parameters
         ----------
         bins
             The bins to use for the RDF
         name
-            The name of the tensor
+            The name of the tensor containing rdf. The name will be concatenated with
+            '-r' to create a tensor containing the r values of the rdf.
         type_i, type_j
             Use these to select only a certain particle type.
         nlist
@@ -90,6 +91,7 @@ class graph_builder:
             By default will used built-in positions. This tensor is only used
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
+
         '''
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
@@ -102,10 +104,11 @@ class graph_builder:
         r = tf.norm(nlist[:,:,:3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins), tf.float32)
         shell_rs = tf.linspace(r_range[0], r_range[1], nbins)
+        vis_rs = tf.mult((shell_rs[1:] + shell_rs[:-1]), 0.5, name=name + '-r')
         vols = shell_rs[1:]**3 - shell_rs[:-1]**3
         # remove 0s
         result = hist[1:] / vols
-        self.out_nodes.append(result)
+        self.out_nodes.append(result, vis_rs)
         return result
 
     def running_mean(self, tensor, name):

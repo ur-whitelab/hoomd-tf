@@ -26,7 +26,7 @@ def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
             checkpoint = 'latest'
         elif type(checkpoint) == int:
             # get specific checkpoint number
-            checkpoint_str = '{}/model-{}'.format(model_directory, checkpoint)
+            checkpoint_str = '{}{}model-{}'.format(model_directory, path.sep, checkpoint)
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
         else:
