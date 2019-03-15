@@ -109,31 +109,44 @@ def find_molecules(system):
 
         This is a slow function and should only be called once.
     '''
+
     mapping = []
     mapped = set()
     N = len(system.particles)
     unmapped = set(range(N))
     pi = 0
+
+    # copy over bonds for speed
+    bonds = [[b.a, b.b] for b in system.bonds]
+
+    print('Finding molecules...', end='')
     while len(mapped) != N:
+        print('\rFinding molecules...{:.2%}'.format(len(mapped) / N), end='')
         pi = unmapped.pop()
         mapped.add(pi)
         mapping.append([pi])
         # traverse bond group
         # until no more found
-        keep_going = True
-        while keep_going:
-            for bond in system.bonds:
+        # Have to keep track of "to consider" for branching molecules
+        to_consider = [pi]
+        while len(to_consider) > 0:
+            pi = to_consider[-1]
+            found_bond = False
+            for bi, bond in enumerate(bonds):
                 # see if bond contains pi and an unseen atom
-                if (pi == bond.a and bond.b in unmapped) or \
-                    (pi == bond.b and bond.a in unmapped):
-                    pi = bond.a if pi == bond.b else bond.b
-                    unmapped.remove(pi)
-                    mapped.add(pi)
-                    mapping[-1].append(pi)
-                    keep_going = True
+                if (pi == bond[0] and bond[1] in unmapped) or \
+                    (pi == bond[1] and bond[0] in unmapped):
+                    new_pi = bond[0] if pi == bond[1] else bond[1]
+                    unmapped.remove(new_pi)
+                    mapped.add(new_pi)
+                    mapping[-1].append(new_pi)
+                    to_consider.append(new_pi)
+                    found_bond = True
                     break
-                keep_going = False
+            if not found_bond:
+                to_consider.remove(pi)
     # sort it to be ascending in min atom index in molecule
+    print('')
     for m in mapping:
         m.sort()
     mapping.sort(key=lambda x: min(x))
@@ -161,10 +174,12 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
     '''
     import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
+    assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
 
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
     M = sum([m.shape[0] for m in molecule_mapping])
+
 
     # create indices
     indices = []
