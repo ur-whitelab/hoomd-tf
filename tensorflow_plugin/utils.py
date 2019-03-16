@@ -218,14 +218,15 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
-def center_of_mass(positions, mapping, system):
+def center_of_mass(positions, mapping, system, name='center-of-mass'):
     # https://en.wikipedia.org/wiki/Center_of_mass#Systems_with_periodic_boundary_conditions
+    # Adapted for -L to L boundary conditions
+    # box dim in hoomd reports though 2 * L
     box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
-    theta = positions / box_dim * 2 * np.pi
+    theta = positions / box_dim * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
     ximean = tf.sparse.matmul(mapping, xi)
     zetamean = tf.sparse.matmul(mapping, zeta)
-    print(zetamean.shape)
-    thetamean = tf.math.atan2(-ximean, -zetamean)
-    return thetamean / 2  / np.pi * box_dim
+    thetamean = tf.math.atan2(zetamean, ximean)
+    return tf.identity(thetamean  / np.pi * box_dim, name=name)

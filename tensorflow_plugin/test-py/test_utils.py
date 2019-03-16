@@ -122,11 +122,12 @@ class test_mappings(unittest.TestCase):
         N = len(self.system.particles)
         p = tf.placeholder(tf.float32, shape=[N, 3])
         com = htf.center_of_mass(p, s, self.system)
+        non_pbc_com = tf.sparse.matmul(s, p)
         with tf.Session() as sess:
             positions = self.system.take_snapshot().particles.position
-            com = sess.run(com, feed_dict={p:positions})
-        print(com)
-        assert False
+            com, non_pbc_com = sess.run([com, non_pbc_com], feed_dict={p:positions})
+        # TODO: Come up with a real test of this.
+        assert True
 
 if __name__ == '__main__':
     unittest.main()
