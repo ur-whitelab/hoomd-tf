@@ -74,10 +74,12 @@ void TensorflowCompute<M>::reallocate() {
   _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
   // In cuda, an array of size 0 breaks things. So even if we aren"t using
   // neighborlist we need to make it size > 0
-  GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
-  _nlist_array.swap(tmp);
-  _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
-  CHECK_CUDA_ERROR();
+  if (_nneighs > 0) {
+    GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
+    _nlist_array.swap(tmp);
+    _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
+    CHECK_CUDA_ERROR();
+  }
   // virial is made with maxN, not N
   GPUArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
   _virial_array.swap(tmp2);
@@ -96,7 +98,6 @@ TensorflowCompute<M>::~TensorflowCompute() {
 */
 template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
-
   if (timestep % _period != 0) return;
   if (m_prof) m_prof->push("TensorflowCompute");
 

@@ -62,7 +62,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist, r_cut, save_period=1000, period=1, feed_dict=None):
+    def attach(self, nlist = None, r_cut = 0, save_period=1000, period=1, feed_dict=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -81,13 +81,16 @@ class tfcompute(hoomd.compute._compute):
         self.compute_name = self.force_name
         self.nneighbor_cutoff = self.graph_info['NN']
         self.atom_number = len(hoomd.context.current.group_all)
-
-        nlist.subscribe(self.rcut)
         r_cut = float(r_cut)
         self.r_cut = r_cut
 
-        #activate neighbor list
-        nlist.update_rcut()
+        if nlist is not None:
+            nlist.subscribe(self.rcut)
+            #activate neighbor list
+            nlist.update_rcut()
+        elif self.nneighbor_cutoff != 0:
+            raise ValueError('Must provide an nlist if you have nneighbor_cutoff > 0')
+
 
         hoomd.util.print_status_line()
 
@@ -103,14 +106,14 @@ class tfcompute(hoomd.compute._compute):
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
-            hoomd.context.current.system_definition, nlist.cpp_nlist,
+            hoomd.context.current.system_definition, nlist.cpp_nlist if nlist is not None else None,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.tasklock)
             if self.device is None:
                 self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
-            hoomd.context.current.system_definition, nlist.cpp_nlist,
+            hoomd.context.current.system_definition,  nlist.cpp_nlist if nlist is not None else None,
             r_cut, self.nneighbor_cutoff, force_mode_code, period,
              self.tasklock)
             if self.device is None:

@@ -78,14 +78,11 @@ class test_compute(unittest.TestCase):
         model_dir = build_examples.benchmark_nonlist_graph()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
-            rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                                n=[32,32])
-            nlist = hoomd.md.nlist.cell(check_period = 1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
-
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach()
             hoomd.run(10)
 
 

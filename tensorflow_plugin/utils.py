@@ -33,7 +33,7 @@ def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
             checkpoint_str = checkpoint
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
-        result = sess.run(run_dict, feed_dict={})
+        result = sess.run(run_dict, feed_dict=feed_dict)
     # re add without colon if necessary
     combined_result = {}
     for k,v in result.items():

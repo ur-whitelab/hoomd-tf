@@ -5,6 +5,33 @@ import numpy as np
 import tensorflow as tf
 
 
+class test_loading(unittest.TestCase):
+    def test_load_variables(self):
+        print('ONLY DISPLAY ONCE')
+        model_dir = '/tmp/test-load'
+        # make model that does assignment
+        g = htf.graph_builder(0, False)
+        h = tf.ones([10], dtype=tf.float32)
+        v = tf.get_variable('test', shape=[], trainable=False)
+        as_op = v.assign(tf.reduce_sum(h))
+        g.save(model_dir, out_nodes=[as_op])
+        # run once
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                n=[3,3])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(save_period=1)
+            hoomd.run(1)
+        # load
+        vars = htf.load_variables(model_dir, ['test'])
+        print(vars)
+        assert np.abs(vars['test'] - 10) < 10e-10
+
+
+
+
 class test_mappings(unittest.TestCase):
     def setUp(self):
         # build system using example from hoomd
@@ -56,7 +83,23 @@ class test_mappings(unittest.TestCase):
         N = len(self.system.particles)
         p = tf.ones(shape=[N, 1])
         m = tf.sparse.matmul(s, p)
+        dense_mapping = tf.sparse.to_dense(s)
         msum = tf.reduce_sum(m)
         with tf.Session() as sess:
             msum = sess.run(msum)
-        assert int(msum) == len(mapping) *  mapping_matrix.shape[0]
+            assert int(msum) == len(mapping) *  mapping_matrix.shape[0]
+            #now make sure we see the mapping matrix in first set
+            dense_mapping = sess.run(dense_mapping)
+
+        map_slice = dense_mapping[:mapping_matrix.shape[0], :mapping_matrix.shape[1]]
+        #make mapping_matrix sum to 1
+        ref_slice = mapping_matrix / np.sum(mapping_matrix, axis=1).reshape(-1,1)
+        print(map_slice, ref_slice)
+        np.testing.assert_array_almost_equal(map_slice, ref_slice)
+
+        #check off-diagnoal slice, which should be 0
+        map_slice = dense_mapping[:mapping_matrix.shape[0], -mapping_matrix.shape[1]:]
+        assert np.sum(map_slice) < 1e-10
+
+if __name__ == '__main__':
+    unittest.main()

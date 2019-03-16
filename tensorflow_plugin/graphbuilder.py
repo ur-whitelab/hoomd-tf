@@ -104,11 +104,11 @@ class graph_builder:
         r = tf.norm(nlist[:,:,:3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins), tf.float32)
         shell_rs = tf.linspace(r_range[0], r_range[1], nbins)
-        vis_rs = tf.mult((shell_rs[1:] + shell_rs[:-1]), 0.5, name=name + '-r')
+        vis_rs = tf.multiply((shell_rs[1:] + shell_rs[:-1]), 0.5, name=name + '-r')
         vols = shell_rs[1:]**3 - shell_rs[:-1]**3
         # remove 0s
         result = hist[1:] / vols
-        self.out_nodes.append(result, vis_rs)
+        self.out_nodes.extend([result, vis_rs])
         return result
 
     def running_mean(self, tensor, name):

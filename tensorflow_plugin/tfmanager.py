@@ -101,10 +101,10 @@ class TFManager:
             return
 
         if self.saver is not None:
-            self.log.info('Writing {} variables at step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
+            self.log.info('Writing {} variables at TF step {}'.format(len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)), self.step))
             self.saver.save(sess, os.path.join(self.model_directory, 'model'), global_step=self.step)
         if self.write_tensorboard and summaries is not None:
-            self.log.info('Writing tensorboard at step {}'.format(self.step))
+            self.log.info('Writing tensorboard at TF step {}'.format(self.step))
             #last out_node should be merged summary (set in _attach_tensorboard)
             self.tb_writer.add_summary(summaries, self.step)
             self.tb_writer.flush()
@@ -165,14 +165,6 @@ class TFManager:
             with tf.device(self.device):
                 self.out_nodes.append(tf_to_hoomd(self.virial, address=self.virial_buffer))
                 self.log.info('initialized virial tf_to_hoomd at address {:x} with shape {} on {}'.format(self.virial_buffer, self.virial.shape, self.device))
-
-        #pf = tf.get_default_graph().get_tensor_by_name('force-gradient/nlist-pairwise-force-gradient:0')
-        #pf = tf.get_default_graph().get_tensor_by_name('force-calc/remove-nans/pairwise-forces:0')
-        #self.out_nodes += [tf.Print(pf, [pf], summarize=1000)]
-        #self.out_nodes += [tf.Print(self.forces, [self.forces, tf.shape(self.forces)], summarize=1000)]
-        #neighs_rs = tf.norm(self.nlist[:,:,:3], axis=2, keepdims=True)
-        #self.out_nodes += [tf.Print(neighs_rs, [neighs_rs], summarize=1000)]
-        #self.out_nodes += [tf.Print(self.nlist, [self.nlist], summarize=1000)]
 
     def _attach_tensorboard(self, sess):
 
@@ -243,6 +235,7 @@ class TFManager:
                     try:
                         feed_name_dict = self.q.get()
                         if feed_name_dict is None:
+                            self.log.info('Empty')
                             raise queue.Empty()
                     except queue.Empty:
                         self.log.info('Received exit. Leaving TF Update Loop. \n')
