@@ -64,7 +64,7 @@ class graph_builder:
         if type_tensor is None:
             type_tensor = self.positions[:,3]
         if type_i is not None:
-            fnlist = tf.boolean_mask(nlist, tf.equal(type_tensor, type_i))
+            nlist = tf.boolean_mask(nlist, tf.equal(type_tensor, type_i))
         if type_j is not None:
             # cannot use boolean mask due to size
             mask = tf.cast(tf.equal(nlist[:,:,3],type_j), tf.float32)
@@ -102,12 +102,12 @@ class graph_builder:
         # filter types
         nlist = self.masked_nlist(type_i, type_j, nlist)
         r = tf.norm(nlist[:,:,:3], axis=2)
-        hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins), tf.float32)
-        shell_rs = tf.linspace(r_range[0], r_range[1], nbins)
+        hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2), tf.float32)
+        shell_rs = tf.linspace(r_range[0], r_range[1], nbins + 1)
         vis_rs = tf.multiply((shell_rs[1:] + shell_rs[:-1]), 0.5, name=name + '-r')
         vols = shell_rs[1:]**3 - shell_rs[:-1]**3
-        # remove 0s
-        result = hist[1:] / vols
+        # remove 0s and Ns
+        result = hist[1:-1] / vols
         self.out_nodes.extend([result, vis_rs])
         return result
 
