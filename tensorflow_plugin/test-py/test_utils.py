@@ -101,6 +101,9 @@ class test_mappings(unittest.TestCase):
         map_slice = dense_mapping[:mapping_matrix.shape[0], -mapping_matrix.shape[1]:]
         assert np.sum(map_slice) < 1e-10
 
+        # make sure the rows sum to one
+        assert (np.sum(np.abs(np.sum(dense_mapping, axis=1))) - dense_mapping.shape[0]) < 10e-10
+
     def test_com(self):
         # I write this as an N x M
         # However, we need to have them as M x N, hence the
