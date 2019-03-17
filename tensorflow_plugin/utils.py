@@ -223,10 +223,10 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     # Adapted for -L to L boundary conditions
     # box dim in hoomd reports though 2 * L
     box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
-    theta = positions / box_dim * np.pi
+    theta = positions / box_dim * 2 * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
     ximean = tf.sparse.matmul(mapping, xi)
     zetamean = tf.sparse.matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
-    return tf.identity(thetamean  / np.pi * box_dim, name=name)
+    return tf.identity(thetamean  / np.pi / 2 * box_dim, name=name)
