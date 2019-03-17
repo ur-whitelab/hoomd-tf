@@ -4,7 +4,7 @@ This plugin allows using tensorflow to compute forces in a simulation
 or to compute other quantities, like collective variables to fit a
 potential for coarse-graining. You must first construct your
 tensorlfow graph using the `tensorflow_plugin.graph_builder` class and
-then add the `tfcompute` compute to your hoomd simulation.
+then add the `tfcompute` compute to your hoomd simulation. See Known Issues at the bottom for important notes.
 
 ## Requirements
 
@@ -490,6 +490,17 @@ C++ functions -> snake (?) because they are only used in py or gpu kernels
 py class ->snake
 
 ## Known Issues
+
+### Using Positions
+
+Hoomd re-orders positions to improve performance. We hope to implement a use of the reverse-tags to make positions going into the TF graph be ordered correctly. In the meantime, you must manually turn-off this homod feature:
+
+```python
+c = hoomd.context.initialize()
+c.sorter.disable()
+```
+
+This is only necessary if your graph needs to have positions passed in a particular order. A common use-case is doing CG mappings.
 
 ### Exploding Gradients
 
