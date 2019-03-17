@@ -300,6 +300,13 @@ variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf'])
 print(variables)
 ```
 
+
+## Coarse-Graining Utilities
+
+TODO: Separate into two files and document the functions.
+
+TODO: Make a unit test that gets nlsit from hoomd and from `compute_nlist`. Compare them.
+
 ## Tensorboard
 
 You can visualize your models with tensorboard. First, add

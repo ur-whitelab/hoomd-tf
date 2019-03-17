@@ -219,6 +219,9 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
 
 
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
+    '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
+    considering PBC. Returns mapped particles.
+    '''
     # https://en.wikipedia.org/wiki/Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
@@ -230,3 +233,45 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     zetamean = tf.sparse.matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
     return tf.identity(thetamean  / np.pi / 2 * box_dim, name=name)
+
+
+def compute_nlist(positions, r_cut, NN, system):
+
+    M = tf.shape(positions)[0]
+
+    #Making 3 dim CG nlist
+    qexpand = tf.expand_dims(positions,1) # one column
+    qTexpand = tf.expand_dims(positions,0) #one row
+
+    # repeat it to make matrix of all positions
+    qtile = tf.tile(qexpand,[1,M,1])
+    qTtile = tf.tile(qTexpand, [M,1,1])
+
+    #subtract them to get distance matrix
+    dist_mat = qTtile - qtile
+
+    # apply minimum image
+    box = tf.reshape(tf.convert_to_tensor([system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+    dist_mat -= tf.math.round(dist_mat / box) * box
+
+    # mask distance matrix to remove things beyond cutoff and zeros
+    dist = tf.norm(dist_mat, axis = 2)
+    mask = (dist <= r_cut) & (dist >= 5e-4)
+    mask_cast = tf.cast(mask, dtype=dist.dtype)
+    #Make it M x M x 3 so it can be used in neigbhor list
+    boolean_mask = tf.stack([mask_cast,mask_cast,mask_cast],axis=2)
+    tf.reshape(boolean_mask, [M, M, 3])
+
+    # truncate neighbor list now
+    bool_3d = dist_mat * boolean_mask
+    dist_mat_r = tf.norm(bool_3d,axis = 2)
+    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = True)
+
+    # we have the topk, but now we need to remove others
+    idx = tf.tile(tf.range(M),[NN])
+    idx = tf.reshape(idx,[-1,1])
+    flat_idx = tf.concat([idx,tf.reshape(topk.indices,[-1,1])],-1)
+    nlist = tf.gather_nd(bool_3d,flat_idx)
+    nlist = tf.reshape(nlist,[-1,NN,3])
+
+    return nlist
