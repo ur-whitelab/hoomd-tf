@@ -272,7 +272,7 @@ class test_compute(unittest.TestCase):
             hoomd.run(10)
         # now load checkpoint
         variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf:0', 'htf-step:0'])
-        assert variables['avg-rdf:0'][3] > 0
+        assert np.sum(variables['avg-rdf:0']) > 0
 
 
     def test_lj_energy(self):
