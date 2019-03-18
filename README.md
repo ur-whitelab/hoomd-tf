@@ -419,7 +419,7 @@ source activate hoomd-tf
 Now that Python is ready, install some pre-requisites:
 
 ```bash
-pip install tensorflow-gpu
+pip install tensorflow-gpu==1.13.1
 ```
 
 Continue following the compling steps below to complete install.
