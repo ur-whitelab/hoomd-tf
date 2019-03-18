@@ -9,7 +9,7 @@ then add the `tfcompute` compute to your hoomd simulation. See Known Issues at t
 ## Requirements
 
 ```
-tensorflow >= 1.13.1
+tensorflow == 1.12
 numpy
 ```
 
