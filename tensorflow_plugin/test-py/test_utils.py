@@ -63,6 +63,8 @@ class test_mappings(unittest.TestCase):
         assert len(mapping) == 9
         assert len(mapping[0]) == 10
     def test_sparse_mapping(self):
+        '''Checks the sparse mapping when used for summing forces, not center of mass
+        '''
         # I write this as an N x M
         # However, we need to have them as M x N, hence the
         # transpose
@@ -75,7 +77,7 @@ class test_mappings(unittest.TestCase):
             [0, 0, 1],
             [0, 0, 1],
             [0, 0, 1],
-            [0, 0, 0],
+            [1, 0, 0],
             [0, 1, 0]]).transpose()
         mapping = htf.find_molecules(self.system)
         s = htf.sparse_mapping([mapping_matrix for _ in mapping], mapping)
@@ -87,13 +89,15 @@ class test_mappings(unittest.TestCase):
         msum = tf.reduce_sum(m)
         with tf.Session() as sess:
             msum = sess.run(msum)
-            assert int(msum) == len(mapping) *  mapping_matrix.shape[0]
+            # here we are doing sum, not center of mass. So this is like com forces
+            #number of nonzero mappeds = number of molecules * number of particles in each molecule
+            assert int(msum) == len(mapping) *  mapping_matrix.shape[1]
             #now make sure we see the mapping matrix in first set
             dense_mapping = sess.run(dense_mapping)
 
         map_slice = dense_mapping[:mapping_matrix.shape[0], :mapping_matrix.shape[1]]
         #make mapping_matrix sum to 1
-        ref_slice = mapping_matrix / np.sum(mapping_matrix, axis=1).reshape(-1,1)
+        ref_slice = mapping_matrix
         print(map_slice, ref_slice)
         np.testing.assert_array_almost_equal(map_slice, ref_slice)
 
@@ -101,8 +105,8 @@ class test_mappings(unittest.TestCase):
         map_slice = dense_mapping[:mapping_matrix.shape[0], -mapping_matrix.shape[1]:]
         assert np.sum(map_slice) < 1e-10
 
-        # make sure the rows sum to one
-        assert (np.sum(np.abs(np.sum(dense_mapping, axis=1))) - dense_mapping.shape[0]) < 10e-10
+        # make sure the rows sum to N
+        assert (np.sum(np.abs(np.sum(dense_mapping, axis=1))) - dense_mapping.shape[1]) < 10e-10
 
     def test_com(self):
         # I write this as an N x M

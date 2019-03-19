@@ -200,17 +200,19 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
                     if system is not None:
                         vs.append(system.particles[mmi[j]].mass)
                     else:
-                        vs.append(1)
-        # now add up masses
-        for i in range(len(idx)):
-            # get masses from previous values
-            masses[idx[i][0] - total_i] += vs[i]
-        # make sure things are valid
-        assert sum([m == 0 for m in masses]) == 0
+                        vs.append(1.)
         # now scale values by mases
-        for i in range(len(idx)):
-            vs[i] /= masses[idx[i][0] - total_i]
-        # all donw
+        if system is not None:
+            # now add up masses
+            for i in range(len(idx)):
+                # get masses from previous values
+                masses[idx[i][0] - total_i] += vs[i]
+            # make sure things are valid
+            assert sum([m == 0 for m in masses]) == 0
+
+            for i in range(len(idx)):
+                vs[i] /= masses[idx[i][0] - total_i]
+        # all done
         indices.extend(idx)
         values.extend(vs)
         total_i += len(masses)
