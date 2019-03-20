@@ -83,6 +83,7 @@ set(files
     graphbuilder.py
     tfarraycomm.py
     tfmanager.py
+    utils.py
     )
 
 install(FILES ${files}
