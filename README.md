@@ -396,12 +396,12 @@ TODO: Fix this! Models need to be built only on root node.
 
 ## Bluehive Install
 
-MAKE SURE YOU HAVE ALREADY CLONED THE HOOMD-TF REPO TO YOUR BLUEHIVE ACCOUNT!
+After cloning the `hoomd-tf` repo, follow these steps:
 
 Load the modules necessary:
 
 ```bash
-module load anaconda cmake sqlite cuda cudnn git
+module load git anaconda3/2018.12b cmake sqlite cudnn/9.0-7
 ```
 
 Set-up virtual python environment *ONCE* to keep packages isolated.
@@ -419,7 +419,7 @@ source activate hoomd-tf
 Now that Python is ready, install some pre-requisites:
 
 ```bash
-pip install tensorflow-gpu==1.13.1
+pip install tensorflow-gpu==1.12
 ```
 
 Continue following the compling steps below to complete install.
@@ -428,6 +428,12 @@ Continue following the compling steps below to complete install.
 
 ```bash
 git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
+```
+
+TODO: We are currently frozen on this commit due to GPU-Array refactoring in hoomd-blue
+
+```bash
+cd hoomd-blue && git checkout a4a24a6d729d21d9027e46dda85a80448bd4d15f
 ```
 
 Put our plugin in the source directory. Make a softlink:
@@ -440,7 +446,7 @@ Now compile (from hoomd-blue directory). Modify options for speed if necessary.
 
 ```bash
 mkdir build && cd build
-cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Debug \
+cmake .. -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_BUILD_TYPE=Release \
 -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF\
  -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
  -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
@@ -458,7 +464,21 @@ Put build directory on your python path:
 export PYTHONPATH="$PYTHONPATH:`pwd`"
 ```
 
+### Updating Compiled Code
+
 Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files (`tensorflow_plugin/*py` to `build/hoomd/tensorflow_plugin`)
+
+## MBuild Environment
+
+If you are using mbuild, please follow these additional install steps:
+
+```bash
+conda install numpy cython
+pip install requests networkx matplotlib scipy pandas plyplus lxml mdtraj oset
+conda install -c omnia -y openmm parmed
+conda install -c conda-forge --no-deps -y packmol gsd
+pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild
+```
 
 ## Running on Bluehive
 
