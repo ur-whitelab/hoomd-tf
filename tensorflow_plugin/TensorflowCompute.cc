@@ -321,10 +321,12 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
       //_streams[i] = 0;
       CHECK_CUDA_ERROR();
     }
-
-    _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
-    if(_nneighs != nneighs) {
-     m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+    
+    if(_nneighs > 0) {
+      _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
+      if(_nneighs != nneighs) {
+	m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+      }
     }
     reallocate(); //must be called so streams are correctly set
     m_tuner.reset(new Autotuner(32, 1024, 32, 5, 100000, "tensorflow", m_exec_conf));
