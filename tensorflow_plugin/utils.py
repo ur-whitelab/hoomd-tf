@@ -260,20 +260,14 @@ def compute_nlist(positions, r_cut, NN, system):
     dist = tf.norm(dist_mat, axis = 2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
-    #Make it M x M x 3 so it can be used in neigbhor list
-    boolean_mask = tf.stack([mask_cast,mask_cast,mask_cast],axis=2)
-    tf.reshape(boolean_mask, [M, M, 3])
-
-    # truncate neighbor list now
-    bool_3d = dist_mat * boolean_mask
-    dist_mat_r = tf.norm(bool_3d,axis = 2)
-    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = True)
+    dist_mat_r = dist * mask_cast
+    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = False)
 
     # we have the topk, but now we need to remove others
     idx = tf.tile(tf.range(M),[NN])
     idx = tf.reshape(idx,[-1,1])
     flat_idx = tf.concat([idx,tf.reshape(topk.indices,[-1,1])],-1)
-    nlist = tf.gather_nd(bool_3d,flat_idx)
+    nlist = tf.gather_nd(dist_mat,flat_idx)
     nlist = tf.reshape(nlist,[-1,NN,3])
 
     return nlist
