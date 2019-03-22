@@ -137,7 +137,40 @@ class test_mappings(unittest.TestCase):
         # TODO: Come up with a real test of this.
         assert True
 
+
     def test_compute_nlist(self):
+        N = 10
+        positions = tf.tile(tf.reshape(tf.range(N), [-1,1]), [1, 3])
+        print(positions.shape)
+        system = type('', (object, ), {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz':100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
+        with tf.Session() as sess:
+            nlist = sess.run([nlist])
+            np.testing.assert_array_almost_equal(np.sort(nlist[0,:])[0], [9, 9, 9])
+            np.testing.assert_array_almost_equal(np.sort(nlist[-1,:])[-1], [-9, -9, -9])
+
+    def test_compute_nlist(self):
+        N = 10
+        positions = tf.tile(tf.reshape(tf.range(N), [-1,1]), [1, 3])
+        print(positions.shape)
+        system = type('', (object, ), {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz':100.})})
+        nlist= htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
+        with tf.Session() as sess:
+            nlist = sess.run(nlist)
+            np.testing.assert_array_almost_equal(np.sort(nlist[0,:])[0], [9, 9, 9])
+
+    def test_compute_nlist_cut(self):
+        N = 10
+        positions = tf.tile(tf.reshape(tf.range(N), [-1,1]), [1, 3])
+        print(positions.shape)
+        system = type('', (object, ), {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz':100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, system, True)
+        with tf.Session() as sess:
+            nlist = sess.run(nlist)
+            np.testing.assert_array_almost_equal(np.sort(nlist[0,:])[0], [3, 3, 3])
+            np.testing.assert_array_almost_equal(np.sort(nlist[-1,:])[0], [-3, -3, -3])
+
+    def test_nlist_compare(self):
         rcut = 5.0
         c = hoomd.context.initialize()
         # disable sorting
@@ -157,6 +190,12 @@ class test_mappings(unittest.TestCase):
 
             hoomd.run(100)
         variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['hoomd-r', 'htf-r'])
-        np.testing.assert_array_almost_equal(variables['hoomd-r'], variables['htf-r'])
+        # the two nlists need to be sorted to be compared
+        nlist = variables['hoomd-r']
+        cnlist = variables['htf-r']
+        for i in range(nlist.shape[0]):
+            ni = np.sort(nlist[i,:])
+            ci = np.sort(cnlist[i, :])
+            np.testing.assert_array_almost_equal(ni, ci, decimal=2)
 if __name__ == '__main__':
     unittest.main()

@@ -237,7 +237,7 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     return tf.identity(thetamean  / np.pi / 2 * box_dim, name=name)
 
 
-def compute_nlist(positions, r_cut, NN, system):
+def compute_nlist(positions, r_cut, NN, system, sorted=False):
 
     M = tf.shape(positions)[0]
 
@@ -261,13 +261,13 @@ def compute_nlist(positions, r_cut, NN, system):
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
     dist_mat_r = dist * mask_cast
-    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = False)
+    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = sorted)
 
     # we have the topk, but now we need to remove others
-    idx = tf.tile(tf.range(M),[NN])
-    idx = tf.reshape(idx,[-1,1])
+    idx = tf.tile(tf.reshape(tf.range(M), [-1,1]), [1, NN])
+    idx = tf.reshape(idx, [-1, 1])
     flat_idx = tf.concat([idx,tf.reshape(topk.indices,[-1,1])],-1)
-    nlist = tf.gather_nd(dist_mat,flat_idx)
+    nlist = tf.gather_nd(dist_mat * tf.reshape(mask_cast, [M, M,1]),flat_idx)
     nlist = tf.reshape(nlist,[-1,NN,3])
 
     return nlist
