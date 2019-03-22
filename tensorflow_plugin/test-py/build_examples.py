@@ -2,11 +2,11 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 import tensorflow as tf
-import os, hoomd.tensorflow_plugin, pickle
+import os, hoomd.tensorflow_plugin as htf, pickle
 
 
 def simple_potential(directory='/tmp/test-simple-potential-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1)
+    graph = htf.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2, keepdims=True)
@@ -26,7 +26,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
         assert tf.get_default_graph().get_tensor_by_name(gi['forces']).shape[1] == 4
 
 def benchmark_gradient_potential():
-    graph = hoomd.tensorflow_plugin.graph_builder(1024, 64)
+    graph = htf.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -36,7 +36,7 @@ def benchmark_gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/benchmark-gradient-potential-model')
 
 def gradient_potential():
-    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1)
+    graph = htf.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
@@ -45,7 +45,7 @@ def gradient_potential():
     graph.save(force_tensor=forces, model_directory='/tmp/test-gradient-potential-model', out_nodes=[energy])
 
 def noforce_graph(directory='/tmp/test-noforce-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
+    graph = htf.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones_like(neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs, name='energy')
@@ -54,7 +54,7 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     return directory
 
 def feeddict_graph(directory='/tmp/test-feeddict-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(9 - 1, output_forces=False)
+    graph = htf.graph_builder(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
     force_com = tf.reduce_mean(forces, axis=0)
     thing = tf.placeholder(dtype=tf.float32, name='test-tensor')
@@ -63,7 +63,7 @@ def feeddict_graph(directory='/tmp/test-feeddict-model'):
     return directory
 
 def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(0, output_forces=True)
+    graph = htf.graph_builder(0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1. , ps)
     force = graph.compute_forces(energy)
@@ -71,7 +71,7 @@ def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
     return directory
 
 def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = htf.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -85,8 +85,25 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
+def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
+    graph = htf.graph_builder(NN, output_forces=False)
+    nlist = graph.nlist[:, :, :3]
+    #get r
+    r = tf.norm(nlist, axis=2)
+    v = tf.get_variable('hoomd-r', initializer=tf.zeros_like(r), validate_shape=False)
+    ops = [v.assign(r)]
+
+    #compute nlist
+    cnlist = htf.compute_nlist(graph.positions[:,:3], r_cut, NN, system)
+    r = tf.norm(nlist, axis=2)
+    v = tf.get_variable('htf-r', initializer=tf.zeros_like(r), validate_shape=False)
+    ops.append(v.assign(r))
+
+    graph.save(model_directory=directory, out_nodes=ops)
+    return directory
+
 def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = htf.graph_builder(NN)
     #pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -98,7 +115,7 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     return directory
 
 def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = htf.graph_builder(NN)
     #pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -112,7 +129,7 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     return directory
 
 def print_graph(NN, directory='/tmp/test-print-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = htf.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
@@ -128,7 +145,7 @@ def print_graph(NN, directory='/tmp/test-print-model'):
     return directory
 
 def trainable_graph(NN, directory='/tmp/test-trainable-model'):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = htf.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]
     #get r
     r = tf.norm(nlist, axis=2)
