@@ -143,7 +143,7 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
             dest[idx * NN + neigh_idx].x = dx.x;
             dest[idx * NN + neigh_idx].y = dx.y;
             dest[idx * NN + neigh_idx].z = dx.z;
-            dest[idx * NN + neigh_idx].w = static_cast<Scalar> (typei);
+            dest[idx * NN + neigh_idx].w = static_cast<Scalar> (typej);
 
         }
     }

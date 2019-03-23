@@ -226,14 +226,14 @@ void TensorflowCompute<M>::prepareNeighbors() {
       buffer[i * _nneighs + nnoffset[i]].x = dx.x;
       buffer[i * _nneighs + nnoffset[i]].y = dx.y;
       buffer[i * _nneighs + nnoffset[i]].z = dx.z;
-      buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[i].w;
+      buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[k].w;
       nnoffset[i]++;
       //TODO: Why is k so big?
       if (m_nlist->getStorageMode() == NeighborList::half && k < m_pdata->getN()) {
         buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
         buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
         buffer[k * _nneighs + nnoffset[k]].z = -dx.z;
-        buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[k].w;
+        buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[i].w;
         nnoffset[k]++;
       }
     }
@@ -321,7 +321,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
       //_streams[i] = 0;
       CHECK_CUDA_ERROR();
     }
-    
+
     if(_nneighs > 0) {
       _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
       if(_nneighs != nneighs) {
