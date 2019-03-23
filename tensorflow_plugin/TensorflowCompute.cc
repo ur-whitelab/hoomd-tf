@@ -98,51 +98,54 @@ TensorflowCompute<M>::~TensorflowCompute() {
 */
 template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
-  if (timestep % _period != 0) return;
-  if (m_prof) m_prof->push("TensorflowCompute");
+  // We need to come here if either it's an update or we have
+  // a deferred update from hoomd2tf mode.
 
-  // We need to offset positions and net forces if we're sending
-  // forces because net forces are calculated after all computes (like us),
-  // so we don't have access until next step.
-
-  // send net forces from last step
-  if(_force_mode == FORCE_MODE::hoomd2tf) {
-      if(timestep > 0) {
-        // get last step's net force and send
-        _forces_comm.receiveArray(m_pdata->getNetForce());
-        // Forces are ready and we prepared nlist from previous computeForces
-        finishUpdate(timestep);
-        // we sent it using forces_comm. We need to zero it out.
-        // This is not necessary, but in the future we may want to allow
-        // both sending and receiving forces.
-        _forces_comm.memsetArray(0);
-      }
-  }
-
-  if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
-  // nneighs == 0 send positions only
-  if (_nneighs > 0) {
-    // Update the neighborlist
-    m_nlist->compute(timestep);
-    if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
-    prepareNeighbors();
-    if (m_prof) m_prof->pop();
-  }
-
-  if (m_prof) m_prof->pop(); //prearing data
-
-  // positions and forces are ready. Now we send
-  if (_force_mode != FORCE_MODE::hoomd2tf)
+  // deferred update first
+  if(_force_mode == FORCE_MODE::hoomd2tf && timestep > 0 && (timestep - 1) % _period == 0) {
+    // We need to offset positions and net forces if we're sending
+    // forces because net forces are calculated after all computes (like us),
+    // so we don't have access until next step.
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Deferred Update");
+    // send net forces from last step
+    // get last step's net force and send
+    _forces_comm.receiveArray(m_pdata->getNetForce());
+    // Forces are ready and we prepared nlist from previous computeForces
     finishUpdate(timestep);
-
-  if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
-
-  // now we receive virial from the update.
-  if(_force_mode == FORCE_MODE::tf2hoomd) {
-      receiveVirial();
+    // we sent it using forces_comm. We need to zero it out.
+    // This is not necessary, but in the future we may want to allow
+    // both sending and receiving forces.
+    _forces_comm.memsetArray(0);
+    if (m_prof) m_prof->pop();  // deferred update
   }
-  if (m_prof) m_prof->pop();  // force update
-  if (m_prof) m_prof->pop();  // compute
+
+  if (timestep % _period == 0) {
+    if (m_prof) m_prof->push("TensorflowCompute<M>");
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
+    // nneighs == 0 send positions only
+    if (_nneighs > 0) {
+      // Update the neighborlist
+      m_nlist->compute(timestep);
+      if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
+      prepareNeighbors();
+      if (m_prof) m_prof->pop();
+    }
+
+    if (m_prof) m_prof->pop(); //prearing data
+
+    // positions and forces are ready. Now we send
+    if (_force_mode != FORCE_MODE::hoomd2tf)
+      finishUpdate(timestep);
+
+    if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
+
+    // now we receive virial from the update.
+    if(_force_mode == FORCE_MODE::tf2hoomd) {
+        receiveVirial();
+    }
+    if (m_prof) m_prof->pop();  // force update
+    if (m_prof) m_prof->pop();  // compute
+  }
 }
 
 template <TFCommMode M>
