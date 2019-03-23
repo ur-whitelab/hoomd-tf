@@ -115,7 +115,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     // we sent it using forces_comm. We need to zero it out.
     // This is not necessary, but in the future we may want to allow
     // both sending and receiving forces.
-    _forces_comm.memsetArray(0);
+    //_forces_comm.memsetArray(0);
     if (m_prof) m_prof->pop();  // deferred update
   }
 

@@ -258,6 +258,33 @@ class test_compute(unittest.TestCase):
         variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['average-energy', 'htf-step:0'])
         assert variables['htf-step'] == 11.0
 
+
+    def test_force_output(self):
+        Ne = 5
+        model_dir = build_examples.lj_force_output(Ne **2 - 1)
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 3.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
+                                           n=[Ne,Ne])
+            nlist = hoomd.md.nlist.cell(check_period = 1)
+            hoomd.md.integrate.mode_standard(dt=0.01)
+            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1)
+            hoomd.run(101)
+            # now load checkpoint and check error
+            variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['error'])
+            print(variables)
+            assert abs(variables['error']) < 1e-10
+            # now check difference between particle forces and forces from htf
+            snapshot = system.take_snapshot()
+            lj_forces = [system.particles[j].net_force for j in range(Ne**2)]
+            # advance one, to get deferred update
+            hoomd.run(1)
+            np.testing.assert_allclose(tfcompute.get_forces_array()[:,:4], lj_forces)
+
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1)
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:

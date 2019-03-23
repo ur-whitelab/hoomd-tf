@@ -114,6 +114,24 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[avg_energy])
     return directory
 
+def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
+    graph = htf.graph_builder(NN, output_forces=False)
+    #pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.nlist_rinv**6
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    #sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    tf_forces = graph.compute_forces(energy)
+    h_forces = graph.forces
+    ps = []
+    ps.append(tf.print('tensorflow computed:', tf_forces))
+    ps.append(tf.print('hooomd computed:', h_forces))
+    error = tf.losses.mean_squared_error(tf_forces, h_forces)
+    v = tf.get_variable('error', shape=[])
+    op = v.assign(error)
+    graph.save(model_directory=directory, out_nodes=[op, *ps])
+    return directory
+
 def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph = htf.graph_builder(NN)
     #pairwise energy. Double count -> divide by 2
