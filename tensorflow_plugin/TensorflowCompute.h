@@ -152,7 +152,6 @@ namespace hoomd_tf {
     void setAutotunerParams(bool enable, unsigned int period) override;
 
   protected:
-    void computeForces(unsigned int timestep) override;
     void reallocate() override;
     void prepareNeighbors() override;
     void receiveVirial() override;
