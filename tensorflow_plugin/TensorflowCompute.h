@@ -12,12 +12,12 @@
 #include <hoomd/Autotuner.h>
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
+#include <hoomd/HalfStepHook.h>
 #include <hoomd/ParticleData.h>
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
 #include "TFArrayComm.h"
 #include "TaskLock.h"
-#include "TensorflowCompute.h"
 
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
@@ -41,6 +41,23 @@ namespace hoomd_tf {
  */
   enum class FORCE_MODE { tf2hoomd, hoomd2tf };
 
+
+  template <class T>
+  class HalfStepHookWrapper : public HalfStepHook {
+    public:T& _f;
+    HalfStepHookWrapper(T& f) : _f(f) {}
+
+    void update(unsigned int timestep) override {
+      _f.computeForces(timestep);
+    }
+
+    // called for half step hook
+    void setSystemDefinition(std::shared_ptr<SystemDefinition> sysdef) override {
+      //pass
+    }
+
+  };
+
   /*! Template class for TFCompute
   *  \tfparam M If TF is on CPU or GPU.
   *
@@ -60,6 +77,7 @@ namespace hoomd_tf {
 
     //! Destructor
     virtual ~TensorflowCompute();
+
 
     Scalar getLogValue(const std::string& quantity,
                       unsigned int timestep) override;
@@ -82,16 +100,18 @@ namespace hoomd_tf {
     std::vector<Scalar4> getPositionsArray() const;
     std::vector<Scalar> getVirialArray() const;
     unsigned int getVirialPitch() const { return m_virial.getPitch(); }
+    virtual void computeForces(unsigned int timestep) override;
+    std::shared_ptr<HalfStepHook> getHook() {
+      return hook;
+    }
 
     pybind11::object
         _py_self;  // pybind objects have to be public with current cc flags
-
+    std::shared_ptr<HalfStepHookWrapper<TensorflowCompute<M> > > hook; //need this to add to integrator
   protected:
     // used if particle number changes
     virtual void reallocate();
     //! Take one timestep forward
-    virtual void computeForces(unsigned int timestep) override;
-
     virtual void prepareNeighbors();
     virtual void receiveVirial();
 
@@ -107,8 +127,8 @@ namespace hoomd_tf {
 
     TFArrayComm<M, Scalar4> _positions_comm;
     TFArrayComm<M, Scalar4> _forces_comm;
-    GPUArray<Scalar4> _nlist_array;
-    GPUArray<Scalar> _virial_array;
+    GlobalArray<Scalar4> _nlist_array;
+    GlobalArray<Scalar> _virial_array;
     TFArrayComm<M, Scalar4> _nlist_comm;
     TFArrayComm<M, Scalar> _virial_comm;
   };

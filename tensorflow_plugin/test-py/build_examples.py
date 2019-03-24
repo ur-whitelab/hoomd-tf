@@ -143,7 +143,8 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     #compute rdf between type 0 and 0
     rdf = graph.compute_rdf([3, 5], 'rdf', 10, 0, 0)
     avg_rdf = graph.running_mean(rdf, 'avg-rdf')
-    graph.save(force_tensor=forces, model_directory=directory)
+    check = tf.add_check_numerics_ops()
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[check])
     return directory
 
 def print_graph(NN, directory='/tmp/test-print-model'):

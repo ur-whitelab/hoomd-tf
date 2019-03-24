@@ -126,7 +126,13 @@ class tfcompute(hoomd.compute._compute):
 
         # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
-        hoomd.context.current.forces.append(self)
+        if force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
+            hoomd.context.current.forces.append(self)
+        else:
+            integrator = hoomd.context.current.integrator
+            if integrator is None:
+                raise ValueError('Must have integrator set to receive forces')
+            integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
 
         if not self.mock_mode:
             self._start_tf()

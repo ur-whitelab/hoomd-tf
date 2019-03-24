@@ -5,7 +5,7 @@
 #define _IPC_ARRAY_COMM_
 
 #include <hoomd/ExecutionConfiguration.h>
-#include <hoomd/GPUArray.h>
+#include <hoomd/GlobalArray.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <iostream>
@@ -62,7 +62,7 @@ namespace hoomd_tf {
   * \param gpu_array The local array which will store communicated data
   * \param name The name of the array
   */
-    TFArrayComm(GPUArray<T>& gpu_array, const char* name)
+    TFArrayComm(GlobalArray<T>& gpu_array, const char* name)
         : _comm_struct(gpu_array, name),
           _array(&gpu_array) {
       checkDevice();
@@ -87,7 +87,7 @@ namespace hoomd_tf {
 
     /*! Copy contents of given array to our array
     */
-    void receiveArray(const GPUArray<T>& array) {
+    void receiveArray(const GlobalArray<T>& array) {
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
@@ -179,7 +179,7 @@ namespace hoomd_tf {
 
   private:
     CommStructDerived<T> _comm_struct;
-    GPUArray<T>* _array;
+    GlobalArray<T>* _array;
   };
 
   void export_TFArrayComm(pybind11::module& m);

@@ -94,13 +94,13 @@ namespace hoomd_tf {
 
 }
 #ifndef GOOGLE_CUDA
-#include <hoomd/GPUArray.h>
+#include <hoomd/GlobalArray.h>
 namespace hoomd_tf {
   template <typename T>
   struct CommStructDerived : CommStruct {
-    GPUArray<T>* _array;
+    GlobalArray<T>* _array;
 
-    CommStructDerived(GPUArray<T>& array, const char* name) {
+    CommStructDerived(GlobalArray<T>& array, const char* name) {
       //Disallow unspecialized construction with explicit array
       T::unimplemented_function;
     }
@@ -143,8 +143,8 @@ namespace hoomd_tf {
   };
 
   //Forward declare specialized templates
-  template<> CommStructDerived<Scalar4>::CommStructDerived(GPUArray<Scalar4>&, const char*);
-  template<> CommStructDerived<Scalar>::CommStructDerived(GPUArray<Scalar>&, const char*);
+  template<> CommStructDerived<Scalar4>::CommStructDerived(GlobalArray<Scalar4>&, const char*);
+  template<> CommStructDerived<Scalar>::CommStructDerived(GlobalArray<Scalar>&, const char*);
 }
 #endif //GOOGLE_CUDA
 #endif //guard

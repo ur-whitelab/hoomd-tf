@@ -10,6 +10,7 @@ then add the `tfcompute` compute to your hoomd simulation. See Known Issues at t
 
 ```
 tensorflow == 1.12
+hoomd-blue == 2.5.1 (must compile, cannot use conda. TODO)
 numpy
 ```
 
@@ -430,10 +431,10 @@ Continue following the compling steps below to complete install.
 git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
 ```
 
-TODO: We are currently frozen on this commit due to GPU-Array refactoring in hoomd-blue
+We are on release v2.5.1 of hoomd-blue
 
 ```bash
-cd hoomd-blue && git checkout a4a24a6d729d21d9027e46dda85a80448bd4d15f
+cd hoomd-blue && git checkout tags/v2.5.1
 ```
 
 Put our plugin in the source directory. Make a softlink:

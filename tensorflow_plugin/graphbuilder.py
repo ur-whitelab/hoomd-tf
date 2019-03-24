@@ -40,7 +40,7 @@ class graph_builder:
         ''' Returns an N x NN tensor of 1 / r for each neighbor
         '''
         if self._nlist_rinv is None:
-            r = tf.norm(self.nlist[:,:,:3], axis=2)
+            r = self.safe_norm(self.nlist[:,:,:3], axis=2)
             self._nlist_rinv = self.safe_div(1.0, r)
         return self._nlist_rinv
 

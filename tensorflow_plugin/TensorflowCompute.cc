@@ -35,6 +35,12 @@ TensorflowCompute<M>::TensorflowCompute(
     TaskLock* tasklock)
     : ForceCompute(sysdef),
       _py_self(py_self),
+      //Why? Because I cannot get pybind to export multiple inheritance
+      //class (HalfStepHook, ForceCompute), so I make a HalfStepHook wrapper
+      // that dispatches to my update(..). BUT, I want to call computeForces
+      // which is protected in ForceCompute, so I cannot use any type inference.
+      // I hate it too
+      hook(std::make_shared<HalfStepHookWrapper<TensorflowCompute<M> > >(HalfStepHookWrapper<TensorflowCompute<M> >(*this))),
       m_nlist(nlist),
       _r_cut(r_cut),
       _nneighs(nneighs),
@@ -70,18 +76,18 @@ void TensorflowCompute<M>::reallocate() {
   // so we'll cast away until I make a version
   // of TFArrayComm that can't override array
   _positions_comm = TFArrayComm<M, Scalar4>(
-      const_cast<GPUArray<Scalar4>&>(m_pdata->getPositions()), "positions");
+      const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()), "positions");
   _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
   // In cuda, an array of size 0 breaks things. So even if we aren"t using
   // neighborlist we need to make it size > 0
   if (_nneighs > 0) {
-    GPUArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
+    GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
     CHECK_CUDA_ERROR();
   }
   // virial is made with maxN, not N
-  GPUArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
+  GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
   _virial_array.swap(tmp2);
   _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
   _virial_comm.memsetArray(0);
@@ -101,24 +107,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   // We need to come here if either it's an update or we have
   // a deferred update from hoomd2tf mode.
 
-  // deferred update first
-  if(_force_mode == FORCE_MODE::hoomd2tf && timestep > 0 && (timestep - 1) % _period == 0) {
-    // We need to offset positions and net forces if we're sending
-    // forces because net forces are calculated after all computes (like us),
-    // so we don't have access until next step.
-    if (m_prof) m_prof->push("TensorflowCompute<M>::Deferred Update");
-    // send net forces from last step
-    // get last step's net force and send
-    _forces_comm.receiveArray(m_pdata->getNetForce());
-    // Forces are ready and we prepared nlist from previous computeForces
-    finishUpdate(timestep);
-    // we sent it using forces_comm. We need to zero it out.
-    // This is not necessary, but in the future we may want to allow
-    // both sending and receiving forces.
-    //_forces_comm.memsetArray(0);
-    if (m_prof) m_prof->pop();  // deferred update
-  }
-
   if (timestep % _period == 0) {
     if (m_prof) m_prof->push("TensorflowCompute<M>");
     if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
@@ -134,8 +122,10 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->pop(); //prearing data
 
     // positions and forces are ready. Now we send
-    if (_force_mode != FORCE_MODE::hoomd2tf)
-      finishUpdate(timestep);
+    if (_force_mode == FORCE_MODE::hoomd2tf)
+        _forces_comm.receiveArray(m_pdata->getNetForce());
+
+    finishUpdate(timestep);
 
     if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
 
@@ -144,6 +134,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         receiveVirial();
     }
     if (m_prof) m_prof->pop();  // force update
+
+    #ifdef ENABLE_CUDA
+    if(M == TFCommMode::GPU)
+      cudaDeviceSynchronize();
+    #endif // ENABLE_CUDA
+
     if (m_prof) m_prof->pop();  // compute
   }
 }
@@ -283,7 +279,12 @@ std::vector<Scalar> TensorflowCompute<M>::getVirialArray() const {return _virial
  */
 void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
     {
-    pybind11::class_<TensorflowCompute<TFCommMode::CPU>, std::shared_ptr<TensorflowCompute<TFCommMode::CPU> > >(m, "TensorflowCompute", pybind11::base<ForceCompute>())
+
+      //need to export halfstephook, since it's not exported anywhere else
+    pybind11::class_<HalfStepHook, std::shared_ptr<HalfStepHook> >(m, "HalfStepHook");
+
+
+    pybind11::class_<TensorflowCompute<TFCommMode::CPU>, std::shared_ptr<TensorflowCompute<TFCommMode::CPU> >, ForceCompute>(m, "TensorflowCompute")
         .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, TaskLock*>())
         .def("getPositionsBuffer", &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowCompute<TFCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
@@ -295,6 +296,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
         .def("getVirialArray", &TensorflowCompute<TFCommMode::CPU>::getVirialArray, pybind11::return_value_policy::take_ownership)
         .def("isDoublePrecision", &TensorflowCompute<TFCommMode::CPU>::isDoublePrecision)
         .def("getVirialPitch", &TensorflowCompute<TFCommMode::CPU>::getVirialPitch)
+        .def("hook", &TensorflowCompute<TFCommMode::CPU>::getHook)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
@@ -344,11 +346,6 @@ void TensorflowComputeGPU::reallocate()  {
 
 }
 
-void TensorflowComputeGPU::computeForces(unsigned int timestep)  {
-  TensorflowCompute::computeForces(timestep);
-  cudaDeviceSynchronize();
-}
-
 void TensorflowComputeGPU::setAutotunerParams(bool enable, unsigned int period)
 {
     TensorflowCompute::setAutotunerParams(enable, period);
@@ -394,7 +391,7 @@ void TensorflowComputeGPU::receiveVirial() {
  */
 void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
     {
-    pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU> >(m, "TensorflowComputeGPU", pybind11::base<ForceCompute>())
+    pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU>, ForceCompute>(m, "TensorflowComputeGPU")
         .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, TaskLock*>())
         .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
@@ -406,6 +403,7 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
         .def("getVirialArray", &TensorflowComputeGPU::getVirialArray, pybind11::return_value_policy::take_ownership)
         .def("isDoublePrecision", &TensorflowComputeGPU::isDoublePrecision)
         .def("getVirialPitch", &TensorflowComputeGPU::getVirialPitch)
+        .def("hook", &TensorflowComputeGPU::getHook)
     ;
     }
 
