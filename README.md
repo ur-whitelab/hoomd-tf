@@ -500,6 +500,10 @@ interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 4. Add timing tests
 5. Add coverage
 6. Add c++ tests (?) Should not have any non python accessible code
+7. Revisit and make sure namings are consistent
+8. Use the MPI/GPU/Multi-GPU code in CMakeLists.txt
+9. Now that forking is not done, we should revert to using the hoomd error reporting mechanism
+
 
 ## Syntax Naming
 ### C++
@@ -521,14 +525,12 @@ py class ->snake
 
 ### Using Positions
 
-Hoomd re-orders positions to improve performance. We hope to implement a use of the reverse-tags to make positions going into the TF graph be ordered correctly. In the meantime, you must manually turn-off this homod feature:
+Hoomd re-orders positions to improve performance. If you are using CG mappings that rely on ordering of positions, be sure to disable this:
 
 ```python
 c = hoomd.context.initialize()
 c.sorter.disable()
 ```
-
-This is only necessary if your graph needs to have positions passed in a particular order. A common use-case is doing CG mappings.
 
 ### Exploding Gradients
 
@@ -542,10 +544,6 @@ capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
 train_op = optimizer.apply_gradients(capped_gvs)
 ```
 which will also prevent exploding gradients. Remember that if training something like a Lennard-Jones potential or other `1/r` potential that high gradients are possible. Use small learning rates and probably clip the grads.
-
-### Error handling
-
-Now that forking is not done, we should revert to using the hoomd error reporting mechanism
 
 ### Neighbor Lists
 
