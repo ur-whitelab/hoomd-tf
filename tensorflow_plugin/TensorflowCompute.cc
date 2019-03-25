@@ -104,9 +104,6 @@ TensorflowCompute<M>::~TensorflowCompute() {
 */
 template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
-  // We need to come here if either it's an update or we have
-  // a deferred update from hoomd2tf mode.
-
   if (timestep % _period == 0) {
     if (m_prof) m_prof->push("TensorflowCompute<M>");
     if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
@@ -134,18 +131,16 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         receiveVirial();
     }
     if (m_prof) m_prof->pop();  // force update
-
-    #ifdef ENABLE_CUDA
-    if(M == TFCommMode::GPU)
-      cudaDeviceSynchronize();
-    #endif // ENABLE_CUDA
-
     if (m_prof) m_prof->pop();  // compute
   }
 }
 
 template <TFCommMode M>
 void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
+#ifdef ENABLE_CUDA
+  if(M == TFCommMode::GPU)
+    cudaDeviceSynchronize();
+#endif // ENABLE_CUDA
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
   // _tasklock->await();
@@ -406,5 +401,6 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
         .def("hook", &TensorflowComputeGPU::getHook)
     ;
     }
+
 
 #endif // ENABLE_CUDA

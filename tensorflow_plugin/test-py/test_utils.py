@@ -196,6 +196,6 @@ class test_mappings(unittest.TestCase):
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i,:])
             ci = np.sort(cnlist[i, :])
-            np.testing.assert_array_almost_equal(ni, ci, decimal=2)
+            np.testing.assert_array_almost_equal(ni, ci, decimal=5)
 if __name__ == '__main__':
     unittest.main()

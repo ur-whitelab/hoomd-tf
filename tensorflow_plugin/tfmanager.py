@@ -184,7 +184,7 @@ class TFManager:
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 #first initialize
                 self.log.info('Found trainable variables...')
-                sess.run(tf.global_variables_initializer())
+                sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
                 self.log.info('Trainable vars initialized')
                 self.saver = tf.train.Saver(**saver_args)
                 if self.bootstrap is not None:

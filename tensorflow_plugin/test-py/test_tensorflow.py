@@ -279,11 +279,10 @@ class test_compute(unittest.TestCase):
             print(variables)
             assert abs(variables['error']) < 1e-5
             # now check difference between particle forces and forces from htf
-            snapshot = system.take_snapshot()
-            lj_forces = [system.particles[j].net_force for j in range(Ne**2)]
-            # advance one, to get deferred update
-            #hoomd.run(0)
+            lj_forces = np.array([lj.forces[j].force for j in range(Ne**2)])
+            lj_energy = np.array([lj.forces[j].energy for j in range(Ne**2)])
             np.testing.assert_allclose(tfcompute.get_forces_array()[:,:3], lj_forces)
+            np.testing.assert_allclose(tfcompute.get_forces_array()[:,3], lj_energy)
 
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1)
