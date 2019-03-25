@@ -117,8 +117,14 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->pop(); //prearing data
 
     // positions and forces are ready. Now we send
-    if (_force_mode == FORCE_MODE::hoomd2tf)
+    if (_force_mode == FORCE_MODE::hoomd2tf) {
+      if(_ref_forces.empty()) {
         _forces_comm.receiveArray(m_pdata->getNetForce());
+      }
+      else {
+        sumReferenceForces();
+      }
+    }
 
     finishUpdate(timestep);
 
@@ -129,16 +135,18 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         receiveVirial();
     }
     if (m_prof) m_prof->pop();  // force update
+
+    #ifdef ENABLE_CUDA
+    if(M == TFCommMode::GPU)
+      cudaDeviceSynchronize();
+    #endif // ENABLE_CUDA
+
     if (m_prof) m_prof->pop();  // compute
   }
 }
 
 template <TFCommMode M>
 void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
-#ifdef ENABLE_CUDA
-  if(M == TFCommMode::GPU)
-    cudaDeviceSynchronize();
-#endif // ENABLE_CUDA
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
   // _tasklock->await();
@@ -146,18 +154,36 @@ void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
 }
 
 template <TFCommMode M>
+void TensorflowCompute<M>::sumReferenceForces() {
+  _forces_comm.memsetArray(0);
+  ArrayHandle<Scalar4> dest(m_force, access_location::host,
+                           access_mode::overwrite);
+
+  for (auto const& forces : _ref_forces) {
+    ArrayHandle<Scalar4> src(forces->getForceArray(), access_location::host,
+                            access_mode::read);
+    for (unsigned int i = 0; i < m_pdata->getN(); i++) {
+      dest.data[i].x += src.data[i].x;
+      dest.data[i].y += src.data[i].y;
+      dest.data[i].z += src.data[i].z;
+      dest.data[i].w += src.data[i].w;
+    }
+  }
+}
+
+template <TFCommMode M>
 void TensorflowCompute<M>::receiveVirial() {
   ArrayHandle<Scalar> dest(m_virial, access_location::host,
-                               access_mode::overwrite);
+                           access_mode::readwrite);
   ArrayHandle<Scalar> src(_virial_array, access_location::host,
-  access_mode::read);
-  for(unsigned int i = 0; i < m_pdata->getN(); i++) {
-      dest.data[0 * getVirialPitch() + i] += src.data[i * 9 + 0]; //xx
-      dest.data[1 * getVirialPitch() + i] += src.data[i * 9 + 1]; //xy
-      dest.data[2 * getVirialPitch() + i] += src.data[i * 9 + 2]; //xz
-      dest.data[3 * getVirialPitch() + i] += src.data[i * 9 + 4]; //yy
-      dest.data[4 * getVirialPitch() + i] += src.data[i * 9 + 5]; //yz
-      dest.data[5 * getVirialPitch() + i] += src.data[i * 9 + 8]; //zz
+                          access_mode::read);
+  for (unsigned int i = 0; i < m_pdata->getN(); i++) {
+    dest.data[0 * getVirialPitch() + i] += src.data[i * 9 + 0];  // xx
+    dest.data[1 * getVirialPitch() + i] += src.data[i * 9 + 1];  // xy
+    dest.data[2 * getVirialPitch() + i] += src.data[i * 9 + 2];  // xz
+    dest.data[3 * getVirialPitch() + i] += src.data[i * 9 + 4];  // yy
+    dest.data[4 * getVirialPitch() + i] += src.data[i * 9 + 5];  // yz
+    dest.data[5 * getVirialPitch() + i] += src.data[i * 9 + 8];  // zz
   }
 }
 
@@ -290,6 +316,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
         .def("isDoublePrecision", &TensorflowCompute<TFCommMode::CPU>::isDoublePrecision)
         .def("getVirialPitch", &TensorflowCompute<TFCommMode::CPU>::getVirialPitch)
         .def("hook", &TensorflowCompute<TFCommMode::CPU>::getHook)
+        .def("addReferenceForce", &TensorflowCompute<TFCommMode::CPU>::addReferenceForce)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
@@ -380,6 +407,17 @@ void TensorflowComputeGPU::receiveVirial() {
   ArrayHandle<Scalar> tf_h_virial(_virial_array, access_location::device, access_mode::read);
   gpu_add_virial(h_virial.data, tf_h_virial.data, m_pdata->getN(), getVirialPitch(), _virial_comm.getCudaStream());
 }
+
+void TensorflowComputeGPU::sumReferenceForces() {
+  _forces_comm.memsetArray(0);
+  ArrayHandle<Scalar4> dest(m_force, access_location::device,
+                           access_mode::overwrite);
+  for (auto const& forces : _ref_forces) {
+    ArrayHandle<Scalar4> src(forces->getForceArray(), access_location::device,
+                            access_mode::read);
+    gpu_add_scalar4(dest.data, src.data, m_force.getNumElements(), _forces_comm.getCudaStream());
+  }
+}
 /* Export the GPU Compute to be visible in the python module
  */
 void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
@@ -397,8 +435,8 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
         .def("isDoublePrecision", &TensorflowComputeGPU::isDoublePrecision)
         .def("getVirialPitch", &TensorflowComputeGPU::getVirialPitch)
         .def("hook", &TensorflowComputeGPU::getHook)
+        .def("addReferenceForce", &TensorflowComputeGPU::addReferenceForce)
     ;
     }
-
 
 #endif // ENABLE_CUDA

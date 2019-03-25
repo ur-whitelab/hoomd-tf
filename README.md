@@ -503,6 +503,9 @@ interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 7. Revisit and make sure namings are consistent
 8. Use the MPI/GPU/Multi-GPU code in CMakeLists.txt
 9. Now that forking is not done, we should revert to using the hoomd error reporting mechanism
+10. Batching using datasets from tensor slices
+11. groups
+12. hoomd.cite when paper is out
 
 
 ## Syntax Naming

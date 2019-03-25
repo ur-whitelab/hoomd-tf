@@ -99,10 +99,15 @@ namespace hoomd_tf {
     std::vector<Scalar4> getNlistArray() const;
     std::vector<Scalar4> getPositionsArray() const;
     std::vector<Scalar> getVirialArray() const;
-    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
     virtual void computeForces(unsigned int timestep) override;
+
+    // define a few short ones in here because I'm lazy.
+    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
     std::shared_ptr<HalfStepHook> getHook() {
       return hook;
+    }
+    void addReferenceForce(std::shared_ptr<ForceCompute> force){
+      _ref_forces.push_back(force);
     }
 
     pybind11::object
@@ -114,6 +119,7 @@ namespace hoomd_tf {
     //! Take one timestep forward
     virtual void prepareNeighbors();
     virtual void receiveVirial();
+    virtual void sumReferenceForces();
 
     void finishUpdate(unsigned int timestep);
 
@@ -124,6 +130,7 @@ namespace hoomd_tf {
     unsigned int _period;
     std::string m_log_name;
     TaskLock* _tasklock;
+    std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
 
     TFArrayComm<M, Scalar4> _positions_comm;
     TFArrayComm<M, Scalar4> _forces_comm;
@@ -155,6 +162,7 @@ namespace hoomd_tf {
     void reallocate() override;
     void prepareNeighbors() override;
     void receiveVirial() override;
+    void sumReferenceForces() override;
 
   private:
     std::unique_ptr<Autotuner> m_tuner;  // Autotuner for block size
