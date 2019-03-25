@@ -84,14 +84,12 @@ void TensorflowCompute<M>::reallocate() {
     GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
-    CHECK_CUDA_ERROR();
   }
   // virial is made with maxN, not N
   GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
   _virial_array.swap(tmp2);
   _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
   _virial_comm.memsetArray(0);
-  CHECK_CUDA_ERROR();
 }
 
 template <TFCommMode M>
