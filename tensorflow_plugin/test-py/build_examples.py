@@ -123,13 +123,13 @@ def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
     energy = tf.reduce_sum(p_energy, axis=1)
     tf_forces = graph.compute_forces(energy)
     h_forces = graph.forces
-    ps = []
-    ps.append(tf.print('tensorflow computed:', tf_forces))
-    ps.append(tf.print('hooomd computed:', h_forces))
+    ops = []
     error = tf.losses.mean_squared_error(tf_forces, h_forces)
     v = tf.get_variable('error', shape=[])
-    op = v.assign(error)
-    graph.save(model_directory=directory, out_nodes=[op, *ps])
+    ops.append(v.assign(error))
+    v = tf.get_variable('forces', shape=[NN + 1, 4], validate_shape=False)
+    ops.append(v.assign(graph.forces))
+    graph.save(model_directory=directory, out_nodes=ops)
     return directory
 
 def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
