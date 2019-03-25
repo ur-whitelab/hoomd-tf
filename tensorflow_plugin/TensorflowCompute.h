@@ -99,10 +99,15 @@ namespace hoomd_tf {
     std::vector<Scalar4> getNlistArray() const;
     std::vector<Scalar4> getPositionsArray() const;
     std::vector<Scalar> getVirialArray() const;
-    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
     virtual void computeForces(unsigned int timestep) override;
+
+    // define a few short ones in here because I'm lazy.
+    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
     std::shared_ptr<HalfStepHook> getHook() {
       return hook;
+    }
+    void setReferenceForces(ForceCompute* force){
+      _ref_forces = force;
     }
 
     pybind11::object
@@ -124,6 +129,7 @@ namespace hoomd_tf {
     unsigned int _period;
     std::string m_log_name;
     TaskLock* _tasklock;
+    ForceCompute* _ref_forces;
 
     TFArrayComm<M, Scalar4> _positions_comm;
     TFArrayComm<M, Scalar4> _forces_comm;

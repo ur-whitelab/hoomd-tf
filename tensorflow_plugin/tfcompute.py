@@ -97,8 +97,8 @@ class tfcompute(hoomd.compute._compute):
         # initialize base class
         hoomd.compute._compute.__init__(self)
 
-        force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(force_mode_code))
+        self.force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
+        hoomd.context.msg.notice(2, 'Force mode is {} \n'.format(self.force_mode_code))
         #if graph is not outputting (input) then tfcompute should be outputting them
         if not self.graph_info['output_forces'] and not _tensorflow_plugin.FORCE_MODE.hoomd2tf:
             raise ValueError('Your graph takes forces as input but you are not sending them from tfcompute')
@@ -107,14 +107,14 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, force_mode_code, period,
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period,
              self.tasklock)
             if self.device is None:
                 self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition,  nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, force_mode_code, period,
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period,
              self.tasklock)
             if self.device is None:
                 self.device = '/gpu:0'
@@ -126,7 +126,7 @@ class tfcompute(hoomd.compute._compute):
 
         # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
-        if force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
+        if self.force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
             hoomd.context.current.forces.append(self)
         else:
             integrator = hoomd.context.current.integrator
@@ -136,6 +136,14 @@ class tfcompute(hoomd.compute._compute):
 
         if not self.mock_mode:
             self._start_tf()
+
+    def set_reference_forces(self, force):
+        if self.force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
+            raise ValueError('Only valid to set reference forces if mode is hoomd2tf')
+        if not hasattr(force, 'cpp_force'):
+            raise ValueError('given force does not seem like a hoomd force')
+        self.cpp_force.setReferenceForces(force.cpp_force)
+        hoomd.context.msg.notice(2, 'Will use given force for TFCompute {} \n'.format(force.name))
 
     def rcut(self):
         # adapted from hoomd/md/pair.py

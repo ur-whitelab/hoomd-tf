@@ -272,8 +272,11 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.01)
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1)
+            tfcompute.set_reference_forces(lj)
             hoomd.run(300)
             # now load checkpoint and check error
             variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['error', 'forces'])

@@ -117,8 +117,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
     if (m_prof) m_prof->pop(); //prearing data
 
     // positions and forces are ready. Now we send
-    if (_force_mode == FORCE_MODE::hoomd2tf)
+    if (_force_mode == FORCE_MODE::hoomd2tf) {
+      if(_ref_forces)
+        _forces_comm.receiveArray(_ref_forces->getForceArray());
+      else
         _forces_comm.receiveArray(m_pdata->getNetForce());
+    }
 
     finishUpdate(timestep);
 
@@ -129,16 +133,18 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         receiveVirial();
     }
     if (m_prof) m_prof->pop();  // force update
+
+    #ifdef ENABLE_CUDA
+    if(M == TFCommMode::GPU)
+      cudaDeviceSynchronize();
+    #endif // ENABLE_CUDA
+
     if (m_prof) m_prof->pop();  // compute
   }
 }
 
 template <TFCommMode M>
 void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
-#ifdef ENABLE_CUDA
-  if(M == TFCommMode::GPU)
-    cudaDeviceSynchronize();
-#endif // ENABLE_CUDA
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
   // _tasklock->await();
@@ -290,6 +296,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
         .def("isDoublePrecision", &TensorflowCompute<TFCommMode::CPU>::isDoublePrecision)
         .def("getVirialPitch", &TensorflowCompute<TFCommMode::CPU>::getVirialPitch)
         .def("hook", &TensorflowCompute<TFCommMode::CPU>::getHook)
+        .def("setReferenceForces", &TensorflowCompute<TFCommMode::CPU>::setReferenceForces)
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
@@ -397,8 +404,8 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
         .def("isDoublePrecision", &TensorflowComputeGPU::isDoublePrecision)
         .def("getVirialPitch", &TensorflowComputeGPU::getVirialPitch)
         .def("hook", &TensorflowComputeGPU::getHook)
+        .def("setReferenceForces", &TensorflowComputeGPU::setReferenceForces)
     ;
     }
-
 
 #endif // ENABLE_CUDA
