@@ -96,8 +96,8 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
         for i,ri in enumerate(r):
-            np_nlist[0,0,1] = ri / 2
-            np_nlist[1,0,1] = -ri / 2
+            np_nlist[0,0,1] = ri
+            np_nlist[1,0,1] = -ri
             # run including passed in feed_dict
             result = sess.run(potential_tensor, feed_dict = {**feed_dict, nlist_tensor: np_nlist} )
             potential[i] = result[0]
