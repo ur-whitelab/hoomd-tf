@@ -122,7 +122,7 @@ class tfcompute(hoomd.compute._compute):
         # get double vs single precision
         self.dtype = tf.float32
         if self.cpp_force.isDoublePrecision():
-            self.dtype = tf.double
+            self.dtype = tf.float64
 
         # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
@@ -137,13 +137,14 @@ class tfcompute(hoomd.compute._compute):
         if not self.mock_mode:
             self._start_tf()
 
-    def set_reference_forces(self, force):
+    def set_reference_forces(self, *forces):
         if self.force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
             raise ValueError('Only valid to set reference forces if mode is hoomd2tf')
-        if not hasattr(force, 'cpp_force'):
-            raise ValueError('given force does not seem like a hoomd force')
-        self.cpp_force.setReferenceForces(force.cpp_force)
-        hoomd.context.msg.notice(2, 'Will use given force for TFCompute {} \n'.format(force.name))
+        for f in forces:
+            if not hasattr(f, 'cpp_force'):
+                raise ValueError('given force does not seem like a hoomd force')
+            self.cpp_force.addReferenceForce(f.cpp_force)
+            hoomd.context.msg.notice(2, 'Will use given force for TFCompute {} \n'.format(f.name))
 
     def rcut(self):
         # adapted from hoomd/md/pair.py
