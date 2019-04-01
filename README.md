@@ -106,7 +106,7 @@ Variables are how you can save data without using Tensorboard. They can be accum
 
 ### Complete Examples
 
-See [tensorflow_plugin/models] and [tensorflow_plugins/test-py/build_examples.py] more.
+See [tensorflow_plugin/models](tensorflow_plugin/models)
 
 ### Lennard-Jones with 1 Particle Type
 
@@ -489,40 +489,6 @@ Because hoomd-tf requires at least two threads to run, you must ensure your blue
 interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
 ```
 
-## TODO
-
-1. Make code consistent with contributors [guidelines for hoomd](https://github.com/glotzerlab/hoomd-blue/blob/maint/SourceConventions.md)
-    1. Put commit hooks in
-    2. Write doxygen comments until you barf
-    3. Use emacs style file to restyle all code
-2. Make python packages used actual dependencies
-3. Remove tasklock
-4. Add timing tests
-5. Add coverage
-6. Add c++ tests (?) Should not have any non python accessible code
-7. Revisit and make sure namings are consistent
-8. Use the MPI/GPU/Multi-GPU code in CMakeLists.txt
-9. Now that forking is not done, we should revert to using the hoomd error reporting mechanism
-10. Batching using datasets from tensor slices
-11. groups
-12. hoomd.cite when paper is out
-
-
-## Syntax Naming
-### C++
-
-balance between tf/myself/hoomd
-C++ class -> Camel
-C++ methods -> camel
-C++ variables -> snake
-C++ types -> camel _t
-C++ class variables -> snake prefix
-POD struct -> (c++ types) (since that is cuda style)
-C++ functions -> snake (?) because they are only used in py or gpu kernels
-
-### Python
-
-py class ->snake
 
 ## Known Issues
 
