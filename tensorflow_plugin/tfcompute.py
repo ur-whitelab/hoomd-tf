@@ -107,15 +107,13 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, self.force_mode_code, period,
-             self.tasklock)
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
             if self.device is None:
                 self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition,  nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, self.force_mode_code, period,
-             self.tasklock)
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
             if self.device is None:
                 self.device = '/gpu:0'
 

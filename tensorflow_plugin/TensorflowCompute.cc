@@ -25,14 +25,12 @@ using namespace hoomd_tf;
     \param nneighs Maximum size for neighbors passed to TF
     \param force_mode Whether we should be computed forces in TF or sending them to TF
     \param period The period between TF updates
-    \param tasklock Currently unused. When this was multiporcess, this allowed simultaneous updates
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
     pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist, Scalar r_cut, unsigned int nneighs,
-    FORCE_MODE force_mode, unsigned int period,
-    TaskLock* tasklock)
+    FORCE_MODE force_mode, unsigned int period)
     : ForceCompute(sysdef),
       _py_self(py_self),
       //Why? Because I cannot get pybind to export multiple inheritance
@@ -45,8 +43,7 @@ TensorflowCompute<M>::TensorflowCompute(
       _r_cut(r_cut),
       _nneighs(nneighs),
       _force_mode(force_mode),
-      _period(period),
-      _tasklock(tasklock) {
+      _period(period){
   m_exec_conf->msg->notice(2)
       << "Starting TensorflowCompute "
       << std::endl;
@@ -94,7 +91,7 @@ void TensorflowCompute<M>::reallocate() {
 
 template <TFCommMode M>
 TensorflowCompute<M>::~TensorflowCompute() {
-  delete _tasklock;
+
 }
 
 /*! Perform the needed calculations
@@ -149,7 +146,6 @@ template <TFCommMode M>
 void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
   if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
   _py_self.attr("finish_update")(timestep);
-  // _tasklock->await();
   if (m_prof) m_prof->pop();
 }
 
@@ -304,7 +300,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
 
 
     pybind11::class_<TensorflowCompute<TFCommMode::CPU>, std::shared_ptr<TensorflowCompute<TFCommMode::CPU> >, ForceCompute>(m, "TensorflowCompute")
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, TaskLock*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int>())
         .def("getPositionsBuffer", &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowCompute<TFCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowCompute<TFCommMode::CPU>::getForcesBuffer, pybind11::return_value_policy::reference)
@@ -333,9 +329,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             std::shared_ptr<SystemDefinition> sysdef,
             std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs,
-             FORCE_MODE force_mode, unsigned int period,
-             TaskLock* tasklock)
-     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, tasklock)
+             FORCE_MODE force_mode, unsigned int period)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period)
 {
 
     //want nlist on stream 0 since a nlist rebuild is
@@ -423,7 +418,7 @@ void TensorflowComputeGPU::sumReferenceForces() {
 void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU>, ForceCompute>(m, "TensorflowComputeGPU")
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, TaskLock*>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int>())
         .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowComputeGPU::getForcesBuffer, pybind11::return_value_policy::reference)
