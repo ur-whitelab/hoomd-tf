@@ -118,19 +118,23 @@ N_hidden_nodes = 5
 graph = htf.graph_builder(NN, output_forces=False)
 r_inv = graph.nlist_rinv
 input_tensor = tf.reshape(r_inv, shape=(-1,1), name='r_inv')
+#we don't need to explicitly make a keras.Model object, just layers
 input_layer = keras.layers.Input(tensor=input_tensor)
 hidden_layer = keras.layers.Dense(N_hidden_nodes)(input_layer)
 output_layer = keras.layers.Dense(1, input_shape=(N_hidden_nodes,))(hidden_layer)
+#do not call Model.compile, just use the output in the TensorFlow graph
 nn_energies = tf.reshape(output_layer, [-1, NN])
 calculated_energies = tf.reduce_sum(nn_energies, axis=1, name='calculated_energies')
 calculated_forces = graph.compute_forces(calculated_energies)
+#cost and optimizer must also be set through TensorFlow, not Keras
 cost = tf.losses.mean_squared_error(calculated_forces, graph.forces)
 optimizer = tf.train.AdamOptimizer(0.001).minimize(cost)
+#save using graph.save, not Keras Model.compile
 graph.save(model_directory='/tmp/keras_model/', out_nodes=[ optimizer])
 
 ```
 
-The model can then be loaded and trained as normal.
+The model can then be loaded and trained as normal. Note that `keras.models.Model.fit()` is not currently supported. You must train using `tensorflow_plugin.tfcompute()` as explained in the next section.
 
 ### Complete Examples
 
