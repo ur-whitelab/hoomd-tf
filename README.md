@@ -1,6 +1,6 @@
-# Tensorflow Plugin
+# TensorFlow Plugin
 
-This plugin allows using tensorflow to compute forces in a simulation
+This plugin allows using TensorFlow to compute forces in a simulation
 or to compute other quantities, like collective variables to fit a
 potential for coarse-graining. You must first construct your
 tensorlfow graph using the `tensorflow_plugin.graph_builder` class and
@@ -26,7 +26,7 @@ graph = graph_builder(NN, output_forces)
 where `NN` is the maximum number of nearest neighbors to consider, and
 `output_forces` indicates if the graph will output forces to use in
 the simulation. After building the `graph`, it will have three tensors
-as attributes to use in constructing the tensorflow graph: `nlist`,
+as attributes to use in constructing the TensorFlow graph: `nlist`,
 `positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
 containing the nearest neighbors. An entry of all zeros indicates that
 less than `NN` nearest neighbors where present for a particular
@@ -100,9 +100,11 @@ and then add the `write_tensorboard=True` flag during the `tfcompute` initialize
 
 ### Variables and Restarts
 
-In tensorflow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graphbuilder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graphbuild.save` or pass `move_previous = False` as a parameter.
+In TensorFlow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graphbuilder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graphbuild.save` or pass `move_previous = False` as a parameter.
 
 Variables are how you can save data without using Tensorboard. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean.
+
+
 
 ### Complete Examples
 
@@ -123,7 +125,7 @@ graph.save(force_tensor=forces, model_directory='/tmp/lj-model')
 
 ## Using Graph in a Simulation
 
-You may use a saved tensorflow model via:
+You may use a saved TensorFlow model via:
 
 ```python
 import hoomd, hoomd.md
@@ -142,11 +144,11 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
 
 ```
 
-where `model_dir` is the directory where the tensorflow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object.
+where `model_dir` is the directory where the TensorFlow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object.
 
 ### Bootstraping Variables
 
-If you have trained variables previously and would like to load them into the current tensorflow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file path or model directory path (latest checkpoint is used) containing variables which can be loaded into your tfcompute graph. Your model will be built, then all variables will be initialized, and then your bootstrap checkpoint will be loaded and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
+If you have trained variables previously and would like to load them into the current TensorFlow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file path or model directory path (latest checkpoint is used) containing variables which can be loaded into your tfcompute graph. Your model will be built, then all variables will be initialized, and then your bootstrap checkpoint will be loaded and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
 
 Here's an example that creates some variables that could be trained offline without Hoomd. In this example, they just use their initial values.
 
@@ -311,7 +313,7 @@ TODO: Make a unit test that gets nlsit from hoomd and from `compute_nlist`. Comp
 ## Tensorboard
 
 You can visualize your models with tensorboard. First, add
-`write_tensorboard=True` the tensorflow plugin constructor. This will
+`write_tensorboard=True` the TensorFlow plugin constructor. This will
 add a new directory called `tensorboard` to your model directory.
 
 After running, you can launch tensorboard like so:
@@ -503,7 +505,7 @@ c.sorter.disable()
 
 ### Exploding Gradients
 
-There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with tensorflow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
+There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with TensorFlow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
 
 You can also clip gradients instead of using safe_norm:
 ```python
