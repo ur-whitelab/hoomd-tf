@@ -104,7 +104,33 @@ In TensorFlow, variables are trainable parameters. They are required parts of yo
 
 Variables are how you can save data without using Tensorboard. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean.
 
+### Optional: Keras Layers for Model Building
 
+Currently HOOMD-TF supports Keras layers in model building. We do not yet support Keras `Model.compile()` or `Model.fit()`. This example shows how to set up a neural network model using Keras layers.
+
+```python
+import tensorflow as tf
+import keras
+import hoomd.tensorflow_plugin as htf
+
+NN = 64
+N_hidden_nodes = 5
+graph = htf.graph_builder(NN, output_forces=False)
+r_inv = graph.nlist_rinv
+input_tensor = tf.reshape(r_inv, shape=(-1,1), name='r_inv')
+input_layer = keras.layers.Input(tensor=input_tensor)
+hidden_layer = keras.layers.Dense(N_hidden_nodes)(input_layer)
+output_layer = keras.layers.Dense(1, input_shape=(N_hidden_nodes,))(hidden_layer)
+nn_energies = tf.reshape(output_layer, [-1, NN])
+calculated_energies = tf.reduce_sum(nn_energies, axis=1, name='calculated_energies')
+calculated_forces = graph.compute_forces(calculated_energies)
+cost = tf.losses.mean_squared_error(calculated_forces, graph.forces)
+optimizer = tf.train.AdamOptimizer(0.001).minimize(cost)
+graph.save(model_directory='/tmp/keras_model/', out_nodes=[ optimizer])
+
+```
+
+The model can then be loaded and trained as normal.
 
 ### Complete Examples
 
