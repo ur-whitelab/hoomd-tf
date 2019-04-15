@@ -17,7 +17,6 @@
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
 #include "TFArrayComm.h"
-#include "TaskLock.h"
 
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
@@ -70,8 +69,7 @@ namespace hoomd_tf {
                       std::shared_ptr<SystemDefinition> sysdef,
                       std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                       unsigned int nneighs, FORCE_MODE force_mode,
-                      unsigned int period,
-                      TaskLock* tasklock);
+                      unsigned int period);
 
     TensorflowCompute() = delete;
 
@@ -130,7 +128,6 @@ namespace hoomd_tf {
     FORCE_MODE _force_mode;
     unsigned int _period;
     std::string m_log_name;
-    TaskLock* _tasklock;
     std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
 
     TFArrayComm<M, Scalar4> _positions_comm;
@@ -154,8 +151,7 @@ namespace hoomd_tf {
                         std::shared_ptr<SystemDefinition> sysdef,
                         std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                         unsigned int nneighs, FORCE_MODE force_mode,
-                        unsigned int period,
-                        TaskLock* tasklock);
+                        unsigned int period);
 
     void setAutotunerParams(bool enable, unsigned int period) override;
 
