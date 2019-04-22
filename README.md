@@ -1,7 +1,6 @@
 # Hoomd-TF
 
-This plugin enables TensorFlow to compute forces in a Hoomd-blue simulation. You
-can also compute other quantities, like collective variables, and do learning.
+This plugin enables the use of TensorFlow to compute forces in a Hoomd-blue simulation. You can also compute other quantities, like collective variables, and do learning.
 
 # Quickstart Tutorial
 
@@ -33,15 +32,9 @@ with htf.tfcompute('my_model') as tfcompute:
     hoomd.run(1e3)
 ```
 
-The general process as seen above is to build a TensorFlow computation graph, load the graph, and then attach the graph. See below for more detailed information about Hoomd-TF.
+This creates a computation graph whose energy function is `2 / r` and also computes forces and virial for the simulation. The `2` is because the neighborlists in Hoomd-TF are *full* neighborlists (double counted). The Hoomd-blue code starts a simulation of a 9 particle square lattice and simulates it for 1000 timesteps under the potential defined in our Hoomd-TF model. The general process of using Hoomd-TF is to build a TensorFlow computation graph, load the graph, and then attach the graph. See below for more detailed information about Hoomd-TF.
 
-## Requirements
-
-```
-tensorflow == 1.12
-hoomd-blue == 2.5.1
-numpy
-```
+# Overview
 
 ## Building Graph
 
@@ -193,17 +186,16 @@ forces = graph.compute_forces(energy)
 graph.save(force_tensor=forces, model_directory='/tmp/lj-model')
 ```
 
-## Using Graph in a Simulation
+## Using a Graph in a Simulation
 
 You may use a saved TensorFlow model via:
 
 ```python
 import hoomd, hoomd.md
-import hoomd.tensorflow_plugin
+import hoomd.tensorflow_plugin as htf
 
-with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-
-    ...hoomd initialization code...
+...hoomd initialization code...
+with htf.tfcompute(model_dir) as tfcompute:
 
     nlist = hoomd.md.nlist.cell()
     tfcompute.attach(nlist, r_cut=3)
@@ -236,14 +228,14 @@ with tf.Session() as sess:
     saver.save(sess, '/tmp/bootstrap/model')
 ```
 
-Now here's how we would load them in the hoomd run script:
+We load them in the hoomd run script:
 ```python
 with hoomd.tensorflow_plugin.tfcompute(model_dir,
     bootstrap='/tmp/bootstrap/model') as tfcompute:
     ...
 ```
 
-Now here's how we would load them in the hoomd run script if we want to change
+Here's how we would load them in the hoomd run script if we want to change
 the names of the variables:
 ```python
 # here the pretrained variable parameters will replace variables with a different name
@@ -255,7 +247,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir,
 
 #### Bootstrapping Variables from Other Models
 
-Here's an example of bootstrapping where you train with Hoomd and then load the variables into a different model:
+Here's an example of bootstrapping where you train with Hoomd-TF and then load the variables into a different model:
 
 ```python
 # build_models.py
@@ -296,15 +288,16 @@ make_train_graph(64, 16, '/tmp/training')
 make_force_graph(64, 16, '/tmp/inference')
 ```
 
-Now here is how we run the training model:
+Here is how we run the training model:
 ```python
 #run_train.py
 import hoomd, hoomd.md
 import hoomd.tensorflow_plugin as htf
 
 
+hoomd.context.initialize()
+
 with htf.tfcompute('/tmp/training') as tfcompute:
-    hoomd.context.initialize()
     rcut = 3.0
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[8,8])
@@ -319,16 +312,16 @@ with htf.tfcompute('/tmp/training') as tfcompute:
     hoomd.run(100)
 ```
 
-Now we load the variables trained in the training run into the model which computes forces:
+Load the variables trained in the training run into the model which computes forces:
 
 ```python
 #run_inference.py
 import hoomd, hoomd.md
 import hoomd.tensorflow_plugin as htf
 
+hoomd.context.initialize()
 with htf.tfcompute('/tmp/inference',
         bootstrap='/tmp/training') as tfcompute:
-    hoomd.context.initialize()
     rcut = 3.0
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[8,8])
@@ -344,7 +337,7 @@ with htf.tfcompute('/tmp/inference',
 
 ## Utilities
 
-There are a few convenience functions in the `hoomd.tensorflow_plugin.utils` for plotting potential energies of pairwise potentials and constructing CG mappings.
+There are a few convenience functions in `hoomd.tensorflow_plugin` and the `graph_builder` class for plotting potential energies of pairwise potentials and constructing CG mappings.
 
 ### RDF
 
@@ -489,6 +482,13 @@ Continue following the compling steps below to complete install.
 
 ## Compiling
 
+## Requirements
+```
+tensorflow == 1.12
+hoomd-blue == 2.5.1
+numpy
+```
+
 ```bash
 git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
 ```
@@ -545,10 +545,10 @@ pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github
 
 ## Running on Bluehive
 
-Because hoomd-tf requires at least two threads to run, you must ensure your bluehive reservation allows two threads. This command works for interactive gpu use:
+This command works for interactive gpu use:
 
 ```bash
-interactive -p awhite -t 12:00:00 -N 1 --ntasks-per-node 24 --gres=gpu
+interactive -p awhite -t 12:00:00 --gres=gpu
 ```
 
 
@@ -565,16 +565,27 @@ c.sorter.disable()
 
 ### Exploding Gradients
 
-There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that makes it impossible to use optimizers with TensorFlow norms. To get around this, use the builtin workaround (`graphbuilder.safe_norm`). Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graphbuilder.safe_norm` throughout.
+There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that somtimes prevents optimizers to work well with TensorFlow norms. Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. This isn't usually an issue for just computing forces. There are three ways to deal with this:
 
-You can also clip gradients instead of using safe_norm:
+#### Small Training Rates
+
+When Training something like a Lennard-Jones potential or other `1/r` potential, high gradients are possible. You can prevent expoding gradients by using small learning rates and ensuring variables are initialized so that energies are finite.
+
+
+#### Safe Norm
+
+There is a workaround (`graph_builder.safe_norm`) in Hoomd-TF. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graph_builder.safe_norm` throughout. This method adds a small amount to all the norms though, so if you rely on some norms being zero it will not work well.
+
+#### Clipping Gradients
+
+Another approach is to clip gradients instead of using safe_norm:
 ```python
 optimizer = tf.train.AdamOptimizer(1e-4)
 gvs = optimizer.compute_gradients(cost)
 capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
 train_op = optimizer.apply_gradients(capped_gvs)
 ```
-which will also prevent exploding gradients. Remember that if training something like a Lennard-Jones potential or other `1/r` potential that high gradients are possible. Use small learning rates and probably clip the grads.
+
 
 ### Neighbor Lists
 
