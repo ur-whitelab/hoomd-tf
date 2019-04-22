@@ -339,7 +339,7 @@ print(variables)
 ### Find Molecules
 To go from atom index to particle index, use the `hoomd.tensorflow_plugin.find_molecules(...)` method:
 ```python
-# The methods takes in a hoomd system as an argument.
+# The method takes in a hoomd system as an argument.
 ...
 molecule_mapping_index = hoomd.tensorflow_plugin.find_molecules(system)
 ...
@@ -369,7 +369,7 @@ The `center_of_mass(...)` method maps the given positions according to the speci
 
 ...
 mapped_position = htf.center_of_mass(graph.positions[:,:3], cg_mapping, system)
-#cg_mapping is the output from sparse_matrix(...) method and indicates how each molecule is mapped.
+#cg_mapping is the output from the sparse_matrix(...) method and indicates how each molecule is mapped.
 ...
 
 ```
