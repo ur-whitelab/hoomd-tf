@@ -348,63 +348,39 @@ molecule_mapping_index = hoomd.tensorflow_plugin.find_molecules(system)
 
 ### Sparse Mapping
 
-The `sparse_mapping(...)` method creates the necessary indices and values for defining a sparse tensor in tensorflow that is a mass-weighted MxN mapping operator where M is the number of coarse-grained particles and N is the number of atoms in the system.
+The `sparse_mapping(...)` method creates the necessary indices and values for defining a sparse tensor in tensorflow that is a mass-weighted MxN mapping operator where M is the number of coarse-grained particles and N is the number of atoms in the system. In the example,`mapping_per_molecule` is a list of k x n matrices where k is the number of coarse-grained sites for each molecule and n is the number of atoms in the corresponding molecule. There should be one matrix per molecule. Since the example is for a 1 bead mapping per molecule the shape is 1 x n. The ordering of the atoms should follow the output from the find_molecules method. The variable `molecule_mapping_index` is the output from the `find_molecules(...)` method.
 
 ```python
 #The example is shown for 1 coarse-grained site per molecule.
 ...
 molecule_mapping_matrix = numpy.ones([1, len(molecule_mapping_index[0])], dtype=np.int)
 mapping_per_molecule = [molecule_mapping_matrix for _ in molecule_mapping_index]
-cg_mapping = hoomd.tensorflow_plugin.sparse_mapping(mapping_per_molecule, \
+cg_mapping = htf.sparse_mapping(mapping_per_molecule, \
 	     			molecule_mapping_index, system = system)
 ...
-'''
-mapping_per_molecule: 
-List of l x n matrices where l is the number of coarse-grained sites for each molecule 
-and n is the number of atoms in the corresponding molecule.
-There should be one matrix per molecule. 
-Since the example is for a 1 bead mapping per molecule the shape is 1 x n.
-The ordering of the atoms should follow the output from the find_molecules method.
-
-molecule_mapping_index:
-Output from the find_molecules(...) method.
-
-system: hoomd system
-'''
 ```
 
 ### Center of Mass
 
-The `center_of_mass(...)` method maps the given positions according to the specified mapping operator to coarse-grain site positions considering periodic boundary condition. 
-The coarse grain site position is placed at the center of mass of its constituent atoms.
+The `center_of_mass(...)` method maps the given positions according to the specified mapping operator to coarse-grain site positions considering periodic boundary condition. The coarse grain site position is placed at the center of mass of its constituent atoms.
 
 
 ```python
 
 ...
-mapped_position = hoomd.tensorflow_plugin.center_of_mass(graph.positions[:,:3], cg_mapping, system)
+mapped_position = htf.center_of_mass(graph.positions[:,:3], cg_mapping, system)
+#cg_mapping is the output from sparse_matrix(...) method and indicates how each molecule is mapped.
 ...
-'''
-cg_mapping:
-The output from the sparse_matrix(...) method output indicating
-how each molecule is mapped into coarse-grained sites.
-'''
+
 ```
 
-### Compute nlist
-The `compute_nlist(...)` method returns the neighbor list for the mapped coarse-grained particles.
+### Compute Mapped Neighbor List
+The `compute_nlist(...)` method returns the neighbor list for the mapped coarse-grained particles. In the example, mapped_position is the mapped particle positions obeying the periodic boundary condition as returned by the `center_of_mass(...) method`, `rcut` is the cut-off radius and `NN` is the number of nearest neighbors to be considered for the coarse-grained system.
 ```python
+...
+mapped_nlist= htf.compute_nlist(mapped_position, rcut, NN, system)
+...
 
-...
-mapped_nlist= hoomd.tensorflow_plugin.compute_nlist(mapped_position, rcut, NN, system)
-...
-'''
-mapped_position:
-Mapped particle positions obeying the periodic boundary condition
-as returned by the center_of_mass(...) method.
-rcut: The cut of radius
-NN : Number of nearest neighbors to be considered for the coarse-grained system
-'''
 ```
 
 ## Tensorboard
