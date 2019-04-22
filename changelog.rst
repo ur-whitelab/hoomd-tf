@@ -1,6 +1,8 @@
-# Change Log
+Change Log
+==========
 
-## v0.2 (Not yet released)
+v0.2 (Not yet released)
+-----------------------
 
 *New Features*
 
@@ -18,7 +20,8 @@
 
 - Batch positions/nlist for execution because very large systems cannot fit a complex NN model into memory,
 
-## v0.1 (2019-04-22)
+v0.1 (2019-04-22)
+-----------------
 
 *Note:* only major changes are listed here.
 
