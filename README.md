@@ -386,7 +386,8 @@ mapped_position = hoomd.tensorflow_plugin.center_of_mass(graph.positions[:,:3], 
 ...
 '''
 cg_mapping:
-The output from the sparse_matrix(...) method output indicating how each molecule is mapped into coarse-grained sites.
+The output from the sparse_matrix(...) method output indicating
+how each molecule is mapped into coarse-grained sites.
 '''
 ```
 
@@ -399,7 +400,8 @@ mapped_nlist= hoomd.tensorflow_plugin.compute_nlist(mapped_position, rcut, NN, s
 ...
 '''
 mapped_position:
-Mapped particle positions obeying the periodic boundary condition as returned by the center_of_mass(...) method.
+Mapped particle positions obeying the periodic boundary condition
+as returned by the center_of_mass(...) method.
 rcut: The cut of radius
 NN : Number of nearest neighbors to be considered for the coarse-grained system
 '''
