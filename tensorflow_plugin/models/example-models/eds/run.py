@@ -1,10 +1,7 @@
 import hoomd, hoomd.md, hoomd.tensorflow_plugin
 import tensorflow as tf
-
-
-with hoomd.tensorflow_plugin.tfcompute('manuscrpt/eds') as tfcompute:
+with hoomd.tensorflow_plugin.tfcompute('/tmp/eds') as tfcompute:
     hoomd.context.initialize()
-
     N = 64
     NN = 30
     rcut = 3.0
@@ -21,9 +18,6 @@ with hoomd.tensorflow_plugin.tfcompute('manuscrpt/eds') as tfcompute:
     hoomd.analyze.log(filename='eds.log',
                       quantities = ['momentum', 'temperature', 'time'],
                       period=100,overwrite=True)
-
     tfcompute.attach(nlist, r_cut=rcut)
-    #hoomd.dump.gsd(filename="trajectory_eds.gsd", period=10)
-    hoomd.dump.gsd(filename="saveall_running.gsd", overwrite=True, period=100, group=hoomd.group.all(), dynamic=['attribute', 'momentum', 'topology'])
-    
+    hoomd.dump.gsd(filename='saveall_running.gsd', overwrite=True, period=100, group=hoomd.group.all(), dynamic=['attribute', 'momentum', 'topology'])
     hoomd.run(200000)
