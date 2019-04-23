@@ -375,7 +375,7 @@ mapped_position = htf.center_of_mass(graph.positions[:,:3], cg_mapping, system)
 ```
 
 ### Compute Mapped Neighbor List
-The `compute_nlist(...)` method returns the neighbor list for the mapped coarse-grained particles. In the example, mapped_position is the mapped particle positions obeying the periodic boundary condition as returned by the `center_of_mass(...) method`, `rcut` is the cut-off radius and `NN` is the number of nearest neighbors to be considered for the coarse-grained system.
+The `compute_nlist(...)` method returns the neighbor list for the mapped coarse-grained particles. In the example, `mapped_position` is the mapped particle positions obeying the periodic boundary condition as returned by the `center_of_mass(...) method`, `rcut` is the cut-off radius and `NN` is the number of nearest neighbors to be considered for the coarse-grained system.
 ```python
 ...
 mapped_nlist= htf.compute_nlist(mapped_position, rcut, NN, system)
