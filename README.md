@@ -2,6 +2,51 @@
 
 This plugin enables the use of TensorFlow to compute forces in a Hoomd-blue simulation. You can also compute other quantities, like collective variables, and do learning.
 
+Table of Contents
+=================
+
+   * [Quickstart Tutorial](#quickstart-tutorial)
+   * [Building the Graph](#building-the-graph)
+      * [Computing Forces](#computing-forces)
+      * [Virial](#virial)
+      * [Finalizing the Graph](#finalizing-the-graph)
+      * [Printing](#printing)
+      * [Variables and Restarts](#variables-and-restarts)
+      * [Saving and Loading Variables](#saving-and-loading-variables)
+      * [Optional: Keras Layers for Model Building](#optional-keras-layers-for-model-building)
+      * [Complete Examples](#complete-examples)
+      * [Lennard-Jones with 1 Particle Type](#lennard-jones-with-1-particle-type)
+   * [Using a Graph in a Simulation](#using-a-graph-in-a-simulation)
+      * [Bootstraping Variables](#bootstraping-variables)
+         * [Bootstrapping Variables from Other Models](#bootstrapping-variables-from-other-models)
+   * [Utilities](#utilities)
+      * [RDF](#rdf)
+   * [Coarse-Graining Utilities](#coarse-graining-utilities)
+      * [Find Molecules](#find-molecules)
+      * [Sparse Mapping](#sparse-mapping)
+      * [Center of Mass](#center-of-mass)
+      * [Compute Mapped Neighbor List](#compute-mapped-neighbor-list)
+   * [Tensorboard](#tensorboard)
+      * [Saving Scalars in Tensorboard](#saving-scalars-in-tensorboard)
+      * [Viewing when TF is running on remote server](#viewing-when-tf-is-running-on-remote-server)
+      * [Viewing when TF is running in container](#viewing-when-tf-is-running-in-container)
+   * [Interactive Mode](#interactive-mode)
+   * [Docker Image for Development](#docker-image-for-development)
+   * [Tests](#tests)
+   * [Bluehive Install](#bluehive-install)
+   * [Compiling](#compiling)
+      * [Requirements](#requirements)
+      * [Updating Compiled Code](#updating-compiled-code)
+   * [MBuild Environment](#mbuild-environment)
+   * [Running on Bluehive](#running-on-bluehive)
+   * [Known Issues](#known-issues)
+      * [Using Positions](#using-positions)
+      * [Exploding Gradients](#exploding-gradients)
+         * [Small Training Rates](#small-training-rates)
+         * [Safe Norm](#safe-norm)
+         * [Clipping Gradients](#clipping-gradients)
+      * [Neighbor Lists](#neighbor-lists)
+
 # Quickstart Tutorial
 
 To compute a `1 / r` pairwise potential with Hoomd-TF:
@@ -34,9 +79,7 @@ with htf.tfcompute('my_model') as tfcompute:
 
 This creates a computation graph whose energy function is `2 / r` and also computes forces and virial for the simulation. The `2` is because the neighborlists in Hoomd-TF are *full* neighborlists (double counted). The Hoomd-blue code starts a simulation of a 9 particle square lattice and simulates it for 1000 timesteps under the potential defined in our Hoomd-TF model. The general process of using Hoomd-TF is to build a TensorFlow computation graph, load the graph, and then attach the graph. See below for more detailed information about Hoomd-TF.
 
-# Overview
-
-## Building Graph
+# Building the Graph
 
 To construct a graph, create a `graph_builder`:
 
@@ -59,7 +102,7 @@ ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
 forces via `output_forces=False`.
 
-### Computing Forces
+## Computing Forces
 
 If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
@@ -85,18 +128,18 @@ nearest neighbors are found. Note that because `nlist` is a *full*
 neighbor list, you should divide by 2 if your energy is a sum of
 pairwise energies.
 
-### Virial
+## Virial
 
 The virial is computed and added to the graph if you use the
 `compute_forces` function and your energy has a non-zero derivative
 with respect to `nlist`. You may also explicitly pass the virial when
 saving, or pass `None` to remove the automatically calculated virial.
 
-### Finalizing the Graph
+## Finalizing the Graph
 
 To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
 
-### Printing
+## Printing
 
 If you would like to print out the values from nodes in your graph, you can
 add a print node to the `out_nodes`. For example:
@@ -110,13 +153,13 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
 
-### Variables and Restarts
+## Variables and Restarts
 
 In TensorFlow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graph_builder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graph_builder.save` in your restart script *or* pass `move_previous = False` as a parameter if you re-run `graph_builder.save`.
 
 Variables are how you can save data. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean. You can load these variables with the `htf.load_variables` command. See next section for details.
 
-### Saving and Loading Variables
+## Saving and Loading Variables
 
 `graph_builder` has a convenience function to compute the running mean of some property:
 
@@ -137,7 +180,7 @@ variables  = htf.load_variables(model_dir, ['avg-energy'])
 
 The `load_variables` is general and can be used to load trained, non-trained, or averaged variables.
 
-### Optional: Keras Layers for Model Building
+## Optional: Keras Layers for Model Building
 
 Currently HOOMD-TF supports Keras layers in model building. We do not yet support Keras `Model.compile()` or `Model.fit()`. This example shows how to set up a neural network model using Keras layers.
 
@@ -169,11 +212,11 @@ graph.save(model_directory='/tmp/keras_model/', out_nodes=[ optimizer])
 
 The model can then be loaded and trained as normal. Note that `keras.models.Model.fit()` is not currently supported. You must train using `tensorflow_plugin.tfcompute()` as explained in the next section.
 
-### Complete Examples
+## Complete Examples
 
 See [tensorflow_plugin/models](tensorflow_plugin/models)
 
-### Lennard-Jones with 1 Particle Type
+## Lennard-Jones with 1 Particle Type
 
 ```python
 graph = hoomd.tensorflow_plugin.graph_builder(NN)
@@ -186,7 +229,7 @@ forces = graph.compute_forces(energy)
 graph.save(force_tensor=forces, model_directory='/tmp/lj-model')
 ```
 
-## Using a Graph in a Simulation
+# Using a Graph in a Simulation
 
 You may use a saved TensorFlow model via:
 
@@ -208,7 +251,7 @@ with htf.tfcompute(model_dir) as tfcompute:
 
 where `model_dir` is the directory where the TensorFlow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object.
 
-### Bootstraping Variables
+## Bootstraping Variables
 
 If you have trained variables previously and would like to load them into the current TensorFlow graph, you can use the `bootstrap` and `bootstrap_map` arguments. `bootstrap` should be a checkpoint file path or model directory path (latest checkpoint is used) containing variables which can be loaded into your tfcompute graph. Your model will be built, then all variables will be initialized, and then your bootstrap checkpoint will be loaded and no variables will be reloaded even if there exists a checkpoint in the model directory (to prevent overwriting your bootstrap variables). `bootstrap_map` is an optional additional argument that will have keys that are variable names in the `bootstrap` checkpoint file and values that are names in the tfcompute graph. This can be used when your variable names do not match up. Here are two example demonstrating with and without a `bootstrap_map`:
 
@@ -245,7 +288,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir,
     ...
 ```
 
-#### Bootstrapping Variables from Other Models
+### Bootstrapping Variables from Other Models
 
 Here's an example of bootstrapping where you train with Hoomd-TF and then load the variables into a different model:
 
@@ -335,11 +378,11 @@ with htf.tfcompute('/tmp/inference',
     hoomd.run(100)
 ```
 
-## Utilities
+# Utilities
 
 There are a few convenience functions in `hoomd.tensorflow_plugin` and the `graph_builder` class for plotting potential energies of pairwise potentials and constructing CG mappings.
 
-### RDF
+## RDF
 
 To compute an RDF, use the `graph.compute_rdf(...)` method:
 
@@ -355,9 +398,9 @@ print(variables)
 ```
 
 
-## Coarse-Graining Utilities
+# Coarse-Graining Utilities
 
-### Find Molecules
+## Find Molecules
 To go from atom index to particle index, use the `hoomd.tensorflow_plugin.find_molecules(...)` method:
 ```python
 # The method takes in a hoomd system as an argument.
@@ -367,7 +410,7 @@ molecule_mapping_index = hoomd.tensorflow_plugin.find_molecules(system)
 
 ```
 
-### Sparse Mapping
+## Sparse Mapping
 
 The `sparse_mapping(...)` method creates the necessary indices and values for defining a sparse tensor in tensorflow that is a mass-weighted MxN mapping operator where M is the number of coarse-grained particles and N is the number of atoms in the system. In the example,`mapping_per_molecule` is a list of k x n matrices where k is the number of coarse-grained sites for each molecule and n is the number of atoms in the corresponding molecule. There should be one matrix per molecule. Since the example is for a 1 bead mapping per molecule the shape is 1 x n. The ordering of the atoms should follow the output from the find_molecules method. The variable `molecule_mapping_index` is the output from the `find_molecules(...)` method.
 
@@ -381,7 +424,7 @@ cg_mapping = htf.sparse_mapping(mapping_per_molecule, \
 ...
 ```
 
-### Center of Mass
+## Center of Mass
 
 The `center_of_mass(...)` method maps the given positions according to the specified mapping operator to coarse-grain site positions considering periodic boundary condition. The coarse grain site position is placed at the center of mass of its constituent atoms.
 
@@ -394,7 +437,7 @@ mapped_position = htf.center_of_mass(graph.positions[:,:3], cg_mapping, system)
 
 ```
 
-### Compute Mapped Neighbor List
+## Compute Mapped Neighbor List
 The `compute_nlist(...)` method returns the neighbor list for the mapped coarse-grained particles. In the example, `mapped_position` is the mapped particle positions obeying the periodic boundary condition as returned by the `center_of_mass(...) method`, `rcut` is the cut-off radius and `NN` is the number of nearest neighbors to be considered for the coarse-grained system.
 ```python
 ...
@@ -403,7 +446,7 @@ mapped_nlist= htf.compute_nlist(mapped_position, rcut, NN, system)
 
 ```
 
-## Tensorboard
+# Tensorboard
 
 You can visualize your models with tensorboard. First, add
 `write_tensorboard=True` the TensorFlow plugin constructor. This will
@@ -417,7 +460,7 @@ tensorboard --logdir=/path/to/model/tensorboard
 
 and then visit `http://localhost:6006` to view the graph.
 
-### Saving Scalars in Tensorboard
+## Saving Scalars in Tensorboard
 
 If you would like to save a scalar over time, like total energy or training loss, you can use the Tensorboard functionality. Add scalars to the Tensorboard summary during the build step:
 
@@ -427,7 +470,7 @@ tf.summary.scalar('total-energy', tf.reduce_sum(particle_energy))
 
 and then add the `write_tensorboard=True` flag during the `tfcompute` initialize. The period of tensorboard writes is controlled by the `saving_period` flag to the `tfcompute.attach` command. View the Tensorboard section below to see how to view the resulting scalars.
 
-### Viewing when TF is running on remote server
+## Viewing when TF is running on remote server
 
 If you are running on a server, before launching tensorboard use this ssh command to login:
 
@@ -437,7 +480,7 @@ ssh -L 6006:[remote ip or hostname]:6006 username@remote
 
 and then you can view after launching on the server via your local web browser.
 
-### Viewing when TF is running in container
+## Viewing when TF is running in container
 
 If you are running docker, you can make this port available a few different ways. The first is
 to get the IP address of your docker container (google how to do this if not default), which is typically `172.0.0.1`, and then
@@ -450,13 +493,13 @@ or `http://127.0.0.1:6006` (windows).
 The last method, which usually works when all others fail, is to have all the container's traffic be on the host. You can do this by
 adding the flag `--net=host` to the run command of the container. Then you can visit  `http://localhost:6006`.
 
-## Interactive Mode
+# Interactive Mode
 
 Experimental, but you can trace your graph in realtime in a simulation. Add both the `write_tensorboard=True` to
 the constructor and the `_debug_mode=True` flag to `attach` command. You then open another shell and connect by following
 the online instructions for interactive debugging from Tensorboard.
 
-## Docker Image for Development
+# Docker Image for Development
 
 To use the included docker image:
 
@@ -486,7 +529,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug\
 make -j2
 ```
 
-## Tests
+# Tests
 
 To run the unit tests:
 
@@ -494,7 +537,7 @@ To run the unit tests:
 pytest ../tensorflow_plugin/test-py/
 ```
 
-## Bluehive Install
+# Bluehive Install
 
 After cloning the `hoomd-tf` repo, follow these steps:
 
@@ -524,7 +567,7 @@ pip install tensorflow-gpu==1.12
 
 Continue following the compling steps below to complete install.
 
-## Compiling
+# Compiling
 
 ## Requirements
 ```
@@ -571,11 +614,11 @@ Put build directory on your python path:
 export PYTHONPATH="$PYTHONPATH:`pwd`"
 ```
 
-### Updating Compiled Code
+## Updating Compiled Code
 
 Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files (`tensorflow_plugin/*py` to `build/hoomd/tensorflow_plugin`)
 
-## MBuild Environment
+# MBuild Environment
 
 If you are using mbuild, please follow these additional install steps:
 
@@ -587,7 +630,7 @@ conda install -c conda-forge --no-deps -y packmol gsd
 pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild
 ```
 
-## Running on Bluehive
+# Running on Bluehive
 
 This command works for interactive gpu use:
 
@@ -596,9 +639,9 @@ interactive -p awhite -t 12:00:00 --gres=gpu
 ```
 
 
-## Known Issues
+# Known Issues
 
-### Using Positions
+## Using Positions
 
 Hoomd re-orders positions to improve performance. If you are using CG mappings that rely on ordering of positions, be sure to disable this:
 
@@ -607,20 +650,20 @@ c = hoomd.context.initialize()
 c.sorter.disable()
 ```
 
-### Exploding Gradients
+## Exploding Gradients
 
 There is a bug in norms (https://github.com/tensorflow/tensorflow/issues/12071) that somtimes prevents optimizers to work well with TensorFlow norms. Note that this is only necessary if you're summing up gradients, like what is commonly done in computing gradients in optimizers. This isn't usually an issue for just computing forces. There are three ways to deal with this:
 
-#### Small Training Rates
+### Small Training Rates
 
 When Training something like a Lennard-Jones potential or other `1/r` potential, high gradients are possible. You can prevent expoding gradients by using small learning rates and ensuring variables are initialized so that energies are finite.
 
 
-#### Safe Norm
+### Safe Norm
 
 There is a workaround (`graph_builder.safe_norm`) in Hoomd-TF. There is almost no performance penalty, so it is fine to replace `tf.norm` with `graph_builder.safe_norm` throughout. This method adds a small amount to all the norms though, so if you rely on some norms being zero it will not work well.
 
-#### Clipping Gradients
+### Clipping Gradients
 
 Another approach is to clip gradients instead of using safe_norm:
 ```python
@@ -631,7 +674,7 @@ train_op = optimizer.apply_gradients(capped_gvs)
 ```
 
 
-### Neighbor Lists
+## Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
 
