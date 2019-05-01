@@ -35,7 +35,7 @@ Table of Contents
    * [Tests](#tests)
    * [Bluehive Install](#bluehive-install)
    * [Compiling](#compiling)
-      * [Requirements](#requirements)
+      * [Conda Environments](#conda-environments)
       * [Updating Compiled Code](#updating-compiled-code)
    * [MBuild Environment](#mbuild-environment)
    * [Running on Bluehive](#running-on-bluehive)
@@ -569,7 +569,7 @@ Continue following the compling steps below to complete install.
 
 # Compiling
 
-## Requirements
+The following packages are required to compile:
 ```
 tensorflow == 1.12
 hoomd-blue == 2.5.1
@@ -612,6 +612,19 @@ Put build directory on your python path:
 
 ```bash
 export PYTHONPATH="$PYTHONPATH:`pwd`"
+```
+
+## Conda Environments
+
+If you are using a conda environment, you may need to force CMAKE to find your 
+python environment. The following additional flags can help with this:
+
+```bash
+cmake .. \
+-DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+-DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
+-DPYTHON_EXECUTABLE=$(which python) \
+-DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF
 ```
 
 ## Updating Compiled Code
