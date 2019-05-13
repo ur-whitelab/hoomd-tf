@@ -18,6 +18,19 @@ set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
     )
 
+# check if we have python dependencies for compiling
+set(TF_REQUIRE_VERSION "1.12")
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_tf_version.py ${TF_REQUIRE_VERSION}
+    RESULT_VARIABLE ret)
+if(ret EQUAL "1")
+    message(FATAL_ERROR "Could not find suitable tensorflow version to build ${COMPONENT_NAME}")
+else()
+    message("-- Found suitable tensorflow version for minimum ${TF_REQUIRE_VERSION}")
+endif()
+
+
+
+
 # Need to define NO_IMPORT_ARRAY in every file but module.cc
 set_source_files_properties(${_${COMPONENT_NAME}_sources} ${_${COMPONENT_NAME}_cu_sources} PROPERTIES COMPILE_DEFINITIONS NO_IMPORT_ARRAY)
 
