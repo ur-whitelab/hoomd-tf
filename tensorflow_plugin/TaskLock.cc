@@ -14,7 +14,7 @@ pybind11::class_<TaskLock>(m, "TaskLock")
     .def("end", &TaskLock::end)
     .def("exit", &TaskLock::exit)
     .def("is_exit", &TaskLock::is_exit)
-    .def("await", &TaskLock::await);
+    .def("do_await", &TaskLock::await);
 
 m.def("make_tasklock", &make_tasklock,
         pybind11::return_value_policy::reference);

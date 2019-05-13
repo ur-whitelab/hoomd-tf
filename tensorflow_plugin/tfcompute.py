@@ -224,7 +224,7 @@ class tfcompute(hoomd.compute._compute):
             self.q.put(value, block=False)
             self.q.join()
         else:
-            self.tasklock.await()
+            self.tasklock.do_await()
         if self.tasklock.is_exit():
             hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
