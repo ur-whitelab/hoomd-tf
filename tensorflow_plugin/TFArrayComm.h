@@ -27,24 +27,6 @@ namespace hoomd_tf {
 
   enum class TFCommMode { GPU, CPU };
 
-  // need this without access to context
-  #ifdef ENABLE_CUDA
-  #ifndef NDEBUG
-  void tf_check_cuda_error(cudaError_t err, const char* file, unsigned int line);
-  #define TF_CHECK_CUDA_ERROR()                           \
-    {                                                      \
-      cudaError_t err_sync = cudaGetLastError();           \
-      tf_check_cuda_error(err_sync, __FILE__, __LINE__);  \
-      cudaError_t err_async = cudaDeviceSynchronize();     \
-      tf_check_cuda_error(err_async, __FILE__, __LINE__); \
-    }
-  #else
-  #define TF_CHECK_CUDA_ERROR()
-  #endif  // NDDEBUG
-  #else   // ENABLE_CUDA
-  #define TF_CHECK_CUDA_ERROR()
-  #endif  // ENABLE_CUDA
-
   /*! Template class for TFCompute
   *  \tfparam M If TF is on CPU or GPU.
   */
@@ -62,9 +44,10 @@ namespace hoomd_tf {
   * \param gpu_array The local array which will store communicated data
   * \param name The name of the array
   */
-    TFArrayComm(GlobalArray<T>& gpu_array, const char* name)
+    TFArrayComm(GlobalArray<T>& gpu_array, const char* name, std::shared_ptr<const ExecutionConfiguration> exec_conf)
         : _comm_struct(gpu_array, name),
-          _array(&gpu_array) {
+          _array(&gpu_array),
+          m_exec_conf(exec_conf) {
       checkDevice();
       allocate();
     }
@@ -78,6 +61,7 @@ namespace hoomd_tf {
       // copy over variables
       _array = other._array;
       _comm_struct = std::move(other._comm_struct);
+      m_exec_conf = other.m_exec_conf;
       return *this;
     }
 
@@ -102,7 +86,7 @@ namespace hoomd_tf {
                   access_mode::read);
         cudaMemcpy(handle.data, ohandle.data, _comm_struct.mem_size,
                   cudaMemcpyDeviceToDevice);
-        TF_CHECK_CUDA_ERROR();
+        CHECK_CUDA_ERROR();
         #endif
       }
     }
@@ -117,7 +101,7 @@ namespace hoomd_tf {
         ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         cudaMemset(static_cast<void*> (handle.data), v, _comm_struct.mem_size);
-        TF_CHECK_CUDA_ERROR();
+        CHECK_CUDA_ERROR();
         #endif
       }
     }
@@ -158,11 +142,11 @@ namespace hoomd_tf {
       if (M == TFCommMode::GPU) {
         cudaEvent_t ipc_event;
         // flush errors
-        TF_CHECK_CUDA_ERROR();
+        CHECK_CUDA_ERROR();
         cudaEventCreateWithFlags(
             &ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
         _comm_struct.event_handle = ipc_event;
-        TF_CHECK_CUDA_ERROR();
+        CHECK_CUDA_ERROR();
       }
       #endif
     }
@@ -180,6 +164,7 @@ namespace hoomd_tf {
   private:
     CommStructDerived<T> _comm_struct;
     GlobalArray<T>* _array;
+    std::shared_ptr<const ExecutionConfiguration> m_exec_conf;
   };
 
   void export_TFArrayComm(pybind11::module& m);

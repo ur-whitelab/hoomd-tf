@@ -73,19 +73,19 @@ void TensorflowCompute<M>::reallocate() {
   // so we'll cast away until I make a version
   // of TFArrayComm that can't override array
   _positions_comm = TFArrayComm<M, Scalar4>(
-      const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()), "positions");
-  _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
+      const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()), "positions", m_exec_conf);
+  _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces", m_exec_conf);
   // In cuda, an array of size 0 breaks things. So even if we aren"t using
   // neighborlist we need to make it size > 0
   if (_nneighs > 0) {
     GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
     _nlist_array.swap(tmp);
-    _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
+    _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist", m_exec_conf);
   }
   // virial is made with maxN, not N
   GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
   _virial_array.swap(tmp2);
-  _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
+  _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial", m_exec_conf);
   _virial_comm.memsetArray(0);
 }
 
