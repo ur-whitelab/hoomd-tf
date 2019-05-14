@@ -175,7 +175,7 @@ class tfcompute(hoomd.compute._compute):
         self.q = queue.Queue(maxsize=1)
         self.tfm = threading.Thread(target=main, args=(self.q, self.tasklock,self.write_tensorboard, self.device))
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager.\n')
+        hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
     def _start_tf(self):
         if not self.cpp_force:
