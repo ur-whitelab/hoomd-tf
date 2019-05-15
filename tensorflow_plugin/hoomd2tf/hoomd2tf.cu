@@ -19,7 +19,7 @@ void HOOMD2TFFunctor<GPUDevice, T >::operator()(
     const GPUDevice& d, int size, CommStruct* in_memory,T* out) {
 
   //cudaEventSynchronize(in_memory.event);
-  in_memory->read_gpu_memory(out, size * sizeof(T));
+  in_memory->readGPUMemory(out, size * sizeof(T));
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.

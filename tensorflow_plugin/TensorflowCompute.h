@@ -116,8 +116,8 @@ namespace hoomd_tf {
     // used if particle number changes
     virtual void reallocate();
     //! Take one timestep forward
-    virtual void prepareNeighbors();
-    virtual void receiveVirial();
+    virtual void prepareNeighbors(unsigned int offset, unsigned int batch_size);
+    virtual void receiveVirial(unsigned int offset, unsigned int batch_size);
     virtual void sumReferenceForces();
 
     void finishUpdate(unsigned int timestep);
@@ -127,10 +127,12 @@ namespace hoomd_tf {
     unsigned int _nneighs;
     FORCE_MODE _force_mode;
     unsigned int _period;
+    unsigned int _batch_size;
     std::string m_log_name;
     std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
 
     TFArrayComm<M, Scalar4> _positions_comm;
+    GlobalArray<Scalar4> _positions_array;
     TFArrayComm<M, Scalar4> _forces_comm;
     GlobalArray<Scalar4> _nlist_array;
     GlobalArray<Scalar> _virial_array;
@@ -157,8 +159,8 @@ namespace hoomd_tf {
 
   protected:
     void reallocate() override;
-    void prepareNeighbors() override;
-    void receiveVirial() override;
+    void prepareNeighbors(unsigned int offset, unsigned int batch_size) override;
+    void receiveVirial(unsigned int offset, unsigned int batch_size) override;
     void sumReferenceForces() override;
 
   private:

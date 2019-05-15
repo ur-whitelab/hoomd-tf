@@ -75,12 +75,12 @@ scalar4_tex_t pdata_pos_tex;
 // Texture for reading the neighborlist
 texture<unsigned int, 1, cudaReadModeElementType> nlist_tex;
 
-//offset
-
 template<unsigned char use_gmem_nlist>
 __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int N,
                                          const unsigned int NN,
+                                         const unsigned int offset,
+                                         const unsigned int batch_size,
                                          const Scalar4 *d_pos,
                                          const BoxDim box,
                                          const unsigned int *d_n_neigh,
@@ -89,9 +89,9 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
                                          double rmax) {
 
     // start by identifying which particle we are to handle
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x + offset;
 
-    if (idx >= N)
+    if (idx >= N || idx - offset >= batch_size)
         return;
 
     // load in the length of the list
@@ -140,10 +140,10 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
         Scalar rsq = dot(dx, dx);
 
         if (rsq < (rmax * rmax)) {
-            dest[idx * NN + neigh_idx].x = dx.x;
-            dest[idx * NN + neigh_idx].y = dx.y;
-            dest[idx * NN + neigh_idx].z = dx.z;
-            dest[idx * NN + neigh_idx].w = static_cast<Scalar> (typej);
+            dest[(idx - offset) * NN + neigh_idx].x = dx.x;
+            dest[(idx - offset) * NN + neigh_idx].y = dx.y;
+            dest[(idx - offset) * NN + neigh_idx].z = dx.z;
+            dest[(idx - offset) * NN + neigh_idx].w = static_cast<Scalar> (typej);
 
         }
     }
@@ -153,7 +153,9 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
 cudaError_t gpu_reshape_nlist(Scalar4* dest,
 			      const Scalar4 *d_pos,
 			      const unsigned int N,
-			      const unsigned int NN,
+                  const unsigned int NN,
+                  const unsigned int offset,
+                  const unsigned int batch_size,
 			      const unsigned int n_ghost,
 			      const BoxDim& box,
 			      const unsigned int *d_n_neigh,
@@ -207,12 +209,14 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         unsigned int run_block_size = min(block_size, max_block_size);
 
         // setup the grid to run the kernel
-        dim3 grid( N / run_block_size + 1, 1, 1);
+        dim3 grid( batch_size / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
 
         gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
                                                  N,
                                                  NN,
+                                                 offset,
+                                                 batch_size,
                                                  d_pos,
                                                  box,
                                                  d_n_neigh,
@@ -230,11 +234,13 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         unsigned int run_block_size = min(block_size, max_block_size);
 
         // setup the grid to run the kernel
-        dim3 grid( N / run_block_size + 1, 1, 1);
+        dim3 grid( batch_size / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
-        gpu_reshape_nlist_kernel<0><<< grid, threads>>>(dest,
+        gpu_reshape_nlist_kernel<0><<< grid, threads, 0, stream>>>(dest,
                                                  N,
                                                  NN,
+                                                 offset,
+                                                 batch_size,
                                                  d_pos,
                                                  box,
                                                  d_n_neigh,

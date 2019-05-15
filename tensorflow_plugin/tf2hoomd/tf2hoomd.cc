@@ -28,7 +28,7 @@ REGISTER_OP("TfToHoomd")
 template <typename T>
 struct TF2IPCFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, CommStruct* out, const T* in) {
-    out->write_cpu_memory(in, sizeof(T) * size);
+    out->writeCPUMemory(in, sizeof(T) * size);
   }
 };
 

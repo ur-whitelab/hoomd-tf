@@ -52,9 +52,9 @@ class test_access(unittest.TestCase):
 
 class test_compute(unittest.TestCase):
     def test_force_overwrite(self):
+        hoomd.context.initialize()
         model_dir = build_examples.simple_potential()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -75,9 +75,9 @@ class test_compute(unittest.TestCase):
                 hoomd.run(100)
 
     def test_nonlist(self):
+        hoomd.context.initialize()
         model_dir = build_examples.benchmark_nonlist_graph()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                                n=[32,32])
             hoomd.md.integrate.mode_standard(dt=0.005)
@@ -125,9 +125,9 @@ class test_compute(unittest.TestCase):
 
 
     def test_print(self):
+        hoomd.context.initialize()
         model_dir = build_examples.print_graph(9 - 1)
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -142,9 +142,9 @@ class test_compute(unittest.TestCase):
                 hoomd.run(2)
 
     def test_noforce_graph(self):
+        hoomd.context.initialize()
         model_dir = build_examples.noforce_graph()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -161,9 +161,9 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(system.particles[j].net_force, [0,0,0], rtol=1e-5)
 
     def test_feeddict_func(self):
+        hoomd.context.initialize()
         model_dir = build_examples.feeddict_graph()
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -243,9 +243,9 @@ class test_compute(unittest.TestCase):
                 np.testing.assert_allclose(tf_forces[i,j], lj_forces[i,j], atol=1e-5)
 
     def test_running_mean(self):
+        hoomd.context.initialize()
         model_dir = build_examples.lj_running_mean(9 - 1)
         with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3,3])

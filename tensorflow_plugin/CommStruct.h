@@ -7,6 +7,7 @@
 #include <vector>
 #include <iostream>
 #include <cstddef>
+#include <cassert>
 
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
 #include <cuda_runtime.h>
@@ -32,6 +33,7 @@ namespace hoomd_tf {
                 const char* name) :
       num_dims(num_dims),
       element_size(element_size),
+      offset(0),
       name(name),
       mem_size(0) {
     }
@@ -57,6 +59,7 @@ namespace hoomd_tf {
       element_size = other.element_size;
       mem_size = other.mem_size;
       name = other.name;
+      offset = other.offset;
       #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
       event_handle = other.event_handle;
       stream = other.stream;
@@ -75,14 +78,15 @@ namespace hoomd_tf {
     os << "]\n  " << "Element Size: " << element_size << "\n" << "Total Size: " << mem_size << "\n";
     return os;
   }
-    virtual void read_gpu_memory(void *dest, size_t n) = 0;
-    virtual void read_cpu_memory(void *dest, size_t n) = 0;
-    virtual void write_gpu_memory(const void *src, size_t n) = 0;
-    virtual void write_cpu_memory(const void *src, size_t n) = 0;
+    virtual void readGPUMemory(void *dest, size_t n) = 0;
+    virtual void readCPUMemory(void *dest, size_t n) = 0;
+    virtual void writeGPUMemory(const void *src, size_t n) = 0;
+    virtual void writeCPUMemory(const void *src, size_t n) = 0;
 
     int* num_elements; //would be better as size_t, but need this for TF
     int num_dims;
     size_t element_size;
+    size_t offset;
     size_t mem_size;
     const char* name;
     //TODO Why is ENABLE_CUDA set for compilng tf code? We don't have any hoomd headers...
@@ -116,29 +120,33 @@ namespace hoomd_tf {
     }
 
     #ifdef ENABLE_CUDA
-    void read_gpu_memory(void *dest, size_t n) override {
+    void readGPUMemory(void *dest, size_t n) override {
+      // TODO Should we check the size or just assume it's correct?
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
-      cudaMemcpy(dest, handle.data, n, cudaMemcpyDeviceToDevice);
+      cudaMemcpy(dest + offset * element_size, handle.data, n, cudaMemcpyDeviceToDevice);
     }
-    void write_gpu_memory(const void* src, size_t n) override {
+    void writeGPUMemory(const void* src, size_t n) override {
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
-      cudaMemcpy(handle.data, src, n, cudaMemcpyDeviceToDevice);
+      cudaMemcpy(handle.data, src + offset * element_size, n, cudaMemcpyDeviceToDevice);
     }
     #else
-    void read_gpu_memory(void *dest, size_t n) override {
-      throw "Should not call read_gpu_memory without CUDA";
+    void readGPUMemory(void *dest, size_t n) override {
+      throw "Should not call readGPUMemory without CUDA";
     }
-    void write_gpu_memory(const void* src, size_t n) override {
-      throw "Should not call read_gpu_memory without CUDA";
+    void writeGPUMemory(const void* src, size_t n) override {
+      throw "Should not call readGPUMemory without CUDA";
     }
     #endif //ENABLE_CUDA
-    void read_cpu_memory(void* dest, size_t n) override {
+    void readCPUMemory(void* dest, size_t n) override {
+      std::cout << offset << " " << element_size << " " << n << " " << mem_size <<  std::endl;
+      assert(offset * element_size + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-      memcpy(dest, handle.data, n);
+      memcpy(dest + offset * element_size, handle.data, n);
     }
-    void write_cpu_memory(const void* src, size_t n) override {
+    void writeCPUMemory(const void* src, size_t n) override {
+      assert(offset * element_size + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::overwrite);
-      memcpy(handle.data, src, n);
+      memcpy(handle.data, src + offset * element_size, n);
     }
   };
 
