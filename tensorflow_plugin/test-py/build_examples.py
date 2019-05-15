@@ -110,11 +110,13 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     #sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(energy, 'average-energy')
+    total_energy = tf.reduce_sum(energy, axis=0)
+    avg_energy = graph.running_mean(total_energy, 'average-energy')
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[avg_energy])
     return directory
 
 def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
+    ops = []
     graph = htf.graph_builder(NN, output_forces=False)
     #pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
@@ -123,18 +125,15 @@ def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
     energy = tf.reduce_sum(p_energy, axis=1)
     tf_forces = graph.compute_forces(energy)
     h_forces = graph.forces
-    ops = []
     error = tf.losses.mean_squared_error(tf_forces, h_forces)
     v = tf.get_variable('error', shape=[])
     ops.append(v.assign(error))
-    v = tf.get_variable('forces', shape=[NN + 1, 4], validate_shape=False)
-    ops.append(v.assign(graph.forces))
     graph.save(model_directory=directory, out_nodes=ops)
     return directory
 
 def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph = htf.graph_builder(NN)
-    #pairwise energy. Double count -> divide by 2
+    # pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     #sum over pairwise energy

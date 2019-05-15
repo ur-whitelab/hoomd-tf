@@ -71,20 +71,21 @@ namespace hoomd_tf {
 
     /*! Copy contents of given array to our array
     */
-    void receiveArray(const GlobalArray<T>& array) {
+    void receiveArray(const GlobalArray<T>& array, int offset = 0) {
+      assert(offset <= array.getNumElements());
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::host,
                         access_mode::read);
-        memcpy(handle.data, ohandle.data, _comm_struct.mem_size);
+        memcpy(handle.data, ohandle.data + offset, _comm_struct.mem_size);
       } else {
         #ifdef ENABLE_CUDA
         ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::device,
                   access_mode::read);
-        cudaMemcpy(handle.data, ohandle.data, _comm_struct.mem_size,
+        cudaMemcpy(handle.data, ohandle.data + offset, _comm_struct.mem_size,
                   cudaMemcpyDeviceToDevice);
         CHECK_CUDA_ERROR();
         #endif
@@ -104,6 +105,19 @@ namespace hoomd_tf {
         CHECK_CUDA_ERROR();
         #endif
       }
+    }
+
+    // These below are for slicing up array for batching.
+    void setOffset(size_t offset) {
+      _comm_struct.offset = offset;
+    }
+
+    void setBatchSize(size_t N) {
+      _comm_struct.num_elements[0] = N;
+    }
+
+    void resetBatchSize() {
+      _comm_struct.num_elements[0] = _array->getNumElements();
     }
 
     /*! Returns our underlying array as a vector

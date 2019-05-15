@@ -18,7 +18,7 @@ using GPUDevice = Eigen::GpuDevice;
 template <typename T>
 void TF2IPCFunctor<GPUDevice, T>::operator()(const GPUDevice& d, int size,
     CommStruct* handle, const T* in) {
-  handle->write_gpu_memory(in, size * sizeof(T));
+  handle->writeGPUMemory(in, size * sizeof(T));
 }
 
 // Explicitly instantiate functors for the types of OpKernels registered.
