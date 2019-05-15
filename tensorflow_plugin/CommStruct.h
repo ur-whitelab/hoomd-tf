@@ -38,7 +38,7 @@ namespace hoomd_tf {
       mem_size(0) {
     }
 
-    void set_num_elements(int* num_elements_t) {
+    void setNumElements(int* num_elements_t) {
       size_t size = 1;
       num_elements = new int[num_dims];
       for(unsigned int i = 0; i < num_dims; i++) {
@@ -123,11 +123,11 @@ namespace hoomd_tf {
     void readGPUMemory(void *dest, size_t n) override {
       // TODO Should we check the size or just assume it's correct?
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
-      cudaMemcpy(dest + offset * element_size, handle.data, n, cudaMemcpyDeviceToDevice);
+      cudaMemcpy(dest, handle.data + offset, n, cudaMemcpyDeviceToDevice);
     }
     void writeGPUMemory(const void* src, size_t n) override {
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
-      cudaMemcpy(handle.data, src + offset * element_size, n, cudaMemcpyDeviceToDevice);
+      cudaMemcpy(handle.data + offset, src, n, cudaMemcpyDeviceToDevice);
     }
     #else
     void readGPUMemory(void *dest, size_t n) override {
@@ -138,15 +138,14 @@ namespace hoomd_tf {
     }
     #endif //ENABLE_CUDA
     void readCPUMemory(void* dest, size_t n) override {
-      std::cout << offset << " " << element_size << " " << n << " " << mem_size <<  std::endl;
-      assert(offset * element_size + n <= mem_size);
+      assert(offset * sizeof(T) + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-      memcpy(dest + offset * element_size, handle.data, n);
+      memcpy(dest, handle.data + offset, n);
     }
     void writeCPUMemory(const void* src, size_t n) override {
-      assert(offset * element_size + n <= mem_size);
+      assert(offset * sizeof(T) + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::host, access_mode::overwrite);
-      memcpy(handle.data, src + offset * element_size, n);
+      memcpy(handle.data + offset, src, n);
     }
   };
 

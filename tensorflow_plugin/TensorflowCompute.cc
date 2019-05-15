@@ -156,7 +156,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       // forces comm is full size because we use m_forces
       _forces_comm.setOffset(offset);
       _forces_comm.setBatchSize(N);
-      _virial_comm.setBatchSize(N);
+      _virial_comm.setBatchSize(N * 9);
 
       std::cout << "Finishing step" << std::endl;
       finishUpdate(timestep);
@@ -199,12 +199,11 @@ void TensorflowCompute<M>::sumReferenceForces() {
     ArrayHandle<Scalar4> src(forces->getForceArray(), access_location::host,
                             access_mode::read);
     for (unsigned int i = 0; i < m_pdata->getN(); i++) {
-      if(i == 0)
-        std::cout << "Adding ref forces " << i << dest.data[i].w << " "  << std::endl;
       dest.data[i].x += src.data[i].x;
       dest.data[i].y += src.data[i].y;
       dest.data[i].z += src.data[i].z;
       dest.data[i].w += src.data[i].w;
+      std::cout << "Adding ref forces " << i << dest.data[i].w << " "  << std::endl;
     }
   }
 }
@@ -216,6 +215,8 @@ void TensorflowCompute<M>::receiveVirial(unsigned int batch_offset, unsigned int
   ArrayHandle<Scalar> src(_virial_array, access_location::host,
                           access_mode::read);
   for (unsigned int i = 0; i < batch_size; i++) {
+    std::cout << "virial " << i + batch_offset << " " << src.data[i * 9 + 0] << std::endl;
+    assert(5 * getVirialPitch() + i + batch_offset < m_virial.getNumElements());
     dest.data[0 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 0];  // xx
     dest.data[1 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 1];  // xy
     dest.data[2 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 2];  // xz
