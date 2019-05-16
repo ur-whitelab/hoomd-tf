@@ -112,7 +112,8 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     forces = graph.compute_forces(energy)
     total_energy = tf.reduce_sum(energy, axis=0)
     avg_energy = graph.running_mean(total_energy, 'average-energy')
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[avg_energy])
+    p = tf.Print(avg_energy, ['e', avg_energy, 'te', total_energy, 's', tf.get_default_graph().get_tensor_by_name('htf-batch-steps:0')])
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[p, avg_energy])
     return directory
 
 def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):

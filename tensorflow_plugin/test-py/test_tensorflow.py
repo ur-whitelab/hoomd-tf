@@ -255,8 +255,9 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
             hoomd.run(10)
         # now load checkpoint
-        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['average-energy', 'htf-step:0'])
-        assert variables['htf-step'] > 1
+        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['average-energy', 'htf-batch-steps'])
+        assert not math.isnan(variables['average-energy'])
+        assert variables['htf-batch-steps'] == 11
 
 
     def test_force_output(self):

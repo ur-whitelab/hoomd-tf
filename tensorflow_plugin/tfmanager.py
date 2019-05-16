@@ -82,7 +82,6 @@ class TFManager:
                 self.out_nodes.append(tf.get_default_graph().get_operation_by_name(n))
 
     def _update(self, sess, feed_dict=None):
-
         if self.step % self.save_period == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
@@ -229,48 +228,38 @@ class TFManager:
             self.log.info('Completed TF Set-up')
             self.q.task_done()
             cumtime = 0
+            processing_cumtime = 0
             result = None
+            feed_dict = None
+            while True:
+                try:
+                    raw_feed_dict = self.q.get()
+                    if raw_feed_dict is None:
+                        self.log.info('Empty Queue')
+                        raise queue.Empty()
+                except queue.Empty:
+                    self.log.info('Received exit. Leaving TF Update Loop. \n')
+                    self.log.info('TF Update running time is {}\n'.format(cumtime))
+                    self.log.info('TF Feed Processing time  is {}\n'.format(processing_cumtime))
+                    self.log.info('TF Total Time (excluding communication)  is {}\n'.format(processing_cumtime + cumtime))
+                    self._save_model(sess)
+                    break
 
-            if self.use_feed:
-                feed_dict = None
-                while True:
-                    try:
-                        feed_name_dict = self.q.get()
-                        if feed_name_dict is None:
-                            self.log.info('Empty')
-                            raise queue.Empty()
-                    except queue.Empty:
-                        self.log.info('Received exit. Leaving TF Update Loop. \n')
-                        self.log.info('TF Update time (excluding communication) is {}\n'.format(cumtime))
-                        self._save_model(sess)
-                        break
-                    #convert name keys to actual tensor keys
-                    try:
-                        feed_dict = dict()
-                        for k,v in feed_name_dict.items():
-                            tensor = tf.get_default_graph().get_tensor_by_name(k)
-                            feed_dict[tensor] = v
-                        last_clock = time.perf_counter()
-                        result = self._update(sess, feed_dict=feed_dict)
-                    finally:
-                        cumtime += (time.perf_counter() - last_clock)
-                        self.q.task_done()
-            else:
-                while True:
-                    if not self.tasklock.start():
-                        self.log.info('Received exit. Leaving TF Update Loop.')
-                        self.log.info('TF Update time (excluding communication) is {:.3f} seconds'.format(cumtime))
-                        self._save_model(sess)
-                        break
+                try:
+                    # convert name keys to actual tensor keys if we're using a feed_dict
+                    # from user
                     last_clock = time.perf_counter()
-                    try:
-                        result = self._update(sess)
-                    except Exception as e:
-                        self.tasklock.end()
-                        self.tasklock.exit()
-                        raise e
+                    feed_dict = dict()
+                    for k,v in raw_feed_dict.items():
+                        tensor = tf.get_default_graph().get_tensor_by_name(k)
+                        feed_dict[tensor] = v
+                    print(feed_dict)
+                    processing_cumtime += (time.perf_counter() - last_clock)
+                    last_clock = time.perf_counter()
+                    result = self._update(sess, feed_dict=feed_dict)
+                finally:
                     cumtime += (time.perf_counter() - last_clock)
-                    self.tasklock.end()
+                    self.q.task_done()
 
 
 

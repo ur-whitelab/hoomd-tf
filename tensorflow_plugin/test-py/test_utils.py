@@ -149,16 +149,6 @@ class test_mappings(unittest.TestCase):
             np.testing.assert_array_almost_equal(np.sort(nlist[0,:])[0], [9, 9, 9])
             np.testing.assert_array_almost_equal(np.sort(nlist[-1,:])[-1], [-9, -9, -9])
 
-    def test_compute_nlist(self):
-        N = 10
-        positions = tf.tile(tf.reshape(tf.range(N), [-1,1]), [1, 3])
-        print(positions.shape)
-        system = type('', (object, ), {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz':100.})})
-        nlist= htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
-        with tf.Session() as sess:
-            nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(np.sort(nlist[0,:])[0], [9, 9, 9])
-
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1,1]), [1, 3])

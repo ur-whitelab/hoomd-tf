@@ -166,7 +166,7 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         # need to terminate orphan
-        if self.feed_dict is not None and not self.q.full():
+        if not self.q.full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
             self.q.put(None)
         self.tfm.join(1)
@@ -211,21 +211,22 @@ class tfcompute(hoomd.compute._compute):
             exit()
         hoomd.context.msg.notice(2,'TF Session Manager has released control. Starting HOOMD updates\n')
 
-    def finish_update(self, timestep):
+    def finish_update(self, batch_index, batch_frac):
         '''Allow TF to read output and we wait for it to finish.'''
         if self.mock_mode:
             return
+        fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
         if self.feed_dict is not None:
             if type(self.feed_dict) == dict:
                 value = self.feed_dict
             else:
                 value = self.feed_dict(self)
                 assert value is not None, 'feed_dict callable failed to provide value'
-            self.q.put(value, block=False)
-            self.q.join()
+            self.q.put({**value, **fd}, block=False)
         else:
-            self.tasklock.do_await()
-        if self.tasklock.is_exit():
+            self.q.put(fd, block=False)
+        self.q.join()
+        if not self.tfm.isAlive():
             hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
