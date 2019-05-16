@@ -155,12 +155,12 @@ class graph_builder:
                                             true_fn=lambda: 0.0,
                                             false_fn=lambda: batch_store))
                     self.out_nodes.append(reset_op)
-                with tf.control_dependencies([reset_op]):
-                    if batch_reduction == 'mean':
-                        batch_op = batch_store.assign_add(tensor * self.batch_frac)
-                    elif batch_reduction == 'max':
-                        batch_op = batch_store.assign_add(tensor)
-                    self.out_nodes.append(batch_op)
+                    with tf.control_dependencies([reset_op]):
+                        if batch_reduction == 'mean':
+                            batch_op = batch_store.assign_add(tensor * self.batch_frac)
+                        elif batch_reduction == 'max':
+                            batch_op = batch_store.assign_add(tensor)
+                        self.out_nodes.append(batch_op)
         return store
 
 

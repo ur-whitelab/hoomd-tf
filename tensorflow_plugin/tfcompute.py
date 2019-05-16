@@ -62,7 +62,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist = None, r_cut = 0, save_period=1000, period=1, feed_dict=None):
+    def attach(self, nlist = None, r_cut = 0, save_period=1000, period=1, feed_dict=None, batch_size=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -83,6 +83,7 @@ class tfcompute(hoomd.compute._compute):
         self.atom_number = len(hoomd.context.current.group_all)
         r_cut = float(r_cut)
         self.r_cut = r_cut
+        self.batch_size = 0 if batch_size is None else batch_size
 
         if nlist is not None:
             nlist.subscribe(self.rcut)
@@ -107,13 +108,14 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self,
             hoomd.context.current.system_definition, nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period, self.batch_size)
+            # TODO: This is not correct
             if self.device is None:
                 self.device = '/cpu:0'
         else:
             self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
             hoomd.context.current.system_definition,  nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+            r_cut, self.nneighbor_cutoff, self.force_mode_code, period, self.batch_size)
             if self.device is None:
                 self.device = '/gpu:0'
 

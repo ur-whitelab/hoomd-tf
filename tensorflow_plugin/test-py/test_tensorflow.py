@@ -41,7 +41,7 @@ class test_access(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             hoomd.run(1)
 
             tfcompute.get_virial_array()
@@ -64,7 +64,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             #use these to throw off timesteps
             hoomd.run(1)
             hoomd.run(1)
@@ -86,6 +86,17 @@ class test_compute(unittest.TestCase):
             hoomd.run(10)
 
 
+    def test_full_batch(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.benchmark_nonlist_graph()
+        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[32,32])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(batch_size=None)
+            hoomd.run(10)
+
     def test_trainable(self):
         model_dir = build_examples.trainable_graph(9 - 1)
         with hoomd.tensorflow_plugin.tfcompute(model_dir, write_tensorboard=True) as tfcompute:
@@ -97,7 +108,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1, batch_size=4)
 
             hoomd.run(5)
 
@@ -119,7 +130,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
 
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1, batch_size=4)
 
             hoomd.run(5)
 
@@ -137,7 +148,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=4, seed=1)
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             for i in range(3):
                 hoomd.run(2)
 
@@ -154,7 +165,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             for i in range(3):
                 hoomd.run(1)
                 for j in range(N):
@@ -175,7 +186,7 @@ class test_compute(unittest.TestCase):
 
             #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[2, :3]})
+            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict=lambda tfc: {'test-tensor:0': tfc.get_positions_array()[2, :3]}, batch_size=4)
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1,:3]
 
@@ -194,7 +205,7 @@ class test_compute(unittest.TestCase):
 
             #multiple average force by particle 4 position
             #just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict={'test-tensor:0': [1,2,3]})
+            tfcompute.attach(nlist, r_cut=rcut, period=10, feed_dict={'test-tensor:0': [1,2,3]}, batch_size=4)
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1,:3]
 
@@ -212,7 +223,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
 
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             hoomd.run(2)
             tf_forces = []
             for i in range(T):
@@ -252,7 +263,7 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=4)
             hoomd.run(10)
         # now load checkpoint
         variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['average-energy', 'htf-batch-steps'])
@@ -276,7 +287,7 @@ class test_compute(unittest.TestCase):
             lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1)
+            tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1, batch_size=4)
             tfcompute.set_reference_forces(lj)
             hoomd.run(300)
             # now load checkpoint and check error
@@ -298,7 +309,7 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=3)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=3, batch_size=4)
             hoomd.run(10)
         # now load checkpoint
         variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf:0', 'htf-step:0'])
@@ -319,7 +330,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
             log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'kinetic_energy'], period=1)
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             energy = []
             for i in range(T):
                 hoomd.run(250)
@@ -344,7 +355,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
 
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             log = hoomd.analyze.log(filename=None, quantities=['potential_energy', 'pressure'], period=1)
             thermo_scalars = []
             for i in range(5):

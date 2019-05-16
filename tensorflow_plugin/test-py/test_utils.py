@@ -175,7 +175,7 @@ class test_mappings(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=None)
             # add lj so we can hopefully get particles mixing
 
             hoomd.run(100)

@@ -30,7 +30,7 @@ template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
     pybind11::object& py_self, std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<NeighborList> nlist, Scalar r_cut, unsigned int nneighs,
-    FORCE_MODE force_mode, unsigned int period)
+    FORCE_MODE force_mode, unsigned int period, unsigned int batch_size)
     : ForceCompute(sysdef),
       _py_self(py_self),
       //Why? Because I cannot get pybind to export multiple inheritance
@@ -44,7 +44,7 @@ TensorflowCompute<M>::TensorflowCompute(
       _nneighs(nneighs),
       _force_mode(force_mode),
       _period(period),
-      _batch_size(4){
+      _batch_size(batch_size){
   m_exec_conf->msg->notice(2)
       << "Starting TensorflowCompute "
       << std::endl;
@@ -81,19 +81,20 @@ void TensorflowCompute<M>::reallocate() {
   assert(m_pdata);
 
   // we don't want to hold onto the positions, so just pass as shared.
-  GlobalArray<Scalar4> tmpPos(_batch_size, m_exec_conf);
+  unsigned int batch_size = _batch_size == 0 ? m_pdata->getMaxN() : _batch_size;
+  GlobalArray<Scalar4> tmpPos(batch_size, m_exec_conf);
   _positions_array.swap(tmpPos);
   _positions_comm = TFArrayComm<M, Scalar4>(_positions_array, "positions", m_exec_conf);
   _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces", m_exec_conf);
   // In cuda, an array of size 0 breaks things. So even if we aren"t using
   // neighborlist we need to make it size > 0
   if (_nneighs > 0) {
-    GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * _batch_size), m_exec_conf);
+    GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * batch_size), m_exec_conf);
     _nlist_array.swap(tmp);
     _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist", m_exec_conf);
   }
   // virial is made with maxN, not N
-  GlobalArray<Scalar>  tmpVirial(9 * _batch_size, m_exec_conf);
+  GlobalArray<Scalar>  tmpVirial(9 * batch_size, m_exec_conf);
   _virial_array.swap(tmpVirial);
   _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial", m_exec_conf);
   _virial_comm.memsetArray(0);
@@ -113,10 +114,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   if (timestep % _period == 0) {
     if (m_prof) m_prof->push("TensorflowCompute");
     // Batch the operations
-    for(int i = 0; i < m_pdata->getN() / _batch_size + 1; i++) {
-      offset = i * _batch_size;
+    // if batch_size == 0, that means do as big as we need to
+    unsigned int batch_size = _batch_size == 0 ? m_pdata->getN() : _batch_size;
+    for(int i = 0; i <  m_pdata->getN() / batch_size + 1; i++) {
+      offset = i * batch_size;
       // compute batch size so that we don't exceed atom number.
-      N = std::min(m_pdata->getN() - offset, _batch_size);
+      N = std::min(m_pdata->getN() - offset, batch_size);
       std::cout << "Batch: " << i <<  "  " << offset << " " << N << std::endl;
       if (N < 1)
         break;
@@ -338,7 +341,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
 
 
     pybind11::class_<TensorflowCompute<TFCommMode::CPU>, std::shared_ptr<TensorflowCompute<TFCommMode::CPU> >, ForceCompute>(m, "TensorflowCompute")
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, unsigned int>())
         .def("getPositionsBuffer", &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowCompute<TFCommMode::CPU>::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowCompute<TFCommMode::CPU>::getForcesBuffer, pybind11::return_value_policy::reference)
@@ -367,8 +370,9 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             std::shared_ptr<SystemDefinition> sysdef,
             std::shared_ptr<NeighborList> nlist,
              Scalar r_cut, unsigned int nneighs,
-             FORCE_MODE force_mode, unsigned int period)
-     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period)
+             FORCE_MODE force_mode, unsigned int period,
+             unsigned int batch_size)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, batch_size)
 {
 
     //want nlist on stream 0 since a nlist rebuild is
@@ -458,7 +462,7 @@ void TensorflowComputeGPU::sumReferenceForces() {
 void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
     {
     pybind11::class_<TensorflowComputeGPU, std::shared_ptr<TensorflowComputeGPU>, ForceCompute>(m, "TensorflowComputeGPU")
-        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int>())
+        .def(pybind11::init< pybind11::object&, std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>, Scalar, unsigned int, FORCE_MODE, unsigned int, unsigned int>())
         .def("getPositionsBuffer", &TensorflowComputeGPU::getPositionsBuffer, pybind11::return_value_policy::reference)
         .def("getNlistBuffer", &TensorflowComputeGPU::getNlistBuffer, pybind11::return_value_policy::reference)
         .def("getForcesBuffer", &TensorflowComputeGPU::getForcesBuffer, pybind11::return_value_policy::reference)
