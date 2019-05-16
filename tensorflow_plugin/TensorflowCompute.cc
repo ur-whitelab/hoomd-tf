@@ -125,6 +125,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         break;
       // nneighs == 0 send positions only
       if (_nneighs > 0) {
+	_nlist_comm.setBatchSize(N * _nneighs);
         // check again
         if(m_nlist->getStorageMode() == NeighborList::half) {
           m_exec_conf->msg->error() << "Must have full neigbhorlist" << std::endl;
@@ -155,11 +156,9 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
       // set batch sizes for communication
       _positions_comm.setBatchSize(N);
-      _nlist_comm.setBatchSize(N * _nneighs);
       // forces comm is full size because we use m_forces
       _forces_comm.setOffset(offset);
       _forces_comm.setBatchSize(N);
-      _virial_comm.setBatchSize(N * 9);
 
       std::cout << "Finishing step" << std::endl;
       finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
@@ -169,6 +168,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       // now we receive virial from the update.
       if(_force_mode == FORCE_MODE::tf2hoomd) {
           std::cout << "Receiving Virial" << std::endl;
+	  _virial_comm.setBatchSize(N * 9);
           receiveVirial(offset, N);
       }
       if (m_prof) m_prof->pop();  // force update
