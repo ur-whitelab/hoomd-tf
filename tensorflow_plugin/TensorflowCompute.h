@@ -69,7 +69,7 @@ namespace hoomd_tf {
                       std::shared_ptr<SystemDefinition> sysdef,
                       std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                       unsigned int nneighs, FORCE_MODE force_mode,
-                      unsigned int period);
+                      unsigned int period, unsigned int batch_size);
 
     TensorflowCompute() = delete;
 
@@ -153,7 +153,7 @@ namespace hoomd_tf {
                         std::shared_ptr<SystemDefinition> sysdef,
                         std::shared_ptr<NeighborList> nlist, Scalar r_cut,
                         unsigned int nneighs, FORCE_MODE force_mode,
-                        unsigned int period);
+                        unsigned int period, unsigned int batch_size);
 
     void setAutotunerParams(bool enable, unsigned int period) override;
 

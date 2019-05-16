@@ -87,13 +87,12 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int *d_nlist,
                                          const unsigned int *d_head_list,
                                          double rmax) {
-
     // start by identifying which particle we are to handle
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x + offset;
 
     if (idx >= N || idx - offset >= batch_size)
         return;
-
+    
     // load in the length of the list
     unsigned int n_neigh = d_n_neigh[idx];
     const unsigned int head_idx = d_head_list[idx];
@@ -153,9 +152,9 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
 cudaError_t gpu_reshape_nlist(Scalar4* dest,
 			      const Scalar4 *d_pos,
 			      const unsigned int N,
-                  const unsigned int NN,
-                  const unsigned int offset,
-                  const unsigned int batch_size,
+                  	      const unsigned int NN,
+                  	      const unsigned int offset,
+                  	      const unsigned int batch_size,
 			      const unsigned int n_ghost,
 			      const BoxDim& box,
 			      const unsigned int *d_n_neigh,
@@ -175,7 +174,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
     assert(d_head_list);
 
     //set neighbors to zeros
-    cudaMemset(dest, 1, N * NN * sizeof(Scalar4));
+    cudaMemset(dest, 1, batch_size * NN * sizeof(Scalar4));
 
     // texture bind
     if (compute_capability < 350) {
