@@ -111,7 +111,7 @@ template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep) {
   int offset, N;
   if (timestep % _period == 0) {
-    if (m_prof) m_prof->push("TensorflowCompute<M>");
+    if (m_prof) m_prof->push("TensorflowCompute");
     // Batch the operations
     for(int i = 0; i < m_pdata->getN() / _batch_size + 1; i++) {
       offset = i * _batch_size;
@@ -125,11 +125,11 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
         // check again
         if(m_nlist->getStorageMode() == NeighborList::half) {
           m_exec_conf->msg->error() << "Must have full neigbhorlist" << std::endl;
-          throw std::runtime_error("Nlist Overflow");
+          throw std::runtime_error("neighbor list wrong type");
         }
         // Update the neighborlist once
         if(i == 0) m_nlist->compute(timestep);
-        if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
+        if (m_prof) m_prof->push("TensorflowCompute::reshapeNeighbors");
         prepareNeighbors(offset, N);
         if (m_prof) m_prof->pop();
       }
@@ -159,9 +159,9 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       _virial_comm.setBatchSize(N * 9);
 
       std::cout << "Finishing step" << std::endl;
-      finishUpdate(timestep);
+      finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
 
-      if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
+      if (m_prof) m_prof->push("TensorflowCompute::Force Update");
 
       // now we receive virial from the update.
       if(_force_mode == FORCE_MODE::tf2hoomd) {
@@ -183,9 +183,9 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::finishUpdate(unsigned int timestep) {
-  if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
-  _py_self.attr("finish_update")(timestep);
+void TensorflowCompute<M>::finishUpdate(unsigned int batch_index, float batch_frac) {
+  if (m_prof) m_prof->push("TensorflowCompute:Awaiting TF Update");
+  _py_self.attr("finish_update")(batch_index, batch_frac);
   if (m_prof) m_prof->pop();
 }
 

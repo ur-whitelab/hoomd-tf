@@ -120,7 +120,7 @@ namespace hoomd_tf {
     virtual void receiveVirial(unsigned int offset, unsigned int batch_size);
     virtual void sumReferenceForces();
 
-    void finishUpdate(unsigned int timestep);
+    void finishUpdate(unsigned int batch_index, float batch_frac);
 
     std::shared_ptr<NeighborList> m_nlist;
     Scalar _r_cut;

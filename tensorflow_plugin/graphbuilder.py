@@ -29,11 +29,15 @@ class graph_builder:
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4], name='positions-input')
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
+        self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
+        self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
         self._nlist_rinv = None
-        self.tensor_step = tf.get_variable('htf-step', dtype=tf.float32, initializer=0.0)
-        update_step_op = self.tensor_step.assign_add(1.0)
-        self.out_nodes = [update_step_op]
+        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
+        self.update_batch_index_op = self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                                                     true_fn=lambda: tf.constant(1),
+                                                     false_fn=lambda: tf.constant(0)))
+        self.out_nodes = [self.update_batch_index_op]
 
     @property
     def nlist_rinv(self):
@@ -111,7 +115,7 @@ class graph_builder:
         self.out_nodes.extend([result, vis_rs])
         return result
 
-    def running_mean(self, tensor, name):
+    def running_mean(self, tensor, name, batch_reduction='mean'):
         '''Computes running mean of the given tensor
 
         Parameters
@@ -120,16 +124,43 @@ class graph_builder:
                 The tensor for which you're computing running mean
             name
                 The name of the variable in which the running mean will be stored
+            batch_reduction
+                If the hoomd data is batched by atom index, how should the component
+                tensor values be reduced? Options are 'mean' and 'sum'. A sum means
+                that tensor values are summed across the batch and then a mean
+                is taking between batches. This makes sense for looking at a system
+                property like pressure. A mean gives a mean across the batch.
+                This would make sense for a per-particle property.
+
 
         Returns
         -------
             A variable containing the running mean
 
         '''
-
-        store = tf.get_variable(name, initializer=tf.zeros_like(tensor), validate_shape=False)
-        update_op = store.assign_add( (tensor - store) / self.tensor_step)
-        self.out_nodes.append(update_op)
+        if batch_reduction not in ['mean', 'sum']:
+            raise ValueError('Unable to perform {} reduction across batches'.format(batch_reduction))
+        store = tf.get_variable(name, initializer=tf.zeros_like(tensor), validate_shape=False, dtype=tf.float32)
+        with tf.name_scope(name + '-batch'):
+            # keep batch avg
+            batch_store = tf.get_variable(name + '-batch', initializer=tf.zeros_like(tensor), validate_shape=False, dtype=tf.float32)
+            with tf.control_dependencies([self.update_batch_index_op]):
+                # moving the batch store to normal store after batch is complete
+                move_op = store.assign(tf.cond(tf.equal(self.batch_index,tf.constant(0)),
+                                        true_fn=lambda: (batch_store - store) / tf.cast(self.batch_steps, dtype=tf.float32) + store,
+                                        false_fn=lambda: store))
+                self.out_nodes.append(move_op)
+                with tf.control_dependencies([move_op]):
+                    reset_op = batch_store.assign(tf.cond(tf.equal(self.batch_index,tf.constant(0)),
+                                            true_fn=lambda: 0.0,
+                                            false_fn=lambda: batch_store))
+                    self.out_nodes.append(reset_op)
+                with tf.control_dependencies([reset_op]):
+                    if batch_reduction == 'mean':
+                        batch_op = batch_store.assign_add(tensor * self.batch_frac)
+                    elif batch_reduction == 'max':
+                        batch_op = batch_store.assign_add(tensor)
+                    self.out_nodes.append(batch_op)
         return store
 
 
