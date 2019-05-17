@@ -238,10 +238,10 @@ class TFManager:
                         self.log.info('Empty Queue')
                         raise queue.Empty()
                 except queue.Empty:
-                    self.log.info('Received exit. Leaving TF Update Loop. \n')
-                    self.log.info('TF Update running time is {}\n'.format(cumtime))
-                    self.log.info('TF Feed Processing time  is {}\n'.format(processing_cumtime))
-                    self.log.info('TF Total Time (excluding communication)  is {}\n'.format(processing_cumtime + cumtime))
+                    self.log.info('Received exit. Leaving TF Update Loop. ')
+                    self.log.info('TF Update running time is {}'.format(cumtime))
+                    self.log.info('TF Feed Processing time  is {}'.format(processing_cumtime))
+                    self.log.info('TF Total Time (excluding communication)  is {}'.format(processing_cumtime + cumtime))
                     self._save_model(sess)
                     break
 

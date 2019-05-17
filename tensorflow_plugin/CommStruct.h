@@ -121,11 +121,12 @@ namespace hoomd_tf {
 
     #ifdef ENABLE_CUDA
     void readGPUMemory(void *dest, size_t n) override {
-      // TODO Should we check the size or just assume it's correct?
+      assert(offset * sizeof(T) + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
       cudaMemcpy(dest, handle.data + offset, n, cudaMemcpyDeviceToDevice);
     }
     void writeGPUMemory(const void* src, size_t n) override {
+      assert(offset * sizeof(T) + n <= mem_size);
       ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
       cudaMemcpy(handle.data + offset, src, n, cudaMemcpyDeviceToDevice);
     }
