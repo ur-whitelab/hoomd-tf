@@ -35,7 +35,7 @@ with hoomd.tensorflow_plugin.tfcompute(model_dir, _mock_mode=False, write_tensor
     #equilibrate for 4k steps first
     hoomd.run(4000)
     #now attach the trainable model
-    tfcompute.attach(nlist, r_cut=rcut, save_period=10, period=100, feed_func=lambda x: {'keep_prob:0': 0.8})
+    tfcompute.attach(nlist, r_cut=rcut, save_period=10, period=100, feed_dict={'keep_prob:0': 0.8})
     #hoomd.analyze.log(filename='TRAINING_log.log',
     #                  quantities = ['potential_energy','temperature'],
     #                  period=100,

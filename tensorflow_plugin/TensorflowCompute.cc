@@ -92,7 +92,7 @@ void TensorflowCompute<M>::reallocate()
         {
         GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
         _nlist_array.swap(tmp);
-        _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist");
+        _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist", m_exec_conf);
         }
     // virial is made with maxN, not N
     GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
