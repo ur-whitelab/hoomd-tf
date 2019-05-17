@@ -25,7 +25,6 @@ using namespace hoomd_tf;
     \param nneighs Maximum size for neighbors passed to TF
     \param force_mode Whether we should be computed forces in TF or sending them to TF
     \param period The period between TF updates
-    \param tasklock Currently unused. When this was multiporcess, this allowed simultaneous updates
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
@@ -35,8 +34,8 @@ TensorflowCompute<M>::TensorflowCompute(
     Scalar r_cut,
     unsigned int nneighs,
     FORCE_MODE force_mode,
-    unsigned int period,
-    TaskLock* tasklock)
+    unsigned int period)
+
     : ForceCompute(sysdef),
       _py_self(py_self),
       //Why? Because I cannot get pybind to export multiple inheritance
@@ -50,8 +49,7 @@ TensorflowCompute<M>::TensorflowCompute(
       _r_cut(r_cut),
       _nneighs(nneighs),
       _force_mode(force_mode),
-      _period(period),
-      _tasklock(tasklock)
+      _period(period)
     {
     m_exec_conf->msg->notice(2)
         << "Starting TensorflowCompute "
@@ -84,8 +82,10 @@ void TensorflowCompute<M>::reallocate()
     // so we'll cast away until I make a version
     // of TFArrayComm that can't override array
     _positions_comm = TFArrayComm<M, Scalar4>(
-        const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()), "positions");
-    _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces");
+        const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()),
+        "positions",
+        m_exec_conf);
+    _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces", m_exec_conf);
     // In cuda, an array of size 0 breaks things. So even if we aren"t using
     // neighborlist we need to make it size > 0
     if (_nneighs > 0)
@@ -97,15 +97,12 @@ void TensorflowCompute<M>::reallocate()
     // virial is made with maxN, not N
     GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
     _virial_array.swap(tmp2);
-    _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial");
+    _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial", m_exec_conf);
     _virial_comm.memsetArray(0);
     }
 
 template <TFCommMode M>
-TensorflowCompute<M>::~TensorflowCompute()
-    {
-    delete _tasklock;
-    }
+TensorflowCompute<M>::~TensorflowCompute(){}
 
 /*! Perform the needed calculations
     \param timestep Current time step of the simulation
@@ -166,9 +163,9 @@ void TensorflowCompute<M>::finishUpdate(unsigned int timestep)
     {
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
     _py_self.attr("finish_update")(timestep);
-    // _tasklock->await();
     if (m_prof) m_prof->pop();
     }
+
 
 template <TFCommMode M>
 void TensorflowCompute<M>::sumReferenceForces()
@@ -362,8 +359,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
             Scalar,
             unsigned int,
             FORCE_MODE,
-            unsigned int,
-            TaskLock*>())
+            unsigned int>())
         .def("getPositionsBuffer",
             &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer,
             pybind11::return_value_policy::reference)
@@ -396,6 +392,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
             &TensorflowCompute<TFCommMode::CPU>::getHook)
         .def("addReferenceForce",
             &TensorflowCompute<TFCommMode::CPU>::addReferenceForce)
+
     ;
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
@@ -414,9 +411,8 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             Scalar r_cut,
             unsigned int nneighs,
             FORCE_MODE force_mode,
-            unsigned int period,
-            TaskLock* tasklock)
-     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, tasklock)
+            unsigned int period)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period)
     {
 
     //want nlist on stream 0 since a nlist rebuild is
@@ -538,8 +534,7 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
             Scalar,
             unsigned int,
             FORCE_MODE,
-            unsigned int,
-            TaskLock*>())
+            unsigned int>())
         .def("getPositionsBuffer",
             &TensorflowComputeGPU::getPositionsBuffer,
             pybind11::return_value_policy::reference)

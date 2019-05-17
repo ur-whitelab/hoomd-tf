@@ -14,7 +14,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
         fr = tf.multiply(-1.0, tf.multiply(tf.reciprocal(neighs_rs), nlist), name='nan-pairwise-forces')
         with tf.name_scope('remove-nans') as scope:
             zeros = tf.zeros_like(nlist)
-            real_fr = tf.where(tf.is_nan(fr), zeros, fr, name='pairwise-forces')
+            real_fr = tf.where(tf.is_finite(fr), fr, zeros, name='pairwise-forces')
         forces = tf.reduce_sum(real_fr, axis=1, name='forces')
     graph.save(force_tensor=forces, model_directory=directory)
     return directory

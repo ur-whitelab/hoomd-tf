@@ -13,7 +13,6 @@
 #include <hoomd/SystemDefinition.h>
 #include <hoomd/md/NeighborList.h>
 #include "TFArrayComm.h"
-#include "TaskLock.h"
 
 // pybind11 is used to create the python bindings to the C++ object,
 // but not if we are compiling GPU kernels
@@ -22,7 +21,6 @@
 #include <hoomd/extern/pybind/include/pybind11/stl.h>
 #include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
 #endif
-
 
 namespace hoomd_tf
     {
@@ -88,9 +86,9 @@ namespace hoomd_tf
             Scalar r_cut,
             unsigned int nneighs,
             FORCE_MODE force_mode,
-            unsigned int period,
-            TaskLock* tasklock);
+            unsigned int period);
 
+        //! No base constructor
         TensorflowCompute() = delete;
 
         //! Destructor
@@ -115,11 +113,11 @@ namespace hoomd_tf
         //! Check what precision level we're using for CUDA purposes
         bool isDoublePrecision() const
             {
-#ifdef SINGLE_PRECISION
-            return false;
-#else
-            return true;
-#endif  // SINGLE_PRECISION
+                #ifdef SINGLE_PRECISION
+                    return false;
+                #else
+                    return true;
+                #endif  // SINGLE_PRECISION
             }
 
         //! Returns the array of forces from associated TFArrayComm object
@@ -190,9 +188,6 @@ namespace hoomd_tf
         //! name of log used in TF
         std::string m_log_name;
 
-        //! the instance of TaskLock used for this compute. currently unused
-        TaskLock* _tasklock;
-
         //! vector of reference forces as ForceCompute objects
         std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
 
@@ -219,59 +214,60 @@ namespace hoomd_tf
     void export_TensorflowCompute(pybind11::module& m);
 
 
-#ifdef ENABLE_CUDA
+    #ifdef ENABLE_CUDA
 
-    /*! GPU version of TensorflowCompute class
-     *
-     */
-    class TensorflowComputeGPU : public TensorflowCompute<TFCommMode::GPU>
-        {
-        public:
-        //! Constructor
-        TensorflowComputeGPU(pybind11::object& py_self,
-            std::shared_ptr<SystemDefinition> sysdef,
-            std::shared_ptr<NeighborList> nlist, Scalar r_cut,
-            unsigned int nneighs, FORCE_MODE force_mode,
-            unsigned int period,
-            TaskLock* tasklock);
-
-        /*! Set what HOOMD autotuner params to use
-         *  \param enable whether to use autotuner
-         *  \param period period with which to use autotuner
+        /*! GPU version of TensorflowCompute class
+         *
          */
-        void setAutotunerParams(bool enable, unsigned int period) override;
-
-        protected:
-        /*! GPU version calls CPU reallocate and resets cudaStreams for comm objects
-         *  \sa TensorflowCompute::reallocate()
-         */
-        void reallocate() override;
-        
-        //! invokes a kernel version of prepareNeighbors
-        //! \sa TensorflowCompute::prepareNeighbors()
-        void prepareNeighbors() override;
-        
-        /*! Use a GPU kernel to transfer the virial values
-         *  \sa TensorflowCompute::receiveVirial()
-         */
-        void receiveVirial() override;
-        
-        /*! Use a GPU kernel to add up reference forces
-         *  \sa TensorflowCompute::sumReferenceForces()
-         */
-        void sumReferenceForces() override;
-
-        private:
-        std::unique_ptr<Autotuner> m_tuner;  //! Autotuner for block size
-        cudaStream_t _streams[4];            //! Array of CUDA streams
-        size_t _nstreams = 4;                //! Number of CUDA streams
-        };
-
-    //! Export the TensorflowComputeGPU class to python
-    void export_TensorflowComputeGPU(pybind11::module& m);
-
-    template class TensorflowCompute<TFCommMode::GPU>;
-#endif  // ENABLE_CUDA
+        class TensorflowComputeGPU : public TensorflowCompute<TFCommMode::GPU>
+            {
+            public:
+            //! Constructor
+            TensorflowComputeGPU(pybind11::object& py_self,
+                std::shared_ptr<SystemDefinition> sysdef,
+                std::shared_ptr<NeighborList> nlist,
+                Scalar r_cut,
+                unsigned int nneighs,
+                FORCE_MODE force_mode,
+                unsigned int period);
+    
+            /*! Set what HOOMD autotuner params to use
+             *  \param enable whether to use autotuner
+             *  \param period period with which to use autotuner
+             */
+            void setAutotunerParams(bool enable, unsigned int period) override;
+    
+            protected:
+            /*! GPU version calls CPU reallocate and resets cudaStreams for comm objects
+             *  \sa TensorflowCompute::reallocate()
+             */
+            void reallocate() override;
+            
+            //! invokes a kernel version of prepareNeighbors
+            //! \sa TensorflowCompute::prepareNeighbors()
+            void prepareNeighbors() override;
+            
+            /*! Use a GPU kernel to transfer the virial values
+             *  \sa TensorflowCompute::receiveVirial()
+             */
+            void receiveVirial() override;
+            
+            /*! Use a GPU kernel to add up reference forces
+             *  \sa TensorflowCompute::sumReferenceForces()
+             */
+            void sumReferenceForces() override;
+    
+            private:
+            std::unique_ptr<Autotuner> m_tuner;  //! Autotuner for block size
+            cudaStream_t _streams[4];            //! Array of CUDA streams
+            size_t _nstreams = 4;                //! Number of CUDA streams
+            };
+    
+        //! Export the TensorflowComputeGPU class to python
+        void export_TensorflowComputeGPU(pybind11::module& m);
+    
+        template class TensorflowCompute<TFCommMode::GPU>;
+    #endif  // ENABLE_CUDA
 
     //! force implementation even if no CUDA found
     template class TensorflowCompute<TFCommMode::CPU>;
