@@ -120,7 +120,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       offset = i * batch_size;
       // compute batch size so that we don't exceed atom number.
       N = std::min(m_pdata->getN() - offset, batch_size);
-      std::cout << "Batch: " << i <<  "  " << offset << " " << N << std::endl;
       if (N < 1)
         break;
       // nneighs == 0 send positions only
@@ -139,13 +138,10 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       }
 
       // get positions
-      std::cout << "Receiving positions" << std::endl;
-      _positions_comm.receiveArray(m_pdata->getPositions(), offset);
-
+      _positions_comm.receiveArray(m_pdata->getPositions(), offset, batch_size);
       // Now we prepare forces if we're sending it
       // forces are size  N, not batch size so we only do this on first batch
       if (_force_mode == FORCE_MODE::hoomd2tf && i == 0) {
-        std::cout << "Receiving forces" << std::endl;
         if(_ref_forces.empty()) {
           _forces_comm.receiveArray(m_pdata->getNetForce());
         }
@@ -160,14 +156,12 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
       _forces_comm.setOffset(offset);
       _forces_comm.setBatchSize(N);
 
-      std::cout << "Finishing step" << std::endl;
       finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
 
       if (m_prof) m_prof->push("TensorflowCompute::Force Update");
 
       // now we receive virial from the update.
       if(_force_mode == FORCE_MODE::tf2hoomd) {
-          std::cout << "Receiving Virial" << std::endl;
 	  _virial_comm.setBatchSize(N * 9);
           receiveVirial(offset, N);
       }
@@ -180,7 +174,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep) {
 
     }
     if (m_prof) m_prof->pop();  // compute
-    std::cout << "TFCompute Complete" << std::endl;
   }
 
 }
@@ -206,7 +199,6 @@ void TensorflowCompute<M>::sumReferenceForces() {
       dest.data[i].y += src.data[i].y;
       dest.data[i].z += src.data[i].z;
       dest.data[i].w += src.data[i].w;
-      std::cout << "Adding ref forces " << i << dest.data[i].w << " "  << std::endl;
     }
   }
 }
@@ -218,7 +210,6 @@ void TensorflowCompute<M>::receiveVirial(unsigned int batch_offset, unsigned int
   ArrayHandle<Scalar> src(_virial_array, access_location::host,
                           access_mode::read);
   for (unsigned int i = 0; i < batch_size; i++) {
-    std::cout << "virial " << i + batch_offset << " " << src.data[i * 9 + 0] << std::endl;
     assert(5 * getVirialPitch() + i + batch_offset < m_virial.getNumElements());
     dest.data[0 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 0];  // xx
     dest.data[1 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 1];  // xy
@@ -283,8 +274,6 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
       // apply periodic boundary conditions
       dx = box.minImage(dx);
-      // if((i * _nneighs + nnoffset[bi]) >=  _nlist_array.getNumElements())
-      // std::cerr << "Error: " << bi << " " <<  _batch_size << " " << (bi * _nneighs + nnoffset[bi]) << " " << _nlist_array.getNumElements() << std::endl;
       if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
       buffer[bi * _nneighs + nnoffset[bi]].x = dx.x;
       buffer[bi * _nneighs + nnoffset[bi]].y = dx.y;
@@ -411,34 +400,34 @@ void TensorflowComputeGPU::setAutotunerParams(bool enable, unsigned int period)
 }
 
 void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int batch_size) {
-
-    ArrayHandle<Scalar4> d_nlist_array(_nlist_array, access_location::device, access_mode::overwrite);
-    ArrayHandle<unsigned int> d_n_neigh(m_nlist->getNNeighArray(), access_location::device, access_mode::read);
-    ArrayHandle<unsigned int> d_nlist(m_nlist->getNListArray(), access_location::device, access_mode::read);
-    ArrayHandle<unsigned int> d_head_list(m_nlist->getHeadList(), access_location::device, access_mode::read);
-    ArrayHandle<Scalar4> d_pos(m_pdata->getPositions(), access_location::device, access_mode::read);
-    m_tuner->begin();
-    gpu_reshape_nlist(d_nlist_array.data,
-                      d_pos.data,
-                      m_pdata->getN(),
-                      _nneighs,
+  ArrayHandle<Scalar4> d_nlist_array(_nlist_array, access_location::device, access_mode::overwrite);
+  ArrayHandle<unsigned int> d_n_neigh(m_nlist->getNNeighArray(), access_location::device, access_mode::read);
+  ArrayHandle<unsigned int> d_nlist(m_nlist->getNListArray(), access_location::device, access_mode::read);
+  ArrayHandle<unsigned int> d_head_list(m_nlist->getHeadList(), access_location::device, access_mode::read);
+  ArrayHandle<Scalar4> d_pos(m_pdata->getPositions(), access_location::device, access_mode::read);
+  CHECK_CUDA_ERROR();
+  m_tuner->begin();
+  gpu_reshape_nlist(d_nlist_array.data,
+		    d_pos.data,
+		    m_pdata->getN(),
+		    _nneighs,
                       offset,
-                      batch_size,
-                      m_pdata->getNGhosts(),
-                      m_pdata->getBox(),
-                      d_n_neigh.data,
-                      d_nlist.data,
-                      d_head_list.data,
-                      this->m_nlist->getNListArray().getPitch(),
-                      m_tuner->getParam(),
-                      m_exec_conf->getComputeCapability(),
-                      m_exec_conf->dev_prop.maxTexture1DLinear,
-                      _r_cut,
-		      _nlist_comm.getCudaStream());
-
-    if(m_exec_conf->isCUDAErrorCheckingEnabled())
-        CHECK_CUDA_ERROR();
-    m_tuner->end();
+		    batch_size,
+		    m_pdata->getNGhosts(),
+		    m_pdata->getBox(),
+		    d_n_neigh.data,
+		    d_nlist.data,
+		    d_head_list.data,
+		    this->m_nlist->getNListArray().getPitch(),
+		    m_tuner->getParam(),
+		    m_exec_conf->getComputeCapability(),
+		    m_exec_conf->dev_prop.maxTexture1DLinear,
+		    _r_cut,
+		    _nlist_comm.getCudaStream());
+  
+  if(m_exec_conf->isCUDAErrorCheckingEnabled())
+    CHECK_CUDA_ERROR();
+  m_tuner->end();
 }
 
 void TensorflowComputeGPU::receiveVirial(unsigned int batch_offset, unsigned int batch_size) {

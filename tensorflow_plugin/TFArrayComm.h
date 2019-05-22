@@ -71,21 +71,24 @@ namespace hoomd_tf {
 
     /*! Copy contents of given array to our array
     */
-    void receiveArray(const GlobalArray<T>& array, int offset = 0) {
-      assert(offset <= array.getNumElements());
+    void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0) {      
+      if(!size) {
+	size = _comm_struct.mem_size;
+      }
+      assert(offset + size / sizeof(T) <= array.getNumElements());
       if (M == TFCommMode::CPU) {
         ArrayHandle<T> handle(*_array, access_location::host,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::host,
                         access_mode::read);
-        memcpy(handle.data, ohandle.data + offset, _comm_struct.mem_size);
+        memcpy(handle.data, ohandle.data + offset, size);
       } else {
         #ifdef ENABLE_CUDA
         ArrayHandle<T> handle(*_array, access_location::device,
                               access_mode::overwrite);
         ArrayHandle<T> ohandle(array, access_location::device,
                   access_mode::read);
-        cudaMemcpy(handle.data, ohandle.data + offset, _comm_struct.mem_size,
+        cudaMemcpy(handle.data, ohandle.data + offset, size,
                   cudaMemcpyDeviceToDevice);
         CHECK_CUDA_ERROR();
         #endif
