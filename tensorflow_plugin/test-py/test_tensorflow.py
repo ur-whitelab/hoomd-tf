@@ -309,10 +309,10 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=3, batch_size=4)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=3)
             hoomd.run(10)
         # now load checkpoint
-        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf:0', 'htf-step:0'])
+        variables  = hoomd.tensorflow_plugin.load_variables(model_dir, ['avg-rdf:0'])
         assert np.sum(variables['avg-rdf:0']) > 0
 
 

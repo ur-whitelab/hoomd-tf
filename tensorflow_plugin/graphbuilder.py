@@ -152,7 +152,7 @@ class graph_builder:
                 self.out_nodes.append(move_op)
                 with tf.control_dependencies([move_op]):
                     reset_op = batch_store.assign(tf.cond(tf.equal(self.batch_index,tf.constant(0)),
-                                            true_fn=lambda: 0.0,
+                                            true_fn=lambda: tf.zeros_like(tensor),
                                             false_fn=lambda: batch_store))
                     self.out_nodes.append(reset_op)
                     with tf.control_dependencies([reset_op]):
