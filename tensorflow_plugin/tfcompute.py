@@ -14,7 +14,8 @@ import tensorflow as tf
 class tfcompute(hoomd.compute._compute):
     def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
                   bootstrap=None, bootstrap_map=None,
-                  _debug_mode=False, _mock_mode=False, write_tensorboard=False):
+                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
+                  use_xla=False):
 
         #so delete won't fail
         self.tfm = None
@@ -40,6 +41,7 @@ class tfcompute(hoomd.compute._compute):
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
         self.feed_dict = None
+        self.use_xla = use_xla
 
     def __enter__(self):
         if not self.mock_mode:
@@ -193,7 +195,8 @@ class tfcompute(hoomd.compute._compute):
                 'save_period': self.save_period,
                 'debug': self.debug_mode,
                 'primary': hoomd.comm.get_rank() == 0,
-                'device': self.device}
+                'device': self.device,
+                'use_xla': self.use_xla}
         self.q.put(args)
         message =  ['Starting TF Manager with:']
         for k,v in args.items():
