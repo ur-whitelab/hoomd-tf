@@ -7,14 +7,17 @@ from os import path
 import pickle
 import hoomd
 
-def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
-     # just in case
+
+def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
+    # just in case
     tf.reset_default_graph()
     # load graph
-    tf.train.import_meta_graph(path.join('{}/'.format(model_directory),'model.meta'), import_scope='')
+    tf.train.import_meta_graph(path.join('{}/'.format(
+                model_directory), 'model.meta'), import_scope='')
     # add colons if missing
     tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
-    run_dict = {n:tf.get_default_graph().get_tensor_by_name(n) for n in tf_names}
+    run_dict = {n: tf.get_default_graph(
+            ).get_tensor_by_name(n) for n in tf_names}
 
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -26,7 +29,8 @@ def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
             checkpoint = 'latest'
         elif type(checkpoint) == int:
             # get specific checkpoint number
-            checkpoint_str = '{}{}model-{}'.format(model_directory, path.sep, checkpoint)
+            checkpoint_str = '{}{}model-{}'.format(model_directory,
+                                                   path.sep, checkpoint)
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
         else:
@@ -36,13 +40,14 @@ def load_variables(model_directory, names, checkpoint = -1, feed_dict={}):
         result = sess.run(run_dict, feed_dict=feed_dict)
     # re add without colon if necessary
     combined_result = {}
-    for k,v in result.items():
+    for k, v in result.items():
         combined_result[k] = v
         combined_result[k.split(':')[0]] = v
     return combined_result
 
 
-def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkpoint = -1, feed_dict = {}):
+def compute_pairwise_potential(model_directory, r, potential_tensor_name,
+                               checkpoint=-1, feed_dict={}):
     ''' Compute the pairwise potential at r for the given model.
 
     Parameters
@@ -54,10 +59,13 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
     potential_tensor_name
         The tensor containing potential energy.
     checkpoint
-        Which checkpoint to load. Default is -1, which loads latest checkpoint. An integer indicates loading
-        from the model directory. If you pass a string, it is interpreted as a path.
+        Which checkpoint to load. Default is -1, which loads latest checkpoint.
+        An integer indicates loading
+        from the model directory. If you pass a string, it is interpreted
+        as a path.
     feed_dict
-        Allows you to add any other placeholder values that need to be added to compute potential in your model
+        Allows you to add any other placeholder values that need to be added
+        to compute potential in your model
     Returns
     -------
     A 1D array of potentials corresponding the pairwise distances in r.
@@ -65,17 +73,20 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
     # just in case
     tf.reset_default_graph()
     # load graph
-    tf.train.import_meta_graph(path.join('{}/'.format(model_directory),'model.meta'), import_scope='')
+    tf.train.import_meta_graph(path.join('{}/'.format(
+                model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
-    if not ':' in potential_tensor_name:
+    if ':' not in potential_tensor_name:
         potential_tensor_name += ':0'
-    potential_tensor = tf.get_default_graph().get_tensor_by_name(potential_tensor_name)
-    nlist_tensor = tf.get_default_graph().get_tensor_by_name(model_params['nlist'])
+    potential_tensor = tf.get_default_graph(
+        ).get_tensor_by_name(potential_tensor_name)
+    nlist_tensor = tf.get_default_graph(
+        ).get_tensor_by_name(model_params['nlist'])
 
-    #build nlist
+    # build nlist
     NN = model_params['NN']
-    np_nlist = np.zeros( (2, NN, 4) )
+    np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
 
     with tf.Session() as sess:
@@ -95,17 +106,19 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name, checkp
             checkpoint_str = checkpoint
             checkpoint = tf.train.load_checkpoint(checkpoint_str)
             saver.restore(sess, checkpoint_str)
-        for i,ri in enumerate(r):
-            np_nlist[0,0,1] = ri
-            np_nlist[1,0,1] = -ri
+        for i, ri in enumerate(r):
+            np_nlist[0, 0, 1] = ri
+            np_nlist[1, 0, 1] = -ri
             # run including passed in feed_dict
-            result = sess.run(potential_tensor, feed_dict = {**feed_dict, nlist_tensor: np_nlist} )
+            result = sess.run(potential_tensor, feed_dict={
+                    **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
     return potential
 
 
 def find_molecules(system):
-    '''Given a hoomd system, this will return a mapping from molecule index to particle index
+    '''Given a hoomd system, this will return a mapping
+        from molecule index to particle index
 
         This is a slow function and should only be called once.
     '''
@@ -135,7 +148,7 @@ def find_molecules(system):
             for bi, bond in enumerate(bonds):
                 # see if bond contains pi and an unseen atom
                 if (pi == bond[0] and bond[1] in unmapped) or \
-                    (pi == bond[1] and bond[0] in unmapped):
+                        (pi == bond[1] and bond[0] in unmapped):
                     new_pi = bond[0] if pi == bond[1] else bond[1]
                     unmapped.remove(new_pi)
                     mapped.add(new_pi)
@@ -152,40 +165,44 @@ def find_molecules(system):
     mapping.sort(key=lambda x: min(x))
     return mapping
 
-def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
-    ''' This will create the necessary indices and values for defining a sparse tensor in
+
+def sparse_mapping(molecule_mapping, molecule_mapping_index,
+                   system=None):
+    ''' This will create the necessary indices and values for
+    defining a sparse tensor in
     tensorflow that is a mass-weighted M x N mapping operator.
 
     Parameters
     -----------
     molecule_mapping
-        This is a list of L x M matrices, where M is the number of atoms in the molecule and L
-        is the number of coarse-grain sites that should come out of the mapping.
-        There should be one matrix per molecule. The ordering of the atoms should follow
+        This is a list of L x M matrices, where M is the number
+        of atoms in the molecule and L is the number of coarse-grain
+        sites that should come out of the mapping.
+        There should be one matrix per molecule.
+        The ordering of the atoms should follow
         what is defined in the output from find_molecules
     molecule_mapping_index
         This is the output from find_molecules.
     system
-        The hoomd system. This is used to get mass values for the mapping, if you would like to
+        The hoomd system. This is used to get mass values
+        for the mapping, if you would like to
         weight by mass of the atoms.
     Returns
     -------
-        A sparse tensorflow tensor of dimension N x N, where N is number of atoms
+        A sparse tensorflow tensor of dimension N x N,
+        where N is number of atoms
     '''
     import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
-
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
     M = sum([m.shape[0] for m in molecule_mapping])
-
-
     # create indices
     indices = []
     values = []
     total_i = 0
-    for mmi,mm in zip(molecule_mapping_index, molecule_mapping):
+    for mmi, mm in zip(molecule_mapping_index, molecule_mapping):
         idx = []
         vs = []
         masses = [0 for _ in range(mm.shape[0])]
@@ -216,7 +233,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index, system=None):
         indices.extend(idx)
         values.extend(vs)
         total_i += len(masses)
-
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
@@ -224,7 +240,8 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
     '''
-    # https://en.wikipedia.org/wiki/Center_of_mass#Systems_with_periodic_boundary_conditions
+    # https://en.wikipedia.org/wiki/
+    # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
     box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
@@ -234,40 +251,35 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     ximean = tf.sparse.matmul(mapping, xi)
     zetamean = tf.sparse.matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
-    return tf.identity(thetamean  / np.pi / 2 * box_dim, name=name)
+    return tf.identity(thetamean/np.pi/2*box_dim, name=name)
 
 
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
-
     M = tf.shape(positions)[0]
-
-    #Making 3 dim CG nlist
-    qexpand = tf.expand_dims(positions,1) # one column
-    qTexpand = tf.expand_dims(positions,0) #one row
-
+    # Making 3 dim CG nlist
+    qexpand = tf.expand_dims(positions, 1)  # one column
+    qTexpand = tf.expand_dims(positions, 0)  # one row
     # repeat it to make matrix of all positions
-    qtile = tf.tile(qexpand,[1,M,1])
-    qTtile = tf.tile(qTexpand, [M,1,1])
-
-    #subtract them to get distance matrix
+    qtile = tf.tile(qexpand, [1, M, 1])
+    qTtile = tf.tile(qTexpand, [M, 1, 1])
+    # subtract them to get distance matrix
     dist_mat = qTtile - qtile
-
     # apply minimum image
-    box = tf.reshape(tf.convert_to_tensor([system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+    box = tf.reshape(tf.convert_to_tensor([
+                system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
-
     # mask distance matrix to remove things beyond cutoff and zeros
-    dist = tf.norm(dist_mat, axis = 2)
+    dist = tf.norm(dist_mat, axis=2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
     dist_mat_r = dist * mask_cast
-    topk = tf.math.top_k(dist_mat_r, k = NN, sorted = sorted)
+    topk = tf.math.top_k(dist_mat_r, k=NN, sorted=sorted)
 
     # we have the topk, but now we need to remove others
-    idx = tf.tile(tf.reshape(tf.range(M), [-1,1]), [1, NN])
+    idx = tf.tile(tf.reshape(tf.range(M), [-1, 1]), [1, NN])
     idx = tf.reshape(idx, [-1, 1])
-    flat_idx = tf.concat([idx,tf.reshape(topk.indices,[-1,1])],-1)
-    nlist = tf.gather_nd(dist_mat * tf.reshape(mask_cast, [M, M,1]),flat_idx)
-    nlist = tf.reshape(nlist,[-1,NN,3])
+    flat_idx = tf.concat([idx, tf.reshape(topk.indices, [-1, 1])], -1)
+    nlist = tf.gather_nd(dist_mat * tf.reshape(mask_cast, [M, M, 1]), flat_idx)
+    nlist = tf.reshape(nlist, [-1, NN, 3])
 
     return nlist
