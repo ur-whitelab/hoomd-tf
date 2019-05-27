@@ -8,12 +8,12 @@ import tensorflow as tf
 
 
 if(len(argv) != 3):
-    print('Usage: benchmark_xla.py [N_PARTICLES] [USE_XLA]')
+    print('Usage: benchmark_xla.py [N_PARTICLES] [USE_XLA (as int)]')
     exit(0)
 
 N = int(argv[1])
-use_xla=bool(argv[2])
-model_dir = '/scratch/rbarret8/benchmarking'
+use_xla=bool(int(argv[2]))
+model_dir = '/scratch/rbarret8/benchmarking_{}_xla'.format(use_xla)
 
 #make a simple ANN, based on: https://medium.com/@curiousily/tensorflow-for-hackers-part-ii-building-simple-neural-network-2d6779d2f91b
 
