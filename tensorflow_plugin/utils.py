@@ -148,7 +148,7 @@ def find_molecules(system):
             for bi, bond in enumerate(bonds):
                 # see if bond contains pi and an unseen atom
                 if (pi == bond[0] and bond[1] in unmapped) or \
-                (pi == bond[1] and bond[0] in unmapped):
+                        (pi == bond[1] and bond[0] in unmapped):
                     new_pi = bond[0] if pi == bond[1] else bond[1]
                     unmapped.remove(new_pi)
                     mapped.add(new_pi)
