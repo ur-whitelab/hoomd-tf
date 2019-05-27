@@ -147,7 +147,7 @@ def find_molecules(system):
             found_bond = False
             for bi, bond in enumerate(bonds):
                 # see if bond contains pi and an unseen atom
-                if (pi == bond[0] and bond[1] in unmapped) or
+                if (pi == bond[0] and bond[1] in unmapped) or \
                 (pi == bond[1] and bond[0] in unmapped):
                     new_pi = bond[0] if pi == bond[1] else bond[1]
                     unmapped.remove(new_pi)
@@ -228,7 +228,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
             assert sum([m == 0 for m in masses]) == 0
 
             for i in range(len(idx)):
-                vs[i] / = masses[idx[i][0] - total_i]
+                vs[i] /= masses[idx[i][0] - total_i]
         # all done
         indices.extend(idx)
         values.extend(vs)
