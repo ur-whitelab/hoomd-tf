@@ -572,9 +572,25 @@ Continue following the compling steps below to complete install.
 The following packages are required to compile:
 ```
 tensorflow == 1.12
-hoomd-blue == 2.5.1
+hoomd-blue >= 2.5.0
 numpy
 ```
+
+## Simple Compiling
+
+This method assumes you already have installed hoomd-blue. You could do that,
+for example, via `conda install -c conda-forget hoomd=2.5.2`.
+
+```bash
+git clone https://github.com/ur-whitelab/hoomd-tf
+cd hoomd-tf && mkdir build && cd build
+cmake ..
+make install
+```
+
+## Compiling with Hoomd-Blue
+
+Use this method if you need to compile with developer flags on or other special requirements.
 
 ```bash
 git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
@@ -586,10 +602,11 @@ We are on release v2.5.1 of hoomd-blue
 cd hoomd-blue && git checkout tags/v2.5.1
 ```
 
-Put our plugin in the source directory. Make a softlink:
+Now we put our plugin in the source directory with a softlink:
 
 ```bash
-ln -s $HOME/hoomd-tf/htf $HOME/hoomd-blue/hoomd
+git clone https://github.com/ur-whitelab/hoomd-tf
+ln -s hoomd-tf/tensorflow_plugin $HOME/hoomd-blue/hoomd
 ```
 
 Now compile (from hoomd-blue directory). Modify options for speed if necessary.
@@ -616,7 +633,7 @@ export PYTHONPATH="$PYTHONPATH:`pwd`"
 
 ## Conda Environments
 
-If you are using a conda environment, you may need to force CMAKE to find your 
+If you are using a conda environment, you may need to force CMAKE to find your
 python environment. The following additional flags can help with this:
 
 ```bash
