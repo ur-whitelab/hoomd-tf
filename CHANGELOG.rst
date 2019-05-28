@@ -15,6 +15,7 @@ v0.2 (Not yet released)
 - Change output logging to only output TF items to the tf_manager.log and also respect the log-level set in hoomd.
 - Add C++ tests and coverage analysis.
 - Add timing tests for assessing regression in performance.
+- Added MPI tests with domain decomposition
 
 *Bug Fixes*
 
