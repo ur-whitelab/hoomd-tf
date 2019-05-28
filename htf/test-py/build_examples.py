@@ -3,7 +3,7 @@
 
 import tensorflow as tf
 import os
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 import pickle
 
 

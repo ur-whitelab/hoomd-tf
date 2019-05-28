@@ -1,7 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-from hoomd.tensorflow_plugin import _tensorflow_plugin
+from hoomd.htf import _htf
 import numpy as np
 import hoomd
 
@@ -19,8 +19,8 @@ class tf_array_comm:
             hoomd.context.initialize()
             hoomd_context = hoomd.context.exec_conf
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_ref = _tensorflow_plugin.TFArrayCommCPU(
-                _tensorflow_plugin.int2ptr(ptr_address))
+            self.cpp_ref = _htf.TFArrayCommCPU(
+                _htf.int2ptr(ptr_address))
         else:
             raise RuntimeError('Can only build TFArray Comm on CPU')
 

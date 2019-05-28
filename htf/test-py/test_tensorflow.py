@@ -3,7 +3,7 @@
 
 import hoomd
 import hoomd.md
-import hoomd.tensorflow_plugin
+import hoomd.htf
 import unittest
 import os
 import tempfile
@@ -37,7 +37,7 @@ def compute_forces(system, rcut):
 class test_access(unittest.TestCase):
     def test_access(self):
         model_dir = build_examples.simple_potential()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir,
+        with hoomd.htf.tfcompute(model_dir,
                                                _mock_mode=True) as tfcompute:
             hoomd.context.initialize('--gpu_error_checking')
             N = 3 * 3
@@ -60,7 +60,7 @@ class test_access(unittest.TestCase):
 class test_compute(unittest.TestCase):
     def test_force_overwrite(self):
         model_dir = build_examples.simple_potential()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -86,7 +86,7 @@ class test_compute(unittest.TestCase):
 
     def test_nonlist(self):
         model_dir = build_examples.benchmark_nonlist_graph()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -99,7 +99,7 @@ class test_compute(unittest.TestCase):
 
     def test_trainable(self):
         model_dir = build_examples.trainable_graph(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir,
+        with hoomd.htf.tfcompute(model_dir,
                                                write_tensorboard=True
                                                ) as tfcompute:
             hoomd.context.initialize()
@@ -119,7 +119,7 @@ class test_compute(unittest.TestCase):
 
     def test_bootstrap(self):
         model_dir = build_examples.trainable_graph(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(
+        with hoomd.htf.tfcompute(
             model_dir, bootstrap=build_examples.bootstrap_graph(
                 9 - 1, model_dir),
             bootstrap_map={'epsilon': 'lj-epsilon', 'sigma': 'lj-sigma'
@@ -138,7 +138,7 @@ class test_compute(unittest.TestCase):
 
     def test_print(self):
         model_dir = build_examples.print_graph(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -157,7 +157,7 @@ class test_compute(unittest.TestCase):
 
     def test_noforce_graph(self):
         model_dir = build_examples.noforce_graph()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -177,7 +177,7 @@ class test_compute(unittest.TestCase):
 
     def test_feeddict_func(self):
         model_dir = build_examples.feeddict_graph()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -199,7 +199,7 @@ class test_compute(unittest.TestCase):
 
     def test_feeddict(self):
         model_dir = build_examples.feeddict_graph()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -220,7 +220,7 @@ class test_compute(unittest.TestCase):
     def test_lj_forces(self):
         N = 3 * 3
         model_dir = build_examples.lj_graph(N - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir,
+        with hoomd.htf.tfcompute(model_dir,
                                                _mock_mode=False) as tfcompute:
             hoomd.context.initialize()
             T = 10
@@ -267,7 +267,7 @@ class test_compute(unittest.TestCase):
 
     def test_running_mean(self):
         model_dir = build_examples.lj_running_mean(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
@@ -280,7 +280,7 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
             hoomd.run(10)
             # now load checkpoint
-        variables = hoomd.tensorflow_plugin.load_variables(
+        variables = hoomd.htf.load_variables(
             model_dir, ['average-energy', 'htf-step:0'])
         assert variables['htf-step'] == 11.0
 
@@ -288,7 +288,7 @@ class test_compute(unittest.TestCase):
         Ne = 5
         c = hoomd.context.initialize()
         model_dir = build_examples.lj_force_output(Ne ** 2 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             rcut = 3.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=2.0),
@@ -306,7 +306,7 @@ class test_compute(unittest.TestCase):
             tfcompute.set_reference_forces(lj)
             hoomd.run(300)
             # now load checkpoint and check error
-            variables = hoomd.tensorflow_plugin.load_variables(
+            variables = hoomd.htf.load_variables(
                 model_dir, ['error', 'forces'])
             assert abs(variables['error']) < 1e-5
             # make sure transferred from tfcompute to tf correctly
@@ -323,7 +323,7 @@ class test_compute(unittest.TestCase):
 
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
@@ -336,13 +336,13 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=3)
             hoomd.run(10)
         # now load checkpoint
-        variables = hoomd.tensorflow_plugin.load_variables(
+        variables = hoomd.htf.load_variables(
             model_dir, ['avg-rdf:0', 'htf-step:0'])
         assert np.sum(variables['avg-rdf:0']) > 0
 
     def test_lj_energy(self):
         model_dir = build_examples.lj_graph(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -375,7 +375,7 @@ class test_compute(unittest.TestCase):
         # matching exactly, I'll leave the tol
         # set that high.
         model_dir = build_examples.lj_graph(9 - 1)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir,
+        with hoomd.htf.tfcompute(model_dir,
                                                _mock_mode=False) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3

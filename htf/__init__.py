@@ -6,7 +6,7 @@
 # need to import all submodules defined in this directory
 
 # NOTE: adjust the import statement to match the name of the template
-# (here: tensorflow_plugin)
+# (here: htf)
 # these are necessary to link?
 
 from .tfcompute import tfcompute

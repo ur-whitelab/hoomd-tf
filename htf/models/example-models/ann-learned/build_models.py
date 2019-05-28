@@ -1,7 +1,7 @@
 import hoomd
 import tensorflow as tf
 import numpy as np
-import hoomd.tensorflow_plugin
+import hoomd.htf
 from sys import argv as argv
 
 
@@ -75,15 +75,15 @@ N_hidden_layers = 1
 
 
 def make_train_graph(NN, N_hidden_nodes, N_hidden_layers):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN, output_forces=False)
+    graph = hoomd.htf.graph_builder(NN, output_forces=False)
     # get neighbor list
     nlist = graph.nlist[:, :, :3]
     # get the interatomic radii
-    r = hoomd.tensorflow_plugin.graph_builder.safe_norm(nlist, axis=2)
+    r = hoomd.htf.graph_builder.safe_norm(nlist, axis=2)
     nn_r = tf.Variable(tf.zeros(shape=[64, NN]), trainable=False)
     nn_r.assign(r)
     histo3 = tf.summary.histogram('neighbor radius', nn_r)
-    r_inv = hoomd.tensorflow_plugin.graph_builder.safe_div(1., r)
+    r_inv = hoomd.htf.graph_builder.safe_div(1., r)
     print('r_inv shape: {}'.format(r_inv.shape))
     # make weights tensors, using our number of hidden nodes
     # NxNN out because we want pairwise forces
@@ -122,12 +122,12 @@ def make_train_graph(NN, N_hidden_nodes, N_hidden_layers):
 
 
 def make_force_graph(NN, N_hidden_nodes, N_hidden_layers):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN)
+    graph = hoomd.htf.graph_builder(NN)
     # get neighbor list
     nlist = graph.nlist[:, :, :3]
     # get the interatomic radii
-    r = hoomd.tensorflow_plugin.graph_builder.safe_norm(nlist, axis=2)
-    r_inv = hoomd.tensorflow_plugin.graph_builder.safe_div(1., r)
+    r = hoomd.htf.graph_builder.safe_norm(nlist, axis=2)
+    r_inv = hoomd.htf.graph_builder.safe_div(1., r)
     r_inv = tf.reshape(r_inv, shape=[-1, 1])
     # make weights tensors, using our number of hidden nodes
     weights, biases = make_weights_and_biases(N_hidden_nodes, N_hidden_layers)

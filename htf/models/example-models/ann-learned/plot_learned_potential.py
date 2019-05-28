@@ -4,7 +4,7 @@ import hoomd.data
 import hoomd.init
 import hoomd.dump
 import hoomd.group
-from hoomd.tensorflow_plugin import tfcompute
+from hoomd.htf import tfcompute
 import tensorflow as tf
 from sys import argv as argv
 from math import sqrt
