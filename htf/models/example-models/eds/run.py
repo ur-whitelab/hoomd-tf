@@ -1,8 +1,8 @@
 import hoomd
 import hoomd.md
-import hoomd.tensorflow_plugin
+import hoomd.htf
 import tensorflow as tf
-with hoomd.tensorflow_plugin.tfcompute('/tmp/eds') as tfcompute:
+with hoomd.htf.tfcompute('/tmp/eds') as tfcompute:
     hoomd.context.initialize()
     N = 64
     NN = 30

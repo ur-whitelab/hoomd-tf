@@ -1,5 +1,5 @@
 import hoomd
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 import unittest
 import numpy as np
 import tensorflow as tf
@@ -17,7 +17,7 @@ class test_loading(unittest.TestCase):
         as_op = v.assign(tf.reduce_sum(h))
         g.save(model_dir, out_nodes=[as_op])
         # run once
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -199,7 +199,7 @@ class test_mappings(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
                                            n=[3, 3, 3])
         model_dir = build_examples.custom_nlist(3**3 - 1, rcut, system)
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -209,7 +209,7 @@ class test_mappings(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
             # add lj so we can hopefully get particles mixing
             hoomd.run(100)
-        variables = hoomd.tensorflow_plugin.load_variables(
+        variables = hoomd.htf.load_variables(
             model_dir, ['hoomd-r', 'htf-r'])
         # the two nlists need to be sorted to be compared
         nlist = variables['hoomd-r']

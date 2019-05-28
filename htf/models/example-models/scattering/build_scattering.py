@@ -1,5 +1,5 @@
 import tensorflow as tf
-from hoomd.tensorflow_plugin import graph_builder
+from hoomd.htf import graph_builder
 b = -3.739  # assuming bunch of Hydrogens
 N = 64
 graph = graph_builder(N, N-1, output_forces=False)

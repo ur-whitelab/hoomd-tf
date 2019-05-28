@@ -4,7 +4,7 @@ import hoomd.dump
 import hoomd.group
 import hoomd.benchmark
 import numpy as np
-from hoomd.tensorflow_plugin import tfcompute
+from hoomd.htf import tfcompute
 import tensorflow as tf
 from math import sqrt
 from sys import argv as argv
@@ -21,9 +21,8 @@ np.random.seed(42)
 # start_time = time.time()
 
 
-with hoomd.tensorflow_plugin.tfcompute(model_dir,
-                                       _mock_mode=False,
-                                       write_tensorboard=True) as tfcompute:
+
+with hoomd.htf.tfcompute(model_dir,_mock_mode=False, write_tensorboard=True) as tfcompute:
     hoomd.context.initialize('--mode=gpu')
     rcut = 3.0
     sqrt_N = int(sqrt(N))

@@ -2,7 +2,7 @@ import hoomd
 import hoomd.md
 import hoomd.dump
 import hoomd.group
-from hoomd.tensorflow_plugin import tfcompute
+from hoomd.htf import tfcompute
 import tensorflow as tf
 from sys import argv as argv
 from math import sqrt
@@ -12,7 +12,7 @@ if(len(argv) != 2):
 N = int(argv[1])
 training_dir = '/scratch/rbarret8/ann-training'
 inference_dir = '/scratch/rbarret8/ann-inference'
-with hoomd.tensorflow_plugin.tfcompute(bootstrap=training_dir
+with hoomd.htf.tfcompute(bootstrap=training_dir
                                        ) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')
     sqrt_N = int(sqrt(N))  # MAKE SURE THIS IS A WHOLE NUMBER???

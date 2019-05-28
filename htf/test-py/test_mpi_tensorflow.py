@@ -1,4 +1,4 @@
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 import hoomd
 from hoomd import md
 from hoomd import comm
@@ -10,7 +10,7 @@ import numpy as np
 
 def run_tf_lj(N, T):
     model_dir = build_examples.lj_graph(N - 1)
-    with hoomd.tensorflow_plugin.tfcompute(model_dir,
+    with hoomd.htf.tfcompute(model_dir,
                                            _mock_mode=False) as tfcompute:
         rcut = 5.0
         system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
