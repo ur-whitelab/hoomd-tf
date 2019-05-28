@@ -54,7 +54,7 @@ TensorflowCompute<M>::TensorflowCompute(
   if (_force_mode == FORCE_MODE::tf2hoomd) {
     // flags[pdata_flag::isotropic_virial] = 1;
     flags[pdata_flag::pressure_tensor] = 1;
-    m_exec_conf->msg->notice(2)
+    m_exec_conf->msg->notice(5)
         << "Setting flag indicating virial modification will occur"
         << std::endl;
   }
@@ -345,7 +345,7 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
     if(_nneighs > 0) {
       _nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
       if(_nneighs != nneighs) {
-	m_exec_conf->msg->notice(2) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
+	m_exec_conf->msg->notice(5) << "set nneighs to be " << _nneighs << " to match GPU nlist array pitch" << std::endl;
       }
     }
     reallocate(); //must be called so streams are correctly set

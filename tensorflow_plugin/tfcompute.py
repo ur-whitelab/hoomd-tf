@@ -58,7 +58,7 @@ class tfcompute(hoomd.compute._compute):
             self.tasklock.exit()
             time.sleep(1)
             if self.tfm and self.tfm.is_alive():
-                hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
+                hoomd.context.msg.notice(3, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
 
     # feed_dict = takes in tfcompute (which gives access
@@ -106,7 +106,7 @@ class tfcompute(hoomd.compute._compute):
             self.force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd
         else:
             self.force_mode_code = _tensorflow_plugin.FORCE_MODE.hoomd2tf
-        hoomd.context.msg.notice(2, 'Force mode is {}'
+        hoomd.context.msg.notice(5, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
         # if graph is not outputting (input) then tfcompute should
         # be outputting them
@@ -156,7 +156,7 @@ class tfcompute(hoomd.compute._compute):
                 raise ValueError('given force does not seem'
                                  ' like a hoomd force')
             self.cpp_force.addReferenceForce(f.cpp_force)
-            hoomd.context.msg.notice(2, 'Will use given force for '
+            hoomd.context.msg.notice(5, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
 
     def rcut(self):
