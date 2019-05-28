@@ -9,8 +9,27 @@
 #include <hoomd/Index1D.h>
 #include <hoomd/HOOMDMath.h>
 
-extern "C" cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int N, cudaStream_t stream);
-extern "C" cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int N, unsigned int pitch, cudaStream_t stream);
+/*! \file TensorflowCompute.cuh
+ *  \brief Declarations of GPU version of some TensorflowCompute methods
+ */ 
+
+//! Add Scalar4 type arrays in parallel on GPU by invoking the kernel.
+extern "C" cudaError_t gpu_add_scalar4(Scalar4 *dest,
+                                       Scalar4 *src,
+                                       unsigned int N,
+                                       cudaStream_t stream);
+
+//! Add up virial arrays in parallel on GPU by invoking the kernel.
+extern "C" cudaError_t gpu_add_virial(Scalar *dest,
+                                      Scalar *src,
+                                      unsigned int N,
+                                      unsigned int pitch,
+                                      cudaStream_t stream);
+
+/*! Reshape neighbor list to fit into GPU memory in an agreeable way for TensorFlow.
+ *  Attempts to use texture memory first, where possible, or will
+ *  use device main memory if not. Invokes kernel function.
+ */
 extern "C" cudaError_t gpu_reshape_nlist(Scalar4* dest,
                                          const Scalar4 *d_pos,
                                          const unsigned int N,
