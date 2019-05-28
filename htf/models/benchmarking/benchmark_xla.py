@@ -101,7 +101,7 @@ def make_train_graph(NN, N_hidden_nodes, N_hidden_layers):
     r = hoomd.htf.graph_builder.safe_norm(nlist, axis=2)
     nn_r = tf.Variable(tf.zeros(shape=[64, NN]), trainable=False)
     nn_r.assign(r)
-    r_inv = hoomd.htf.graph_builder.safe_div(1.,r)
+    r_inv = hoomd.htf.graph_builder.safe_div(1., r)
     # make weights tensors, using our number of hidden nodes
     # NxNN out because we want pairwise forces
     r_inv = tf.reshape(r_inv, shape=[-1,1], name='r_inv')

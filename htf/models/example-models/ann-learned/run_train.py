@@ -22,9 +22,7 @@ np.random.seed(42)
 
 
 
-with hoomd.htf.tfcompute(model_dir, 
-                         _mock_mode=False,
-                        write_tensorboard=True) as tfcompute:
+with hoomd.htf.tfcompute(model_dir,_mock_mode=False, write_tensorboard=True) as tfcompute:
     hoomd.context.initialize('--mode=gpu')
     rcut = 3.0
     sqrt_N = int(sqrt(N))
