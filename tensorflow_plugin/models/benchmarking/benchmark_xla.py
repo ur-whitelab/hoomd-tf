@@ -12,7 +12,7 @@ import tensorflow as tf
 
 
 if(len(argv) != 3):
-    print 'Usage: benchmark_xla.py [N_PARTICLES] [USE_XLA (as int)]'
+    print('Usage: benchmark_xla.py [N_PARTICLES] [USE_XLA (as int)]')
     exit(0)
 
 N = int(argv[1])
@@ -73,15 +73,16 @@ def build_neural_network(x,
     input_layer = perceptron_layer(x, weights['w0'], biases['b0'], keep_prob)
     hidden_layers = []
     for i in range(N_layers):
-        hidden_layers.append(perceptron_layer(
-            (input_layer if i==0 else hidden_layers[i-1]),
-            weights=weights['w{}'.format(i+1)],
-            biases=biases['b{}'.format(i+1)],
-            keep_prob))
+        hidden_layers.append(
+            perceptron_layer(
+                (input_layer if i==0 else hidden_layers[i-1]),
+                weights['w{}'.format(i+1)],
+                biases['b{}'.format(i+1)],
+                keep_prob))
     output_layer = perceptron_layer(
         (input_layer if N_hidden_layers==0 else hidden_layers[-1]),
-        weights=weights['out'],
-        biases=biases['out'],
+        weights['out'],
+        biases['out'],
         final_layer=True)
     return(output_layer)
 
