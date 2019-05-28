@@ -6,20 +6,21 @@ v0.2 (Not yet released)
 
 *New Features*
 
-- Make it possible to disable hoomd-tf compute in script.
-- Make code consistent for hoomd-blue plugin.
-- Add config options and test XLA benchmarks for CG mapping operators code and other multistep complex code.
+- Made code consistent for hoomd-blue plugin.
+- Added config options and tested XLA benchmarks for CG mapping operators code and other multistep complex code.
 
 *Enhancements*
 
-- Change output logging to only output TF items to the tf_manager.log and also respect the log-level set in hoomd.
+- Changed output logging to only output TF items to the tf_manager.log and
+- The log-level is consistent with that in hoomd.
 - Add C++ tests and coverage analysis.
-- Add timing tests for assessing regression in performance.
-- Added MPI tests with domain decomposition
+- Swtiched to using hoomd-blue cuda error codes.
+- Added MPI tests with domain decomposition.
 
 *Bug Fixes*
 
-- Batch positions/nlist for execution because very large systems cannot fit a complex NN model into memory,
+- Cmake now checks for TF and hoomd versions while building hoomd-tf.
+- Batch positions/nlist for execution because very large systems cannot fit a complex NN model into memory.
 
 v0.1 (2019-04-22)
 -----------------
