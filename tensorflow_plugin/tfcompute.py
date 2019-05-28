@@ -18,12 +18,11 @@ import tensorflow as tf
 
 # Integrates tensorflow
 # TODO
-
-
 class tfcompute(hoomd.compute._compute):
-    def __init__(self, tf_model_directory, log_filename='tf_manager.log',
-                 device=None, bootstrap=None, bootstrap_map=None,
-                 _debug_mode=False, _mock_mode=False, write_tensorboard=False):
+    def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
+                  bootstrap=None, bootstrap_map=None,
+                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
+                  use_xla=False):
         # so delete won't fail
         self.tfm = None
         # if hoomd.init.is_initialized():
@@ -45,6 +44,7 @@ class tfcompute(hoomd.compute._compute):
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
         self.feed_dict = None
+        self.use_xla = use_xla
 
     def __enter__(self):
         if not self.mock_mode:
@@ -61,6 +61,7 @@ class tfcompute(hoomd.compute._compute):
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
 
+
     # feed_dict = takes in tfcompute (which gives access
     # to forces/positions/nlist)
     # feed_dict should return a dictionary where the key is
@@ -68,7 +69,7 @@ class tfcompute(hoomd.compute._compute):
     # name (can be set during graph build stage)
     # and the value is the result to be fed into the named tensor. Note
     # that if you name a tensor, typically you must
-    # append :0 to it. For example, if your name is 'my-tensor', then the
+    # append :0 to it. For example, if your name is 'my-tesnor', then the
     # actual tensor is named 'my-tensor:0'.
 
     def attach(self, nlist=None, r_cut=0, save_period=1000,
@@ -193,7 +194,7 @@ class tfcompute(hoomd.compute._compute):
         self.tfm = threading.Thread(target=main, args=(
                 self.q, self.tasklock, self.write_tensorboard, self.device))
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager.\n')
+        hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
     def _start_tf(self):
         if not self.cpp_force:
@@ -211,7 +212,8 @@ class tfcompute(hoomd.compute._compute):
                 'save_period': self.save_period,
                 'debug': self.debug_mode,
                 'primary': hoomd.comm.get_rank() == 0,
-                'device': self.device}
+                'device': self.device,
+                'use_xla': self.use_xla}
         self.q.put(args)
         message = ['Starting TF Manager with:']
         for k, v in args.items():
