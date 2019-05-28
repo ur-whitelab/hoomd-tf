@@ -60,8 +60,7 @@ TensorflowCompute<M>::TensorflowCompute(
   }
   // connect to the ParticleData to receive notifications when the maximum
   // number of particles changes
-  m_pdata->getMaxParticleNumberChangeSignal()
-      .connect<TensorflowCompute, &TensorflowCompute<M>::reallocate>(this);
+  m_pdata->getMaxParticleNumberChangeSignal().template connect<TensorflowCompute, &TensorflowCompute<M>::reallocate>(this);
 }
 
 template <TFCommMode M>

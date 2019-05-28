@@ -9,7 +9,7 @@ namespace hoomd_tf{
   CommStructDerived<Scalar4>::CommStructDerived(GlobalArray<Scalar4>& array, const char* name) :
     _array(&array),
     CommStruct(2, sizeof(Scalar), name){
-      int tmp[] = {array.getNumElements(), 4};
+    int tmp[] =  {static_cast<int>(array.getNumElements()), 4};
       set_num_elements(tmp);
   }
 
@@ -17,7 +17,7 @@ namespace hoomd_tf{
   CommStructDerived<Scalar>::CommStructDerived(GlobalArray<Scalar>& array, const char* name) :
     _array(&array),
     CommStruct(2, sizeof(Scalar), name) {
-      int tmp[] = {array.getNumElements(), 1};
+    int tmp[] = {static_cast<int>(array.getNumElements()), 1};
       set_num_elements(tmp);
     }
 }

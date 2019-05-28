@@ -1,11 +1,11 @@
 # Maintanier: Andrew White
 
-project(example_plugin)
+project(tensorflow_plugin)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.2 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_MODULE_PATH})
 SET(CMAKE_INSTALL_RPATH "$ORIGIN/..:$ORIGIN")
-
+set(CMAKE_MACOSX_RPATH OFF)
 include(FindHOOMD.cmake)
 
 # plugins must be built as shared libraries
