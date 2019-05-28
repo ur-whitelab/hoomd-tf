@@ -136,10 +136,11 @@ class TFManager:
                                                 T=self.dtype,
                                                 name='nlist-input'),
                                     [-1, self.nneighs, 4])
-            self.log.log(10, 'initialized positions hoomd_to_tf at address {:x}'
-                          ' with shape {} on {}'.format(self.positions_buffer,
-                                                        self.positions.shape,
-                                                        self.device))
+            self.log.log(10, 'initialized positions hoomd_to_tf at address'
+							' {:x} with shape {} on {}'
+							.format(self.positions_buffer,
+									self.positions.shape,
+                                    self.device))
             self.log.log(10, 'initialized nlist hoomd_to_tf at address {:x}'
                           'with shape {} on {}'.format(self.nlist_buffer,
                                                        self.nlist.shape,
@@ -160,10 +161,11 @@ class TFManager:
                 self.forces = hoomd_to_tf(address=self.forces_buffer,
                                           shape=[4], T=self.dtype,
                                           name='forces-input')
-                self.log.log(10, 'initialized forces hoomd_to_tf at address {:x}'
-                              ' with shape {} on {}'.format(self.forces_buffer,
-                                                            self.forces.shape,
-                                                            self.device))
+                self.log.log(10, 'initialized forces hoomd_to_tf at address'
+								' {:x} with shape {} on {}'
+								.format(self.forces_buffer,
+										self.forces.shape,
+										self.device))
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
@@ -211,10 +213,11 @@ class TFManager:
             with tf.device(self.device):
                 self.out_nodes.append(tf_to_hoomd(
                         self.virial, address=self.virial_buffer))
-                self.log.log(10, 'initialized virial tf_to_hoomd at address {:x}'
-                              ' with shape {} on {}'.format(self.virial_buffer,
-                                                            self.virial.shape,
-                                                            self.device))
+                self.log.log(10, 'initialized virial tf_to_hoomd at address'
+								' {:x} with shape {} on {}'
+								.format(self.virial_buffer,
+										self.virial.shape,
+										self.device))
 
     def _attach_tensorboard(self, sess):
 
@@ -284,9 +287,10 @@ class TFManager:
                 from tensorflow.python import debug as tf_debug
                 sess = tf_debug.TensorBoardDebugWrapperSession(
                     sess, 'localhost:6064')
-                self.log.log(6, 'You must (first!) attach tensorboard by running'
-                              ' tensorboard --logdir {} --debugger_port 6064'
-                              .format(os.path.join(self.model_directory,
+                self.log.log(6, 'You must (first!) attach tensorboard by 
+								running'
+								' tensorboard --logdir {} --debugger_port 6064'
+								.format(os.path.join(self.model_directory,
                                                    'tensorboard')))
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
@@ -302,7 +306,7 @@ class TFManager:
                     try:
                         feed_name_dict = self.q.get()
                         if feed_name_dict is None:
-								self.log.exception('Empty')
+							self.log.exception('Empty')
                             raise queue.Empty()
                     except queue.Empty:
                         self.log.log(2, 'Received exit. Leaving TF Update'
