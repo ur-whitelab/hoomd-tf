@@ -18,12 +18,11 @@ import tensorflow as tf
 
 # Integrates tensorflow
 # TODO
-
-
 class tfcompute(hoomd.compute._compute):
-    def __init__(self, tf_model_directory, log_filename='tf_manager.log',
-                 device=None, bootstrap=None, bootstrap_map=None,
-                 _debug_mode=False, _mock_mode=False, write_tensorboard=False):
+    def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
+                  bootstrap=None, bootstrap_map=None,
+                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
+                  use_xla=False):
         # so delete won't fail
         self.tfm = None
         # if hoomd.init.is_initialized():
@@ -45,6 +44,7 @@ class tfcompute(hoomd.compute._compute):
         self.bootstrap = bootstrap
         self.bootstrap_map = bootstrap_map
         self.feed_dict = None
+        self.use_xla = use_xla
 
     def __enter__(self):
         if not self.mock_mode:
@@ -60,6 +60,10 @@ class tfcompute(hoomd.compute._compute):
             if self.tfm and self.tfm.is_alive():
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
+<<<<<<< HEAD
+=======
+
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
     # feed_dict = takes in tfcompute (which gives access
     # to forces/positions/nlist)
     # feed_dict should return a dictionary where the key is
@@ -67,9 +71,15 @@ class tfcompute(hoomd.compute._compute):
     # name (can be set during graph build stage)
     # and the value is the result to be fed into the named tensor. Note
     # that if you name a tensor, typically you must
+<<<<<<< HEAD
     # append :0 to it. For example, if your name is 'my-tesnor', then the
     # actual tensor is named 'my-tensor:0'.
     
+=======
+    # append :0 to it. For example, if your name is 'my-tensor', then the
+    # actual tensor is named 'my-tensor:0'.
+
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
     def attach(self, nlist=None, r_cut=0, save_period=1000,
                period=1, feed_dict=None):
         # make sure we have number of atoms and know dimensionality, etc.
@@ -79,7 +89,10 @@ class tfcompute(hoomd.compute._compute):
         if self.tfm is None and not self.mock_mode:
             raise Exception('You must use the with statement to construct '
                             'and attach a tfcompute')
+<<<<<<< HEAD
 
+=======
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
         # I'm not sure if this is necessary following other files
         self.enabled = True
         self.log = True
@@ -102,12 +115,20 @@ class tfcompute(hoomd.compute._compute):
         hoomd.util.print_status_line()
         # initialize base class
         hoomd.compute._compute.__init__(self)
+<<<<<<< HEAD
 
         self.force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd if self.graph_info['output_forces'] else _tensorflow_plugin.FORCE_MODE.hoomd2tf
+=======
+        if self.graph_info['output_forces']:
+            self.force_mode_code = _tensorflow_plugin.FORCE_MODE.tf2hoomd
+        else:
+            self.force_mode_code = _tensorflow_plugin.FORCE_MODE.hoomd2tf
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
         # if graph is not outputting (input) then tfcompute should
         # be outputting them
+<<<<<<< HEAD
         if not self.graph_info['output_forces'
                                ] and not _tensorflow_plugin.FORCE_MODE.hoomd2tf:
             raise ValueError('Your graph takes forces as input but you are'
@@ -117,22 +138,35 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = _tensorflow_plugin.TensorflowCompute(self, hoomd.context.current.system_definition, nlist.cpp_nlist if nlist is not None else None,
             r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+=======
+        state_1 = self.graph_info['output_forces']
+        state_2 = _tensorflow_plugin.FORCE_MODE.hoomd2tf
+        if not state_1 and not state_2:
+            raise ValueError('Your graph takes forces as input but you are'
+                             ' not sending them from tfcompute')
+        # initialize the reflected c++ class
+        if not hoomd.context.exec_conf.isCUDAEnabled():
+            self.cpp_force = _tensorflow_plugin.TensorflowCompute(
+                self, hoomd.context.current.system_definition,
+                nlist.cpp_nlist if nlist is not None else None,
+                r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
             if self.device is None:
                 self.device = '/cpu:0'
         else:
-            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(self,
-            hoomd.context.current.system_definition,  nlist.cpp_nlist if nlist is not None else None,
-            r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+            self.cpp_force = _tensorflow_plugin.TensorflowComputeGPU(
+                self, hoomd.context.current.system_definition,
+                nlist.cpp_nlist if nlist is not None else None,
+                r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
             if self.device is None:
                 self.device = '/gpu:0'
-
         # get double vs single precision
         self.dtype = tf.float32
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.float64
-
         # adding to forces causes the computeForces method to be called.
-        hoomd.context.current.system.addCompute(self.cpp_force, self.compute_name)
+        hoomd.context.current.system.addCompute(self.cpp_force,
+                                                self.compute_name)
         if self.force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
             hoomd.context.current.forces.append(self)
         else:
@@ -140,16 +174,17 @@ class tfcompute(hoomd.compute._compute):
             if integrator is None:
                 raise ValueError('Must have integrator set to receive forces')
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
-
         if not self.mock_mode:
             self._start_tf()
 
     def set_reference_forces(self, *forces):
         if self.force_mode_code == _tensorflow_plugin.FORCE_MODE.tf2hoomd:
-            raise ValueError('Only valid to set reference forces if mode is hoomd2tf')
+            raise ValueError('Only valid to set reference'
+                             ' forces if mode is hoomd2tf')
         for f in forces:
             if not hasattr(f, 'cpp_force'):
-                raise ValueError('given force does not seem like a hoomd force')
+                raise ValueError('given force does not seem'
+                                 ' like a hoomd force')
             self.cpp_force.addReferenceForce(f.cpp_force)
             hoomd.context.msg.notice(2, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
@@ -157,6 +192,7 @@ class tfcompute(hoomd.compute._compute):
     def rcut(self):
         # adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
+<<<<<<< HEAD
         ntypes = hoomd.context.current.system_definition.getParticleData(
             ).getNTypes()
         type_list = []
@@ -164,6 +200,15 @@ class tfcompute(hoomd.compute._compute):
             type_list.append(hoomd.context.current.system_definition.getParticleData(
                     ).getNameByType(i))
 
+=======
+        sys_def = hoomd.context.current.system_definition
+        ntypes = sys_def.getParticleData().getNTypes()
+        type_list = []
+        for i in range(0, ntypes):
+            sys_def = hoomd.context.current.system_definition
+            type_list.append(sys_def.getParticleData(
+                    ).getNameByType(i))
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
         # update the rcut by pair type
         r_cut_dict = hoomd.md.nlist.rcut()
         for i in range(0, ntypes):
@@ -188,7 +233,7 @@ class tfcompute(hoomd.compute._compute):
         self.tfm = threading.Thread(target=main, args=(
                 self.q, self.tasklock, self.write_tensorboard, self.device))
         self.tfm.start()
-        hoomd.context.msg.notice(2, 'Forked TF Session Manager.\n')
+        hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
     def _start_tf(self):
         if not self.cpp_force:
@@ -206,7 +251,8 @@ class tfcompute(hoomd.compute._compute):
                 'save_period': self.save_period,
                 'debug': self.debug_mode,
                 'primary': hoomd.comm.get_rank() == 0,
-                'device': self.device}
+                'device': self.device,
+                'use_xla': self.use_xla}
         self.q.put(args)
         message = ['Starting TF Manager with:']
         for k, v in args.items():
@@ -234,14 +280,17 @@ class tfcompute(hoomd.compute._compute):
                 value = self.feed_dict
             else:
                 value = self.feed_dict(self)
-                assert value is not None, 'feed_dict callable failed to provide value'
+                string = 'feed_dict callable failed to provide value'
+                assert value is not None, string
             self.q.put(value, block=False)
             self.q.join()
         else:
             self.tasklock.do_await()
         if self.tasklock.is_exit():
-            hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
-            raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
+            hoomd.context.msg.error('TF Session Manager has'
+                                    ' unexpectedly stopped\n')
+            raise RuntimeError('TF Session Manager has '
+                               'unexpectedly stopped\n')
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())

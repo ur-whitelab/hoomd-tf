@@ -43,7 +43,7 @@ class TFManager:
                  forces_buffer, virial_buffer, log_filename,
                  dtype, debug, write_tensorboard, use_feed,
                  bootstrap, primary, bootstrap_map,
-                 save_period):
+                 save_period, use_xla):
         self.primary = primary
         self.log = logging.getLogger('tensorflow')
         if not primary:
@@ -73,6 +73,10 @@ class TFManager:
         self.nneighs = self.graph_info['NN']
         self.out_nodes = []
         self.summaries = None
+<<<<<<< HEAD
+=======
+        self.use_xla = use_xla
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
         self._prepare_graph()
         if graph_info['output_forces']:
             self.log.info('This TF Graph can modify forces.')
@@ -227,7 +231,13 @@ class TFManager:
         self.log.info('Constructed TF Model graph')
         # make it grow as memory is needed instead of consuming all
         gpu_options = tf.GPUOptions(allow_growth=True)
+<<<<<<< HEAD
         config = tf.ConfigProto(gpu_options=gpu_options)
+=======
+        config=tf.ConfigProto(gpu_options=gpu_options)
+        if self.use_xla:
+            config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+>>>>>>> e49210e0e64cf9e417fb015b1c0c6458456cbf57
         with tf.Session(config=config) as sess:
             # resore model checkpoint if there are variables
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
