@@ -112,5 +112,6 @@ add_custom_target(copy_${COMPONENT_NAME} ALL DEPENDS ${files})
 
 if(BUILD_TESTING)
     add_subdirectory(test-py)
+    add_subdirectory(test-cc)
 endif()
 
