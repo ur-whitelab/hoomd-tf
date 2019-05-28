@@ -58,7 +58,7 @@ class tfcompute(hoomd.compute._compute):
             self.tasklock.exit()
             time.sleep(1)
             if self.tfm and self.tfm.is_alive():
-                hoomd.context.msg.notice(3, 'Shutting down TF Manually.\n')
+                hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
 
     # feed_dict = takes in tfcompute (which gives access
