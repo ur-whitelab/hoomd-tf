@@ -27,8 +27,8 @@ def main(q, tasklock, write_tensorboard=False, profile=False):
 
 
 def load_op_library(op):
-    import hoomd.htf
-    path = hoomd.htf.__path__[0]
+    import hoomd.tensorflow_plugin
+    path = hoomd.tensorflow_plugin.__path__[0]
     try:
         mod = tf.load_op_library(os.path.join(path, op,
                                               'lib_{}_op.so'.format(op)))
@@ -39,11 +39,11 @@ def load_op_library(op):
 
 class TFManager:
     def __init__(self, graph_info, device, q, tasklock,
-                positions_buffer, nlist_buffer,
-                forces_buffer, virial_buffer, log_filename,
-                dtype, debug, write_tensorboard, use_feed,
-                bootstrap, primary, bootstrap_map,
-                save_period, use_xla):
+                 positions_buffer, nlist_buffer,
+                 forces_buffer, virial_buffer, log_filename,
+                 dtype, debug, write_tensorboard, use_feed,
+                 bootstrap, primary, bootstrap_map,
+                 save_period, use_xla):
         self.primary = primary
         self.log = logging.getLogger('tensorflow')
         if not primary:
@@ -76,10 +76,10 @@ class TFManager:
         self.use_xla = use_xla
         self._prepare_graph()
         if graph_info['output_forces']:
-            self.log.info('This TF Graph can modify forces.')
+            self.log.log(8, 'This TF Graph can modify forces.')
             self._prepare_forces()
         else:
-            self.log.info('This TF Graph will not modify forces.')
+            self.log.log(8, 'This TF Graph will not modify forces.')
 
         for n in self.graph_info['out_nodes']:
             try:
@@ -110,13 +110,13 @@ class TFManager:
             return
 
         if self.saver is not None:
-            self.log.info('Writing {} variables at TF step {}'.format(
+            self.log.log(8, 'Writing {} variables at TF step {}'.format(
                     len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES
                                           )), self.step))
             self.saver.save(sess, os.path.join(self.model_directory, 'model'),
                             global_step=self.step)
         if self.write_tensorboard and summaries is not None:
-            self.log.info('Writing tensorboard at TF step {}'.format(
+            self.log.log(8, 'Writing tensorboard at TF step {}'.format(
                     self.step))
             # last out_node should be merged summary (set in
             #  _attach_tensorboard)
@@ -136,14 +136,15 @@ class TFManager:
                                                 T=self.dtype,
                                                 name='nlist-input'),
                                     [-1, self.nneighs, 4])
-            self.log.info('initialized positions hoomd_to_tf at address {:x}'
-                          ' with shape {} on {}'.format(self.positions_buffer,
-                                                        self.positions.shape,
-                                                        self.device))
-            self.log.info('initialized nlist hoomd_to_tf at address {:x}'
-                          'with shape {} on {}'.format(self.nlist_buffer,
-                                                       self.nlist.shape,
-                                                       self.device))
+            self.log.log(10, 'initialized positions hoomd_to_tf at address'
+                         ' {:x} with shape {} on {}'
+                         .format(self.positions_buffer,
+                                 self.positions.shape,
+                                 self.device))
+            self.log.log(10, 'initialized nlist hoomd_to_tf at address {:x}'
+                         'with shape {} on {}'.format(self.nlist_buffer,
+                                                      self.nlist.shape,
+                                                      self.device))
         # now cast if graph dtype are different
         if self.graph_info['dtype'] != self.dtype:
             with tf.device(self.device):
@@ -160,12 +161,13 @@ class TFManager:
                 self.forces = hoomd_to_tf(address=self.forces_buffer,
                                           shape=[4], T=self.dtype,
                                           name='forces-input')
-                self.log.info('initialized forces hoomd_to_tf at address {:x}'
-                              ' with shape {} on {}'.format(self.forces_buffer,
-                                                            self.forces.shape,
-                                                            self.device))
-            if self.graph_info['dtype'] != self.dtype:
-                self.forces = tf.cast(self.forces, self.graph_info['dtype'])
+                self.log.log(10, 'initialized forces hoomd_to_tf at address'
+                             ' {:x} with shape {} on {}'
+                             .format(self.forces_buffer,
+                                     self.forces.shape,
+                                     self.device))
+        if self.graph_info['dtype'] != self.dtype:
+            self.forces = tf.cast(self.forces, self.graph_info['dtype'])
             input_map[self.graph_info['forces']] = self.forces
 
         # now insert into graph
@@ -202,19 +204,20 @@ class TFManager:
         with tf.device(self.device):
             self.out_nodes.append(tf_to_hoomd(
                     self.forces, address=self.forces_buffer))
-            self.log.info('initialized forces tf_to_hoomd at address {:x}'
-                          ' with shape {} on {}'.format(self.forces_buffer,
-                                                        self.forces.shape,
-                                                        self.device))
+            self.log.log(10, 'initialized forces tf_to_hoomd at address {:x}'
+                         ' with shape {} on {}'.format(self.forces_buffer,
+                                                       self.forces.shape,
+                                                       self.device))
         if self.graph_info['virial'] is not None:
             # virial is Nx3x3
             with tf.device(self.device):
                 self.out_nodes.append(tf_to_hoomd(
                         self.virial, address=self.virial_buffer))
-                self.log.info('initialized virial tf_to_hoomd at address {:x}'
-                              ' with shape {} on {}'.format(self.virial_buffer,
-                                                            self.virial.shape,
-                                                            self.device))
+                self.log.log(10, 'initialized virial tf_to_hoomd at address'
+                             ' {:x} with shape {} on {}'
+                             .format(self.virial_buffer,
+                                     self.virial.shape,
+                                     self.device))
 
     def _attach_tensorboard(self, sess):
 
@@ -225,20 +228,21 @@ class TFManager:
 
     def start_loop(self):
 
-        self.log.info('Constructed TF Model graph')
+        self.log.log(10, 'Constructed TF Model graph')
         # make it grow as memory is needed instead of consuming all
         gpu_options = tf.GPUOptions(allow_growth=True)
-        config=tf.ConfigProto(gpu_options=gpu_options)
+        config = tf.ConfigProto(gpu_options=gpu_options)
         if self.use_xla:
-            config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+            config.graph_options.optimizer_options.global_jit_level =
+            tf.OptimizerOptions.ON_1
         with tf.Session(config=config) as sess:
             # resore model checkpoint if there are variables
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 # first initialize
-                self.log.info('Found trainable variables...')
+                self.log.log(10, 'Found trainable variables...')
                 sess.run(tf.group(tf.global_variables_initializer(),
                                   tf.local_variables_initializer()))
-                self.log.info('Trainable vars initialized')
+                self.log.log(10, 'Trainable vars initialized')
                 self.saver = tf.train.Saver(**saver_args)
                 if self.bootstrap is not None:
                     checkpoint = tf.train.latest_checkpoint(self.bootstrap)
@@ -247,8 +251,8 @@ class TFManager:
                             'Could not find '
                             'bootstrap checkpoint'
                             ' {}'.format(self.bootstrap))
-                    self.log.info('Using bootstrap checkpoint'
-                                  ' {}'.format(self.bootstrap))
+                    self.log.log(8, 'Using bootstrap checkpoint'
+                                 ' {}'.format(self.bootstrap))
                     # convert bootstrap map values into actual variables
                     variable_map = None
                     if self.bootstrap_map is not None:
@@ -284,14 +288,15 @@ class TFManager:
                 from tensorflow.python import debug as tf_debug
                 sess = tf_debug.TensorBoardDebugWrapperSession(
                     sess, 'localhost:6064')
-                self.log.info('You must (first!) attach tensorboard by running'
-                              ' tensorboard --logdir {} --debugger_port 6064'
-                              .format(os.path.join(self.model_directory,
-                                                   'tensorboard')))
+                self.log.log(6, 'You must (first!) attach tensorboard by'
+                             ' running'
+                             ' tensorboard --logdir {} --debugger_port 6064'
+                             .format(os.path.join(self.model_directory,
+                                                  'tensorboard')))
             if self.write_tensorboard:
                 self._attach_tensorboard(sess)
             # indicating we are ready to begin
-            self.log.info('Completed TF Set-up')
+            self.log.log(10, 'Completed TF Set-up')
             self.q.task_done()
             cumtime = 0
             result = None
@@ -302,13 +307,13 @@ class TFManager:
                     try:
                         feed_name_dict = self.q.get()
                         if feed_name_dict is None:
-                            self.log.info('Empty')
+                            self.log.exception('Empty')
                             raise queue.Empty()
                     except queue.Empty:
-                        self.log.info('Received exit. Leaving TF Update'
-                                      'Loop. \n')
-                        self.log.info('TF Update time (excluding '
-                                      'communication) is {}\n'.format(cumtime))
+                        self.log.log(2, 'Received exit. Leaving TF Update'
+                                     'Loop. \n')
+                        self.log.log(2, 'TF Update time (excluding '
+                                     'communication) is {}\n'.format(cumtime))
                         self._save_model(sess)
                         break
                     # convert name keys to actual tensor keys
@@ -326,10 +331,11 @@ class TFManager:
             else:
                 while True:
                     if not self.tasklock.start():
-                        self.log.info('Received exit. Leaving TF Update Loop.')
-                        self.log.info('TF Update time (excluding'
-                                      ' communication) is {:.3f}'
-                                      ' seconds'.format(cumtime))
+                        self.log.log(2, 'Received exit. Leaving TF Update'
+                                     ' Loop.')
+                        self.log.log(2, 'TF Update time (excluding'
+                                     ' communication) is {:.3f}'
+                                     ' seconds'.format(cumtime))
                         self._save_model(sess)
                         break
                     last_clock = time.perf_counter()
