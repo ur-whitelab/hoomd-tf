@@ -6,23 +6,25 @@
 
 
 /*! \file TensorflowCompute.cu
-    \brief CUDA kernels for TensorflowCompute
+    \brief CUDA kernels and functions for TensorflowCompute
 */
 
 extern "C" __global__
-void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N) {
+void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N)
+    {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (i < N)
-    {
+        {
         dest[i].x += src[i].x;
         dest[i].y += src[i].y;
         dest[i].z += src[i].z;
         dest[i].w += src[i].w;
+        }
     }
-}
 
-cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N, cudaStream_t s) {
+cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N, cudaStream_t s)
+    {
     // setup the grid to run the kernel
     int block_size = 256;
     dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
@@ -31,27 +33,30 @@ cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int _N, cudaSt
     // run the kernel
     gpu_add_scalar4_kernel<<< grid, threads, 0, s >>>(dest, src, _N);
 
-    // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
+    // this method always succeds.
+    // If you had a cuda* call in this driver, you could return its error code, if not
     // cudaSuccess
     return cudaSuccess;
-}
+    }
 
 extern "C" __global__
-void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch) {
+void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch)
+    {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (i < _N)
-    {
+        {
         dest[0 * _pitch + i] += src[i * 9 + 0]; //xx
         dest[1 * _pitch + i] += src[i * 9 + 1]; //xy
         dest[2 * _pitch + i] += src[i * 9 + 2]; //xz
         dest[3 * _pitch + i] += src[i * 9 + 4]; //yy
         dest[4 * _pitch + i] += src[i * 9 + 5]; //yz
         dest[5 * _pitch + i] += src[i * 9 + 8]; //zz
+        }
     }
-}
 
-cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch, cudaStream_t s) {
+cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned int _pitch, cudaStream_t s)
+    {
     // setup the grid to run the kernel
     int block_size = 256;
     dim3 grid( (int)ceil((double)_N / (double)block_size), 1, 1);
@@ -60,19 +65,20 @@ cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int _N, unsigned 
     // run the kernel
     gpu_add_virial_kernel<<< grid, threads, 0, s >>>(dest, src, _N, _pitch);
 
-    // this method always succeds. If you had a cuda* call in this driver, you could return its error code if not
+    // this method always succeds.
+    // If you had a cuda* call in this driver, you could return its error code, if not
     // cudaSuccess
     return cudaSuccess;
-}
+    }
 
 #include "hoomd/TextureTools.h"
 #include "hoomd/Index1D.h"
 #include <assert.h>
 
-// Texture for reading particle positions
+//! Texture for reading particle positions
 scalar4_tex_t pdata_pos_tex;
 
-// Texture for reading the neighborlist
+//! Texture for reading the neighbor list
 texture<unsigned int, 1, cudaReadModeElementType> nlist_tex;
 
 //offset
@@ -86,7 +92,8 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int *d_n_neigh,
                                          const unsigned int *d_nlist,
                                          const unsigned int *d_head_list,
-                                         double rmax) {
+                                         double rmax)
+    {
 
     // start by identifying which particle we are to handle
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -113,7 +120,8 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
 
     // loop over neighbors
     assert(n_neigh <= NN);
-    for (int neigh_idx = 0; neigh_idx < n_neigh; neigh_idx++) {
+    for (int neigh_idx = 0; neigh_idx < n_neigh; neigh_idx++)
+        {
 
         // read the current neighbor index
         // prefetch the next value and set the current one
@@ -139,15 +147,16 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
         // calculate r
         Scalar rsq = dot(dx, dx);
 
-        if (rsq < (rmax * rmax)) {
+        if (rsq < (rmax * rmax))
+            {
             dest[idx * NN + neigh_idx].x = dx.x;
             dest[idx * NN + neigh_idx].y = dx.y;
             dest[idx * NN + neigh_idx].z = dx.z;
             dest[idx * NN + neigh_idx].w = static_cast<Scalar> (typej);
 
+            }
         }
     }
-}
 
 
 cudaError_t gpu_reshape_nlist(Scalar4* dest,
@@ -164,7 +173,8 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
 			      const unsigned int compute_capability,
 			      const unsigned int max_tex1d_width,
 			      double rmax,
-			      cudaStream_t stream) {
+			      cudaStream_t stream)
+    {
 
     assert(d_pos);
     assert(dest);
@@ -176,33 +186,39 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
     cudaMemset(dest, 1, N * NN * sizeof(Scalar4));
 
     // texture bind
-    if (compute_capability < 350) {
+    if (compute_capability < 350)
+        {
         // bind the pdata position texture
         pdata_pos_tex.normalized = false;
         pdata_pos_tex.filterMode = cudaFilterModePoint;
-        cudaError_t error = cudaBindTexture(0, pdata_pos_tex, d_pos, sizeof(Scalar4) * (N+n_ghost));
+        cudaError_t error = cudaBindTexture(0,
+                                            pdata_pos_tex,
+                                            d_pos,
+                                            sizeof(Scalar4) * (N+n_ghost));
         if (error != cudaSuccess)
             return error;
 
         if (size_nlist <= max_tex1d_width)
-        {
+            {
             nlist_tex.normalized = false;
             nlist_tex.filterMode = cudaFilterModePoint;
             error = cudaBindTexture(0, nlist_tex, d_nlist, sizeof(unsigned int)*size_nlist);
             if (error != cudaSuccess)
                 return error;
+            }
         }
-    }
 
-    if (compute_capability < 350 && size_nlist > max_tex1d_width) {
-     // use global memory when the neighbor list must be texture bound, but exceeds the max size of a texture
+    if (compute_capability < 350 && size_nlist > max_tex1d_width)
+        {
+        // use global memory when the neighbor list must be texture bound,
+        // but exceeds the max size of a texture
         static unsigned int max_block_size = UINT_MAX;
         if (max_block_size == UINT_MAX)
-        {
+            {
             cudaFuncAttributes attr;
             cudaFuncGetAttributes(&attr, gpu_reshape_nlist_kernel<1>);
             max_block_size = attr.maxThreadsPerBlock;
-        }
+            }
 
         unsigned int run_block_size = min(block_size, max_block_size);
 
@@ -211,21 +227,24 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         dim3 threads(run_block_size, 1, 1);
 
         gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
-                                                 N,
-                                                 NN,
-                                                 d_pos,
-                                                 box,
-                                                 d_n_neigh,
-                                                 d_nlist,
-                                                 d_head_list,
-                                                 rmax);
-    } else {
+            N,
+            NN,
+            d_pos,
+            box,
+            d_n_neigh,
+            d_nlist,
+            d_head_list,
+            rmax);
+        }
+    else
+        {
         static unsigned int max_block_size = UINT_MAX;
-        if (max_block_size == UINT_MAX) {
+        if (max_block_size == UINT_MAX)
+            {
             cudaFuncAttributes attr;
             cudaFuncGetAttributes(&attr, gpu_reshape_nlist_kernel<0>);
             max_block_size = attr.maxThreadsPerBlock;
-        }
+            }
 
         unsigned int run_block_size = min(block_size, max_block_size);
 
@@ -233,16 +252,16 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         dim3 grid( N / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
         gpu_reshape_nlist_kernel<0><<< grid, threads>>>(dest,
-                                                 N,
-                                                 NN,
-                                                 d_pos,
-                                                 box,
-                                                 d_n_neigh,
-                                                 d_nlist,
-                                                 d_head_list,
-                                                 rmax);
-    }
+            N,
+            NN,
+            d_pos,
+            box,
+            d_n_neigh,
+            d_nlist,
+            d_head_list,
+            rmax);
+        }
 
     return cudaSuccess;
 
-}
+    }
