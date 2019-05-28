@@ -5,10 +5,6 @@
 #ifndef _TENSORFLOW_COMPUTE_H_
 #define _TENSORFLOW_COMPUTE_H_
 
-/*! \file TensorflowCompute.h
-    \brief Declaration of TensorflowCompute
-*/
-
 #include <hoomd/Autotuner.h>
 #include <hoomd/ForceCompute.h>
 #include <hoomd/HOOMDMath.h>
@@ -26,156 +22,256 @@
 #include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
 #endif
 
-
-namespace hoomd_tf {
-
-
-  //! A nonsense particle Compute written to demonstrate how to write a plugin
-  /*! This Compute simply sets all of the particle's velocities to 0 when update()
-  * is called.
-  */
-
- /*!
- * Indicates if forces should be computed by or passed to TF
- */
-  enum class FORCE_MODE { tf2hoomd, hoomd2tf };
+namespace hoomd_tf
+    {
+    /*! \file TensorflowCompute.h
+     *  \brief Declaration of TensorflowCompute
+     *
+     *  This is the main class of the HOOMD-TF package, responsible for the
+     *  communication between HOOMD and TensorFlow, optionally using GPU-GPU
+     *  memory transfer in GPU mode.
+     *  HOOMD neighbor lists are passed to and from TensorFlow as comm objects.
+     *  \sa TFArrayComm class
+    */
 
 
-  template <class T>
-  class HalfStepHookWrapper : public HalfStepHook {
-    public:T& _f;
-    HalfStepHookWrapper(T& f) : _f(f) {}
 
-    void update(unsigned int timestep) override {
-      _f.computeForces(timestep);
+    //! A nonsense particle Compute written to demonstrate how to write a plugin
+    /*! This Compute simply sets all of the particle's velocities to 0 when update()
+     * is called.
+     */
+
+    /*! FORCE_MODE class
+     *  Indicates if forces should be computed by or passed to TF, respectively.
+     */
+    enum class FORCE_MODE { tf2hoomd, hoomd2tf };
+
+    /*! HalfStepHookWrapper class
+     *  Wrapper around HOOMD-blue's HalfStepHook class.
+     *  Overrides update method to enable call of TF for force computing.
+     */
+    template <class T>
+        class HalfStepHookWrapper : public HalfStepHook
+        {
+        public:
+        T& _f;
+        HalfStepHookWrapper(T& f) : _f(f) {}
+
+        //! override update from HOOMD to compute TF forces also
+        void update(unsigned int timestep) override
+            {
+            _f.computeForces(timestep);
+            }
+
+        //! called for half step hook
+        void setSystemDefinition(std::shared_ptr<SystemDefinition> sysdef) override
+            {
+            //pass
+            }
+
+        };
+
+    /*! Template class for TFCompute
+     *  \tfparam M If TF is on CPU or GPU.
+     *
+     */
+    template <TFCommMode M = TFCommMode::CPU>
+        class TensorflowCompute : public ForceCompute
+        {
+        public:
+        //! Constructor
+        TensorflowCompute(pybind11::object& py_self,
+            std::shared_ptr<SystemDefinition> sysdef,
+            std::shared_ptr<NeighborList> nlist,
+            Scalar r_cut,
+            unsigned int nneighs,
+            FORCE_MODE force_mode,
+            unsigned int period);
+
+        //! No base constructor
+        TensorflowCompute() = delete;
+
+        //! Destructor
+        virtual ~TensorflowCompute();
+
+        //! Returns log value of specified quantity at chosen timestep 
+        Scalar getLogValue(const std::string& quantity,
+                           unsigned int timestep) override;
+
+        //! Returns address of TFArrayComm object holding forces
+        int64_t getForcesBuffer() const;
+        
+        //! Returns address of TFArrayComm object holding positions
+        int64_t getPositionsBuffer() const;
+        
+        //! Returns address of TFArrayComm object holding virial
+        int64_t getVirialBuffer() const;
+        
+        //! Returns address of TFArrayComm object holding neighbor list
+        int64_t getNlistBuffer() const;
+
+        //! Check what precision level we're using for CUDA purposes
+        bool isDoublePrecision() const
+            {
+                #ifdef SINGLE_PRECISION
+                    return false;
+                #else
+                    return true;
+                #endif  // SINGLE_PRECISION
+            }
+
+        //! Returns the array of forces from associated TFArrayComm object
+        std::vector<Scalar4> getForcesArray() const;
+        
+        //! Returns the array of neighbor lists from associated TFArrayComm object
+        std::vector<Scalar4> getNlistArray() const;
+        
+        //! Returns the array of positions from associated TFArrayComm object
+        std::vector<Scalar4> getPositionsArray() const;
+        
+        //! Returns the array of virials from associated TFArrayComm object
+        std::vector<Scalar> getVirialArray() const;
+
+        //! Dispatches computation of forces according to FORCE_MODE
+        virtual void computeForces(unsigned int timestep) override;
+
+        //! Get the memory pitch of the virial
+        unsigned int getVirialPitch() const { return m_virial.getPitch(); }
+        std::shared_ptr<HalfStepHook> getHook()
+            {
+            return hook;
+            }
+
+        //! Add a separately computed or tabular force
+        void addReferenceForce(std::shared_ptr<ForceCompute> force)
+            {
+            _ref_forces.push_back(force);
+            }
+        
+        //! pybind objects have to be public with current cc flags
+        pybind11::object _py_self;
+        
+        //! need this to add to integrator in HOOMD
+        std::shared_ptr<HalfStepHookWrapper<TensorflowCompute<M> > > hook;
+        
+        protected:
+        //! used if particle number changes
+        virtual void reallocate();
+        
+        //! Set up neighbor list to take one timestep forward
+        virtual void prepareNeighbors();
+        
+        //! Transfer virial from TF memory location to HOOMD
+        virtual void receiveVirial();
+        
+        //! Add up all the reference forces from TF to HOOMD
+        virtual void sumReferenceForces();
+
+        //! When TF updates are all finished, send word to python
+        void finishUpdate(unsigned int timestep);
+
+        //! pointer to the neighbor lists of all particles
+        std::shared_ptr<NeighborList> m_nlist;
+        
+        //! cutoff radius
+        Scalar _r_cut;
+
+        //! max number of neighbors
+        unsigned int _nneighs;
+
+        //! specify which force mode we are using
+        FORCE_MODE _force_mode;
+
+        //! how frequently we actually do the TF update
+        unsigned int _period;
+
+        //! name of log used in TF
+        std::string m_log_name;
+
+        //! vector of reference forces as ForceCompute objects
+        std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
+
+        //! comm object for holding positions
+        TFArrayComm<M, Scalar4> _positions_comm;
+
+        //! comm object for holding forces
+        TFArrayComm<M, Scalar4> _forces_comm;
+
+        //! array of neighbor list values (x, y, z, w)
+        GlobalArray<Scalar4> _nlist_array;
+
+        //! array of virial values
+        GlobalArray<Scalar> _virial_array;
+
+        //! comm object for holding neighbor lists
+        TFArrayComm<M, Scalar4> _nlist_comm;
+
+        //! comm object for holding virials
+        TFArrayComm<M, Scalar> _virial_comm;
+        };
+
+    //! Export the TensorflowCompute class to python
+    void export_TensorflowCompute(pybind11::module& m);
+
+
+    #ifdef ENABLE_CUDA
+
+        /*! GPU version of TensorflowCompute class
+         *
+         */
+        class TensorflowComputeGPU : public TensorflowCompute<TFCommMode::GPU>
+            {
+            public:
+            //! Constructor
+            TensorflowComputeGPU(pybind11::object& py_self,
+                std::shared_ptr<SystemDefinition> sysdef,
+                std::shared_ptr<NeighborList> nlist,
+                Scalar r_cut,
+                unsigned int nneighs,
+                FORCE_MODE force_mode,
+                unsigned int period);
+    
+            /*! Set what HOOMD autotuner params to use
+             *  \param enable whether to use autotuner
+             *  \param period period with which to use autotuner
+             */
+            void setAutotunerParams(bool enable, unsigned int period) override;
+    
+            protected:
+            /*! GPU version calls CPU reallocate and resets cudaStreams for comm objects
+             *  \sa TensorflowCompute::reallocate()
+             */
+            void reallocate() override;
+            
+            //! invokes a kernel version of prepareNeighbors
+            //! \sa TensorflowCompute::prepareNeighbors()
+            void prepareNeighbors() override;
+            
+            /*! Use a GPU kernel to transfer the virial values
+             *  \sa TensorflowCompute::receiveVirial()
+             */
+            void receiveVirial() override;
+            
+            /*! Use a GPU kernel to add up reference forces
+             *  \sa TensorflowCompute::sumReferenceForces()
+             */
+            void sumReferenceForces() override;
+    
+            private:
+            std::unique_ptr<Autotuner> m_tuner;  //! Autotuner for block size
+            cudaStream_t _streams[4];            //! Array of CUDA streams
+            size_t _nstreams = 4;                //! Number of CUDA streams
+            };
+    
+        //! Export the TensorflowComputeGPU class to python
+        void export_TensorflowComputeGPU(pybind11::module& m);
+    
+        template class TensorflowCompute<TFCommMode::GPU>;
+    #endif  // ENABLE_CUDA
+
+    //! force implementation even if no CUDA found
+    template class TensorflowCompute<TFCommMode::CPU>;
+
     }
-
-    // called for half step hook
-    void setSystemDefinition(std::shared_ptr<SystemDefinition> sysdef) override {
-      //pass
-    }
-
-  };
-
-  /*! Template class for TFCompute
-  *  \tfparam M If TF is on CPU or GPU.
-  *
-  */
-  template <TFCommMode M = TFCommMode::CPU>
-  class TensorflowCompute : public ForceCompute {
-  public:
-    //! Constructor
-    TensorflowCompute(pybind11::object& py_self,
-                      std::shared_ptr<SystemDefinition> sysdef,
-                      std::shared_ptr<NeighborList> nlist, Scalar r_cut,
-                      unsigned int nneighs, FORCE_MODE force_mode,
-                      unsigned int period);
-
-    TensorflowCompute() = delete;
-
-    //! Destructor
-    virtual ~TensorflowCompute();
-
-
-    Scalar getLogValue(const std::string& quantity,
-                      unsigned int timestep) override;
-
-    int64_t getForcesBuffer() const;
-    int64_t getPositionsBuffer() const;
-    int64_t getVirialBuffer() const;
-    int64_t getNlistBuffer() const;
-
-    bool isDoublePrecision() const {
-  #ifdef SINGLE_PRECISION
-      return false;
-  #else
-      return true;
-  #endif  // SINGLE_PRECISION
-    }
-
-    std::vector<Scalar4> getForcesArray() const;
-    std::vector<Scalar4> getNlistArray() const;
-    std::vector<Scalar4> getPositionsArray() const;
-    std::vector<Scalar> getVirialArray() const;
-    virtual void computeForces(unsigned int timestep) override;
-
-    // define a few short ones in here because I'm lazy.
-    unsigned int getVirialPitch() const { return m_virial.getPitch(); }
-    std::shared_ptr<HalfStepHook> getHook() {
-      return hook;
-    }
-
-    void addReferenceForce(std::shared_ptr<ForceCompute> force){
-      _ref_forces.push_back(force);
-    }
-
-    pybind11::object
-        _py_self;  // pybind objects have to be public with current cc flags
-    std::shared_ptr<HalfStepHookWrapper<TensorflowCompute<M> > > hook; //need this to add to integrator
-  protected:
-    // used if particle number changes
-    virtual void reallocate();
-    //! Take one timestep forward
-    virtual void prepareNeighbors();
-    virtual void receiveVirial();
-    virtual void sumReferenceForces();
-
-    void finishUpdate(unsigned int timestep);
-
-    std::shared_ptr<NeighborList> m_nlist;
-    Scalar _r_cut;
-    unsigned int _nneighs;
-    FORCE_MODE _force_mode;
-    unsigned int _period;
-    std::string m_log_name;
-    std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
-
-    TFArrayComm<M, Scalar4> _positions_comm;
-    TFArrayComm<M, Scalar4> _forces_comm;
-    GlobalArray<Scalar4> _nlist_array;
-    GlobalArray<Scalar> _virial_array;
-    TFArrayComm<M, Scalar4> _nlist_comm;
-    TFArrayComm<M, Scalar> _virial_comm;
-  };
-
-  //! Export the TensorflowCompute class to python
-  void export_TensorflowCompute(pybind11::module& m);
-
-
-  #ifdef ENABLE_CUDA
-
-  class TensorflowComputeGPU : public TensorflowCompute<TFCommMode::GPU> {
-  public:
-    //! Constructor
-    TensorflowComputeGPU(pybind11::object& py_self,
-                        std::shared_ptr<SystemDefinition> sysdef,
-                        std::shared_ptr<NeighborList> nlist, Scalar r_cut,
-                        unsigned int nneighs, FORCE_MODE force_mode,
-                        unsigned int period);
-
-    void setAutotunerParams(bool enable, unsigned int period) override;
-
-  protected:
-    void reallocate() override;
-    void prepareNeighbors() override;
-    void receiveVirial() override;
-    void sumReferenceForces() override;
-
-  private:
-    std::unique_ptr<Autotuner> m_tuner;  // Autotuner for block size
-    cudaStream_t _streams[4];
-    size_t _nstreams = 4;
-  };
-
-  //! Export the TensorflowComputeGPU class to python
-  void export_TensorflowComputeGPU(pybind11::module& m);
-
-  template class TensorflowCompute<TFCommMode::GPU>;
-  #endif  // ENABLE_CUDA
-
-  // force implementation
-  template class TensorflowCompute<TFCommMode::CPU>;
-
-}
 
 #endif  // _TENSORFLOW_COMPUTE_H_

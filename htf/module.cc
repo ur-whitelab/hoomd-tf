@@ -10,15 +10,18 @@
 
 using namespace hoomd_tf;
 
-// specify the python module. Note that the name must expliclty match the PROJECT() name provided in CMakeLists
-// (with an underscore in front)
+/*! \file module.cc
+ *  Specifies the python module. Note that the name must expliclty match the
+ *  PROJECT() name provided in CMakeLists (with an underscore in front)
+ */
+
 PYBIND11_PLUGIN(_htf)
     {
     pybind11::module m("_htf");
     export_TensorflowCompute(m);
 
     #ifdef ENABLE_CUDA
-    export_TensorflowComputeGPU(m);
+        export_TensorflowComputeGPU(m);
     #endif
 
     export_TFArrayComm(m);
