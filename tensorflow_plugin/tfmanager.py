@@ -81,8 +81,9 @@ class TFManager:
             except ValueError:
                 self.out_nodes.append(tf.get_default_graph().get_operation_by_name(n))
 
-    def _update(self, sess, feed_dict=None):
-        if self.step % self.save_period == 0:
+    def _update(self, sess, feed_dict, batch_index):
+        # only update step and save on the first batch.
+        if self.step % self.save_period == 0 and batch_index == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries], feed_dict=feed_dict)
             else:
@@ -90,7 +91,8 @@ class TFManager:
             self._save_model(sess, result[-1])
         else:
             result = sess.run(self.out_nodes, feed_dict=feed_dict)
-        self.step += 1
+        if batch_index == 0:
+            self.step += 1
 
         return result
 
@@ -250,13 +252,14 @@ class TFManager:
                     # from user
                     last_clock = time.perf_counter()
                     feed_dict = dict()
+                    bi = raw_feed_dict['htf-batch-index:0']
                     for k,v in raw_feed_dict.items():
                         tensor = tf.get_default_graph().get_tensor_by_name(k)
                         feed_dict[tensor] = v
                     print(feed_dict)
                     processing_cumtime += (time.perf_counter() - last_clock)
                     last_clock = time.perf_counter()
-                    result = self._update(sess, feed_dict=feed_dict)
+                    result = self._update(sess, feed_dict, bi)
                 finally:
                     cumtime += (time.perf_counter() - last_clock)
                     self.q.task_done()
