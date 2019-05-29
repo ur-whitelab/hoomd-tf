@@ -27,8 +27,8 @@ def main(q, tasklock, write_tensorboard=False, profile=False):
 
 
 def load_op_library(op):
-    import hoomd.tensorflow_plugin
-    path = hoomd.tensorflow_plugin.__path__[0]
+    import hoomd.htf
+    path = hoomd.htf.__path__[0]
     try:
         mod = tf.load_op_library(os.path.join(path, op,
                                               'lib_{}_op.so'.format(op)))
@@ -233,7 +233,7 @@ class TFManager:
         gpu_options = tf.GPUOptions(allow_growth=True)
         config = tf.ConfigProto(gpu_options=gpu_options)
         if self.use_xla:
-            config.graph_options.optimizer_options.global_jit_level =
+            config.graph_options.optimizer_options.global_jit_level = \
             tf.OptimizerOptions.ON_1
         with tf.Session(config=config) as sess:
             # resore model checkpoint if there are variables
