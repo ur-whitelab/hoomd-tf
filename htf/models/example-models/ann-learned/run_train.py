@@ -43,7 +43,7 @@ with hoomd.htf.tfcompute(model_dir,_mock_mode=False, write_tensorboard=True) as 
                      r_cut=rcut,
                      save_period=10,
                      period=100,
-                     feed_func=lambda x: {'keep_prob:0': 0.8})
+                     feed_dict=dict({'keep_prob:0': 0.8}))
     # train on 50k timesteps
     hoomd.run(50000)
 
