@@ -156,7 +156,7 @@ class tfcompute(hoomd.compute._compute):
                 raise ValueError('given force does not seem'
                                  ' like a hoomd force')
             self.cpp_force.addReferenceForce(f.cpp_force)
-            hoomd.context.msg.notice(2, 'Will use given force for '
+            hoomd.context.msg.notice(5, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
 
     def rcut(self):
