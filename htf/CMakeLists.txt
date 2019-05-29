@@ -4,7 +4,7 @@ if (NOT BUILD_MD)
     message(FATAL_ERROR "MPCD package cannot be built without MD.")
 endif(NOT BUILD_MD)
 
-set(COMPONENT_NAME tensorflow_plugin)
+set(COMPONENT_NAME htf)
 
 set(_${COMPONENT_NAME}_sources
     module.cc

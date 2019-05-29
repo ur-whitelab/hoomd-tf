@@ -1,5 +1,5 @@
-import hoomd.tensorflow_plugin
-from hoomd.tensorflow_plugin import tfcompute
+import hoomd.htf
+from hoomd.htf import tfcompute
 import hoomd
 import hoomd.md
 import hoomd.dump
@@ -94,14 +94,14 @@ N_hidden_nodes = 50
 N_hidden_layers = 5
 
 def make_train_graph(NN, N_hidden_nodes, N_hidden_layers):
-    graph = hoomd.tensorflow_plugin.graph_builder(NN, output_forces=False)
+    graph = hoomd.htf.graph_builder(NN, output_forces=False)
     # get neighbor list
     nlist = graph.nlist[:,:,:3]
     # get the interatomic radii
-    r = hoomd.tensorflow_plugin.graph_builder.safe_norm(nlist, axis=2)
+    r = hoomd.htf.graph_builder.safe_norm(nlist, axis=2)
     nn_r = tf.Variable(tf.zeros(shape=[64, NN]), trainable=False)
     nn_r.assign(r)
-    r_inv = hoomd.tensorflow_plugin.graph_builder.safe_div(1.,r)
+    r_inv = hoomd.htf.graph_builder.safe_div(1., r)
     # make weights tensors, using our number of hidden nodes
     # NxNN out because we want pairwise forces
     r_inv = tf.reshape(r_inv, shape=[-1,1], name='r_inv')
@@ -131,7 +131,7 @@ make_train_graph(NN, N_hidden_nodes, N_hidden_layers)
 
 np.random.seed(42)
 
-with hoomd.tensorflow_plugin.tfcompute(model_dir,
+with hoomd.htf.tfcompute(model_dir,
                                        _mock_mode=False,
                                        write_tensorboard=False,
                                        use_xla=use_xla) as tfcompute:

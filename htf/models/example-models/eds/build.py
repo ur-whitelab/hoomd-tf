@@ -1,4 +1,4 @@
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 import sys
 import tensorflow as tf
 
