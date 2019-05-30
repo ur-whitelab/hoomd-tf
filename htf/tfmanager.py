@@ -30,7 +30,7 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path,
+        mod = tf.load_op_library(os.path.join(path, op,
                                               'lib_{}_op.so'.format(op)))
     except OSError:
         raise OSError('Unable to load OP {}. '
