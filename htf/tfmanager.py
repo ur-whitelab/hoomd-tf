@@ -30,10 +30,11 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path, op,
+        mod = tf.load_op_library(os.path.join(path,
                                               'lib_{}_op.so'.format(op)))
-    except IOError:
-        raise IOError('Unable to load OP {}'.format(op))
+    except OSError:
+        raise OSError('Unable to load OP {}. '
+                      'Expected to be in {}'.format(op, path))
     return mod
 
 
@@ -166,9 +167,9 @@ class TFManager:
                              .format(self.forces_buffer,
                                      self.forces.shape,
                                      self.device))
-        if self.graph_info['dtype'] != self.dtype:
-            self.forces = tf.cast(self.forces, self.graph_info['dtype'])
-            input_map[self.graph_info['forces']] = self.forces
+            if self.graph_info['dtype'] != self.dtype:
+                self.forces = tf.cast(self.forces, self.graph_info['dtype'])
+                input_map[self.graph_info['forces']] = self.forces
 
         # now insert into graph
         try:

@@ -8,6 +8,7 @@ v0.2 (Not yet released)
 
 - Made code consistent for hoomd-blue plugin.
 - Added config options and tested XLA benchmarks for CG mapping operators code and other multistep complex code.
+- It is now possible to compile the plugin after hoomd-blue install
 
 *Enhancements*
 

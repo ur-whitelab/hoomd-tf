@@ -1,10 +1,10 @@
 # Maintainer: Andrew White
 
-set(COMPONENT_NAME hoomd2tf_op)
-set(_${COMPONENT_NAME}_sources
+set(SUB_COMPONENT_NAME hoomd2tf_op)
+set(_${SUB_COMPONENT_NAME}_sources
     hoomd2tf.cc
     )
-set(_${COMPONENT_NAME}_cu_sources
+set(_${SUB_COMPONENT_NAME}_cu_sources
     hoomd2tf.cu
     )
 
@@ -31,19 +31,19 @@ message(STATUS "CUDA_INCLUDE_DIRS: ${CUDA_INCLUDE_DIRS}")
 message(STATUS "TF_CFLAGS: ${TF_CFLAGS}")
 message(STATUS "TF_LFLAGS: ${TF_LFLAGS}")
 message(STATUS "HOOMD_CUDA_FLAGS: ${CUDA_ADDITIONAL_OPTIONS}")
-CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${TF_CUDA_ADDITIONAL_OPTIONS} SHARED)
+CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${SUB_COMPONENT_NAME}_cu_sources} OPTIONS ${TF_CUDA_ADDITIONAL_OPTIONS} SHARED)
 endif (ENABLE_CUDA)
 
 #add library target
-add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
+add_library (_${SUB_COMPONENT_NAME} SHARED ${_${SUB_COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 #set the TF compiler/linker flags
 message(STATUS "HOOMD_TF_CUDA_C++_FLAGS: ${TF_CFLAGS}")
-target_compile_options(_${COMPONENT_NAME} PRIVATE ${TF_CFLAGS})
-target_link_libraries(_${COMPONENT_NAME} ${TF_LFLAGS})
-target_link_libraries(_${COMPONENT_NAME} ${HOOMD_LIBRARIES})
+target_compile_options(_${SUB_COMPONENT_NAME} PRIVATE ${TF_CFLAGS})
+target_link_libraries(_${SUB_COMPONENT_NAME} ${TF_LFLAGS})
+target_link_libraries(_${SUB_COMPONENT_NAME} ${HOOMD_LIBRARIES})
 
 
 # install the library
-install(TARGETS _${COMPONENT_NAME}
+install(TARGETS _${SUB_COMPONENT_NAME}
         LIBRARY DESTINATION ${PYTHON_MODULE_BASE_DIR}/${COMPONENT_NAME}
         )
