@@ -32,8 +32,9 @@ def load_op_library(op):
     try:
         mod = tf.load_op_library(os.path.join(path,
                                               'lib_{}_op.so'.format(op)))
-    except:
-        raise IOError('Unable to load OP {}. Expected to be in {}'.format(op, path))
+    except OSError:
+        raise OSError('Unable to load OP {}. '
+                      'Expected to be in {}'.format(op, path))
     return mod
 
 
