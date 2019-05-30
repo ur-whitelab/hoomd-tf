@@ -2,6 +2,7 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from hoomd.tensorflow_plugin import _tensorflow_plugin
+from .utils import find_molecules
 from .tfmanager import main
 import sys, math, numpy as np, pickle, queue, threading, os, time
 import hoomd, hoomd.md.nlist, hoomd.comm
@@ -62,7 +63,7 @@ class tfcompute(hoomd.compute._compute):
     # and the value is the result to be fed into the named tensor. Note that if you name a tensor, typically you must
     # append :0 to it. For example, if your name is 'my-tesnor', then the actual tensor is named 'my-tensor:0'.
     #
-    def attach(self, nlist = None, r_cut = 0, save_period=1000, period=1, feed_dict=None, batch_size=None):
+    def attach(self, nlist = None, r_cut = 0, save_period=1000, period=1, feed_dict=None, mol_indices=None, batch_size=None):
 
         #make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -84,6 +85,14 @@ class tfcompute(hoomd.compute._compute):
         r_cut = float(r_cut)
         self.r_cut = r_cut
         self.batch_size = 0 if batch_size is None else batch_size
+
+        # find molecules if necessary
+        if 'mol_indices' self.graph_info and self.graph_info['mol_indices'] is not None:
+            if mol_indices is None:
+                mol_indices = find_molecules(hoomd.context.current.system_definition)
+            self.mol_indices = mol_indices
+        else:
+            self.mol_indices = None
 
         if nlist is not None:
             nlist.subscribe(self.rcut)
@@ -218,6 +227,8 @@ class tfcompute(hoomd.compute._compute):
         if self.mock_mode:
             return
         fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
+        if self.mol_indices is not None:
+            fd[self.graph_info['mol_indices']] = self.mol_indices
         if self.feed_dict is not None:
             if type(self.feed_dict) == dict:
                 value = self.feed_dict

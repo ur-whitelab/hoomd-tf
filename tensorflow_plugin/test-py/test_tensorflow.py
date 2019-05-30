@@ -376,5 +376,36 @@ class test_compute(unittest.TestCase):
             hoomd.run(3)
             np.testing.assert_allclose([log.query('potential_energy'), log.query('pressure')], thermo_scalars[i], atol=1e-2)
 
+class test_mol_batching(unittest.TestCase):
+    def test_single_atom(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8)
+        with htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=None)
+            hoomd.run(8)
+
+    def test_single_atom_batched(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8)
+        with htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
+            hoomd.run(8)
+
 if __name__ == '__main__':
     unittest.main()

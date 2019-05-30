@@ -147,6 +147,19 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
+def lj_mol(NN, MN, diretory='/tmp/test-lj-mol'):
+    graph = htf.graph_builder(NN)
+    graph.build_mol_rep(MN)
+    #assume particle (w) is 0
+    r = graph.safe_norm(graph.mol_nlist, axis=3)
+    rinv = self.safe_div(1.0, r)
+    mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
+    mol_energy = tf.reduce_sum(mol_p_energy, axis=2, keep_dims=True)
+    energy = graph.scatter_mol_quantity(mol_energy)
+    forces = tf.compute_forces(energy)
+    graph.save(force_tensor=forces, model_directory=directory)
+    return diretory
+
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)
     nlist = graph.nlist[:, :, :3]

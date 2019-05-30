@@ -21,6 +21,7 @@ class graph_builder:
         '''
         #clear any previous graphs
         atom_number = None
+        self.atom_number = atom_number
         tf.reset_default_graph()
         self.nneighbor_cutoff = nneighbor_cutoff
         #use zeros so that we don't need to feed to start session
@@ -32,7 +33,11 @@ class graph_builder:
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
         self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
+
         self._nlist_rinv = None
+        self.mol_indices = None
+        self.mol_batched = False
+
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
         self.update_batch_index_op = self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
                                                      true_fn=lambda: tf.constant(1),
@@ -238,6 +243,34 @@ class graph_builder:
             forces = tf.concat([forces[:,:3], tf.reshape(energy, [tf.shape(forces)[0], 1])], -1)
         return tf.identity(forces, name='computed-forces')
 
+    def build_mol_rep(self, MN):
+        '''
+        This creates mol_forces, mol_positions, and mol_nlist which are
+        mol_number x MN x 4 (mol_forces, mol_positions) and ? x MN x NN x 4 (mol_nlist)
+        tensors batched by molecule, where mol_number is the number of molecules. mol_number
+        is determined at run time. The MN must be chosen to be large enough to
+        encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
+        then the extra entries will be zeros. The specification of what is a molecule
+        will be passed at runtime.
+
+        To convert a _mol quantity to a per-particle quantity, call
+        scatter_mol_quanitity(tensor)
+        '''
+        self.mol_indices = tf.placeholder(tf.int32, shape=[self.atom_number, MN], name='htf-molecule-index')
+        self.mol_positions = tf.gather_nd(self.positions, self.mol_indices)
+        self.mol_nlist = tf.gather_nd(self.nlist, self.mol_indices)
+        if not self.output_forces:
+            self.mol_forces = tf.gather_nd(self.forces, self.mol_indices)
+
+    def scatter_mol_quantity(self, tensor):
+        '''
+        This will convert a tensor shaped of mol_number x MN x [shape]
+        into N x [shape]. For example, you might have energy per atom per molecule (mol_number x MN x 1)
+        and this would give back energy per atom.
+        '''
+        assert len(tensor.shape) > 2, 'You must have shape with dimension greater than 2'
+        return tf.scatter_nd(self.mol_indices, tensor, [tf.shape(self.positions)[0]] + tf.shape(tensor)[2:])
+
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
         '''
@@ -340,7 +373,8 @@ class graph_builder:
                         'nlist': self.nlist.name,
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
-                        'out_nodes': [x.name for x in out_nodes]
+                        'out_nodes': [x.name for x in out_nodes],
+                        'mol_indices': self.mol_indices.name
                         }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
