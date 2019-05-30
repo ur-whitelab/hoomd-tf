@@ -333,7 +333,6 @@ class TFManager:
                     for k, v in raw_feed_dict.items():
                         tensor = tf.get_default_graph().get_tensor_by_name(k)
                         feed_dict[tensor] = v
-                    print(feed_dict)
                     processing_cumtime += (time.perf_counter() - last_clock)
                     last_clock = time.perf_counter()
                     result = self._update(sess, feed_dict, bi)

@@ -60,6 +60,7 @@ namespace hoomd_tf
             element_size = other.element_size;
             mem_size = other.mem_size;
             name = other.name;
+            offset = other.offset;
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
             event_handle = other.event_handle;
             stream = other.stream;
