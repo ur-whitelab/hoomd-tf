@@ -30,10 +30,10 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path, op,
+        mod = tf.load_op_library(os.path.join(path,
                                               'lib_{}_op.so'.format(op)))
-    except IOError:
-        raise IOError('Unable to load OP {}'.format(op))
+    except:
+        raise IOError('Unable to load OP {}. Expected to be in {}'.format(op, path))
     return mod
 
 

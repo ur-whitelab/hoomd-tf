@@ -1,6 +1,6 @@
 # Maintainer: Andrew White
 
-if (NOT BUILD_MD)
+if(NOT BUILD_MD)
     message(FATAL_ERROR "MPCD package cannot be built without MD.")
 endif(NOT BUILD_MD)
 
@@ -34,25 +34,28 @@ endif()
 # Need to define NO_IMPORT_ARRAY in every file but module.cc
 set_source_files_properties(${_${COMPONENT_NAME}_sources} ${_${COMPONENT_NAME}_cu_sources} PROPERTIES COMPILE_DEFINITIONS NO_IMPORT_ARRAY)
 
-if (ENABLE_CUDA)
+if(ENABLE_CUDA)
 CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
-endif (ENABLE_CUDA)
+endif(ENABLE_CUDA)
 
 #add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
 
-if (APPLE)
+if(APPLE)
 set_target_properties(_${COMPONENT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/..;@loader_path")
 else()
 set_target_properties(_${COMPONENT_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/..;\$ORIGIN")
 endif()
 
 # link the library to its dependencies
+if(NOT HOOMD_MD_LIB)
+  set(HOOMD_MD_LIB _md)
+endif()
 target_link_libraries(_${COMPONENT_NAME} PRIVATE ${HOOMD_MD_LIB} ${HOOMD_LIBRARIES})
 
 # if we are compiling with MPI support built in, set appropriate
 # compiler/linker flags
-if (ENABLE_MPI)
+if(ENABLE_MPI)
    if(MPI_COMPILE_FLAGS)
        set_target_properties(_${COMPONENT_NAME} PROPERTIES COMPILE_FLAGS "${MPI_CXX_COMPILE_FLAGS}")
    endif(MPI_COMPILE_FLAGS)
@@ -107,7 +110,7 @@ endforeach()
 
 add_custom_target(copy_${COMPONENT_NAME} ALL DEPENDS ${files})
 
-if (BUILD_TESTING)
+if(BUILD_TESTING)
     add_subdirectory(test-py)
 endif()
 
