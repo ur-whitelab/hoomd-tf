@@ -131,16 +131,9 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-<<<<<<< HEAD:tensorflow_plugin/test-py/build_examples.py
-    total_energy = tf.reduce_sum(energy, axis=0)
-    avg_energy = graph.running_mean(total_energy, 'average-energy')
-    p = tf.Print(avg_energy, ['e', avg_energy, 'te', total_energy, 's', tf.get_default_graph().get_tensor_by_name('htf-batch-steps:0')])
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[p, avg_energy])
-=======
     avg_energy = graph.running_mean(energy, 'average-energy')
     graph.save(force_tensor=forces, model_directory=directory,
                out_nodes=[avg_energy])
->>>>>>> master:htf/test-py/build_examples.py
     return directory
 
 
@@ -176,7 +169,6 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
-<<<<<<< HEAD:tensorflow_plugin/test-py/build_examples.py
 def lj_mol(NN, MN, diretory='/tmp/test-lj-mol'):
     graph = htf.graph_builder(NN)
     graph.build_mol_rep(MN)
@@ -189,8 +181,6 @@ def lj_mol(NN, MN, diretory='/tmp/test-lj-mol'):
     forces = tf.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=directory)
     return diretory
-=======
->>>>>>> master:htf/test-py/build_examples.py
 
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)

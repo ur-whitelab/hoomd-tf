@@ -417,7 +417,7 @@ class graph_builder:
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
                         'out_nodes': [x.name for x in out_nodes],
-                        'mol_indices': self.mol_indices.name
+                        'mol_indices': self.mol_indices.name if self.mol_indices is not None else None
                         }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

@@ -319,8 +319,8 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             buffer[bi * _nneighs + nnoffset[bi]].z = dx.z;
             buffer[bi * _nneighs + nnoffset[bi]].w = h_pos.data[k].w;
             nnoffset[bi]++;
+            }
         }
-
     free(nnoffset);
     }
 

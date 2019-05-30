@@ -169,7 +169,7 @@ namespace hoomd_tf
         virtual void sumReferenceForces();
 
         //! When TF updates are all finished, send word to python
-        void finishUpdate(unsigned int offset, unsigned int batch_size);
+        void finishUpdate(unsigned int offset, float batch_frac);
 
         //! pointer to the neighbor lists of all particles
         std::shared_ptr<NeighborList> m_nlist;
