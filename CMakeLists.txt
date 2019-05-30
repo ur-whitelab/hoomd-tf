@@ -1,6 +1,6 @@
 # Maintanier: Andrew White
 
-project(example_plugin)
+project(htf)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.2 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_MODULE_PATH})
