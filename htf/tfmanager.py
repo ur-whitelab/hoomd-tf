@@ -166,9 +166,9 @@ class TFManager:
                              .format(self.forces_buffer,
                                      self.forces.shape,
                                      self.device))
-        if self.graph_info['dtype'] != self.dtype:
-            self.forces = tf.cast(self.forces, self.graph_info['dtype'])
-            input_map[self.graph_info['forces']] = self.forces
+            if self.graph_info['dtype'] != self.dtype:
+                self.forces = tf.cast(self.forces, self.graph_info['dtype'])
+                input_map[self.graph_info['forces']] = self.forces
 
         # now insert into graph
         try:
