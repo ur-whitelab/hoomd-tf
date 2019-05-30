@@ -52,7 +52,7 @@ Table of Contents
 To compute a `1 / r` pairwise potential with Hoomd-TF:
 
 ```python
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 import tensorflow as tf
 
 ########### Graph Building Code ###########
@@ -84,7 +84,7 @@ This creates a computation graph whose energy function is `2 / r` and also compu
 To construct a graph, create a `graph_builder`:
 
 ```python
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 graph = htf.graph_builder(NN, output_forces)
 ```
 
@@ -187,7 +187,7 @@ Currently HOOMD-TF supports Keras layers in model building. We do not yet suppor
 ```python
 import tensorflow as tf
 from tensorflow.keras import layers
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 
 NN = 64
 N_hidden_nodes = 5
@@ -210,16 +210,16 @@ graph.save(model_directory='/tmp/keras_model/', out_nodes=[ optimizer])
 
 ```
 
-The model can then be loaded and trained as normal. Note that `keras.models.Model.fit()` is not currently supported. You must train using `tensorflow_plugin.tfcompute()` as explained in the next section.
+The model can then be loaded and trained as normal. Note that `keras.models.Model.fit()` is not currently supported. You must train using `htf.tfcompute()` as explained in the next section.
 
 ## Complete Examples
 
-See [tensorflow_plugin/models](tensorflow_plugin/models)
+See [htf/models](htf/models)
 
 ## Lennard-Jones with 1 Particle Type
 
 ```python
-graph = hoomd.tensorflow_plugin.graph_builder(NN)
+graph = hoomd.htf.graph_builder(NN)
 #use convenience rinv
 r_inv = graph.nlist_rinv
 p_energy = 4.0 / 2.0 * (r_inv**12 - r_inv**6)
@@ -235,7 +235,7 @@ You may use a saved TensorFlow model via:
 
 ```python
 import hoomd, hoomd.md
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 
 ...hoomd initialization code...
 with htf.tfcompute(model_dir) as tfcompute:
@@ -273,7 +273,7 @@ with tf.Session() as sess:
 
 We load them in the hoomd run script:
 ```python
-with hoomd.tensorflow_plugin.tfcompute(model_dir,
+with hoomd.htf.tfcompute(model_dir,
     bootstrap='/tmp/bootstrap/model') as tfcompute:
     ...
 ```
@@ -282,7 +282,7 @@ Here's how we would load them in the hoomd run script if we want to change
 the names of the variables:
 ```python
 # here the pretrained variable parameters will replace variables with a different name
-with hoomd.tensorflow_plugin.tfcompute(model_dir,
+with hoomd.htf.tfcompute(model_dir,
     bootstrap='/tmp/bootstrap/model',
     bootstrap_map={'lj-epsilon':'epsilon', 'lj-sigma':'sigma'}) as tfcompute:
     ...
@@ -295,7 +295,7 @@ Here's an example of bootstrapping where you train with Hoomd-TF and then load t
 ```python
 # build_models.py
 import tensorflow as tf
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 
 def make_train_graph(NN, directory):
     # build a model that fits the energy to a linear term
@@ -335,7 +335,7 @@ Here is how we run the training model:
 ```python
 #run_train.py
 import hoomd, hoomd.md
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 
 
 hoomd.context.initialize()
@@ -360,7 +360,7 @@ Load the variables trained in the training run into the model which computes for
 ```python
 #run_inference.py
 import hoomd, hoomd.md
-import hoomd.tensorflow_plugin as htf
+import hoomd.htf as htf
 
 hoomd.context.initialize()
 with htf.tfcompute('/tmp/inference',
@@ -380,7 +380,7 @@ with htf.tfcompute('/tmp/inference',
 
 # Utilities
 
-There are a few convenience functions in `hoomd.tensorflow_plugin` and the `graph_builder` class for plotting potential energies of pairwise potentials and constructing CG mappings.
+There are a few convenience functions in `hoomd.htf` and the `graph_builder` class for plotting potential energies of pairwise potentials and constructing CG mappings.
 
 ## RDF
 
@@ -401,11 +401,11 @@ print(variables)
 # Coarse-Graining Utilities
 
 ## Find Molecules
-To go from atom index to particle index, use the `hoomd.tensorflow_plugin.find_molecules(...)` method:
+To go from atom index to particle index, use the `hoomd.htf.find_molecules(...)` method:
 ```python
 # The method takes in a hoomd system as an argument.
 ...
-molecule_mapping_index = hoomd.tensorflow_plugin.find_molecules(system)
+molecule_mapping_index = hoomd.htf.find_molecules(system)
 ...
 
 ```
@@ -504,14 +504,14 @@ the online instructions for interactive debugging from Tensorboard.
 To use the included docker image:
 
 ```bash
-docker build -t hoomd-tf tensorflow_plugin
+docker build -t hoomd-tf htf
 ```
 
 To run the container:
 
 ```bash
 docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
- -v /insert/path/to/tensorflow_plugin/:/srv/hoomd-blue/tensorflow_plugin hoomd-tf bash
+ -v /insert/path/to/htf/:/srv/hoomd-blue/htf hoomd-tf bash
 ```
 
 The `cap--add` and `security-opt` flags are optional and allow `gdb`
@@ -534,7 +534,7 @@ make -j2
 To run the unit tests:
 
 ```bash
-pytest ../tensorflow_plugin/test-py/
+pytest ../htf/test-py/
 ```
 
 # Bluehive Install
@@ -589,7 +589,7 @@ cd hoomd-blue && git checkout tags/v2.5.1
 Put our plugin in the source directory. Make a softlink:
 
 ```bash
-ln -s $HOME/hoomd-tf/tensorflow_plugin $HOME/hoomd-blue/hoomd
+ln -s $HOME/hoomd-tf/htf $HOME/hoomd-blue/hoomd
 ```
 
 Now compile (from hoomd-blue directory). Modify options for speed if necessary.
@@ -629,7 +629,7 @@ cmake .. \
 
 ## Updating Compiled Code
 
-Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files (`tensorflow_plugin/*py` to `build/hoomd/tensorflow_plugin`)
+Note: if you modify C++ code, only run make (not cmake). If you modify python, just copy over py files (`htf/*py` to `build/hoomd/htf`)
 
 # MBuild Environment
 

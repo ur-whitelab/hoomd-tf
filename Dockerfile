@@ -36,9 +36,9 @@ RUN git clone --recursive https://bitbucket.org/glotzer/hoomd-blue /srv/hoomd-bl
 WORKDIR /srv/hoomd-blue
 
 #Add plugin
-RUN mkdir -p tensorflow_plugin
-RUN cd hoomd && ln -s ../tensorflow_plugin tensorflow_plugin
-#ADD . hoomd/tensorflow_plugin
+RUN mkdir -p htf
+RUN cd hoomd && ln -s ../htf htf
+#ADD . hoomd/htf
 
 
 ENV PYTHONPATH=$PYTHONPATH:/srv/hoomd-blue/build
