@@ -151,14 +151,15 @@ class tfcompute(hoomd.compute._compute):
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             self.cpp_force = \
-                _htf.TensorflowCompute(self,
-                                        hoomd.context.current.system_definition,
-                                        nlist.cpp_nlist if nlist is not None else None,
-                                        r_cut,
-                                        self.nneighbor_cutoff,
-                                        self.force_mode_code,
-                                        period,
-                                        self.batch_size)
+                _htf.TensorflowCompute(
+                    self,
+                    hoomd.context.current.system_definition,
+                    nlist.cpp_nlist if nlist is not None else None,
+                    r_cut,
+                    self.nneighbor_cutoff,
+                    self.force_mode_code,
+                    period,
+                    self.batch_size)
             # TODO: This is not correct
             if self.device is None:
                 self.device = '/cpu:0'

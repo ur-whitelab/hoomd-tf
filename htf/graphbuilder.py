@@ -45,9 +45,10 @@ class graph_builder:
         self.MN = 0
 
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
-        self.update_batch_index_op = self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
-                                                     true_fn=lambda: tf.constant(1),
-                                                     false_fn=lambda: tf.constant(0)))
+        self.update_batch_index_op = \
+            self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                                                true_fn=lambda: tf.constant(1),
+                                                false_fn=lambda: tf.constant(0)))
         self.out_nodes = [self.update_batch_index_op]
 
     @property
@@ -156,21 +157,28 @@ class graph_builder:
 
         '''
         if batch_reduction not in ['mean', 'sum']:
-            raise ValueError('Unable to perform {} reduction across batches'.format(batch_reduction))
-        store = tf.get_variable(name, initializer=tf.zeros_like(tensor), validate_shape=False, dtype=tf.float32)
+            raise ValueError('Unable to perform {}'
+                             'reduction across batches'.format(batch_reduction))
+        store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
+                                validate_shape=False, dtype=tf.float32)
         with tf.name_scope(name + '-batch'):
             # keep batch avg
-            batch_store = tf.get_variable(name + '-batch', initializer=tf.zeros_like(tensor), validate_shape=False, dtype=tf.float32)
+            batch_store = tf.get_variable(name + '-batch',
+                                          initializer=tf.zeros_like(tensor),
+                                          validate_shape=False, dtype=tf.float32)
             with tf.control_dependencies([self.update_batch_index_op]):
                 # moving the batch store to normal store after batch is complete
-                move_op = store.assign(tf.cond(tf.equal(self.batch_index,tf.constant(0)),
-                                        true_fn=lambda: (batch_store - store) / tf.cast(self.batch_steps, dtype=tf.float32) + store,
-                                        false_fn=lambda: store))
+                move_op = store.assign(tf.cond(
+                    tf.equal(self.batch_index, tf.constant(0)),
+                    true_fn=lambda: (batch_store - store) /
+                    tf.cast(self.batch_steps, dtype=tf.float32) + store,
+                    false_fn=lambda: store))
                 self.out_nodes.append(move_op)
                 with tf.control_dependencies([move_op]):
-                    reset_op = batch_store.assign(tf.cond(tf.equal(self.batch_index,tf.constant(0)),
-                                            true_fn=lambda: tf.zeros_like(tensor),
-                                            false_fn=lambda: batch_store))
+                    reset_op = batch_store.assign(tf.cond(
+                        tf.equal(self.batch_index, tf.constant(0)),
+                        true_fn=lambda: tf.zeros_like(tensor),
+                        false_fn=lambda: batch_store))
                     self.out_nodes.append(reset_op)
                     with tf.control_dependencies([reset_op]):
                         if batch_reduction == 'mean':
@@ -271,11 +279,11 @@ class graph_builder:
             forces = tf.concat([forces[:, :3],
                                 tf.tile(energy, tf.shape(forces)[0:1])], -1)
         else:
-            forces = tf.concat(
-                [forces[:, :3],
-                tf.reshape(tf.tile(tf.reshape(energy, [1]),
-                                   tf.shape(forces)[0:1]),
-                            shape=[-1,1])], -1)
+            forces = tf.concat([forces[:, :3],
+                                tf.reshape(tf.tile(tf.reshape(energy, [1]),
+                                                   tf.shape(forces)[0:1]),
+                                           shape=[-1, 1])],
+                               -1)
         return tf.identity(forces, name='computed-forces')
 
     def build_mol_rep(self, MN):
@@ -293,12 +301,22 @@ class graph_builder:
         '''
         self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
-        ap = tf.concat((tf.constant([0,0,0,0], dtype=self.positions.dtype, shape=(1,4)), self.positions), axis=0)
-        an = tf.concat((tf.zeros(shape=(1,self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist), axis=0)
+        ap = tf.concat((
+                tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                self.positions),
+            axis=0)
+        an = tf.concat(
+            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist),
+            axis=0)
         self.mol_positions = tf.reshape(tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
-        self.mol_nlist = tf.reshape(tf.gather(an, self.mol_flat_idx), shape=[-1, MN, self.nneighbor_cutoff, 4])
+        self.mol_nlist = tf.reshape(
+            tf.gather(an, self.mol_flat_idx),
+            shape=[-1, MN, self.nneighbor_cutoff, 4])
         if not self.output_forces:
-            af =  tf.concat((tf.constant([0,0,0,0], dtype=self.positions.dtype, shape=(1,4)), self.forces), axis=0)
+            af = tf.concat((
+                    tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                    self.forces),
+                axis=0)
             self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
         self.MN = MN
 
@@ -405,20 +423,20 @@ class graph_builder:
         meta_graph_def = tf.train.export_meta_graph(filename=(
                 os.path.join(model_directory, 'model.meta')))
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
-        #    f.write(tf.get_default_graph().as_graph_def().SerializeToString())
-        #save metadata of class
-        graph_info = {  'NN': self.nneighbor_cutoff,
-                        'model_directory': model_directory,
-                        'forces': self.forces.name,
-                        'positions': self.positions.name,
-                        'virial': None if virial is None else virial.name,
-                        'nlist': self.nlist.name,
-                        'dtype': self.nlist.dtype,
-                        'output_forces': self.output_forces,
-                        'out_nodes': [x.name for x in out_nodes],
-                        'mol_indices': self.mol_indices.name if self.mol_indices is not None else None,
-                        'MN': self.MN
-
-                        }
+        # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
+        # save metadata of class
+        graph_info = {'NN': self.nneighbor_cutoff,
+                      'model_directory': model_directory,
+                      'forces': self.forces.name,
+                      'positions': self.positions.name,
+                      'virial': None if virial is None else virial.name,
+                      'nlist': self.nlist.name,
+                      'dtype': self.nlist.dtype,
+                      'output_forces': self.output_forces,
+                      'out_nodes': [x.name for x in out_nodes],
+                      'mol_indices':
+                          self.mol_indices.name if self.mol_indices is not None else None,
+                      'MN': self.MN
+                      }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
