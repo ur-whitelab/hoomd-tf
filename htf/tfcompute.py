@@ -99,7 +99,7 @@ class tfcompute(hoomd.compute._compute):
         self.batch_size = 0 if batch_size is None else batch_size
 
         if self.batch_size > 0:
-             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
+            hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
 
         # find molecules if necessary
         if 'mol_indices' in self.graph_info and \

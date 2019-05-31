@@ -280,7 +280,7 @@ class graph_builder:
                                 tf.reshape(tf.tile(tf.reshape(energy, [1]),
                                                    tf.shape(forces)[0:1]),
                                            shape=[-1, 1])],
-                                -1)
+                               -1)
         else:
             forces = tf.concat(
                 [forces[:, :3], tf.reshape(

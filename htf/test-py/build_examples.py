@@ -67,6 +67,7 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
 def mol_force(directory='/tmp/test-mol-force-model'):
     graph = htf.graph_builder(0, output_forces=False)
     graph.build_mol_rep(3)
