@@ -106,6 +106,9 @@ class tfcompute(hoomd.compute._compute):
                 self.graph_info['mol_indices'] is not None:
             if self.batch_size != 0:
                 raise ValueError('Cannot batch by molecule and by batch_number')
+            if hoomd.comm.get_num_ranks() > 1:
+                raise ValueError('Molecular batches are '
+                                 'not supported with spatial decomposition (MPI)')
             hoomd.context.msg.notice(2, 'Using molecular batching in htf\n')
             if mol_indices is None:
                 sys = hoomd.data.system_data(hoomd.context.current.system_definition)
