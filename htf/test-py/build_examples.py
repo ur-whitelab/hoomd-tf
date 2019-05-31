@@ -67,6 +67,12 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+def mol_force(directory='/tmp/test-mol-force-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    graph.build_mol_rep(3)
+    f = tf.norm(graph.mol_forces, axis=0)
+    graph.save(directory, out_nodes=[f])
+    return directory
 
 def feeddict_graph(directory='/tmp/test-feeddict-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
@@ -179,9 +185,8 @@ def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
     mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
     total_e = tf.reduce_sum(mol_p_energy)
     forces = graph.compute_forces(total_e)
-    graph.save(force_tensor=forces, model_directory=directory)
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[])
     return directory
-
 
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)

@@ -275,15 +275,17 @@ class graph_builder:
                 tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))),
                 [tf.shape(forces)[0], 1])
             forces = tf.concat([forces[:, :3], energy], -1)
-        elif len(energy.shape) == 1 and energy.shape[0] == 1:
-            forces = tf.concat([forces[:, :3],
-                                tf.tile(energy, tf.shape(forces)[0:1])], -1)
-        else:
+        elif len(energy.shape) == 0:
             forces = tf.concat([forces[:, :3],
                                 tf.reshape(tf.tile(tf.reshape(energy, [1]),
                                                    tf.shape(forces)[0:1]),
                                            shape=[-1, 1])],
-                               -1)
+                                -1)
+        else:
+            forces = tf.concat(
+                [forces[:, :3], tf.reshape(
+                    energy,
+                    [tf.shape(forces)[0], 1])], -1)
         return tf.identity(forces, name='computed-forces')
 
     def build_mol_rep(self, MN):

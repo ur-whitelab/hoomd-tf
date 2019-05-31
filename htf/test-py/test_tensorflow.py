@@ -444,13 +444,13 @@ class test_mol_batching(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            tfcompute.attach(nlist, r_cut=rcut, batch_size=None)
+            tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(8)
 
     def test_single_atom_batched(self):
         hoomd.context.initialize()
-        model_dir = build_examples.lj_mol(9 - 1, 8)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-batch-lj')
+        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -465,8 +465,8 @@ class test_mol_batching(unittest.TestCase):
 
     def test_single_atom_malformed(self):
         hoomd.context.initialize()
-        model_dir = build_examples.lj_mol(9 - 1, 8)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-malf-lj')
+        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -481,7 +481,7 @@ class test_mol_batching(unittest.TestCase):
 
     def test_multi_atom(self):
         hoomd.context.initialize()
-        model_dir = build_examples.lj_mol(9 - 1, 8)
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-multi-lj')
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
             NN = N - 1
@@ -494,6 +494,17 @@ class test_mol_batching(unittest.TestCase):
             tfcompute.attach(nlist,
                              r_cut=rcut,
                              mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
+            hoomd.run(8)
+
+    def test_mol_force_output(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.mol_force()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            tfcompute.attach(mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
             hoomd.run(8)
 
 

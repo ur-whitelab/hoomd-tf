@@ -88,9 +88,14 @@ namespace hoomd_tf
          */
         void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0)
             {
+            // convert size into mem size
             if(!size)
                 {
                 size = _comm_struct.mem_size;
+                }
+            else
+                {
+                size = size * sizeof(T);
                 }
             assert(offset + size / sizeof(T) <= array.getNumElements());
             if (M == TFCommMode::CPU)

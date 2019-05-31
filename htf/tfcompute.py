@@ -59,7 +59,7 @@ class tfcompute(hoomd.compute._compute):
         if not self.mock_mode and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
             self.tasklock.exit()
-            time.sleep(1)
+            time.sleep(0)
             if self.tfm and self.tfm.is_alive():
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
@@ -98,11 +98,15 @@ class tfcompute(hoomd.compute._compute):
         self.r_cut = r_cut
         self.batch_size = 0 if batch_size is None else batch_size
 
+        if self.batch_size > 0:
+             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
+
         # find molecules if necessary
         if 'mol_indices' in self.graph_info and \
                 self.graph_info['mol_indices'] is not None:
             if self.batch_size != 0:
                 raise ValueError('Cannot batch by molecule and by batch_number')
+            hoomd.context.msg.notice(2, 'Using molecular batching in htf\n')
             if mol_indices is None:
                 sys = hoomd.data.system_data(hoomd.context.current.system_definition)
                 mol_indices = \
@@ -269,9 +273,9 @@ class tfcompute(hoomd.compute._compute):
         for k, v in args['graph_info'].items():
             message.append('\t  {: <18}: {: >20}'.format(str(k), str(v)))
         for m in message:
-            hoomd.context.msg.notice(2, m + '\n')
+            hoomd.context.msg.notice(8, m + '\n')
         self.q.join()
-        if not self.tfm.isAlive():
+        if not self.tfm.is_alive():
             exit()
         hoomd.context.msg.notice(2, 'TF Session Manager has released control.'
                                  ' Starting HOOMD updates\n')
@@ -293,7 +297,7 @@ class tfcompute(hoomd.compute._compute):
         else:
             self.q.put(fd, block=False)
         self.q.join()
-        if not self.tfm.isAlive():
+        if not self.tfm.is_alive():
             hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
