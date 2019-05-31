@@ -131,7 +131,7 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(energy, 'average-energy')
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0), 'average-energy')
     graph.save(force_tensor=forces, model_directory=directory,
                out_nodes=[avg_energy])
     return directory
@@ -169,18 +169,17 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
-def lj_mol(NN, MN, diretory='/tmp/test-lj-mol'):
+def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
     graph = htf.graph_builder(NN)
     graph.build_mol_rep(MN)
     #assume particle (w) is 0
     r = graph.safe_norm(graph.mol_nlist, axis=3)
-    rinv = self.safe_div(1.0, r)
+    rinv = graph.safe_div(1.0, r)
     mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
-    mol_energy = tf.reduce_sum(mol_p_energy, axis=2, keep_dims=True)
-    energy = graph.scatter_mol_quantity(mol_energy)
-    forces = tf.compute_forces(energy)
+    total_e = tf.reduce_sum(mol_p_energy)
+    forces = graph.compute_forces(total_e)
     graph.save(force_tensor=forces, model_directory=directory)
-    return diretory
+    return directory
 
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)

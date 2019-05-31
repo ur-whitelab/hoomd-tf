@@ -42,6 +42,7 @@ class graph_builder:
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
+        self.MN = 0
 
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
         self.update_batch_index_op = self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
@@ -223,7 +224,7 @@ class graph_builder:
             # neighbor to force on origin in nlist
             nlist_forces = tf.gradients(energy, nlist)[0]
             if nlist_forces is not None:
-                nlist_forces = tf.identity(2.0 * nlist_forces,
+                nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
                                            name='nlist-pairwise-force'
                                                 '-gradient-raw')
                 zeros = tf.zeros(tf.shape(nlist_forces))
@@ -268,11 +269,13 @@ class graph_builder:
             forces = tf.concat([forces[:, :3], energy], -1)
         elif len(energy.shape) == 1 and energy.shape[0] == 1:
             forces = tf.concat([forces[:, :3],
-                                tf.tile(energy, tf.shape(forces)[0])], -1)
+                                tf.tile(energy, tf.shape(forces)[0:1])], -1)
         else:
             forces = tf.concat(
-                [forces[:, :3], tf.reshape(energy,
-                                           [tf.shape(forces)[0], 1])], -1)
+                [forces[:, :3],
+                tf.reshape(tf.tile(tf.reshape(energy, [1]),
+                                   tf.shape(forces)[0:1]),
+                            shape=[-1,1])], -1)
         return tf.identity(forces, name='computed-forces')
 
     def build_mol_rep(self, MN):
@@ -288,20 +291,16 @@ class graph_builder:
         To convert a _mol quantity to a per-particle quantity, call
         scatter_mol_quanitity(tensor)
         '''
-        self.mol_indices = tf.placeholder(tf.int32, shape=[self.atom_number, MN], name='htf-molecule-index')
-        self.mol_positions = tf.gather_nd(self.positions, self.mol_indices)
-        self.mol_nlist = tf.gather_nd(self.nlist, self.mol_indices)
+        self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
+        self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
+        ap = tf.concat((tf.constant([0,0,0,0], dtype=self.positions.dtype, shape=(1,4)), self.positions), axis=0)
+        an = tf.concat((tf.zeros(shape=(1,self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist), axis=0)
+        self.mol_positions = tf.reshape(tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
+        self.mol_nlist = tf.reshape(tf.gather(an, self.mol_flat_idx), shape=[-1, MN, self.nneighbor_cutoff, 4])
         if not self.output_forces:
-            self.mol_forces = tf.gather_nd(self.forces, self.mol_indices)
-
-    def scatter_mol_quantity(self, tensor):
-        '''
-        This will convert a tensor shaped of mol_number x MN x [shape]
-        into N x [shape]. For example, you might have energy per atom per molecule (mol_number x MN x 1)
-        and this would give back energy per atom.
-        '''
-        assert len(tensor.shape) > 2, 'You must have shape with dimension greater than 2'
-        return tf.scatter_nd(self.mol_indices, tensor, [tf.shape(self.positions)[0]] + tf.shape(tensor)[2:])
+            af =  tf.concat((tf.constant([0,0,0,0], dtype=self.positions.dtype, shape=(1,4)), self.forces), axis=0)
+            self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
+        self.MN = MN
 
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
@@ -417,7 +416,9 @@ class graph_builder:
                         'dtype': self.nlist.dtype,
                         'output_forces': self.output_forces,
                         'out_nodes': [x.name for x in out_nodes],
-                        'mol_indices': self.mol_indices.name if self.mol_indices is not None else None
+                        'mol_indices': self.mol_indices.name if self.mol_indices is not None else None,
+                        'MN': self.MN
+
                         }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

@@ -100,7 +100,7 @@ class test_compute(unittest.TestCase):
     def test_full_batch(self):
         hoomd.context.initialize()
         model_dir = build_examples.benchmark_nonlist_graph()
-        with hoomd.tensorflow_plugin.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                                 n=[32,32])
             hoomd.md.integrate.mode_standard(dt=0.005)
@@ -205,7 +205,7 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, period=10,
                              feed_dict=lambda tfc:
                              {'test-tensor:0':
-                              tfc.get_positions_array()[4, :3]},
+                              tfc.get_positions_array()[2, :3]},
                               batch_size=4)
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1, :3]
@@ -439,7 +439,7 @@ class test_mol_batching(unittest.TestCase):
     def test_single_atom(self):
         hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8)
-        with htf.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -454,7 +454,7 @@ class test_mol_batching(unittest.TestCase):
     def test_single_atom_batched(self):
         hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8)
-        with htf.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -463,9 +463,39 @@ class test_mol_batching(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
-            tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
+            with self.assertRaises(ValueError):
+                tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
+            hoomd.run(8)
+    def test_single_atom_malformed(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+            with self.assertRaises(ValueError):
+                tfcompute.attach(nlist, r_cut=rcut, mol_indices = [1,1,4,24])
             hoomd.run(8)
 
+    def test_multi_atom(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3,3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2).randomize_velocities(seed=1)
+            tfcompute.attach(nlist, r_cut=rcut, mol_indices = [[0,1,2], [3, 4], [5, 6, 7], [8]])
+            hoomd.run(8)
 
 if __name__ == '__main__':
     unittest.main()

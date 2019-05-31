@@ -101,10 +101,27 @@ class tfcompute(hoomd.compute._compute):
         # find molecules if necessary
         if 'mol_indices' in self.graph_info and \
                 self.graph_info['mol_indices'] is not None:
+            if self.batch_size != 0:
+                raise ValueError('Cannot batch by molecule and by batch_number')
             if mol_indices is None:
+                sys = hoomd.data.system_data(hoomd.context.current.system_definition)
                 mol_indices = \
-                    find_molecules(hoomd.context.current.system_definition)
+                    find_molecules(sys)
             self.mol_indices = mol_indices
+            if type(self.mol_indices) != list:
+                raise ValueError('mol_indices must be nested python list')
+            if type(self.mol_indices[0]) != list:
+                raise ValueError('mol_indices must be nested python list')
+            # fill out the indices
+            for mi in self.mol_indices:
+                for i in range(len(mi)):
+                    mi[i] += 1
+                if len(mi) > self.graph_info['MN']:
+                    raise ValueError('One of your molecule indices'
+                                     'has more than MN indices.'
+                                     'Increase MN in your graph.')
+                while len(mi) < self.graph_info['MN']:
+                    mi.append(0)
         else:
             self.mol_indices = None
 
