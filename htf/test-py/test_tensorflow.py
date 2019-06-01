@@ -83,6 +83,45 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(system.particles[j].net_force,
                                                py_forces[j, :], atol=1e-5)
                 hoomd.run(100)
+    def test_clean_exit(self):
+        model_dir = build_examples.simple_potential()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            snapshot1 = system.take_snapshot()
+            position1 = snapshot1.particles.position[0]
+            
+            hoomd.md.integrate.mode_standard(dt= 10**(-10))
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=2, seed=2)
+
+            tfcompute.attach(nlist, r_cut=rcut)
+            # use these to throw off timesteps
+            hoomd.run(1)
+        snapshot2 = system.take_snapshot()
+        position2 = snapshot2.particles.position[0]
+        print('position1',position1)
+        print('position2',position2)
+        np.testing.assert_equal(position1,position2,err_msg="The positions are not equal.")
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            #hoomd.context.initialize()
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            hoomd.md.integrate.mode_standard(dt= 10**(-3))
+            tfcompute.attach(nlist, r_cut=rcut)
+            # use these to throw off timesteps
+            hoomd.run(10)
+        snapshot3 = system.take_snapshot()
+        position3 = snapshot3.particles.position[0]
+        print('position2',position2)
+        print('position3',position3)
+        np.testing.assert_equal(position2,position3,err_msg="The positions are not equal.")
+          
 
     def test_nonlist(self):
         model_dir = build_examples.benchmark_nonlist_graph()
