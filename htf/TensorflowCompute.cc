@@ -156,7 +156,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
                 }
 
             // get positions
-            _positions_comm.receiveArray(m_pdata->getPositions(), offset, batch_size);
+            _positions_comm.receiveArray(m_pdata->getPositions(), offset, N);
             // Now we prepare forces if we're sending it
             // forces are size  N, not batch size so we only do this on first batch
             if (_force_mode == FORCE_MODE::hoomd2tf && i == 0)
@@ -174,7 +174,6 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
             // forces comm is full size because we use m_forces
             _forces_comm.setOffset(offset);
             _forces_comm.setBatchSize(N);
-
             finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
 
             if (m_prof) m_prof->push("TensorflowCompute::Force Update");
@@ -526,7 +525,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
 void TensorflowComputeGPU::receiveVirial(unsigned int offset, unsigned int batch_size) {
     ArrayHandle<Scalar> h_virial(m_virial, access_location::device, access_mode::overwrite);
     ArrayHandle<Scalar> tf_h_virial(_virial_array, access_location::device, access_mode::read);
-    gpu_add_virial(h_virial.data + batch_offset,
+    gpu_add_virial(h_virial.data + offset,
         tf_h_virial.data,
         batch_size,
         getVirialPitch(),
