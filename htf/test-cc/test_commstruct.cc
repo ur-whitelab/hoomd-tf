@@ -1,5 +1,5 @@
-#include "hoomd/ExecutionConfiguration.h"
-#include "hoomd/htf/CommStruct.h"
+#include <hoomd/ExecutionConfiguration.h>
+#include <hoomd/htf/CommStruct.h>
 
 /*! \file test_commstruct.cc
     \brief Implements unit tests for the CommStruct object class
@@ -8,7 +8,7 @@
 
 using namespace std;
 
-#include "hoomd/test/upp11_config.h"
+#include <hoomd/test/upp11_config.h>
 HOOMD_UP_MAIN();
 
 UP_TEST( CommStruct_basic_tests)
