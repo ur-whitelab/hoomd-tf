@@ -76,8 +76,8 @@ install(TARGETS _${COMPONENT_NAME}
 ##############################
 # The Tensorflow
 
-add_subdirectory(hoomd2tf)
-add_subdirectory(tf2hoomd)
+add_subdirectory(hoomd2tf_op)
+add_subdirectory(tf2hoomd_op)
 
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package
