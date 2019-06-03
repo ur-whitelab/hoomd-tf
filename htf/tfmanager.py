@@ -30,7 +30,7 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        op_path = os.path.join(path, op,'lib_{}'.format(op))
+        op_path = os.path.join(path, op, 'lib_{}'.format(op))
         if os.path.exists(op_path + '.so'):
             op_path += '.so'
         elif os.path.exists(op_path + '.dylib'):
