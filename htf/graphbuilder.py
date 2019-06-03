@@ -23,6 +23,7 @@ class graph_builder:
         '''
         # clear any previous graphs
         atom_number = None
+        self.atom_number = atom_number
         tf.reset_default_graph()
         self.nneighbor_cutoff = nneighbor_cutoff
         # use zeros so that we don't need to feed to start session
@@ -33,14 +34,22 @@ class graph_builder:
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
         if not output_forces:
-            self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4],
-                                         name='forces-input')
+            self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
+        self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
+        self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
+
         self._nlist_rinv = None
-        self.tensor_step = tf.get_variable('htf-step', dtype=tf.float32,
-                                           initializer=0.0)
-        update_step_op = self.tensor_step.assign_add(1.0)
-        self.out_nodes = [update_step_op]
+        self.mol_indices = None
+        self.mol_batched = False
+        self.MN = 0
+
+        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
+        self.update_batch_index_op = \
+            self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                                                true_fn=lambda: tf.constant(1),
+                                                false_fn=lambda: tf.constant(0)))
+        self.out_nodes = [self.update_batch_index_op]
 
     @property
     def nlist_rinv(self):
@@ -124,7 +133,7 @@ class graph_builder:
         self.out_nodes.extend([result, vis_rs])
         return result
 
-    def running_mean(self, tensor, name):
+    def running_mean(self, tensor, name, batch_reduction='mean'):
         '''Computes running mean of the given tensor
 
         Parameters
@@ -132,19 +141,51 @@ class graph_builder:
             tensor
                 The tensor for which you're computing running mean
             name
-                The name of the variable in which the running mean
-                will be stored
+                The name of the variable in which the running mean will be stored
+            batch_reduction
+                If the hoomd data is batched by atom index, how should the component
+                tensor values be reduced? Options are 'mean' and 'sum'. A sum means
+                that tensor values are summed across the batch and then a mean
+                is taking between batches. This makes sense for looking at a system
+                property like pressure. A mean gives a mean across the batch.
+                This would make sense for a per-particle property.
+
 
         Returns
         -------
             A variable containing the running mean
 
         '''
-
+        if batch_reduction not in ['mean', 'sum']:
+            raise ValueError('Unable to perform {}'
+                             'reduction across batches'.format(batch_reduction))
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
-                                validate_shape=False)
-        update_op = store.assign_add((tensor - store) / self.tensor_step)
-        self.out_nodes.append(update_op)
+                                validate_shape=False, dtype=tf.float32)
+        with tf.name_scope(name + '-batch'):
+            # keep batch avg
+            batch_store = tf.get_variable(name + '-batch',
+                                          initializer=tf.zeros_like(tensor),
+                                          validate_shape=False, dtype=tf.float32)
+            with tf.control_dependencies([self.update_batch_index_op]):
+                # moving the batch store to normal store after batch is complete
+                move_op = store.assign(tf.cond(
+                    tf.equal(self.batch_index, tf.constant(0)),
+                    true_fn=lambda: (batch_store - store) /
+                    tf.cast(self.batch_steps, dtype=tf.float32) + store,
+                    false_fn=lambda: store))
+                self.out_nodes.append(move_op)
+                with tf.control_dependencies([move_op]):
+                    reset_op = batch_store.assign(tf.cond(
+                        tf.equal(self.batch_index, tf.constant(0)),
+                        true_fn=lambda: tf.zeros_like(tensor),
+                        false_fn=lambda: batch_store))
+                    self.out_nodes.append(reset_op)
+                    with tf.control_dependencies([reset_op]):
+                        if batch_reduction == 'mean':
+                            batch_op = batch_store.assign_add(tensor * self.batch_frac)
+                        elif batch_reduction == 'max':
+                            batch_op = batch_store.assign_add(tensor)
+                        self.out_nodes.append(batch_op)
         return store
 
     def compute_forces(self, energy, virial=None, positions=None,
@@ -191,7 +232,7 @@ class graph_builder:
             # neighbor to force on origin in nlist
             nlist_forces = tf.gradients(energy, nlist)[0]
             if nlist_forces is not None:
-                nlist_forces = tf.identity(2.0 * nlist_forces,
+                nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
                                            name='nlist-pairwise-force'
                                                 '-gradient-raw')
                 zeros = tf.zeros(tf.shape(nlist_forces))
@@ -234,14 +275,52 @@ class graph_builder:
                 tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))),
                 [tf.shape(forces)[0], 1])
             forces = tf.concat([forces[:, :3], energy], -1)
-        elif len(energy.shape) == 1 and energy.shape[0] == 1:
+        elif len(energy.shape) == 0:
             forces = tf.concat([forces[:, :3],
-                                tf.tile(energy, tf.shape(forces)[0])], -1)
+                                tf.reshape(tf.tile(tf.reshape(energy, [1]),
+                                                   tf.shape(forces)[0:1]),
+                                           shape=[-1, 1])],
+                               -1)
         else:
             forces = tf.concat(
-                [forces[:, :3], tf.reshape(energy,
-                                           [tf.shape(forces)[0], 1])], -1)
+                [forces[:, :3], tf.reshape(
+                    energy,
+                    [tf.shape(forces)[0], 1])], -1)
         return tf.identity(forces, name='computed-forces')
+
+    def build_mol_rep(self, MN):
+        '''
+        This creates mol_forces, mol_positions, and mol_nlist which are
+        mol_number x MN x 4 (mol_forces, mol_positions) and ? x MN x NN x 4 (mol_nlist)
+        tensors batched by molecule, where mol_number is the number of molecules. mol_number
+        is determined at run time. The MN must be chosen to be large enough to
+        encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
+        then the extra entries will be zeros. The specification of what is a molecule
+        will be passed at runtime.
+
+        To convert a _mol quantity to a per-particle quantity, call
+        scatter_mol_quanitity(tensor)
+        '''
+        self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
+        self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
+        ap = tf.concat((
+                tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                self.positions),
+            axis=0)
+        an = tf.concat(
+            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist),
+            axis=0)
+        self.mol_positions = tf.reshape(tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
+        self.mol_nlist = tf.reshape(
+            tf.gather(an, self.mol_flat_idx),
+            shape=[-1, MN, self.nneighbor_cutoff, 4])
+        if not self.output_forces:
+            af = tf.concat((
+                    tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                    self.forces),
+                axis=0)
+            self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
+        self.MN = MN
 
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
@@ -346,7 +425,7 @@ class graph_builder:
         meta_graph_def = tf.train.export_meta_graph(filename=(
                 os.path.join(model_directory, 'model.meta')))
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
-        #    f.write(tf.get_default_graph().as_graph_def().SerializeToString())
+        # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
         graph_info = {'NN': self.nneighbor_cutoff,
                       'model_directory': model_directory,
@@ -356,7 +435,10 @@ class graph_builder:
                       'nlist': self.nlist.name,
                       'dtype': self.nlist.dtype,
                       'output_forces': self.output_forces,
-                      'out_nodes': [x.name for x in out_nodes]
+                      'out_nodes': [x.name for x in out_nodes],
+                      'mol_indices':
+                          self.mol_indices.name if self.mol_indices is not None else None,
+                      'MN': self.MN
                       }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

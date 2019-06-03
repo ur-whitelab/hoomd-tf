@@ -58,14 +58,14 @@ namespace hoomd_tf
                 checkDevice();
                 allocate();
                 }
-        
+
         //! Copy constructor
         TFArrayComm(TFArrayComm&& other)
             {
-            // use the assignment overloaded operator 
+            // use the assignment overloaded operator
             *this = std::move(other);
             }
-        
+
         //! overloaded assignment operator
         TFArrayComm& operator=(TFArrayComm&& other)
             {
@@ -76,7 +76,7 @@ namespace hoomd_tf
             m_exec_conf = other.m_exec_conf;
             return *this;
             }
-        
+
         //! destructor
         ~TFArrayComm()
             {
@@ -86,8 +86,18 @@ namespace hoomd_tf
         /*! Copy contents of given array to this array
          *  \param array the array whose contents to copy into this one
          */
-        void receiveArray(const GlobalArray<T>& array)
+        void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0)
             {
+            // convert size into mem size
+            if(!size)
+                {
+                size = _comm_struct.mem_size;
+                }
+            else
+                {
+                size = size * sizeof(T);
+                }
+            assert(offset + size / sizeof(T) <= array.getNumElements());
             if (M == TFCommMode::CPU)
                 {
                 ArrayHandle<T> handle(*_array,
@@ -96,7 +106,7 @@ namespace hoomd_tf
                 ArrayHandle<T> ohandle(array,
                     access_location::host,
                     access_mode::read);
-                memcpy(handle.data, ohandle.data, _comm_struct.mem_size);
+                memcpy(handle.data, ohandle.data + offset, size);
                 }
             else
                 {
@@ -108,8 +118,8 @@ namespace hoomd_tf
                         access_location::device,
                         access_mode::read);
                     cudaMemcpy(handle.data,
-                        ohandle.data,
-                        _comm_struct.mem_size,
+                        ohandle.data + offset,
+                        size,
                         cudaMemcpyDeviceToDevice);
                     CHECK_CUDA_ERROR();
                 #endif
@@ -137,6 +147,18 @@ namespace hoomd_tf
                     CHECK_CUDA_ERROR();
                 #endif
                 }
+            }
+
+        //! Set offset value for batching
+        void setOffset(size_t offset)
+        {
+        _comm_struct.offset = offset;
+        }
+
+        //! Set batch size
+        void setBatchSize(size_t N)
+            {
+            _comm_struct.num_elements[0] = N;
             }
 
         /*! Returns our underlying array as a vector

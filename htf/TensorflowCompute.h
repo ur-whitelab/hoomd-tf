@@ -86,7 +86,8 @@ namespace hoomd_tf
             Scalar r_cut,
             unsigned int nneighs,
             FORCE_MODE force_mode,
-            unsigned int period);
+            unsigned int period,
+            unsigned int batch_size);
 
         //! No base constructor
         TensorflowCompute() = delete;
@@ -94,19 +95,19 @@ namespace hoomd_tf
         //! Destructor
         virtual ~TensorflowCompute();
 
-        //! Returns log value of specified quantity at chosen timestep 
+        //! Returns log value of specified quantity at chosen timestep
         Scalar getLogValue(const std::string& quantity,
                            unsigned int timestep) override;
 
         //! Returns address of TFArrayComm object holding forces
         int64_t getForcesBuffer() const;
-        
+
         //! Returns address of TFArrayComm object holding positions
         int64_t getPositionsBuffer() const;
-        
+
         //! Returns address of TFArrayComm object holding virial
         int64_t getVirialBuffer() const;
-        
+
         //! Returns address of TFArrayComm object holding neighbor list
         int64_t getNlistBuffer() const;
 
@@ -122,13 +123,13 @@ namespace hoomd_tf
 
         //! Returns the array of forces from associated TFArrayComm object
         std::vector<Scalar4> getForcesArray() const;
-        
+
         //! Returns the array of neighbor lists from associated TFArrayComm object
         std::vector<Scalar4> getNlistArray() const;
-        
+
         //! Returns the array of positions from associated TFArrayComm object
         std::vector<Scalar4> getPositionsArray() const;
-        
+
         //! Returns the array of virials from associated TFArrayComm object
         std::vector<Scalar> getVirialArray() const;
 
@@ -147,32 +148,32 @@ namespace hoomd_tf
             {
             _ref_forces.push_back(force);
             }
-        
+
         //! pybind objects have to be public with current cc flags
         pybind11::object _py_self;
-        
+
         //! need this to add to integrator in HOOMD
         std::shared_ptr<HalfStepHookWrapper<TensorflowCompute<M> > > hook;
-        
+
         protected:
         //! used if particle number changes
         virtual void reallocate();
-        
+
         //! Set up neighbor list to take one timestep forward
-        virtual void prepareNeighbors();
-        
+        virtual void prepareNeighbors(unsigned int offset, unsigned int batch_size);
+
         //! Transfer virial from TF memory location to HOOMD
-        virtual void receiveVirial();
-        
+        virtual void receiveVirial(unsigned int offset, unsigned int batch_size);
+
         //! Add up all the reference forces from TF to HOOMD
         virtual void sumReferenceForces();
 
         //! When TF updates are all finished, send word to python
-        void finishUpdate(unsigned int timestep);
+        void finishUpdate(unsigned int offset, float batch_frac);
 
         //! pointer to the neighbor lists of all particles
         std::shared_ptr<NeighborList> m_nlist;
-        
+
         //! cutoff radius
         Scalar _r_cut;
 
@@ -185,6 +186,9 @@ namespace hoomd_tf
         //! how frequently we actually do the TF update
         unsigned int _period;
 
+        //! The batch size for sending/receiving TF updates
+        unsigned int _batch_size;
+
         //! name of log used in TF
         std::string m_log_name;
 
@@ -193,6 +197,9 @@ namespace hoomd_tf
 
         //! comm object for holding positions
         TFArrayComm<M, Scalar4> _positions_comm;
+
+        //! array of positions, which is size of batch
+        GlobalArray<Scalar4> _positions_array;
 
         //! comm object for holding forces
         TFArrayComm<M, Scalar4> _forces_comm;
@@ -229,43 +236,44 @@ namespace hoomd_tf
                 Scalar r_cut,
                 unsigned int nneighs,
                 FORCE_MODE force_mode,
-                unsigned int period);
-    
+                unsigned int period,
+                unsigned int batch_size);
+
             /*! Set what HOOMD autotuner params to use
              *  \param enable whether to use autotuner
              *  \param period period with which to use autotuner
              */
             void setAutotunerParams(bool enable, unsigned int period) override;
-    
+
             protected:
             /*! GPU version calls CPU reallocate and resets cudaStreams for comm objects
              *  \sa TensorflowCompute::reallocate()
              */
             void reallocate() override;
-            
+
             //! invokes a kernel version of prepareNeighbors
             //! \sa TensorflowCompute::prepareNeighbors()
-            void prepareNeighbors() override;
-            
+            void prepareNeighbors(unsigned int offset, unsigned int batch_size) override;
+
             /*! Use a GPU kernel to transfer the virial values
              *  \sa TensorflowCompute::receiveVirial()
              */
-            void receiveVirial() override;
-            
+            void receiveVirial(unsigned int offset, unsigned int batch_size) override;
+
             /*! Use a GPU kernel to add up reference forces
              *  \sa TensorflowCompute::sumReferenceForces()
              */
             void sumReferenceForces() override;
-    
+
             private:
             std::unique_ptr<Autotuner> m_tuner;  //! Autotuner for block size
             cudaStream_t _streams[4];            //! Array of CUDA streams
             size_t _nstreams = 4;                //! Number of CUDA streams
             };
-    
+
         //! Export the TensorflowComputeGPU class to python
         void export_TensorflowComputeGPU(pybind11::module& m);
-    
+
         template class TensorflowCompute<TFCommMode::GPU>;
     #endif  // ENABLE_CUDA
 

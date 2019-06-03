@@ -34,7 +34,8 @@ TensorflowCompute<M>::TensorflowCompute(
     Scalar r_cut,
     unsigned int nneighs,
     FORCE_MODE force_mode,
-    unsigned int period)
+    unsigned int period,
+    unsigned int batch_size)
 
     : ForceCompute(sysdef),
       _py_self(py_self),
@@ -49,7 +50,8 @@ TensorflowCompute<M>::TensorflowCompute(
       _r_cut(r_cut),
       _nneighs(nneighs),
       _force_mode(force_mode),
-      _period(period)
+      _period(period),
+      _batch_size(batch_size)
     {
     m_exec_conf->msg->notice(2)
         << "Starting TensorflowCompute "
@@ -66,6 +68,19 @@ TensorflowCompute<M>::TensorflowCompute(
             << "Setting flag indicating virial modification will occur"
             << std::endl;
         }
+
+    // try to set storage mode
+    if(_nneighs > 0)
+        {
+            if(m_nlist->getStorageMode() == NeighborList::half) {
+            m_nlist->setStorageMode(NeighborList::full);
+
+            m_exec_conf->msg->notice(8)
+                << "Swapping to full neighbor list"
+                << std::endl;
+            }
+        }
+
     // connect to the ParticleData to receive notifications when the maximum
     // number of particles changes
     m_pdata->getMaxParticleNumberChangeSignal()
@@ -81,22 +96,22 @@ void TensorflowCompute<M>::reallocate()
     // but the recieve method does exist
     // so we'll cast away until I make a version
     // of TFArrayComm that can't override array
-    _positions_comm = TFArrayComm<M, Scalar4>(
-        const_cast<GlobalArray<Scalar4>&>(m_pdata->getPositions()),
-        "positions",
-        m_exec_conf);
+    unsigned int batch_size = _batch_size == 0 ? m_pdata->getMaxN() : _batch_size;
+    GlobalArray<Scalar4> tmpPos(batch_size, m_exec_conf);
+    _positions_array.swap(tmpPos);
+    _positions_comm = TFArrayComm<M, Scalar4>(_positions_array, "positions", m_exec_conf);
     _forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces", m_exec_conf);
     // In cuda, an array of size 0 breaks things. So even if we aren"t using
     // neighborlist we need to make it size > 0
     if (_nneighs > 0)
         {
-        GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * m_pdata->getMaxN()), m_exec_conf);
+        GlobalArray<Scalar4> tmp(std::max(1U, _nneighs * batch_size), m_exec_conf);
         _nlist_array.swap(tmp);
         _nlist_comm = TFArrayComm<M, Scalar4>(_nlist_array, "nlist", m_exec_conf);
         }
     // virial is made with maxN, not N
-    GlobalArray<Scalar>  tmp2(9 * m_pdata->getMaxN(), m_exec_conf);
-    _virial_array.swap(tmp2);
+    GlobalArray<Scalar>  tmpVirial(9 * batch_size, m_exec_conf);
+    _virial_array.swap(tmpVirial);
     _virial_comm =  TFArrayComm<M, Scalar>(_virial_array, "virial", m_exec_conf);
     _virial_comm.memsetArray(0);
     }
@@ -109,60 +124,83 @@ TensorflowCompute<M>::~TensorflowCompute(){}
 */
 template <TFCommMode M>
 void TensorflowCompute<M>::computeForces(unsigned int timestep)
-    {
+{
+    int offset, N;
     if (timestep % _period == 0)
         {
-        if (m_prof) m_prof->push("TensorflowCompute<M>");
-        if (m_prof) m_prof->push("TensorflowCompute<M>::Preparing Data for TF");
-        // nneighs == 0 send positions only
-        if (_nneighs > 0)
+        if (m_prof) m_prof->push("TensorflowCompute");
+        // Batch the operations
+        // if batch_size == 0, that means do as big as we need to
+        unsigned int batch_size = _batch_size == 0 ? m_pdata->getN() : _batch_size;
+        for(int i = 0; i <  m_pdata->getN() / batch_size + 1; i++)
             {
-            // Update the neighborlist
-            m_nlist->compute(timestep);
-            if (m_prof) m_prof->push("TensorflowCompute<M>::reshapeNeighbors");
-            prepareNeighbors();
-            if (m_prof) m_prof->pop();
-            }
-
-        if (m_prof) m_prof->pop(); //preparing data
-
-        // positions and forces are ready. Now we send
-        if (_force_mode == FORCE_MODE::hoomd2tf)
-            {
-            if(_ref_forces.empty())
+            offset = i * batch_size;
+            // compute batch size so that we don't exceed atom number.
+            N = std::min(m_pdata->getN() - offset, batch_size);
+            if (N < 1) break;
+            // nneighs == 0 send positions only
+            if (_nneighs > 0)
                 {
-                _forces_comm.receiveArray(m_pdata->getNetForce());
+                _nlist_comm.setBatchSize(N * _nneighs);
+                    // check again
+                    if(m_nlist->getStorageMode() == NeighborList::half)
+                        {
+                        m_exec_conf->msg->error() << "Must have full neigbhorlist" << std::endl;
+                        throw std::runtime_error("neighbor list wrong type");
+                        }
+                    // Update the neighborlist once
+                    if(i == 0) m_nlist->compute(timestep);
+                    if (m_prof) m_prof->push("TensorflowCompute::reshapeNeighbors");
+                    prepareNeighbors(offset, N);
+                    if (m_prof) m_prof->pop();
                 }
-            else
+
+            // get positions
+            _positions_comm.receiveArray(m_pdata->getPositions(), offset, N);
+            // Now we prepare forces if we're sending it
+            // forces are size  N, not batch size so we only do this on first batch
+            if (_force_mode == FORCE_MODE::hoomd2tf && i == 0)
                 {
-                sumReferenceForces();
+                    if(_ref_forces.empty()) {
+                    _forces_comm.receiveArray(m_pdata->getNetForce());
+                    }
+                    else {
+                    sumReferenceForces();
+                    }
                 }
+
+            // set batch sizes for communication
+            _positions_comm.setBatchSize(N);
+            // forces comm is full size because we use m_forces
+            _forces_comm.setOffset(offset);
+            _forces_comm.setBatchSize(N);
+            finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
+
+            if (m_prof) m_prof->push("TensorflowCompute::Force Update");
+
+            // now we receive virial from the update.
+            if(_force_mode == FORCE_MODE::tf2hoomd)
+                {
+                _virial_comm.setBatchSize(N * 9);
+                    receiveVirial(offset, N);
+                }
+            if (m_prof) m_prof->pop();  // force update
+
+            #ifdef ENABLE_CUDA
+            if(M == TFCommMode::GPU) cudaDeviceSynchronize();
+            #endif // ENABLE_CUDA
+
             }
-
-        finishUpdate(timestep);
-
-        if (m_prof) m_prof->push("TensorflowCompute<M>::Force Update");
-
-        // now we receive virial from the update.
-        if(_force_mode == FORCE_MODE::tf2hoomd) {
-            receiveVirial();
-            }
-        if (m_prof) m_prof->pop();  // force update
-
-#ifdef ENABLE_CUDA
-        if(M == TFCommMode::GPU)
-            cudaDeviceSynchronize();
-#endif // ENABLE_CUDA
-
         if (m_prof) m_prof->pop();  // compute
         }
-    }
+
+}
 
 template <TFCommMode M>
-void TensorflowCompute<M>::finishUpdate(unsigned int timestep)
+void TensorflowCompute<M>::finishUpdate(unsigned int batch_index, float batch_frac)
     {
     if (m_prof) m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
-    _py_self.attr("finish_update")(timestep);
+    _py_self.attr("finish_update")(batch_index, batch_frac);
     if (m_prof) m_prof->pop();
     }
 
@@ -189,25 +227,26 @@ void TensorflowCompute<M>::sumReferenceForces()
     }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::receiveVirial()
+void TensorflowCompute<M>::receiveVirial(unsigned int batch_offset, unsigned int batch_size)
     {
     ArrayHandle<Scalar> dest(m_virial, access_location::host,
         access_mode::readwrite);
     ArrayHandle<Scalar> src(_virial_array, access_location::host,
         access_mode::read);
-    for (unsigned int i = 0; i < m_pdata->getN(); i++)
+    for (unsigned int i = 0; i < batch_size; i++)
         {
-        dest.data[0 * getVirialPitch() + i] += src.data[i * 9 + 0];  // xx
-        dest.data[1 * getVirialPitch() + i] += src.data[i * 9 + 1];  // xy
-        dest.data[2 * getVirialPitch() + i] += src.data[i * 9 + 2];  // xz
-        dest.data[3 * getVirialPitch() + i] += src.data[i * 9 + 4];  // yy
-        dest.data[4 * getVirialPitch() + i] += src.data[i * 9 + 5];  // yz
-        dest.data[5 * getVirialPitch() + i] += src.data[i * 9 + 8];  // zz
+        assert(5 * getVirialPitch() + i + batch_offset < m_virial.getNumElements());
+        dest.data[0 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 0];  // xx
+        dest.data[1 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 1];  // xy
+        dest.data[2 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 2];  // xz
+        dest.data[3 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 4];  // yy
+        dest.data[4 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 5];  // yz
+        dest.data[5 * getVirialPitch() + i + batch_offset] += src.data[i * 9 + 8];  // zz
         }
     }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::prepareNeighbors()
+void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned int batch_size)
     {
     // create ptr at offset to where neighbors go
     ArrayHandle<Scalar4> buffer_array(_nlist_array, access_location::host,
@@ -216,20 +255,20 @@ void TensorflowCompute<M>::prepareNeighbors()
     //zero out buffer
     memset(buffer, 0, _nlist_array.getNumElements() * sizeof(Scalar4));
     unsigned int* nnoffset =
-        (unsigned int*)calloc(m_pdata->getMaxN(), sizeof(unsigned int));
+        (unsigned int*)calloc(batch_size, sizeof(unsigned int));
 
     // These snippets taken from md/TablePotentials.cc
 
     // access the neighbor list
     ArrayHandle<Scalar4> h_pos(
         m_pdata->getPositions(), access_location::host, access_mode::read);
-    
+
     ArrayHandle<unsigned int> h_n_neigh(
         m_nlist->getNNeighArray(), access_location::host, access_mode::read);
-    
+
     ArrayHandle<unsigned int> h_nlist(
         m_nlist->getNListArray(), access_location::host, access_mode::read);
-    
+
     ArrayHandle<unsigned int> h_head_list(
         m_nlist->getHeadList(), access_location::host, access_mode::read);
 
@@ -237,7 +276,8 @@ void TensorflowCompute<M>::prepareNeighbors()
     const BoxDim& box = m_pdata->getBox();
 
     // for each particle
-    for (int i = 0; i < (int)m_pdata->getN(); i++)
+    int bi = 0;
+    for (int i = batch_offset; i < batch_offset + batch_size; i++, bi++)
         {
         // access the particle's position and type (MEM TRANSFER: 4 scalars)
         Scalar3 pi =
@@ -249,6 +289,7 @@ void TensorflowCompute<M>::prepareNeighbors()
         unsigned int j = 0;
 
         if (_nneighs < size)
+            {
             m_exec_conf->msg->error()
                 << "Overflow in nlist! Only "
                 << _nneighs
@@ -256,6 +297,8 @@ void TensorflowCompute<M>::prepareNeighbors()
                 << size
                 << " neighbors."
                 << std::endl;
+            throw std::runtime_error("Nlist Overflow");
+            }
         for (; j < size; j++)
             {
 
@@ -269,35 +312,14 @@ void TensorflowCompute<M>::prepareNeighbors()
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
-            if((i * _nneighs + nnoffset[i]) >=  _nlist_array.getNumElements())
-                std::cout
-                    << "Error: "
-                    << i
-                    << " "
-                    <<  m_pdata->getMaxN()
-                    << " "
-                    << (i * _nneighs + nnoffset[i])
-                    << " "
-                    << _nlist_array.getNumElements()
-                    << std::endl;
             if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
-            buffer[i * _nneighs + nnoffset[i]].x = dx.x;
-            buffer[i * _nneighs + nnoffset[i]].y = dx.y;
-            buffer[i * _nneighs + nnoffset[i]].z = dx.z;
-            buffer[i * _nneighs + nnoffset[i]].w = h_pos.data[k].w;
-            nnoffset[i]++;
-            //TODO: Why is k so big?
-            if (m_nlist->getStorageMode() == NeighborList::half && k < m_pdata->getN())
-                {
-                buffer[k * _nneighs + nnoffset[k]].x = -dx.x;
-                buffer[k * _nneighs + nnoffset[k]].y = -dx.y;
-                buffer[k * _nneighs + nnoffset[k]].z = -dx.z;
-                buffer[k * _nneighs + nnoffset[k]].w = h_pos.data[i].w;
-                nnoffset[k]++;
-                }
+            buffer[bi * _nneighs + nnoffset[bi]].x = dx.x;
+            buffer[bi * _nneighs + nnoffset[bi]].y = dx.y;
+            buffer[bi * _nneighs + nnoffset[bi]].z = dx.z;
+            buffer[bi * _nneighs + nnoffset[bi]].w = h_pos.data[k].w;
+            nnoffset[bi]++;
             }
         }
-
     free(nnoffset);
     }
 
@@ -359,6 +381,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
             Scalar,
             unsigned int,
             FORCE_MODE,
+            unsigned int,
             unsigned int>())
         .def("getPositionsBuffer",
             &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer,
@@ -411,8 +434,9 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
             Scalar r_cut,
             unsigned int nneighs,
             FORCE_MODE force_mode,
-            unsigned int period)
-     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period)
+            unsigned int period,
+            unsigned int batch_size)
+     : TensorflowCompute(py_self, sysdef, nlist, r_cut, nneighs, force_mode, period, batch_size)
     {
 
     //want nlist on stream 0 since a nlist rebuild is
@@ -457,7 +481,7 @@ void TensorflowComputeGPU::setAutotunerParams(bool enable, unsigned int period)
     m_tuner->setEnabled(enable);
     }
 
-void TensorflowComputeGPU::prepareNeighbors() {
+void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int batch_size) {
 
     ArrayHandle<Scalar4> d_nlist_array(_nlist_array,
         access_location::device,
@@ -479,6 +503,8 @@ void TensorflowComputeGPU::prepareNeighbors() {
         d_pos.data,
         m_pdata->getN(),
         _nneighs,
+        offset,
+        batch_size,
         m_pdata->getNGhosts(),
         m_pdata->getBox(),
         d_n_neigh.data,
@@ -496,12 +522,12 @@ void TensorflowComputeGPU::prepareNeighbors() {
     m_tuner->end();
     }
 
-void TensorflowComputeGPU::receiveVirial() {
+void TensorflowComputeGPU::receiveVirial(unsigned int offset, unsigned int batch_size) {
     ArrayHandle<Scalar> h_virial(m_virial, access_location::device, access_mode::overwrite);
     ArrayHandle<Scalar> tf_h_virial(_virial_array, access_location::device, access_mode::read);
-    gpu_add_virial(h_virial.data,
+    gpu_add_virial(h_virial.data + offset,
         tf_h_virial.data,
-        m_pdata->getN(),
+        batch_size,
         getVirialPitch(),
         _virial_comm.getCudaStream());
     }
@@ -534,6 +560,7 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
             Scalar,
             unsigned int,
             FORCE_MODE,
+            unsigned int,
             unsigned int>())
         .def("getPositionsBuffer",
             &TensorflowComputeGPU::getPositionsBuffer,

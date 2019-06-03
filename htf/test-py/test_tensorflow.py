@@ -38,7 +38,7 @@ class test_access(unittest.TestCase):
     def test_access(self):
         model_dir = build_examples.simple_potential()
         with hoomd.htf.tfcompute(model_dir,
-                                               _mock_mode=True) as tfcompute:
+                                 _mock_mode=True) as tfcompute:
             hoomd.context.initialize('--gpu_error_checking')
             N = 3 * 3
             NN = N - 1
@@ -49,7 +49,7 @@ class test_access(unittest.TestCase):
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             hoomd.run(1)
             tfcompute.get_virial_array()
             tfcompute.get_positions_array()
@@ -73,7 +73,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=2, seed=2)
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             # use these to throw off timesteps
             hoomd.run(1)
             hoomd.run(1)
@@ -97,11 +97,21 @@ class test_compute(unittest.TestCase):
             tfcompute.attach()
             hoomd.run(10)
 
+    def test_full_batch(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.benchmark_nonlist_graph()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[32, 32])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(batch_size=None)
+            hoomd.run(10)
+
     def test_trainable(self):
         model_dir = build_examples.trainable_graph(9 - 1)
         with hoomd.htf.tfcompute(model_dir,
-                                               write_tensorboard=True
-                                               ) as tfcompute:
+                                 write_tensorboard=True) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
@@ -110,7 +120,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1, batch_size=4)
             hoomd.run(5)
             checkpoints = glob.glob(os.path.join(model_dir, 'model-*.data*'))
             # 6 because an extra is written at the end
@@ -151,7 +161,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=4, seed=1)
 
-            tfcompute.attach(nlist, r_cut=rcut)
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
             for i in range(3):
                 hoomd.run(2)
 
@@ -192,8 +202,8 @@ class test_compute(unittest.TestCase):
             # just for fun
             tfcompute.attach(nlist, r_cut=rcut, period=10,
                              feed_dict=lambda tfc:
-                             {'test-tensor:0':
-                              tfc.get_positions_array()[4, :3]})
+                             {'test-tensor:0': tfc.get_positions_array()[2, :3]},
+                             batch_size=4)
             hoomd.run(11)
             tf_force = tfcompute.get_forces_array()[1, :3]
 
@@ -220,8 +230,7 @@ class test_compute(unittest.TestCase):
     def test_lj_forces(self):
         N = 3 * 3
         model_dir = build_examples.lj_graph(N - 1)
-        with hoomd.htf.tfcompute(model_dir,
-                                               _mock_mode=False) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             T = 10
             rcut = 5.0
@@ -277,12 +286,13 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all()
                                    ).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=4)
             hoomd.run(10)
             # now load checkpoint
         variables = hoomd.htf.load_variables(
-            model_dir, ['average-energy', 'htf-step:0'])
-        assert variables['htf-step'] == 11.0
+            model_dir, ['average-energy', 'htf-batch-steps:0'])
+        assert not math.isnan(variables['average-energy'])
+        assert variables['htf-batch-steps'] == 11
 
     def test_force_output(self):
         Ne = 5
@@ -307,11 +317,8 @@ class test_compute(unittest.TestCase):
             hoomd.run(300)
             # now load checkpoint and check error
             variables = hoomd.htf.load_variables(
-                model_dir, ['error', 'forces'])
+                model_dir, ['error'])
             assert abs(variables['error']) < 1e-5
-            # make sure transferred from tfcompute to tf correctly
-            np.testing.assert_allclose(tfcompute.get_forces_array(),
-                                       variables['forces'])
             # now check difference between particle forces and
             # forces from htf
             lj_forces = np.array([lj.forces[j].force for j in range(Ne**2)])
@@ -333,12 +340,12 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=3)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=3, batch_size=4)
             hoomd.run(10)
         # now load checkpoint
         variables = hoomd.htf.load_variables(
-            model_dir, ['avg-rdf:0', 'htf-step:0'])
-        assert np.sum(variables['avg-rdf:0']) > 0
+            model_dir, ['avg-rdf'])
+        assert np.sum(variables['avg-rdf']) > 0
 
     def test_lj_energy(self):
         model_dir = build_examples.lj_graph(9 - 1)
@@ -375,8 +382,7 @@ class test_compute(unittest.TestCase):
         # matching exactly, I'll leave the tol
         # set that high.
         model_dir = build_examples.lj_graph(9 - 1)
-        with hoomd.htf.tfcompute(model_dir,
-                                               _mock_mode=False) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
@@ -423,6 +429,83 @@ class test_compute(unittest.TestCase):
                                            tf_virial[i][j][0:2], atol=1e-5)
             # np.testing.assert_allclose([log.query('potential_energy'),
             # log.query('pressure')], thermo_scalars[i], rtol=1e-3)
+
+
+class test_mol_batching(unittest.TestCase):
+    def test_single_atom(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(8)
+
+    def test_single_atom_batched(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-batch-lj')
+        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            with self.assertRaises(ValueError):
+                tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
+            hoomd.run(8)
+
+    def test_single_atom_malformed(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-malf-lj')
+        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            with self.assertRaises(ValueError):
+                tfcompute.attach(nlist, r_cut=rcut, mol_indices=[1, 1, 4, 24])
+            hoomd.run(8)
+
+    def test_multi_atom(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.lj_mol(9 - 1, 8, '/tmp/test-lj-multi-lj')
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            tfcompute.attach(nlist,
+                             r_cut=rcut,
+                             mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
+            hoomd.run(8)
+
+    def test_mol_force_output(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.mol_force()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            tfcompute.attach(mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
+            hoomd.run(8)
 
 
 if __name__ == '__main__':

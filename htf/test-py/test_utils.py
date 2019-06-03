@@ -8,7 +8,6 @@ import build_examples
 
 class test_loading(unittest.TestCase):
     def test_load_variables(self):
-        print('ONLY DISPLAY ONCE')
         model_dir = '/tmp/test-load'
         # make model that does assignment
         g = htf.graph_builder(0, False)
@@ -146,49 +145,26 @@ class test_mappings(unittest.TestCase):
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
-        print(positions.shape)
-        system = type('', (object, ), {
-                'box': type('', (object,), {
-                        'Lx': 100., 'Ly': 100., 'Lz': 100.})})
-        nlist = htf.compute_nlist(tf.cast(
-                positions, tf.float32), 100., 9, system, True)
-        with tf.Session() as sess:
-            nlist = sess.run([nlist])
-            np.testing.assert_array_almost_equal(np.sort(
-                    nlist[0, :])[0], [9, 9, 9])
-            np.testing.assert_array_almost_equal(np.sort(
-                    nlist[-1, :])[-1], [-9, -9, -9])
-
-    def test_compute_nlist(self):
-        N = 10
-        positions = tf.tile(tf.reshape(tf.range(N),
-                                       [-1, 1]), [1, 3])
-        print(positions.shape)
-        system = type('', (object, ),
-                      {'box': type('', (object,),
-                                   {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
-        nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  100., 9, system, True)
+        system = type('',
+                      (object, ),
+                      {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(
-                np.sort(nlist[0, :])[0], [9, 9, 9])
+            np.testing.assert_array_almost_equal(nlist[0, :][0], [9, 9, 9])
+            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-9, -9, -9])
 
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
-        print(positions.shape)
-        system = type('', (object, ),
-                      {'box': type('', (object,),
-                                   {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
-        nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  5.5, 9, system, True)
+        system = type('',
+                      (object, ),
+                      {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(
-                np.sort(nlist[0, :])[0], [3, 3, 3])
-            np.testing.assert_array_almost_equal(
-                np.sort(nlist[-1, :])[0], [-3, -3, -3])
+            np.testing.assert_array_almost_equal(nlist[0, :][0], [3, 3, 3])
+            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-3, -3, -3])
 
     def test_nlist_compare(self):
         rcut = 5.0
@@ -204,9 +180,8 @@ class test_mappings(unittest.TestCase):
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=None)
             # add lj so we can hopefully get particles mixing
             hoomd.run(100)
         variables = hoomd.htf.load_variables(
@@ -214,6 +189,7 @@ class test_mappings(unittest.TestCase):
         # the two nlists need to be sorted to be compared
         nlist = variables['hoomd-r']
         cnlist = variables['htf-r']
+        print(nlist.shape)
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i, :])
             ci = np.sort(cnlist[i, :])

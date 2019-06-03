@@ -26,18 +26,19 @@ namespace hoomd_tf
      *   and copying
      *
      */
-  
+
     struct CommStruct
         {
         CommStruct(int num_dims, size_t element_size, const char* name) :
         num_dims(num_dims),
         element_size(element_size),
+        offset(0),
         name(name),
         mem_size(0)
         {}
 
         //! Set number of elements and calculate needed memory
-        void set_num_elements(int* num_elements_t)
+        void setNumElements(int* num_elements_t)
             {
             size_t size = 1;
             num_elements = new int[num_dims];
@@ -59,6 +60,7 @@ namespace hoomd_tf
             element_size = other.element_size;
             mem_size = other.mem_size;
             name = other.name;
+            offset = other.offset;
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
             event_handle = other.event_handle;
             stream = other.stream;
@@ -85,20 +87,21 @@ namespace hoomd_tf
                << "\n";
             return os;
             }
-        virtual void read_gpu_memory(void *dest, size_t n) = 0;        //! Read GPU memory
-        virtual void read_cpu_memory(void *dest, size_t n) = 0;        //! Read CPU memory
-        virtual void write_gpu_memory(const void *src, size_t n) = 0;  //! Write to GPU
-        virtual void write_cpu_memory(const void *src, size_t n) = 0;  //! Write to CPU
+        virtual void readGPUMemory(void *dest, size_t n) = 0;        //! Read GPU memory
+        virtual void readCPUMemory(void *dest, size_t n) = 0;        //! Read CPU memory
+        virtual void writeGPUMemory(const void *src, size_t n) = 0;  //! Write to GPU
+        virtual void writeCPUMemory(const void *src, size_t n) = 0;  //! Write to CPU
 
         int* num_elements;   //! Number of elements. would be better as size_t
                              //! but need this for TF
         int num_dims;        //! Dimensionality
         size_t element_size; //! Bit size of each element
+        size_t offset;       //! Offset for doing batches
         size_t mem_size;     //! Total memory of all elements together
         const char* name;    //! Name of this communication object
         //TODO Why is ENABLE_CUDA set for compilng tf code? We don't have any hoomd headers...
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
-        cudaEvent_t event_handle; //! This CommStruct's CUDA event handle 
+        cudaEvent_t event_handle; //! This CommStruct's CUDA event handle
         cudaStream_t stream = 0;  //! This CommStruct's CUDA stream
 #endif
         };
@@ -106,7 +109,7 @@ namespace hoomd_tf
     }
 
     /*!  CommStructDerived class
-     *   This is for a derived child of CommStruct and has 
+     *   This is for a derived child of CommStruct and has
      *   all its functionality
      *
      */
@@ -139,35 +142,39 @@ namespace hoomd_tf
             }
 
 #ifdef ENABLE_CUDA
-        void read_gpu_memory(void *dest, size_t n) override
+        void readGPUMemory(void *dest, size_t n) override
             {
+            assert(offset * sizeof(T) + n <= mem_size);
             ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
-            cudaMemcpy(dest, handle.data, n, cudaMemcpyDeviceToDevice);
+            cudaMemcpy(dest, handle.data + offset, n, cudaMemcpyDeviceToDevice);
             }
-        void write_gpu_memory(const void* src, size_t n) override
+        void writeGPUMemory(const void* src, size_t n) override
             {
+            assert(offset * sizeof(T) + n <= mem_size);
             ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
-            cudaMemcpy(handle.data, src, n, cudaMemcpyDeviceToDevice);
+            cudaMemcpy(handle.data + offset, src, n, cudaMemcpyDeviceToDevice);
             }
 #else
-        void read_gpu_memory(void *dest, size_t n) override
+        void readGPUMemory(void *dest, size_t n) override
             {
-            throw "Should not call read_gpu_memory without CUDA";
+            throw "Should not call readGPUMemory without CUDA";
             }
-        void write_gpu_memory(const void* src, size_t n) override
+        void writeGPUMemory(const void* src, size_t n) override
             {
-            throw "Should not call read_gpu_memory without CUDA";
+            throw "Should not call readGPUMemory without CUDA";
             }
 #endif //ENABLE_CUDA
-        void read_cpu_memory(void* dest, size_t n) override
+        void readCPUMemory(void* dest, size_t n) override
             {
+            assert(offset * sizeof(T) + n <= mem_size);
             ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-            memcpy(dest, handle.data, n);
+            memcpy(dest, handle.data + offset, n);
             }
-        void write_cpu_memory(const void* src, size_t n) override
+        void writeCPUMemory(const void* src, size_t n) override
             {
+            assert(offset * sizeof(T) + n <= mem_size);
             ArrayHandle<T> handle(*_array, access_location::host, access_mode::overwrite);
-            memcpy(handle.data, src, n);
+            memcpy(handle.data + offset, src, n);
             }
         };
 
