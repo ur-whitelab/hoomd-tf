@@ -30,8 +30,14 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path, op,
-                                              'lib_{}_op.so'.format(op)))
+        op_path = os.path.join(path, op, 'lib_{}'.format(op))
+        if os.path.exists(op_path + '.so'):
+            op_path += '.so'
+        elif os.path.exists(op_path + '.dylib'):
+            op_path += '.dylib'
+        else:
+            raise OSError()
+        mod = tf.load_op_library(op_path)
     except OSError:
         raise OSError('Unable to load OP {}. '
                       'Expected to be in {}'.format(op, path))
@@ -126,7 +132,7 @@ class TFManager:
             self.tb_writer.flush()
 
     def _prepare_graph(self):
-        hoomd_to_tf_module = load_op_library('hoomd2tf')
+        hoomd_to_tf_module = load_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
         with tf.device(self.device):
@@ -201,7 +207,7 @@ class TFManager:
         except ValueError:
             raise ValueError('Your graph must contain the following'
                              ' tensors: forces, nlist, positions')
-        tf_to_hoomd_module = load_op_library('tf2hoomd')
+        tf_to_hoomd_module = load_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         with tf.device(self.device):
             self.out_nodes.append(tf_to_hoomd(
