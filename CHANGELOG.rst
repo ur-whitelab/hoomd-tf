@@ -1,27 +1,26 @@
 Change Log
 ==========
 
-v0.2 (Not yet released)
+v0.2 (2019-06-03)
 -----------------------
 
 *New Features*
-- It is now possible to batch a TF calls or order things by molecule in the TF graph
-- Made code consistent for hoomd-blue plugin.
-- Added config options and tested XLA benchmarks for CG mapping operators code and other multistep complex code.
-- It is now possible to compile the plugin after hoomd-blue install
+
+- Added attach `batch_size` argument enabling batching of TF calls
+- Can now batch by molecule, enabling selection/exclusion of molecules
+- Added XLA option to improve TF speed
+- Now possible to compile the plugin after hoomd-blue install
+- Changed name of package to htf instead of tensorflow_plugin
 
 *Enhancements*
 
 - Changed output logging to only output TF items to the tf_manager.log and
-- The log-level is consistent with that in hoomd.
-- Add C++ tests and coverage analysis.
-- Swtiched to using hoomd-blue cuda error codes.
-- Added MPI tests with domain decomposition.
-
-*Bug Fixes*
-
+- Log-level is now consistent with hoomd
+- Add C++ tests
+- Swtiched to using hoomd-blue cuda error codes
+- Added MPI tests with domain decomposition
+- Improved style consistency with hoomd-blue
 - Cmake now checks for TF and hoomd versions while building hoomd-tf.
-- Batch positions/nlist for execution because very large systems cannot fit a complex NN model into memory.
 
 v0.1 (2019-04-22)
 -----------------
