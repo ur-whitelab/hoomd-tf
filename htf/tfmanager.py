@@ -30,8 +30,14 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path, op,
-                                              'lib_{}.so'.format(op)))
+        op_path = os.path.join(path, op,'lib_{}'.format(op))
+        if os.path.exists(op_path + '.so'):
+            op_path += '.so'
+        elif os.path.exists(op_path + '.dylib'):
+            op_path += '.dylib'
+        else:
+            raise OSError()
+        mod = tf.load_op_library(op_path)
     except OSError:
         raise OSError('Unable to load OP {}. '
                       'Expected to be in {}'.format(op, path))

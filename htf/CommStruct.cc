@@ -16,7 +16,7 @@ namespace hoomd_tf
         _array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
-        int tmp[] = {array.getNumElements(), 4};
+	int tmp[] = {static_cast<int>(array.getNumElements()), 4};
         setNumElements(tmp);
         }
 
@@ -26,7 +26,7 @@ namespace hoomd_tf
         _array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
-        int tmp[] = {array.getNumElements(), 1};
+	  int tmp[] = {static_cast<int>(array.getNumElements()), 1};
         setNumElements(tmp);
         }
     }
