@@ -16,8 +16,8 @@ v0.2 (2019-06-03)
 
 - Changed output logging to only output TF items to the tf_manager.log and
 - Log-level is now consistent with hoomd
-- Add C++ tests
-- Swtiched to using hoomd-blue cuda error codes
+- Added C++ tests
+- Switched to hoomd-blue cuda error codes
 - Added MPI tests with domain decomposition
 - Improved style consistency with hoomd-blue
 - Cmake now checks for TF and hoomd versions while building hoomd-tf.
