@@ -40,7 +40,6 @@ class tfcompute(hoomd.compute._compute):
         except FileNotFoundError:
             raise RuntimeError('Unable to load model'
                                ' in directory {}'.format(tf_model_directory))
-        self.tasklock = _htf.make_tasklock()
         self.mock_mode = _mock_mode
         self.device = device
         self.write_tensorboard = write_tensorboard
@@ -58,8 +57,6 @@ class tfcompute(hoomd.compute._compute):
         # trigger end in task lock
         if not self.mock_mode and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
-            self.tasklock.exit()
-            time.sleep(0)
             if self.tfm and self.tfm.is_alive():
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
@@ -243,7 +240,7 @@ class tfcompute(hoomd.compute._compute):
     def _init_tf(self):
         self.q = queue.Queue(maxsize=1)
         self.tfm = threading.Thread(target=main, args=(
-                self.q, self.tasklock, self.write_tensorboard, self.device))
+                self.q, self.write_tensorboard, self.device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
