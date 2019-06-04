@@ -6,23 +6,17 @@ v0.2 (2019-06-03)
 
 *New Features*
 
-- Added C++ unit tests skeleton in the same format as HOOMD-blue. Compile with -DBUILD_TESTING=ON to use.
-- Made code consistent for hoomd-blue plugin.
-- Added config options and tested XLA benchmarks for CG mapping operators code and other multistep complex code.
-- It is now possible to compile the plugin after hoomd-blue install
-=======
 - Added attach `batch_size` argument enabling batching of TF calls
 - Can now batch by molecule, enabling selection/exclusion of molecules
 - Added XLA option to improve TF speed
 - Now possible to compile the plugin after hoomd-blue install
 - Changed name of package to htf instead of tensorflow_plugin
->>>>>>> master
 
 *Enhancements*
 
 - Changed output logging to only output TF items to the tf_manager.log and
 - Log-level is now consistent with hoomd
-- Added C++ tests
+- Added C++ unit tests skeleton in the same format as HOOMD-blue. Compile with -DBUILD_TESTING=ON to use.
 - Switched to hoomd-blue cuda error codes
 - Added MPI tests with domain decomposition
 - Improved style consistency with hoomd-blue
