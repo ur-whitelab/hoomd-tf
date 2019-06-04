@@ -41,7 +41,7 @@ template <typename T>
 struct HOOMD2TFFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, int size, CommStruct* in_memory,
                   T* out) {
-    in_memory->read_cpu_memory(out, size * sizeof(T));
+    in_memory->readCPUMemory(out, size * sizeof(T));
   }
 };
 

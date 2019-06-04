@@ -30,8 +30,14 @@ def load_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
-        mod = tf.load_op_library(os.path.join(path,
-                                              'lib_{}_op.so'.format(op)))
+        op_path = os.path.join(path, op, 'lib_{}'.format(op))
+        if os.path.exists(op_path + '.so'):
+            op_path += '.so'
+        elif os.path.exists(op_path + '.dylib'):
+            op_path += '.dylib'
+        else:
+            raise OSError()
+        mod = tf.load_op_library(op_path)
     except OSError:
         raise OSError('Unable to load OP {}. '
                       'Expected to be in {}'.format(op, path))
@@ -90,9 +96,9 @@ class TFManager:
                 self.out_nodes.append(tf.get_default_graph(
                         ).get_operation_by_name(n))
 
-    def _update(self, sess, feed_dict=None):
-
-        if self.step % self.save_period == 0:
+    def _update(self, sess, feed_dict, batch_index):
+        # only update step and save on the first batch.
+        if self.step % self.save_period == 0 and batch_index == 0:
             if self.summaries is not None:
                 result = sess.run(self.out_nodes + [self.summaries],
                                   feed_dict=feed_dict)
@@ -101,7 +107,8 @@ class TFManager:
             self._save_model(sess, result[-1])
         else:
             result = sess.run(self.out_nodes, feed_dict=feed_dict)
-        self.step += 1
+        if batch_index == 0:
+            self.step += 1
 
         return result
 
@@ -125,7 +132,7 @@ class TFManager:
             self.tb_writer.flush()
 
     def _prepare_graph(self):
-        hoomd_to_tf_module = load_op_library('hoomd2tf')
+        hoomd_to_tf_module = load_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
         with tf.device(self.device):
@@ -200,7 +207,7 @@ class TFManager:
         except ValueError:
             raise ValueError('Your graph must contain the following'
                              ' tensors: forces, nlist, positions')
-        tf_to_hoomd_module = load_op_library('tf2hoomd')
+        tf_to_hoomd_module = load_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         with tf.device(self.device):
             self.out_nodes.append(tf_to_hoomd(
@@ -235,7 +242,7 @@ class TFManager:
         config = tf.ConfigProto(gpu_options=gpu_options)
         if self.use_xla:
             config.graph_options.optimizer_options.global_jit_level = \
-            tf.OptimizerOptions.ON_1
+                tf.OptimizerOptions.ON_1
         with tf.Session(config=config) as sess:
             # resore model checkpoint if there are variables
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
@@ -300,51 +307,41 @@ class TFManager:
             self.log.log(10, 'Completed TF Set-up')
             self.q.task_done()
             cumtime = 0
+            processing_cumtime = 0
             result = None
+            feed_dict = None
+            while True:
+                try:
+                    raw_feed_dict = self.q.get()
+                    if raw_feed_dict is None:
+                        self.log.info('Empty Queue')
+                        raise queue.Empty()
+                except queue.Empty:
+                    self.log.info('Received exit. Leaving TF Update Loop. ')
+                    self.log.info('TF Update running'
+                                  'time is {}'.format(cumtime))
+                    self.log.info('TF Feed Processing'
+                                  'time is {}'.format(processing_cumtime))
+                    self.log.info('TF Total Time'
+                                  '(excluding communication)'
+                                  ' is {}'
+                                  .format(processing_cumtime + cumtime))
+                    self._save_model(sess)
+                    break
 
-            if self.use_feed:
-                feed_dict = None
-                while True:
-                    try:
-                        feed_name_dict = self.q.get()
-                        if feed_name_dict is None:
-                            self.log.exception('Empty')
-                            raise queue.Empty()
-                    except queue.Empty:
-                        self.log.log(2, 'Received exit. Leaving TF Update'
-                                     'Loop. \n')
-                        self.log.log(2, 'TF Update time (excluding '
-                                     'communication) is {}\n'.format(cumtime))
-                        self._save_model(sess)
-                        break
-                    # convert name keys to actual tensor keys
-                    try:
-                        feed_dict = dict()
-                        for k, v in feed_name_dict.items():
-                            tensor = tf.get_default_graph(
-                                ).get_tensor_by_name(k)
-                            feed_dict[tensor] = v
-                        last_clock = time.perf_counter()
-                        result = self._update(sess, feed_dict=feed_dict)
-                    finally:
-                        cumtime += (time.perf_counter() - last_clock)
-                        self.q.task_done()
-            else:
-                while True:
-                    if not self.tasklock.start():
-                        self.log.log(2, 'Received exit. Leaving TF Update'
-                                     ' Loop.')
-                        self.log.log(2, 'TF Update time (excluding'
-                                     ' communication) is {:.3f}'
-                                     ' seconds'.format(cumtime))
-                        self._save_model(sess)
-                        break
+                try:
+                    # convert name keys to actual
+                    # tensor keys if we're using a feed_dict
+                    # from user
                     last_clock = time.perf_counter()
-                    try:
-                        result = self._update(sess)
-                    except Exception as e:
-                        self.tasklock.end()
-                        self.tasklock.exit()
-                        raise e
+                    feed_dict = dict()
+                    bi = raw_feed_dict['htf-batch-index:0']
+                    for k, v in raw_feed_dict.items():
+                        tensor = tf.get_default_graph().get_tensor_by_name(k)
+                        feed_dict[tensor] = v
+                    processing_cumtime += (time.perf_counter() - last_clock)
+                    last_clock = time.perf_counter()
+                    result = self._update(sess, feed_dict, bi)
+                finally:
                     cumtime += (time.perf_counter() - last_clock)
-                    self.tasklock.end()
+                    self.q.task_done()

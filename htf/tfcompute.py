@@ -1,6 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
+from .utils import find_molecules
 from hoomd.htf import _htf
 from .tfmanager import main
 import sys
@@ -17,12 +18,14 @@ import hoomd.comm
 import tensorflow as tf
 
 # Integrates tensorflow
-# TODO
+
+
 class tfcompute(hoomd.compute._compute):
-    def __init__(self,tf_model_directory, log_filename='tf_manager.log', device=None,
-                  bootstrap=None, bootstrap_map=None,
-                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
-                  use_xla=False):
+    def __init__(self, tf_model_directory,
+                 log_filename='tf_manager.log', device=None,
+                 bootstrap=None, bootstrap_map=None,
+                 _debug_mode=False, _mock_mode=False, write_tensorboard=False,
+                 use_xla=False):
         # so delete won't fail
         self.tfm = None
         # if hoomd.init.is_initialized():
@@ -56,7 +59,7 @@ class tfcompute(hoomd.compute._compute):
         if not self.mock_mode and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
             self.tasklock.exit()
-            time.sleep(1)
+            time.sleep(0)
             if self.tfm and self.tfm.is_alive():
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
@@ -72,7 +75,8 @@ class tfcompute(hoomd.compute._compute):
     # actual tensor is named 'my-tensor:0'.
 
     def attach(self, nlist=None, r_cut=0, save_period=1000,
-               period=1, feed_dict=None):
+               period=1, feed_dict=None, mol_indices=None,
+               batch_size=None):
         # make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
             hoomd.context.msg.error('Must attach TF after initialization\n')
@@ -92,6 +96,42 @@ class tfcompute(hoomd.compute._compute):
         self.atom_number = len(hoomd.context.current.group_all)
         r_cut = float(r_cut)
         self.r_cut = r_cut
+        self.batch_size = 0 if batch_size is None else batch_size
+
+        if self.batch_size > 0:
+            hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
+
+        # find molecules if necessary
+        if 'mol_indices' in self.graph_info and \
+                self.graph_info['mol_indices'] is not None:
+            if self.batch_size != 0:
+                raise ValueError('Cannot batch by molecule and by batch_number')
+            if hoomd.comm.get_num_ranks() > 1:
+                raise ValueError('Molecular batches are '
+                                 'not supported with spatial decomposition (MPI)')
+            hoomd.context.msg.notice(2, 'Using molecular batching in htf\n')
+            if mol_indices is None:
+                sys = hoomd.data.system_data(hoomd.context.current.system_definition)
+                mol_indices = \
+                    find_molecules(sys)
+            self.mol_indices = mol_indices
+            if type(self.mol_indices) != list:
+                raise ValueError('mol_indices must be nested python list')
+            if type(self.mol_indices[0]) != list:
+                raise ValueError('mol_indices must be nested python list')
+            # fill out the indices
+            for mi in self.mol_indices:
+                for i in range(len(mi)):
+                    mi[i] += 1
+                if len(mi) > self.graph_info['MN']:
+                    raise ValueError('One of your molecule indices'
+                                     'has more than MN indices.'
+                                     'Increase MN in your graph.')
+                while len(mi) < self.graph_info['MN']:
+                    mi.append(0)
+        else:
+            self.mol_indices = None
+
         if nlist is not None:
             nlist.subscribe(self.rcut)
             # activate neighbor list
@@ -117,17 +157,29 @@ class tfcompute(hoomd.compute._compute):
                              ' not sending them from tfcompute')
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
-            self.cpp_force = _htf.TensorflowCompute(
-                self, hoomd.context.current.system_definition,
-                nlist.cpp_nlist if nlist is not None else None,
-                r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+            self.cpp_force = \
+                _htf.TensorflowCompute(
+                    self,
+                    hoomd.context.current.system_definition,
+                    nlist.cpp_nlist if nlist is not None else None,
+                    r_cut,
+                    self.nneighbor_cutoff,
+                    self.force_mode_code,
+                    period,
+                    self.batch_size)
+            # TODO: This is not correct
             if self.device is None:
                 self.device = '/cpu:0'
         else:
-            self.cpp_force = _htf.TensorflowComputeGPU(
-                self, hoomd.context.current.system_definition,
-                nlist.cpp_nlist if nlist is not None else None,
-                r_cut, self.nneighbor_cutoff, self.force_mode_code, period)
+            self.cpp_force = \
+                _htf.TensorflowComputeGPU(self,
+                                          hoomd.context.current.system_definition,
+                                          nlist.cpp_nlist if nlist is not None else None,
+                                          r_cut,
+                                          self.nneighbor_cutoff,
+                                          self.force_mode_code,
+                                          period,
+                                          self.batch_size)
             if self.device is None:
                 self.device = '/gpu:0'
         # get double vs single precision
@@ -183,7 +235,7 @@ class tfcompute(hoomd.compute._compute):
 
     def shutdown_tf(self):
         # need to terminate orphan
-        if self.feed_dict is not None and not self.q.full():
+        if not self.q.full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
             self.q.put(None)
         self.tfm.join(1)
@@ -224,33 +276,33 @@ class tfcompute(hoomd.compute._compute):
         for k, v in args['graph_info'].items():
             message.append('\t  {: <18}: {: >20}'.format(str(k), str(v)))
         for m in message:
-            hoomd.context.msg.notice(2, m + '\n')
+            hoomd.context.msg.notice(8, m + '\n')
         self.q.join()
-        if not self.tfm.isAlive():
+        if not self.tfm.is_alive():
             exit()
         hoomd.context.msg.notice(2, 'TF Session Manager has released control.'
                                  ' Starting HOOMD updates\n')
 
-    def finish_update(self, timestep):
+    def finish_update(self, batch_index, batch_frac):
         '''Allow TF to read output and we wait for it to finish.'''
         if self.mock_mode:
             return
+        fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
+        if self.mol_indices is not None:
+            fd[self.graph_info['mol_indices']] = self.mol_indices
         if self.feed_dict is not None:
             if type(self.feed_dict) == dict:
                 value = self.feed_dict
             else:
                 value = self.feed_dict(self)
-                string = 'feed_dict callable failed to provide value'
-                assert value is not None, string
-            self.q.put(value, block=False)
-            self.q.join()
+                assert value is not None, 'feed_dict callable failed to provide value'
+            self.q.put({**value, **fd}, block=False)
         else:
-            self.tasklock.do_await()
-        if self.tasklock.is_exit():
-            hoomd.context.msg.error('TF Session Manager has'
-                                    ' unexpectedly stopped\n')
-            raise RuntimeError('TF Session Manager has '
-                               'unexpectedly stopped\n')
+            self.q.put(fd, block=False)
+        self.q.join()
+        if not self.tfm.is_alive():
+            hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
+            raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
     def get_positions_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
