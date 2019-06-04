@@ -1,4 +1,4 @@
-# Maintainer: joaander
+# Maintainer: Andrew White
 
 ###################################
 ## Setup all of the test executables in a for loop
