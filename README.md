@@ -7,6 +7,7 @@ Table of Contents
 
    * [Quickstart Tutorial](#quickstart-tutorial)
    * [Building the Graph](#building-the-graph)
+      * [Molecule Batching](#molecule-batching)
       * [Computing Forces](#computing-forces)
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
@@ -17,6 +18,7 @@ Table of Contents
       * [Complete Examples](#complete-examples)
       * [Lennard-Jones with 1 Particle Type](#lennard-jones-with-1-particle-type)
    * [Using a Graph in a Simulation](#using-a-graph-in-a-simulation)
+      * [Batching](#batching)
       * [Bootstraping Variables](#bootstraping-variables)
          * [Bootstrapping Variables from Other Models](#bootstrapping-variables-from-other-models)
    * [Utilities](#utilities)
@@ -88,7 +90,7 @@ import hoomd.htf as htf
 graph = htf.graph_builder(NN, output_forces)
 ```
 
-where `NN` is the maximum number of nearest neighbors to consider, and
+where `NN` is the maximum number of nearest neighbors to consider (can be 0) and
 `output_forces` indicates if the graph will output forces to use in
 the simulation. After building the `graph`, it will have three tensors
 as attributes to use in constructing the TensorFlow graph: `nlist`,
@@ -101,6 +103,33 @@ that the `x,y,z` values are a vector originating at the particle and
 ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
 forces via `output_forces=False`.
+
+## Molecule Batching
+
+It may be simpler to have positions or neighbor lists or forces arranged by molecule.
+For example, you may want to look at only a particular bond or subset of atoms in a molecule.
+To do this, you can call `graph.build_mol_rep(MN)`, where `MN` is the maximum number of
+atoms in a molecule. This will create the following new attributes: `mol_positions`,
+`mol_nlist`, and `mol_forces` (if your graph has `output_forces=False`). These new
+attributes are dimension `M x MN x ...`  where `M` is the number of molecules and
+`MN` is the atom index within the molecule. If your molecule has less than `MN`,
+extra entries will be zeros. You can defnie a molecule to be whatever you want and
+atoms need not be only in one molecule. Here's an example to compute a water angle,
+where I'm assuming that the oxygens are the middle atom.
+
+```python
+import hoomd.htf as htf
+graph = htf.graph_builder(0)
+graph.build_mol_rep(3)
+# want slice for all molecules (:)
+# want h1 (0), o (1), h2(2)
+# positions are x,y,z,w. We only want x,y z (:3)
+v1 = graph.mol_positions[:, 2, :3] - graph.mol_positions[:, 1, :3]
+v2 = graph.mol_positions[:, 0, :3] - graph.mol_positions[:, 1, :3]
+# compute per-molecule dot product and divide by per molecule norm
+c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1), tf.norm(v2 axis=1)
+angles = tf.math.acos(c)
+```
 
 ## Computing Forces
 
@@ -249,7 +278,17 @@ with htf.tfcompute(model_dir) as tfcompute:
 
 ```
 
-where `model_dir` is the directory where the TensorFlow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object.
+where `model_dir` is the directory where the TensorFlow model was saved, `nlist` is a hoomd neighbor list object and `r_cut` is the maximum distance for to consider particles as being neighbors. `nlist` is optional and is not required if your graph doesn't use the `nlist` object (you passed `NN = 0` when building your graph).
+
+## Batching
+
+If you used per-molecule positions or nlist in your graph, you can either
+rely on hoomd-tf to find your molecules by traversing the bonds in your system (default)
+or you can specify what are molecules in your system. They are passed via `attach(..., mol_indices=[[..]])`. The `mol_indices` are a, possibly ragged, 2D python list where each
+element in the list is a list of atom indices for a molecule. For example, `[[0,1], [1]]` means
+that there are two molecules with the first containing atoms 0 and 1 and the second containing atom 1. Note that the molecules can be different size and atoms can exist in multiple molecules.
+
+If you do not call `build_mol_rep` while building your graph, you can optionally split your batches to be smaller than the entire system. This is set via the `batch_size` integer argument to `attach`. This can help for high-memory systems where you cannot spare the GPU memory to have each tensor be the size of your system.
 
 ## Bootstraping Variables
 

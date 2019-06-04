@@ -16,8 +16,8 @@ namespace hoomd_tf
         _array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
-        int tmp[] = {array.getNumElements(), 4};
-        set_num_elements(tmp);
+	int tmp[] = {static_cast<int>(array.getNumElements()), 4};
+        setNumElements(tmp);
         }
 
     //! Define template constructor for Scalar dtype
@@ -26,7 +26,7 @@ namespace hoomd_tf
         _array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
-        int tmp[] = {array.getNumElements(), 1};
-        set_num_elements(tmp);
+	  int tmp[] = {static_cast<int>(array.getNumElements()), 1};
+        setNumElements(tmp);
         }
     }

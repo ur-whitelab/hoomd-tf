@@ -68,6 +68,13 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     return directory
 
 
+def mol_force(directory='/tmp/test-mol-force-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    graph.build_mol_rep(3)
+    f = tf.norm(graph.mol_forces, axis=0)
+    graph.save(directory, out_nodes=[f])
+    return directory
+
 def feeddict_graph(directory='/tmp/test-feeddict-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
@@ -131,13 +138,14 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(energy, 'average-energy')
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0), 'average-energy')
     graph.save(force_tensor=forces, model_directory=directory,
                out_nodes=[avg_energy])
     return directory
 
 
 def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
+    ops = []
     graph = htf.graph_builder(NN, output_forces=False)
     # pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
@@ -146,12 +154,9 @@ def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
     energy = tf.reduce_sum(p_energy, axis=1)
     tf_forces = graph.compute_forces(energy)
     h_forces = graph.forces
-    ops = []
     error = tf.losses.mean_squared_error(tf_forces, h_forces)
     v = tf.get_variable('error', shape=[])
     ops.append(v.assign(error))
-    v = tf.get_variable('forces', shape=[NN + 1, 4], validate_shape=False)
-    ops.append(v.assign(graph.forces))
     graph.save(model_directory=directory, out_nodes=ops)
     return directory
 
@@ -171,6 +176,18 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
     graph.save(force_tensor=forces, model_directory=directory)
     return directory
 
+
+def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
+    graph = htf.graph_builder(NN)
+    graph.build_mol_rep(MN)
+    # assume particle (w) is 0
+    r = graph.safe_norm(graph.mol_nlist, axis=3)
+    rinv = graph.safe_div(1.0, r)
+    mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
+    total_e = tf.reduce_sum(mol_p_energy)
+    forces = graph.compute_forces(total_e)
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[])
+    return directory
 
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)
@@ -213,9 +230,12 @@ def trainable_graph(NN, directory='/tmp/test-trainable-model'):
     # capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var)
     # for grad, var in gvs]
     train_op = optimizer.apply_gradients(gvs)
+    # put non-trainable items
+    # need to do reduction so batch size independent
+    avg_energy = graph.running_mean(tf.reduce_sum(energy), 'avg-energy')
     # check = tf.add_check_numerics_ops()
     graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[train_op, check])
+               out_nodes=[train_op, check, avg_energy])
     return directory
 
 
