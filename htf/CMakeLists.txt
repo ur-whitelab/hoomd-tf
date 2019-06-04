@@ -11,7 +11,6 @@ set(_${COMPONENT_NAME}_sources
     CommStruct.cc
     TensorflowCompute.cc
     TFArrayComm.cc
-    TaskLock.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources

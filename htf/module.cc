@@ -4,7 +4,6 @@
 // Include the defined classes that are to be exported to python
 #include "TensorflowCompute.h"
 #include "TFArrayComm.h"
-#include "TaskLock.h"
 
 #include <hoomd/extern/pybind/include/pybind11/pybind11.h>
 
@@ -25,8 +24,6 @@ PYBIND11_PLUGIN(_htf)
     #endif
 
     export_TFArrayComm(m);
-
-    export_TaskLock(m);
 
     return m.ptr();
     }
