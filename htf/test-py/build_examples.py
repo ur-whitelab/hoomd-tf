@@ -230,9 +230,12 @@ def trainable_graph(NN, directory='/tmp/test-trainable-model'):
     # capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var)
     # for grad, var in gvs]
     train_op = optimizer.apply_gradients(gvs)
+    # put non-trainable items
+    # need to do reduction so batch size independent
+    avg_energy = graph.running_mean(tf.reduce_sum(energy), 'avg-energy')
     # check = tf.add_check_numerics_ops()
     graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[train_op, check])
+               out_nodes=[train_op, check, avg_energy])
     return directory
 
 

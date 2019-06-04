@@ -44,7 +44,7 @@ class graph_builder:
         self.mol_batched = False
         self.MN = 0
 
-        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0)
+        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
         self.update_batch_index_op = \
             self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
                                                 true_fn=lambda: tf.constant(1),
@@ -160,12 +160,12 @@ class graph_builder:
             raise ValueError('Unable to perform {}'
                              'reduction across batches'.format(batch_reduction))
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
-                                validate_shape=False, dtype=tf.float32)
+                                validate_shape=False, dtype=tf.float32, trainable=False)
         with tf.name_scope(name + '-batch'):
             # keep batch avg
             batch_store = tf.get_variable(name + '-batch',
                                           initializer=tf.zeros_like(tensor),
-                                          validate_shape=False, dtype=tf.float32)
+                                          validate_shape=False, dtype=tf.float32, trainable=False)
             with tf.control_dependencies([self.update_batch_index_op]):
                 # moving the batch store to normal store after batch is complete
                 move_op = store.assign(tf.cond(
