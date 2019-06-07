@@ -14,10 +14,10 @@ import time
 saver_args = {'max_to_keep': 1000}
 
 
-def main(q, tasklock, write_tensorboard=False, profile=False):
+def main(q, write_tensorboard=False, profile=False):
 
     tfm_args = q.get()
-    tfm = TFManager(q=q, tasklock=tasklock,
+    tfm = TFManager(q=q,
                     write_tensorboard=write_tensorboard, **tfm_args)
     if(profile):
         cProfile.runctx('tfm.start_loop()', globals(),
@@ -45,7 +45,7 @@ def load_op_library(op):
 
 
 class TFManager:
-    def __init__(self, graph_info, device, q, tasklock,
+    def __init__(self, graph_info, device, q,
                  positions_buffer, nlist_buffer,
                  forces_buffer, virial_buffer, log_filename,
                  dtype, debug, write_tensorboard, use_feed,
@@ -62,7 +62,6 @@ class TFManager:
 
         self.device = device
         self.q = q
-        self.tasklock = tasklock
         self.positions_buffer = positions_buffer
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer

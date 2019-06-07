@@ -11,7 +11,6 @@ set(_${COMPONENT_NAME}_sources
     CommStruct.cc
     TensorflowCompute.cc
     TFArrayComm.cc
-    TaskLock.cc
     )
 
 set(_${COMPONENT_NAME}_cu_sources
@@ -38,7 +37,7 @@ if(ENABLE_CUDA)
 CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
 endif(ENABLE_CUDA)
 
-#add_library (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
+add_library (_${COMPONENT_NAME}_static STATIC ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
 
 if(APPLE)
@@ -112,5 +111,6 @@ add_custom_target(copy_${COMPONENT_NAME} ALL DEPENDS ${files})
 
 if(BUILD_TESTING)
     add_subdirectory(test-py)
+    add_subdirectory(test-cc)
 endif()
 

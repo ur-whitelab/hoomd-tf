@@ -16,7 +16,7 @@ v0.2 (2019-06-03)
 
 - Changed output logging to only output TF items to the tf_manager.log and
 - Log-level is now consistent with hoomd
-- Added C++ tests
+- Added C++ unit tests skeleton in the same format as HOOMD-blue. Compile with -DBUILD_TESTING=ON to use.
 - Switched to hoomd-blue cuda error codes
 - Added MPI tests with domain decomposition
 - Improved style consistency with hoomd-blue
@@ -25,7 +25,7 @@ v0.2 (2019-06-03)
 v0.1 (2019-04-22)
 -----------------
 
-*Note:* only major changes are listed here.
+*Note:* onlyn major changes are listed here.
 
 - Made Python packages actual dependencies.
 - Switched to using hoomd-blue cuda error codes.

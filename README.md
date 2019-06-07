@@ -645,7 +645,7 @@ Now we put our plugin in the source directory with a softlink:
 
 ```bash
 git clone https://github.com/ur-whitelab/hoomd-tf
-ln -s hoomd-tf/tensorflow_plugin $HOME/hoomd-blue/hoomd
+ln -s $HOME/hoomd-tf/htf $HOME/hoomd-blue/hoomd
 ```
 
 Now compile (from hoomd-blue directory). Modify options for speed if necessary.
