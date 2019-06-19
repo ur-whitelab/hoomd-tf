@@ -119,6 +119,7 @@ class tfcompute(hoomd.compute._compute):
             # fill out the indices
             for mi in self.mol_indices:
                 for i in range(len(mi)):
+                    # add 1 so that an index of 0 corresponds to slicing a dummy atom
                     mi[i] += 1
                 if len(mi) > self.graph_info['MN']:
                     raise ValueError('One of your molecule indices'
