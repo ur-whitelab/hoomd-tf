@@ -284,6 +284,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     # mask is reapplied here, so those huge numbers won't still be in there.
     nlist_pos = tf.reshape(tf.gather_nd(dist_mat, flat_idx), [-1, NN, 3])
     nlist_mask = tf.reshape(tf.gather_nd(mask_cast, flat_idx), [-1, NN, 1])
-    #with tf.control_dependencies([tf.print(nlist_mask)]):
 
-    return tf.concat([nlist_pos, tf.cast(tf.reshape(topk.indices,[-1, NN, 1]), tf.float32)], axis=-1) * nlist_mask
+    return tf.concat([
+        nlist_pos,
+        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]), tf.float32)], axis=-1) * nlist_mask
