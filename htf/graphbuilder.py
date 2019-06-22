@@ -296,14 +296,20 @@ class graph_builder:
         is determined at run time. The MN must be chosen to be large enough to
         encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
         then the extra entries will be zeros. Note that your input should be 0 based,
-        but subsequent tensorflow data will be 1 based, since 0 means no atom. The specification of what is a molecule
+        but subsequent tensorflow data will be 1 based, since 0 means no atom. 
+        The specification of what is a molecule
         will be passed at runtime, so that it can be dynamic if desired.
 
         To convert a _mol quantity to a per-particle quantity, call
         scatter_mol_quanitity(tensor)
         '''
-        self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
-        self.rev_mol_indices = tf.placeholder(tf.int32, shape=[None, 2], name='htf-reverse-molecule-index')
+
+        self.mol_indices = tf.placeholder(tf.int32, 
+                                          shape=[None, MN], 
+                                          name='htf-molecule-index')
+        self.rev_mol_indices = tf.placeholder(tf.int32, 
+                                              shape=[None, 2], 
+                                              name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
         ap = tf.concat((
                 tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
