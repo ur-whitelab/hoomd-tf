@@ -507,6 +507,25 @@ class test_mol_batching(unittest.TestCase):
             tfcompute.attach(mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
             hoomd.run(8)
 
+    def test_reverse_mol_index(self):
+        # need this for logging
+        hoomd.context.initialize()
+        mi = [[1, 2, 0, 0, 0], [3, 0, 0, 0, 0], [4, 5, 7, 8, 9]]
+        rmi = hoomd.htf._make_reverse_indices(mi)
+        # should be
+        rmi_ref = [
+            [0, 0],
+            [0, 1],
+            [1, 0],
+            [2, 0],
+            [2, 1],
+            [-1, -1],
+            [2, 2],
+            [2, 3],
+            [2, 4]
+        ]
+        self.assertEqual(rmi, rmi_ref)
+
 
 if __name__ == '__main__':
     unittest.main()

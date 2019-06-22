@@ -295,13 +295,15 @@ class graph_builder:
         tensors batched by molecule, where mol_number is the number of molecules. mol_number
         is determined at run time. The MN must be chosen to be large enough to
         encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
-        then the extra entries will be zeros. The specification of what is a molecule
-        will be passed at runtime.
+        then the extra entries will be zeros. Note that your input should be 0 based,
+        but subsequent tensorflow data will be 1 based, since 0 means no atom. The specification of what is a molecule
+        will be passed at runtime, so that it can be dynamic if desired.
 
         To convert a _mol quantity to a per-particle quantity, call
         scatter_mol_quanitity(tensor)
         '''
         self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
+        self.rev_mol_indices = tf.placeholder(tf.int32, shape=[None, 2], name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
         ap = tf.concat((
                 tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
@@ -427,18 +429,21 @@ class graph_builder:
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
-        graph_info = {'NN': self.nneighbor_cutoff,
-                      'model_directory': model_directory,
-                      'forces': self.forces.name,
-                      'positions': self.positions.name,
-                      'virial': None if virial is None else virial.name,
-                      'nlist': self.nlist.name,
-                      'dtype': self.nlist.dtype,
-                      'output_forces': self.output_forces,
-                      'out_nodes': [x.name for x in out_nodes],
-                      'mol_indices':
-                          self.mol_indices.name if self.mol_indices is not None else None,
-                      'MN': self.MN
-                      }
+        graph_info = {
+            'NN': self.nneighbor_cutoff,
+            'model_directory': model_directory,
+            'forces': self.forces.name,
+            'positions': self.positions.name,
+            'virial': None if virial is None else virial.name,
+            'nlist': self.nlist.name,
+            'dtype': self.nlist.dtype,
+            'output_forces': self.output_forces,
+            'out_nodes': [x.name for x in out_nodes],
+            'mol_indices':
+            self.mol_indices.name if self.mol_indices is not None else None,
+            'rev_mol_indices':
+            self.rev_mol_indices.name if self.mol_indices is not None else None,
+            'MN': self.MN
+            }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
