@@ -8,6 +8,13 @@ import pickle
 import hoomd
 
 
+## \internal
+# \brief load the TensorFlow variables from a checkpoint
+#
+# Adds variables from model_directory corresponding to names
+# into the TensorFlow graph, optionally loading from a checkpoint
+# other than the most recently saved one, or setting variable values
+# with a feed_dict
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     # just in case
     tf.reset_default_graph()
@@ -46,9 +53,11 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
+## \internal
+# \brief computes the U(r) for a given TensorFlow model
 def compute_pairwise_potential(model_directory, r, potential_tensor_name,
                                checkpoint=-1, feed_dict={}):
-    ''' Compute the pairwise potential at r for the given model.
+    R""" Compute the pairwise potential at r for the given model.
 
     Parameters
     ----------
@@ -69,7 +78,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     Returns
     -------
     A 1D array of potentials corresponding the pairwise distances in r.
-    '''
+    """
     # just in case
     tf.reset_default_graph()
     # load graph
@@ -116,12 +125,18 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     return potential
 
 
+## \internal
+# \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
-    '''Given a hoomd system, this will return a mapping
-        from molecule index to particle index
+    R""" Given a hoomd system, this will return a mapping
+    from molecule index to particle index
 
-        This is a slow function and should only be called once.
-    '''
+    This is a slow function and should only be called once.
+    Parameters
+    ---------
+    system
+        The molecular system in HOOMD.
+    """
 
     mapping = []
     mapped = set()
@@ -166,9 +181,11 @@ def find_molecules(system):
     return mapping
 
 
+## \internal
+# \brief Finds mapping operators for coarse-graining
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
-    ''' This will create the necessary indices and values for
+    R""" This will create the necessary indices and values for
     defining a sparse tensor in
     tensorflow that is a mass-weighted M x N mapping operator.
 
@@ -191,7 +208,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     -------
         A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
-    '''
+    """
     import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
@@ -236,10 +253,20 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
+## \internal
+# \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
-    '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
+    R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
-    '''
+    Parameters
+    ----------
+    positions
+        The tensor of particle positions
+    mapping
+        The coarse-grain mapping used to produce the particles in system
+    system
+        The system of particles
+    """
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
@@ -254,7 +281,27 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     return tf.identity(thetamean/np.pi/2*box_dim, name=name)
 
 
+## \internal
+# \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
+    R""" Computer partice pairwise neihgbor lists.
+    Parameters
+    ----------
+    positions
+        Positions of the particles
+    r_cut
+        Cutoff radius (HOOMD units)
+    NN
+        Maximum number of neighbors per particle
+    system
+        The HOOMD system of particles
+    sorted
+        Whether to sort neighbor lists by distance
+    Returns
+    -------
+    nlist
+        An [N X NN X 3] tensor containing neighbor lists of all particles
+    """
     M = tf.shape(positions)[0]
     # Making 3 dim CG nlist
     qexpand = tf.expand_dims(positions, 1)  # one column
