@@ -312,7 +312,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
-            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > _r_cut * _r_cut) continue;
+            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut) continue;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;
@@ -441,18 +441,18 @@ TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object& py_self,
 
     //want nlist on stream 0 since a nlist rebuild is
     //called just before prepareNeighbors
-    _streams[0] = 0;
+    m_streams[0] = 0;
     for(unsigned int i = 1; i < m_nstreams; i++)
         {
         cudaStreamCreate(&(m_streams[i]));
-        //_streams[i] = 0;
+        //m_streams[i] = 0;
         CHECK_CUDA_ERROR();
         }
 
     if(m_nneighs > 0)
         {
         m_nneighs = std::min(m_nlist->getNListArray().getPitch(),nneighs);
-        if(_nneighs != nneighs)
+        if(m_nneighs != nneighs)
             {
             m_exec_conf->msg->notice(2)
                 << "set nneighs to be "

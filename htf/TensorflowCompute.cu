@@ -108,7 +108,7 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
     // read in the position of our particle. Texture reads of Scalar4's are faster than global reads on compute 1.0 hardware
     Scalar4 postype = texFetchScalar4(d_pos, pdata_pos_tex, idx);
     Scalar3 pos = make_scalar3(postype.x, postype.y, postype.z);
-    unsigned int typei = m__scalar_as_int(postype.w);
+    unsigned int typei = __scalar_as_int(postype.w);
 
     // prefetch neighbor index
     unsigned int cur_neigh = 0;
@@ -142,7 +142,7 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
         dx = box.minImage(dx);
 
         // access needed parameters
-        unsigned int typej = m__scalar_as_int(neigh_postype.w);
+        unsigned int typej = __scalar_as_int(neigh_postype.w);
 
         // calculate r
         Scalar rsq = dot(dx, dx);

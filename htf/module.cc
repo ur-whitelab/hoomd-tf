@@ -14,9 +14,9 @@ using namespace hoomd_tf;
  *  PROJECT() name provided in CMakeLists (with an underscore in front)
  */
 
-PYBIND11_PLUGIN(m_htf)
+PYBIND11_PLUGIN(_htf)
     {
-    pybind11::module m("m_htf");
+    pybind11::module m("_htf");
     export_TensorflowCompute(m);
 
     #ifdef ENABLE_CUDA
