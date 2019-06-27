@@ -2,7 +2,7 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from .utils import find_molecules
-from hoomd.htf import _htf
+from hoomd.htf import m_htf
 from .tfmanager import main
 import sys
 import math
