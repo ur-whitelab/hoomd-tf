@@ -88,6 +88,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     NN = model_params['NN']
     np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
+    forces = np.empty(len(r))
 
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -113,7 +114,8 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-    return potential
+        forces = tf.gradients(potential, r)
+    return potential, forces
 
 
 def find_molecules(system):
