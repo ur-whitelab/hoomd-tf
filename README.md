@@ -435,7 +435,16 @@ graph.running_mean(rdf, 'avg-rdf')
 variables  = htf.load_variables(model_dir, ['avg-rdf'])
 print(variables)
 ```
+## Pairwise Potential and Forces
 
+To compute pairwise potential, use the `graph.compute_pairwise_potential(...)` method:
+
+```python
+...
+r = numpy.arange(1, 10, 1)
+potential, forces = graph.compute_pairwise_potential('/path/to/model', r, potential_tensor)
+...
+```
 
 # Coarse-Graining Utilities
 
