@@ -442,7 +442,7 @@ To compute pairwise potential, use the `graph.compute_pairwise_potential(...)` m
 ```python
 ...
 r = numpy.arange(1, 10, 1)
-potential, forces = graph.compute_pairwise_potential('/path/to/model', r, potential_tensor)
+potential, forces = htf.compute_pairwise_potential('/path/to/model', r, potential_tensor)
 ...
 ```
 
