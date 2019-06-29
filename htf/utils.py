@@ -114,7 +114,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-        forces = tf.gradients(potential, r)
+        forces = tf.math.negative(tf.gradients(potential, r))
     return potential, forces
 
 
