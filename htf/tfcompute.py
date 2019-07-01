@@ -130,7 +130,7 @@ class tfcompute(hoomd.compute._compute):
             c = hoomd.context.current.sorter
             if c is None:
                 hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
-                                         'Make sure you disable it allow molecular batching')
+                                         'Make sure you disable it to allow molecular batching')
             else:
                 c.disable()
         else:
