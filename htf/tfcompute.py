@@ -127,6 +127,13 @@ class tfcompute(hoomd.compute._compute):
                                      'Increase MN in your graph.')
                 while len(mi) < self.graph_info['MN']:
                     mi.append(0)
+            # ok we have succeeded, now we try to disable sorting
+            c = hoomd.context.current.sorter
+            if c is None:
+                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                         'Make sure you disable it to allow molecular batching')
+            else:
+                c.disable()
         else:
             self.mol_indices = None
 
