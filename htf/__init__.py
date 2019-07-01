@@ -7,5 +7,4 @@ from .tfcompute import tfcompute
 from .graphbuilder import graph_builder
 from .tfarraycomm import tf_array_comm
 from .utils import *
-__version__='0.3'
-
+__version__= '0.3'
