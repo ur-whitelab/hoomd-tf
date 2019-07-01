@@ -272,10 +272,15 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     dist = tf.norm(dist_mat, axis=2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
-    # replace these masked elements with really large numbers
-    # that will be very negative (therefore not part of "top")
-    dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e10
-    topk = tf.math.top_k(-dist_mat_r, k=NN, sorted=sorted)
+    if sorted:
+        # replace these masked elements with really large numbers
+        # that will be very negative (therefore not part of "top")
+        dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e10
+        topk = tf.math.top_k(-dist_mat_r, k=NN, sorted=True)
+    else:
+        # all the 0s will disappear as we grab topk
+        dist_mat_r = dist * mask_cast
+        topk = tf.math.top_k(dist_mat_r, k=NN, sorted=False)
 
     # we have the topk, but now we need to remove others
     idx = tf.tile(tf.reshape(tf.range(M), [-1, 1]), [1, NN])
