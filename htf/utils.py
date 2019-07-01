@@ -272,14 +272,24 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     dist = tf.norm(dist_mat, axis=2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
-    dist_mat_r = dist * mask_cast
-    topk = tf.math.top_k(dist_mat_r, k=NN, sorted=sorted)
+    if sorted:
+        # replace these masked elements with really large numbers
+        # that will be very negative (therefore not part of "top")
+        dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e10
+        topk = tf.math.top_k(-dist_mat_r, k=NN, sorted=True)
+    else:
+        # all the 0s will disappear as we grab topk
+        dist_mat_r = dist * mask_cast
+        topk = tf.math.top_k(dist_mat_r, k=NN, sorted=False)
 
     # we have the topk, but now we need to remove others
     idx = tf.tile(tf.reshape(tf.range(M), [-1, 1]), [1, NN])
     idx = tf.reshape(idx, [-1, 1])
     flat_idx = tf.concat([idx, tf.reshape(topk.indices, [-1, 1])], -1)
-    nlist = tf.gather_nd(dist_mat * tf.reshape(mask_cast, [M, M, 1]), flat_idx)
-    nlist = tf.reshape(nlist, [-1, NN, 3])
+    # mask is reapplied here, so those huge numbers won't still be in there.
+    nlist_pos = tf.reshape(tf.gather_nd(dist_mat, flat_idx), [-1, NN, 3])
+    nlist_mask = tf.reshape(tf.gather_nd(mask_cast, flat_idx), [-1, NN, 1])
 
-    return nlist
+    return tf.concat([
+        nlist_pos,
+        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]), tf.float32)], axis=-1) * nlist_mask
