@@ -197,6 +197,27 @@ class test_mappings(unittest.TestCase):
             ci = np.sort(cnlist[i, :])
             np.testing.assert_array_almost_equal(ni, ci, decimal=5)
 
+    def test_compute_pairwise_potential(self):
+        rcut = 5.0
+        c = hoomd.context.initialize()
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
+                                           n=[3, 3, 3])
+        model_dir = build_examples.custom_nlist(3**3 - 1, rcut, system)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            nlist = hoomd.md.nlist.cell()
+            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=None)
+            # add lj so we can hopefully get particles mixing
+            hoomd.run(100)
+            potentials = tfcompute.get_forces_array()[3]
+
+        r = np.linspace(0.5, 1.5, 10)
+        potential, forces = htf.compute_pairwise_potential(model_dir, r, potentials)
+        np.testing.assert_equal(len(forces), len(r), 'Forces not calculated correctly')
+
 
 if __name__ == '__main__':
     unittest.main()
