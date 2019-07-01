@@ -2,8 +2,8 @@
 //  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 
-#ifndef _TENSORFLOW_COMPUTE_H_
-#define _TENSORFLOW_COMPUTE_H_
+#ifndef m_TENSORFLOW_COMPUTE_H_
+#define m_TENSORFLOW_COMPUTE_H_
 
 #include <hoomd/Autotuner.h>
 #include <hoomd/ForceCompute.h>
@@ -54,13 +54,13 @@ namespace hoomd_tf
         class HalfStepHookWrapper : public HalfStepHook
         {
         public:
-        T& _f;
-        HalfStepHookWrapper(T& f) : _f(f) {}
+        T& m_f;
+        HalfStepHookWrapper(T& f) : m_f(f) {}
 
         //! override update from HOOMD to compute TF forces also
         void update(unsigned int timestep) override
             {
-            _f.computeForces(timestep);
+            m_f.computeForces(timestep);
             }
 
         //! called for half step hook
@@ -146,11 +146,11 @@ namespace hoomd_tf
         //! Add a separately computed or tabular force
         void addReferenceForce(std::shared_ptr<ForceCompute> force)
             {
-            _ref_forces.push_back(force);
+            m_ref_forces.push_back(force);
             }
 
         //! pybind objects have to be public with current cc flags
-        pybind11::object _py_self;
+        pybind11::object m_py_self;
 
         //! need this to add to integrator in HOOMD
         std::shared_ptr<HalfStepHookWrapper<TensorflowCompute<M> > > hook;
@@ -175,46 +175,46 @@ namespace hoomd_tf
         std::shared_ptr<NeighborList> m_nlist;
 
         //! cutoff radius
-        Scalar _r_cut;
+        Scalar m_r_cut;
 
         //! max number of neighbors
-        unsigned int _nneighs;
+        unsigned int m_nneighs;
 
         //! specify which force mode we are using
-        FORCE_MODE _force_mode;
+        FORCE_MODE m_force_mode;
 
         //! how frequently we actually do the TF update
-        unsigned int _period;
+        unsigned int m_period;
 
         //! The batch size for sending/receiving TF updates
-        unsigned int _batch_size;
+        unsigned int m_batch_size;
 
         //! name of log used in TF
         std::string m_log_name;
 
         //! vector of reference forces as ForceCompute objects
-        std::vector< std::shared_ptr<ForceCompute> > _ref_forces;
+        std::vector< std::shared_ptr<ForceCompute> > m_ref_forces;
 
         //! comm object for holding positions
-        TFArrayComm<M, Scalar4> _positions_comm;
+        TFArrayComm<M, Scalar4> m_positions_comm;
 
         //! array of positions, which is size of batch
-        GlobalArray<Scalar4> _positions_array;
+        GlobalArray<Scalar4> m_positions_array;
 
         //! comm object for holding forces
-        TFArrayComm<M, Scalar4> _forces_comm;
+        TFArrayComm<M, Scalar4> m_forces_comm;
 
         //! array of neighbor list values (x, y, z, w)
-        GlobalArray<Scalar4> _nlist_array;
+        GlobalArray<Scalar4> m_nlist_array;
 
         //! array of virial values
-        GlobalArray<Scalar> _virial_array;
+        GlobalArray<Scalar> m_virial_array;
 
         //! comm object for holding neighbor lists
-        TFArrayComm<M, Scalar4> _nlist_comm;
+        TFArrayComm<M, Scalar4> m_nlist_comm;
 
         //! comm object for holding virials
-        TFArrayComm<M, Scalar> _virial_comm;
+        TFArrayComm<M, Scalar> m_virial_comm;
         };
 
     //! Export the TensorflowCompute class to python
@@ -267,8 +267,8 @@ namespace hoomd_tf
 
             private:
             std::unique_ptr<Autotuner> m_tuner;  //! Autotuner for block size
-            cudaStream_t _streams[4];            //! Array of CUDA streams
-            size_t _nstreams = 4;                //! Number of CUDA streams
+            cudaStream_t m_streams[4];            //! Array of CUDA streams
+            size_t m_nstreams = 4;                //! Number of CUDA streams
             };
 
         //! Export the TensorflowComputeGPU class to python
@@ -282,4 +282,4 @@ namespace hoomd_tf
 
     }
 
-#endif  // _TENSORFLOW_COMPUTE_H_
+#endif  // m_TENSORFLOW_COMPUTE_H_

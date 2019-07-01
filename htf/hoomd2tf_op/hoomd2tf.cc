@@ -54,7 +54,7 @@ class HoomdToTfOp : public OpKernel {
     // get memory address
     int64 tmp;
     context->GetAttr("address", &tmp);
-    _input_memory = reinterpret_cast<CommStruct*>(tmp);
+    m_input_memory = reinterpret_cast<CommStruct*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -69,7 +69,7 @@ class HoomdToTfOp : public OpKernel {
                     "Shape specification to HoomdToTf should be vector"));
 
     // TODO: Is there a performance hit for this?
-    TensorShapeUtils::MakeShape(_input_memory->num_elements, _input_memory->num_dims, &tmp_shape);
+    TensorShapeUtils::MakeShape(m_input_memory->num_elements, m_input_memory->num_dims, &tmp_shape);
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, tmp_shape, &output_tensor));
@@ -79,12 +79,12 @@ class HoomdToTfOp : public OpKernel {
                 errors::InvalidArgument("Too many elements in tensor"));
     auto output = output_tensor->flat<T>();
     HOOMD2TFFunctor<Device, T>()(context->eigen_device<Device>(),
-                                    output.size(), _input_memory,
+                                    output.size(), m_input_memory,
                                     output.data());
   }
 
  private:
-  CommStruct* _input_memory;
+  CommStruct* m_input_memory;
 };
 
 // Register the CPU kernels.
