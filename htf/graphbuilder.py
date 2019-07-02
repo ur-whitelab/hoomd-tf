@@ -11,12 +11,8 @@ R"""This is a python class that builds the TensorFlow graph.
 """
 
 class graph_builder:
-    
-
     # \internal
     # \brief Initializes the graphbuilder class
-    # \details
-    # 
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
     
         Parameters
@@ -27,7 +23,6 @@ class graph_builder:
             True if your graph will compute forces to be used in TensorFlow
     """
     def __init__(self, nneighbor_cutoff, output_forces=True):
-        
         # clear any previous graphs
         atom_number = None
         self.atom_number = atom_number
@@ -45,12 +40,10 @@ class graph_builder:
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
         self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
-
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
         self.MN = 0
-
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
         self.update_batch_index_op = \
             self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),

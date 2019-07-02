@@ -19,14 +19,14 @@ import tensorflow as tf
 
 ## \internal
 # \brief TensorFlow HOOMD compute class
-# 
+# \details
 # Integrates tensorflow into HOOMD-blue, with options to load and save models,
 # write a tensorboard file, run in "mock mode", and use XLA if available.
 
 class tfcompute(hoomd.compute._compute):
     ## \internal
     # \brief Constructs the tfcompute class
-    # 
+    # \details
     # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
     # whether to use a tensorboard, and some execution preferences.
     def __init__(self, tf_model_directory,
@@ -106,8 +106,8 @@ class tfcompute(hoomd.compute._compute):
     # \internal
     # \brief The structure of the graph
     # \details
-    # The information that is loaded from a pickled tensorflow graph model 
-    # as a dictionary, containing things like number of neighbors and other 
+    # The information that is loaded from a pickled tensorflow graph model
+    # as a dictionary, containing things like number of neighbors and other
     # information necessary to reconstruct the graph.
 
     ## \var _mock_mode
@@ -130,7 +130,7 @@ class tfcompute(hoomd.compute._compute):
     # \brief Whether to save a tensorboard file
     # \details
     # Tensorboard can be used to visualize the structure of a TensorFlow
-    # graphical model. Set this to True if you want to save one, and it 
+    # graphical model. Set this to True if you want to save one, and it
     # will save in the same directory as the tf_model_directory
 
     ## \var bootstrap
@@ -159,14 +159,14 @@ class tfcompute(hoomd.compute._compute):
     # the tensor name (can be set during graph build stage),
     # and the value is the result to be fed into the named tensor. Note
     # that if you name a tensor, typically you must
-    # append ':0' to that name. For example, if your name is 'my-tensor', 
+    # append ':0' to that name. For example, if your name is 'my-tensor',
     # then the actual tensor is named 'my-tensor:0'.
 
     ## \var use_xla
     # \internal
     # \brief Whether to use XLA in TensorFlow
     # \details
-    # XLA is an accelerated linear algebra library for TensorFlow which helps 
+    # XLA is an accelerated linear algebra library for TensorFlow which helps
     # speed up some tensor calculations. Use this to toggle
     # whether or not to use it.
 
@@ -197,7 +197,7 @@ class tfcompute(hoomd.compute._compute):
     r_cut
         Cutoff radius for neighbor listing.
     save_period
-        How often to save the TensorFlow data. Period here is measured by 
+        How often to save the TensorFlow data. Period here is measured by
         how many times the TensorFLow model is updated. See period.
     period
         How many HOOMD steps should pass before updating the TensorFlow model.
@@ -338,7 +338,7 @@ class tfcompute(hoomd.compute._compute):
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
         if not self.mock_mode:
             self._start_tf()
-            
+
     R""" Sets the HOOMD reference forces to be used by TensorFlow.
     See C++ comments in TensorFlowCompute.h"""
     def set_reference_forces(self, *forces):

@@ -44,14 +44,14 @@ def load_op_library(op):
     return mod
 
 ## \internal
-# \brief TensorFlow manager class 
-# 
-# Manages when TensorFlow performs training and coordinates its 
+# \brief TensorFlow manager class
+# \details
+# Manages when TensorFlow performs training and coordinates its
 # communication with HOOMD
 class TFManager:
     ## \internal
     # \brief Constructs the tfmanager class
-    # 
+    # \details
     # Sets up the TensorFlow graph and sets any placeholder vars.
     # Handles updating and saving of TensorFlow graph, and passing
     # output forces back to HOOMD, as well as writing tensorboards.
@@ -62,7 +62,7 @@ class TFManager:
                  bootstrap, primary, bootstrap_map,
                  save_period, use_xla):
         R""" Initialize an instance of TFManager.
-        
+
         Parameters
         ----------
         graph_info
@@ -100,7 +100,7 @@ class TFManager:
             A dictionary to be used when bootstrapping, pairing old models' tensor variable
             names with new ones. Key is new name, value is older model's.
         save_period
-            How often to save the TensorFlow data. Period here is measured by 
+            How often to save the TensorFlow data. Period here is measured by
             how many times the TensorFLow model is updated. See tfcompute.py.
         use_xla
             If True, enables the accelerated linear algebra library in TensorFlow, which
@@ -154,7 +154,7 @@ class TFManager:
     # \internal
     # \brief Whether or not this is the 'primary' thread
     # \details
-    # It is only necessary for one thread to save model files and 
+    # It is only necessary for one thread to save model files and
     # write logs, so the 'primary' thread is the one assigned to  do this.
 
     ## \var log
@@ -165,7 +165,7 @@ class TFManager:
 
     ## \var device
     # \internal
-    # \brief Which device Tensorflow is running on 
+    # \brief Which device Tensorflow is running on
     # \details
     # When GPU execution is enabled and multiple GPU devices are available,
     # this specifies which GPU to use. Otherwise it will default to the only
@@ -195,7 +195,7 @@ class TFManager:
 
     ## \var virial_buffer
     # \internal
-    # \brief The memory address of the virial 
+    # \brief The memory address of the virial
     # \details
     # This is needed for conversion between HOOMD and TensorFlow memory spaces
 
@@ -293,6 +293,7 @@ class TFManager:
     # to True to use it.
 
     R""" update the TensorFlow model.
+
     Parameters
     ----------
     sess
