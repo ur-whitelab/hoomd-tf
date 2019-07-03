@@ -13,7 +13,7 @@ namespace hoomd_tf
 
     template<>
     CommStructDerived<Scalar4>::CommStructDerived(GlobalArray<Scalar4>& array, const char* name) :
-        _array(&array),
+        m_array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
 	int tmp[] = {static_cast<int>(array.getNumElements()), 4};
@@ -23,7 +23,7 @@ namespace hoomd_tf
     //! Define template constructor for Scalar dtype
     template<>
     CommStructDerived<Scalar>::CommStructDerived(GlobalArray<Scalar>& array, const char* name) :
-        _array(&array),
+        m_array(&array),
         CommStruct(2, sizeof(Scalar), name)
         {
 	  int tmp[] = {static_cast<int>(array.getNumElements()), 1};

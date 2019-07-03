@@ -311,6 +311,11 @@ class graph_builder:
                                               shape=[None, 2],
                                               name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
+
+        # we add one dummy particle to the positions, nlist, and forces so that
+        # we can fill the mol indices with 0s which will slice
+        # these dummy particles. Thus we will add one to the mol indices when
+        # we do tf compute to prepare.
         ap = tf.concat((
                 tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
                 self.positions),

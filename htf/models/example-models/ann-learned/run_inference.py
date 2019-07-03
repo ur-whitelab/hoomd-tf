@@ -6,12 +6,11 @@ from hoomd.htf import tfcompute
 import tensorflow as tf
 from sys import argv as argv
 from math import sqrt
-if(len(argv) != 2):
-    print('Usage: basic_ann_ff.py [N_PARTICLES]')
+if(len(argv) != 3):
+    print('Usage: basic_ann_ff.py [N_PARTICLES] [training_dir]')
     exit(0)
 N = int(argv[1])
-training_dir = '/scratch/rbarret8/ann-training'
-inference_dir = '/scratch/rbarret8/ann-inference'
+training_dir = argv[2]
 with hoomd.htf.tfcompute(bootstrap=training_dir
                                        ) as tfcompute:
     hoomd.context.initialize('--gpu_error_checking')

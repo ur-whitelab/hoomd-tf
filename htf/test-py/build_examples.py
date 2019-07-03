@@ -121,7 +121,7 @@ def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
 
     # compute nlist
     cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, system)
-    r = tf.norm(cnlist, axis=2)
+    r = tf.norm(cnlist[:, :, :3], axis=2)
     v = tf.get_variable('htf-r', initializer=tf.zeros_like(r),
                         validate_shape=False)
     ops.append(v.assign(r))

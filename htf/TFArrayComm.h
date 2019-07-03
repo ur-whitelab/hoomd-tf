@@ -1,8 +1,8 @@
 // Copyright (c) 2018 Andrew White at the University of Rochester
 //  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-#ifndef _IPC_ARRAY_COMM_
-#define _IPC_ARRAY_COMM_
+#ifndef m_IPC_ARRAY_COMM_
+#define m_IPC_ARRAY_COMM_
 
 #include <hoomd/ExecutionConfiguration.h>
 #include <hoomd/GlobalArray.h>
@@ -51,8 +51,8 @@ namespace hoomd_tf
         TFArrayComm(GlobalArray<T>& gpu_array,
             const char* name,
             std::shared_ptr<const ExecutionConfiguration> exec_conf)
-            : _comm_struct(gpu_array, name),
-              _array(&gpu_array),
+            : m_comm_struct(gpu_array, name),
+              m_array(&gpu_array),
               m_exec_conf(exec_conf)
                 {
                 checkDevice();
@@ -71,8 +71,8 @@ namespace hoomd_tf
             {
             checkDevice();
             // copy over variables
-            _array = other._array;
-            _comm_struct = std::move(other._comm_struct);
+            m_array = other.m_array;
+            m_comm_struct = std::move(other.m_comm_struct);
             m_exec_conf = other.m_exec_conf;
             return *this;
             }
@@ -91,7 +91,7 @@ namespace hoomd_tf
             // convert size into mem size
             if(!size)
                 {
-                size = _comm_struct.mem_size;
+                size = m_comm_struct.mem_size;
                 }
             else
                 {
@@ -100,7 +100,7 @@ namespace hoomd_tf
             assert(offset + size / sizeof(T) <= array.getNumElements());
             if (M == TFCommMode::CPU)
                 {
-                ArrayHandle<T> handle(*_array,
+                ArrayHandle<T> handle(*m_array,
                     access_location::host,
                     access_mode::overwrite);
                 ArrayHandle<T> ohandle(array,
@@ -111,7 +111,7 @@ namespace hoomd_tf
             else
                 {
                 #ifdef ENABLE_CUDA
-                    ArrayHandle<T> handle(*_array,
+                    ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
                     ArrayHandle<T> ohandle(array,
@@ -132,18 +132,18 @@ namespace hoomd_tf
             {
             if (M == TFCommMode::CPU)
                 {
-                ArrayHandle<T> handle(*_array,
+                ArrayHandle<T> handle(*m_array,
                     access_location::host,
                     access_mode::overwrite);
-                memset( static_cast<void*> (handle.data), v, _comm_struct.mem_size);
+                memset( static_cast<void*> (handle.data), v, m_comm_struct.mem_size);
                 }
             else
                 {
                 #ifdef ENABLE_CUDA
-                    ArrayHandle<T> handle(*_array,
+                    ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
-                    cudaMemset(static_cast<void*> (handle.data), v, _comm_struct.mem_size);
+                    cudaMemset(static_cast<void*> (handle.data), v, m_comm_struct.mem_size);
                     CHECK_CUDA_ERROR();
                 #endif
                 }
@@ -152,21 +152,21 @@ namespace hoomd_tf
         //! Set offset value for batching
         void setOffset(size_t offset)
         {
-        _comm_struct.offset = offset;
+        m_comm_struct.offset = offset;
         }
 
         //! Set batch size
         void setBatchSize(size_t N)
             {
-            _comm_struct.num_elements[0] = N;
+            m_comm_struct.num_elements[0] = N;
             }
 
         /*! Returns our underlying array as a vector
          */
         std::vector<T> getArray() const
             {
-            ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
-            return std::vector<T>(handle.data, handle.data + _array->getNumElements());
+            ArrayHandle<T> handle(*m_array, access_location::host, access_mode::read);
+            return std::vector<T>(handle.data, handle.data + m_array->getNumElements());
             }
 
         /*! Return memory address of the CommStruct wrapper around our array
@@ -174,15 +174,15 @@ namespace hoomd_tf
         int64_t getAddress() const
             {
             //need to cast to base class then get pointer to that.
-            return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&_comm_struct));
+            return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&m_comm_struct));
             }
 
         #ifdef ENABLE_CUDA
             //! Set the CUDA stream that will be used
-            void setCudaStream(cudaStream_t s) { _comm_struct.stream = s;}
+            void setCudaStream(cudaStream_t s) { m_comm_struct.stream = s;}
             cudaStream_t getCudaStream() const
                 {
-                return _comm_struct.stream;
+                return m_comm_struct.stream;
                 }
         #endif
 
@@ -208,7 +208,7 @@ namespace hoomd_tf
                     CHECK_CUDA_ERROR();
                     cudaEventCreateWithFlags(
                         &ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
-                    _comm_struct.event_handle = ipc_event;
+                    m_comm_struct.event_handle = ipc_event;
                     CHECK_CUDA_ERROR();
                     }
             #endif
@@ -220,7 +220,7 @@ namespace hoomd_tf
             if (M == TFCommMode::GPU)
                 {
                 #ifdef ENABLE_CUDA
-                    cudaEventDestroy(_comm_struct.event_handle);
+                    cudaEventDestroy(m_comm_struct.event_handle);
                 #endif
                 }
             }
@@ -228,8 +228,8 @@ namespace hoomd_tf
         using value_type = T;
 
         private:
-        CommStructDerived<T> _comm_struct;
-        GlobalArray<T>* _array;
+        CommStructDerived<T> m_comm_struct;
+        GlobalArray<T>* m_array;
         std::shared_ptr<const ExecutionConfiguration> m_exec_conf;
         };
 
@@ -238,4 +238,4 @@ namespace hoomd_tf
 
     }
 
-#endif  //_IPC_ARRAY_COMM_
+#endif  //m_IPC_ARRAY_COMM_

@@ -25,11 +25,9 @@ class tfcompute(hoomd.compute._compute):
                  log_filename='tf_manager.log', device=None,
                  bootstrap=None, bootstrap_map=None,
                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
-                 use_xla=False):
+                 use_xla=True):
         # so delete won't fail
         self.tfm = None
-        # if hoomd.init.is_initialized():
-        #    raise RuntimeError('Must create TF before hoomd initialization')
         self.debug_mode = _debug_mode
         self.tf_model_directory = tf_model_directory
         self.log_filename = log_filename
@@ -119,6 +117,7 @@ class tfcompute(hoomd.compute._compute):
             # fill out the indices
             for mi in self.mol_indices:
                 for i in range(len(mi)):
+                    # add 1 so that an index of 0 corresponds to slicing a dummy atom
                     mi[i] += 1
                 if len(mi) > self.graph_info['MN']:
                     raise ValueError('One of your molecule indices'
@@ -126,8 +125,17 @@ class tfcompute(hoomd.compute._compute):
                                      'Increase MN in your graph.')
                 while len(mi) < self.graph_info['MN']:
                     mi.append(0)
+                    
             # now make reverse
             self.rev_mol_indices = _make_reverse_indices(self.mol_indices)
+
+            # ok we have succeeded, now we try to disable sorting
+            c = hoomd.context.current.sorter
+            if c is None:
+                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                         'Make sure you disable it to allow molecular batching')
+            else:
+                c.disable()
         else:
             self.mol_indices = None
 

@@ -10,13 +10,13 @@ from math import sqrt
 from sys import argv as argv
 import time
 
-if(len(argv) != 2):
-    print('Usage: basic_ann_ff.py [N_PARTICLES]')
+if(len(argv) != 3):
+    print('Usage: basic_ann_ff.py [N_PARTICLES] [model_dir]')
     exit(0)
 
 
 N = int(argv[1])
-model_dir = '/scratch/rbarret8/ann-training'
+model_dir = argv[2]
 np.random.seed(42)
 # start_time = time.time()
 
