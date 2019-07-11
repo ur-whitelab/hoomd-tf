@@ -2,7 +2,12 @@ import hoomd
 import hoomd.md
 import hoomd.htf
 import tensorflow as tf
-with hoomd.htf.tfcompute('/tmp/eds') as tfcompute:
+import sys
+if(len(sys.argv) != 2):
+    print('Usage: run.py [model_dir]')
+    exit(0)
+model_dir = sys.argv[1]
+with hoomd.htf.tfcompute(model_dir) as tfcompute:
     hoomd.context.initialize()
     N = 64
     NN = 30

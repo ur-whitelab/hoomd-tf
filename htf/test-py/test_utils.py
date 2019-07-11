@@ -16,8 +16,8 @@ class test_loading(unittest.TestCase):
         as_op = v.assign(tf.reduce_sum(h))
         g.save(model_dir, out_nodes=[as_op])
         # run once
+        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
@@ -28,7 +28,6 @@ class test_loading(unittest.TestCase):
             hoomd.run(1)
         # load
         vars = htf.load_variables(model_dir, ['test'])
-        print(vars)
         assert np.abs(vars['test'] - 10) < 10e-10
 
 
@@ -102,7 +101,6 @@ class test_mappings(unittest.TestCase):
             :mapping_matrix.shape[0], :mapping_matrix.shape[1]]
         # make mapping_matrix sum to 1
         ref_slice = mapping_matrix
-        print(map_slice, ref_slice)
         np.testing.assert_array_almost_equal(map_slice, ref_slice)
         # check off-diagnoal slice, which should be 0
         map_slice = dense_mapping[
@@ -151,8 +149,10 @@ class test_mappings(unittest.TestCase):
         nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(nlist[0, :][0], [9, 9, 9])
-            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-9, -9, -9])
+            # particle 1 is closest to 0
+            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+            # particle 0 is -9 away from 9
+            np.testing.assert_array_almost_equal(nlist[-1, -1, :], [-9, -9, -9, 0])
 
     def test_compute_nlist_cut(self):
         N = 10
@@ -163,8 +163,10 @@ class test_mappings(unittest.TestCase):
         nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(nlist[0, :][0], [3, 3, 3])
-            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-3, -3, -3])
+            # particle 1 is closest to 0
+            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+            # particle later particles on 0 are all 0s because there were not enough neigbhors
+            np.testing.assert_array_almost_equal(nlist[-1, -1, :], [0, 0, 0, 0])
 
     def test_nlist_compare(self):
         rcut = 5.0
@@ -172,9 +174,10 @@ class test_mappings(unittest.TestCase):
         # disable sorting
         if c.sorter is not None:
             c.sorter.disable()
+        # want to have a big enough system so that we actually have a cutoff
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
-                                           n=[3, 3, 3])
-        model_dir = build_examples.custom_nlist(3**3 - 1, rcut, system)
+                                           n=[4, 4, 4])
+        model_dir = build_examples.custom_nlist(16, rcut, system)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
@@ -189,7 +192,6 @@ class test_mappings(unittest.TestCase):
         # the two nlists need to be sorted to be compared
         nlist = variables['hoomd-r']
         cnlist = variables['htf-r']
-        print(nlist.shape)
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i, :])
             ci = np.sort(cnlist[i, :])

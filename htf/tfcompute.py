@@ -25,11 +25,9 @@ class tfcompute(hoomd.compute._compute):
                  log_filename='tf_manager.log', device=None,
                  bootstrap=None, bootstrap_map=None,
                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
-                 use_xla=False):
+                 use_xla=True):
         # so delete won't fail
         self.tfm = None
-        # if hoomd.init.is_initialized():
-        #    raise RuntimeError('Must create TF before hoomd initialization')
         self.debug_mode = _debug_mode
         self.tf_model_directory = tf_model_directory
         self.log_filename = log_filename
@@ -127,6 +125,17 @@ class tfcompute(hoomd.compute._compute):
                                      'Increase MN in your graph.')
                 while len(mi) < self.graph_info['MN']:
                     mi.append(0)
+                    
+            # now make reverse
+            self.rev_mol_indices = _make_reverse_indices(self.mol_indices)
+
+            # ok we have succeeded, now we try to disable sorting
+            c = hoomd.context.current.sorter
+            if c is None:
+                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                         'Make sure you disable it to allow molecular batching')
+            else:
+                c.disable()
         else:
             self.mol_indices = None
 
@@ -208,7 +217,6 @@ class tfcompute(hoomd.compute._compute):
             self.cpp_force.addReferenceForce(f.cpp_force)
             hoomd.context.msg.notice(5, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
-
     def rcut(self):
         # adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
@@ -288,6 +296,7 @@ class tfcompute(hoomd.compute._compute):
         fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
         if self.mol_indices is not None:
             fd[self.graph_info['mol_indices']] = self.mol_indices
+            fd[self.graph_info['rev_mol_indices']] = self.rev_mol_indices
         if self.feed_dict is not None:
             if type(self.feed_dict) == dict:
                 value = self.feed_dict
@@ -326,3 +335,26 @@ class tfcompute(hoomd.compute._compute):
             npa[i, 2] = e.z
             npa[i, 3] = e.w
         return npa
+
+
+def _make_reverse_indices(mol_indices):
+    num_atoms = 0
+    for m in mol_indices:
+        num_atoms = max(num_atoms, max(m))
+    # add 1, since we found the largest index
+    num_atoms += 1
+    rmi = [[] for _ in range(num_atoms)]
+    for i in range(len(mol_indices)):
+        for j in range(len(mol_indices[i])):
+            index = mol_indices[i][j]
+            if index > 0:
+                rmi[index - 1] = [i, j]
+    warned = False
+    for r in rmi:
+        if len(r) != 2 and not warned:
+            warned = True
+            hoomd.context.msg.notice(
+                1,
+                'Not all of your atoms are in a molecule\n')
+            r.extend([-1, -1])
+    return rmi
