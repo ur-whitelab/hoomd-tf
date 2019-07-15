@@ -25,7 +25,7 @@ class tfcompute(hoomd.compute._compute):
                  log_filename='tf_manager.log', device=None,
                  bootstrap=None, bootstrap_map=None,
                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
-                 use_xla=True):
+                 use_xla=False):
         # so delete won't fail
         self.tfm = None
         self.debug_mode = _debug_mode
