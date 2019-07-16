@@ -7,7 +7,6 @@ v0.3 (2019-07-03)
 *Enhancements*
 
 - Batching by molecule now has a atom id to mol id/atom id look-up (`rev_mol_indices`)
-- XLA is enabled by default
 - Version string is visible in package
 - Example models now take an argument specifying where to save them
 - When batching, atom sorting is automatically disabled
