@@ -1,3 +1,6 @@
+R""" Check to ensure that we have a compatible version of TensorFlow.
+"""
+
 from __future__ import print_function
 import sys
 try:
@@ -7,6 +10,7 @@ except ImportError:
     exit(1)
 from pkg_resources import parse_version
 
+# get and parse the version of the detected TF version
 vtf = parse_version(tensorflow.__version__)
 vreq = parse_version(sys.argv[1])
 

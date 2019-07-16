@@ -17,15 +17,50 @@ import hoomd.md.nlist
 import hoomd.comm
 import tensorflow as tf
 
-# Integrates tensorflow
-
+## \internal
+# \brief TensorFlow HOOMD compute class
+# \details
+# Integrates tensorflow into HOOMD-blue, with options to load and save models,
+# write a tensorboard file, run in "mock mode", and use XLA if available.
 
 class tfcompute(hoomd.compute._compute):
+    ## \internal
+    # \brief Constructs the tfcompute class
+    # \details
+    # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
+    # whether to use a tensorboard, and some execution preferences.
     def __init__(self, tf_model_directory,
                  log_filename='tf_manager.log', device=None,
                  bootstrap=None, bootstrap_map=None,
                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
                  use_xla=False):
+        R""" Initialize a tfcompute class instance
+
+        Parameters
+        ---------
+        tf_model_directory
+            Directory in which to save the TensorFlow model files.
+        log_filename
+            Name to use for the TensorFlow log file.
+        device
+            Device (GPU) on which to execute, if a specific one is desired.
+        bootstrap
+            If set to a directory, will search for and load a previously-saved model file
+        bootstrap_map
+            A dictionary to be used when bootstrapping, pairing old models' tensor variable
+            names with new ones. Key is new name, value is older model's.
+        _deubug_mode
+            Set this to True to see more debug messages.
+        _mock_mode
+            Set this to True to run a "fake" calculation of forces that would be passed to
+            the HOOMD simulation without applying them.
+        write_tensorboard
+            If True, a tensorboard file will be written in the tf_model_directory.
+        use_xla
+            If True, enables the accelerated linear algebra library in TensorFlow, which
+            can be useful for large and complicated tensor operations.
+        """
+
         # so delete won't fail
         self.tfm = None
         self.debug_mode = _debug_mode
@@ -46,11 +81,102 @@ class tfcompute(hoomd.compute._compute):
         self.feed_dict = None
         self.use_xla = use_xla
 
+    ## \var tfm
+    # \internal
+    # \brief TensorFlow manager used by the computer
+    # \details
+    # The TensorFlow manager instance used by this class to inteact with and
+    # manage memory communication between HOOMD and TensorFlow.
+
+    ## \var debug_mode
+    # \internal
+    # \brief Whether to print debug statements
+
+    ## \var tf_model_directory
+    # \internal
+    # \brief Where to save TensorFlow model files
+
+    ## \var log_filename
+    # \internal
+    # \brief Name of the log file
+
+    ## \var graph_info
+    # \internal
+    # \brief The structure of the graph
+    # \details
+    # The information that is loaded from a pickled tensorflow graph model
+    # as a dictionary, containing things like number of neighbors and other
+    # information necessary to reconstruct the graph.
+
+    ## \var _mock_mode
+    # \internal
+    # \brief Sets whether to disregard force output
+    # \details
+    # If this is True, then htf will run as if it were outputting forces
+    # to HOOMD, but will not actually output them, just report them.
+
+    ## \var device
+    # \internal
+    # \brief The GPU device to run on
+    # \details
+    # Set this argument to a string specifying which GPU to use on machines
+    # with more than one GPU installed. Otherwise, defaults to 'gpu:0' in
+    # GPU execution mode, or 'cpu:0' in CPU mode.
+
+    ## \var write_tensorboard
+    # \internal
+    # \brief Whether to save a tensorboard file
+    # \details
+    # Tensorboard can be used to visualize the structure of a TensorFlow
+    # graphical model. Set this to True if you want to save one, and it
+    # will save in the same directory as the tf_model_directory
+
+    ## \var bootstrap
+    # \internal
+    # \brief Location of previously-saved model to be loaded
+    # \details
+    # TensorFlow can optionally load parameters from a previously-trained
+    # model. Set bootstrap to the location of such a model to make use of it.
+
+    ## \var bootstrap_map
+    # \internal
+    # \brief Dictionary of previously-specified model's structure
+    # \details
+    # This map is filled with information loaded from a previously-trained
+    # model. bootstrap must be set to a valid path for this to work.
+
+    ## \var feed_dict
+    # \internal
+    # \brief Dictionary of values to set for TensorFlow placeholders
+    # \details
+    # Some model hyper parameters are user-specified, such as dropout rate
+    # in a neural network model. Such variables are created as TensorFlow
+    # placeholders. Populate a dictionary keyed by tensor names and desired
+    # values, then pass as feed_dict.
+    # feed_dict should be a dictionary where the key is
+    # the tensor name (can be set during graph build stage),
+    # and the value is the result to be fed into the named tensor. Note
+    # that if you name a tensor, typically you must
+    # append ':0' to that name. For example, if your name is 'my-tensor',
+    # then the actual tensor is named 'my-tensor:0'.
+
+    ## \var use_xla
+    # \internal
+    # \brief Whether to use XLA in TensorFlow
+    # \details
+    # XLA is an accelerated linear algebra library for TensorFlow which helps
+    # speed up some tensor calculations. Use this to toggle
+    # whether or not to use it.
+
+    R""" __enter__ method of the HOOMD compute
+    Launches TensorFlow."""
     def __enter__(self):
         if not self.mock_mode:
             self._init_tf()
         return self
 
+    R""" __exit__ method of the HOOMD compute
+    Tells TensorFlow to shutdown its instance, through TFManager. """
     def __exit__(self, exc_type, exc_value, traceback):
         # trigger end in task lock
         if not self.mock_mode and self.tfm.is_alive():
@@ -59,16 +185,32 @@ class tfcompute(hoomd.compute._compute):
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
 
-    # feed_dict = takes in tfcompute (which gives access
-    # to forces/positions/nlist)
-    # feed_dict should return a dictionary where the key is
-    # the tensor
-    # name (can be set during graph build stage)
-    # and the value is the result to be fed into the named tensor. Note
-    # that if you name a tensor, typically you must
-    # append :0 to it. For example, if your name is 'my-tensor', then the
-    # actual tensor is named 'my-tensor:0'.
-
+    R""" Attaches the TensorFlow instance to HOOMD.
+    The main method of this class, this method sets up TensorFlow and
+    gets HOOMD ready to interact with it.
+    Parameters
+    ----------
+    nlist
+        The HOOMD neighbor list that will be used as the TensorFlow input.
+    r_cut
+        Cutoff radius for neighbor listing.
+    save_period
+        How often to save the TensorFlow data. Period here is measured by
+        how many times the TensorFLow model is updated. See period.
+    period
+        How many HOOMD steps should pass before updating the TensorFlow model.
+        In combination with save_period, determines how many timesteps pass before
+        TensorFlow saves its data (slow). For example, with a save_period of 200,
+        a period of 4, TensorFlow will write to the tf_model_directory every 800
+        simulation steps.
+    feed_dict
+        The dictionary keyed by tensor names and filled with corresponding values.
+        See feed_dict in __init__.
+    mol_indices
+        Molecule indices for each atom, identifying which molecule each atom belongs to.
+    batch_size
+        The size of batches if we are using batching. Cannot be used if molecule-wise
+        batching is active."""
     def attach(self, nlist=None, r_cut=0, save_period=1000,
                period=1, feed_dict=None, mol_indices=None,
                batch_size=None):
@@ -206,6 +348,8 @@ class tfcompute(hoomd.compute._compute):
         if not self.mock_mode:
             self._start_tf()
 
+    R""" Sets the HOOMD reference forces to be used by TensorFlow.
+    See C++ comments in TensorFlowCompute.h"""
     def set_reference_forces(self, *forces):
         if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
             raise ValueError('Only valid to set reference'
@@ -217,8 +361,10 @@ class tfcompute(hoomd.compute._compute):
             self.cpp_force.addReferenceForce(f.cpp_force)
             hoomd.context.msg.notice(5, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
+
+    R""" Define the cutoff radius used in the neighbor list.
+    Adapted from hoomd/md/pair.py"""
     def rcut(self):
-        # adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
@@ -235,10 +381,14 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
+    R""" delete method for the compute.
+    Ensures that tensorflow is properly shut down before quitting."""
     def __del__(self):
         if self.tfm and self.tfm.is_alive():
             self.shutdown_tf()
 
+    R""" shut down the TensorFlow instance.
+    """
     def shutdown_tf(self):
         # need to terminate orphan
         if not self.q.full():
@@ -246,6 +396,8 @@ class tfcompute(hoomd.compute._compute):
             self.q.put(None)
         self.tfm.join(1)
 
+    R""" set up the TensorFlow instance.
+    Create threading queue and give it to TensorFlow manager."""
     def _init_tf(self):
         self.q = queue.Queue(maxsize=1)
         self.tfm = threading.Thread(target=main, args=(
@@ -253,6 +405,8 @@ class tfcompute(hoomd.compute._compute):
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
+    R""" start the TensorFlow instance.
+    Add our class var args to the queue, and print some graph info."""
     def _start_tf(self):
         if not self.cpp_force:
             return
@@ -289,8 +443,9 @@ class tfcompute(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'TF Session Manager has released control.'
                                  ' Starting HOOMD updates\n')
 
+    R""" Allow TF to read output and we wait for it to finish.
+    """
     def finish_update(self, batch_index, batch_frac):
-        '''Allow TF to read output and we wait for it to finish.'''
         if self.mock_mode:
             return
         fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
