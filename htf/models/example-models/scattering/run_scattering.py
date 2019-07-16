@@ -1,7 +1,12 @@
 import tensorflow as tf
 import hoomd
 from hoomd.htf import tfcompute
-model_dir = '/scratch/hgandhi/scattering/'
+import sys
+if(len(sys.argv) != 2):
+    print('Usage: build_scattering.py [model_dir]')
+    exit(0)
+
+model_dir = sys.argv[1]
 
 
 with hoomd.htf.tfcompute(model_dir, _mock_mode=False,

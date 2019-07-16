@@ -1,8 +1,8 @@
 // Copyright (c) 2018 Andrew White at the University of Rochester
 //  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-#ifndef _TENSORFLOW_COMPUTE_CUH_
-#define _TENSORFLOW_COMPUTE_CUH_
+#ifndef m_TENSORFLOW_COMPUTE_CUH_
+#define m_TENSORFLOW_COMPUTE_CUH_
 
 #include <hoomd/HOOMDMath.h>
 #include <hoomd/ParticleData.cuh>
@@ -48,4 +48,4 @@ extern "C" cudaError_t gpu_reshape_nlist(Scalar4* dest,
                                          double rmax,
 					 cudaStream_t stream);
 
-#endif // _TENSORFLOW_COMPUTE_CUH_
+#endif // m_TENSORFLOW_COMPUTE_CUH_

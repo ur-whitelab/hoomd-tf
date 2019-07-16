@@ -4,6 +4,11 @@ import numpy as np
 import hoomd.htf
 from sys import argv as argv
 
+if(len(argv) != 2):
+    print('Usage: build_models.py [model_directory]')
+    exit(0)
+
+model_dir = argv[1]
 
 # make a simple ANN, based on: https://medium.com/@curiousily/
 # tensorflow-for-hackers-part-ii-building-simple-neural-network-2d6779d2f91b
@@ -116,7 +121,7 @@ def make_train_graph(NN, N_hidden_nodes, N_hidden_layers):
     # print cost for a more granular plot
     printer2 = tf.Print(cost, [cost], summarize=100, message="cost is: ")
     # check = tf.add_check_numerics_ops()
-    graph.save(model_directory='/scratch/rbarret8/ann-training',
+    graph.save(model_directory=model_dir,
                out_nodes=[optimizer, histo, histo2, histo3, printer2])
     # check, printer,
 
@@ -143,7 +148,7 @@ def make_force_graph(NN, N_hidden_nodes, N_hidden_layers):
     printer = tf.Print(calculated_forces, [calculated_forces], summarize=10,
                        message='calculated_forces is: ')
     # no cost nor minimizer this time
-    graph.save(model_directory='/scratch/rbarret8/ann-inference',
+    graph.save(model_directory=model_dir,
                force_tensor=calculated_forces, out_nodes=[printer])
 
 
