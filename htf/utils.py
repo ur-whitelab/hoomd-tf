@@ -90,17 +90,18 @@ def compute_pairwise_potential(model_directory, potential_tensor,
     potential = np.empty(len(r))
 
     nlist_forces = tf.gradients(potential_tensor, nlist_tensor)[0]
-    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
-					           name='nlist-pairwise-force'
-							   '-gradient-raw')
+    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0),
+                                                nlist_forces),
+                               name='nlist-pairwise-force'
+                               '-gradient-raw')
     zeros = tf.zeros(tf.shape(nlist_forces))
     nlist_forces = tf.where(tf.is_finite(nlist_forces),
-					        nlist_forces, zeros,
-							name='nlist-pairwise-force-gradient')
+                            nlist_forces, zeros,
+                            name='nlist-pairwise-force-gradient')
     nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
-				                 name='nlist-force-gradient')
+                                 name='nlist-force-gradient')
     forces = nlist_reduce
-	with tf.Session() as sess:
+    with tf.Session() as sess:
         saver = tf.train.Saver()
         if(checkpoint == -1):
             # get latest
@@ -124,7 +125,7 @@ def compute_pairwise_potential(model_directory, potential_tensor,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-	return potential, forces
+    return potential, forces
 
 
 def find_molecules(system):
@@ -303,4 +304,5 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
 
     return tf.concat([
         nlist_pos,
-        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]), tf.float32)], axis=-1) * nlist_mask
+        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
+                tf.float32)], axis=-1) * nlist_mask

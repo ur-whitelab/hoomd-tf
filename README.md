@@ -23,6 +23,7 @@ Table of Contents
          * [Bootstrapping Variables from Other Models](#bootstrapping-variables-from-other-models)
    * [Utilities](#utilities)
       * [RDF](#rdf)
+      * [Pairwise Potential and Forces](#pairwise-potential-and-forces)
    * [Coarse-Graining Utilities](#coarse-graining-utilities)
       * [Find Molecules](#find-molecules)
       * [Sparse Mapping](#sparse-mapping)

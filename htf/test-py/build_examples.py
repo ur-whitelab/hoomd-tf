@@ -75,6 +75,7 @@ def mol_force(directory='/tmp/test-mol-force-model'):
     graph.save(directory, out_nodes=[f])
     return directory
 
+
 def feeddict_graph(directory='/tmp/test-feeddict-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
@@ -138,7 +139,8 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0), 'average-energy')
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0),
+                                    'average-energy')
     graph.save(force_tensor=forces, model_directory=directory,
                out_nodes=[avg_energy])
     return directory
@@ -188,6 +190,7 @@ def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
     forces = graph.compute_forces(total_e)
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[])
     return directory
+
 
 def print_graph(NN, directory='/tmp/test-print-model'):
     graph = htf.graph_builder(NN)
