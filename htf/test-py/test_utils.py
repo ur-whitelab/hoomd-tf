@@ -228,9 +228,9 @@ class test_mappings(unittest.TestCase):
 
         r = np.linspace(0.5, 1.5, 5)
         potential, *forces = htf.compute_pairwise_potential(model_dir,
-                                                            r, 'energy')
-        np.testing.assert_equal(len(forces), len(r) - 1,
-                                'Forces not calculated correctly')
+                                                           r, 'energy')
+        np.testing.assert_equal(len(potential), len(r),
+                                'Potentials not calculated correctly')
 
 
 if __name__ == '__main__':

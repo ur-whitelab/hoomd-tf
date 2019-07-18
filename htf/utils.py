@@ -46,8 +46,9 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
-def compute_pairwise_potential(model_directory, potential_tensor,
-                               r, checkpoint=-1, feed_dict={}):
+def compute_pairwise_potential(model_directory, r,
+                               potential_tensor_name,
+                               checkpoint=-1, feed_dict={}):
     ''' Compute the pairwise potential at r for the given model.
 
     Parameters
@@ -78,7 +79,7 @@ def compute_pairwise_potential(model_directory, potential_tensor,
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
-        potential_tensor_name += ':0'
+        potential_tensor_name = potential_tensor_name + ':0'
     potential_tensor = tf.get_default_graph(
         ).get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph(
