@@ -198,12 +198,13 @@ class test_mappings(unittest.TestCase):
             np.testing.assert_array_almost_equal(ni, ci, decimal=5)
 
     def test_compute_pairwise_potential(self):
-        rcut = 5.0
-        c = hoomd.context.initialize()
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
-                                           n=[3, 3, 3])
-        model_dir = build_examples.custom_nlist(3**3 - 1, rcut, system)
+        model_dir = build_examples.lj_rdf(9 - 1)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 2.5
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -214,10 +215,9 @@ class test_mappings(unittest.TestCase):
             hoomd.run(100)
             potentials = tfcompute.get_forces_array()[3]
 
-        r = np.linspace(0.5, 1.5, 10)
-        potential, forces = htf.compute_pairwise_potential(model_dir, r, potentials)
-        np.testing.assert_equal(len(forces), len(r), 'Forces not calculated correctly')
-
+        r = np.linspace(0.5, 1.5, 5)
+        potential, *forces  = htf.compute_pairwise_potential(model_dir, r, 'energy')
+        np.testing.assert_equal(len(forces), len(r) - 1, 'Forces not calculated correctly')
 
 if __name__ == '__main__':
     unittest.main()

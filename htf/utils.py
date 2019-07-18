@@ -46,8 +46,8 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
-def compute_pairwise_potential(model_directory, r, potential_tensor_name,
-                               checkpoint=-1, feed_dict={}):
+def compute_pairwise_potential(model_directory, potential_tensor,
+                               r, checkpoint=-1, feed_dict={}):
     ''' Compute the pairwise potential at r for the given model.
 
     Parameters
@@ -88,9 +88,19 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     NN = model_params['NN']
     np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
-    forces = np.empty(len(r))
 
-    with tf.Session() as sess:
+    nlist_forces = tf.gradients(potential_tensor, nlist_tensor)[0]
+    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
+					           name='nlist-pairwise-force'
+							   '-gradient-raw')
+    zeros = tf.zeros(tf.shape(nlist_forces))
+    nlist_forces = tf.where(tf.is_finite(nlist_forces),
+					        nlist_forces, zeros,
+							name='nlist-pairwise-force-gradient')
+    nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
+				                 name='nlist-force-gradient')
+    forces = nlist_reduce
+	with tf.Session() as sess:
         saver = tf.train.Saver()
         if(checkpoint == -1):
             # get latest
@@ -114,8 +124,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-        forces = tf.math.negative(tf.gradients(potential, r))
-    return potential, forces
+	return potential, forces
 
 
 def find_molecules(system):
