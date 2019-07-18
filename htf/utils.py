@@ -55,7 +55,8 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
 
 ## \internal
 # \brief computes the U(r) for a given TensorFlow model
-def compute_pairwise_potential(model_directory, r, potential_tensor_name,
+def compute_pairwise_potential(model_directory, r,
+                               potential_tensor_name,
                                checkpoint=-1, feed_dict={}):
     R""" Compute the pairwise potential at r for the given model.
 
@@ -87,7 +88,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
-        potential_tensor_name += ':0'
+        potential_tensor_name = potential_tensor_name + ':0'
     potential_tensor = tf.get_default_graph(
         ).get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph(
@@ -98,6 +99,18 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
 
+    nlist_forces = tf.gradients(potential_tensor, nlist_tensor)[0]
+    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0),
+                                                nlist_forces),
+                               name='nlist-pairwise-force'
+                               '-gradient-raw')
+    zeros = tf.zeros(tf.shape(nlist_forces))
+    nlist_forces = tf.where(tf.is_finite(nlist_forces),
+                            nlist_forces, zeros,
+                            name='nlist-pairwise-force-gradient')
+    nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
+                                 name='nlist-force-gradient')
+    forces = nlist_reduce
     with tf.Session() as sess:
         saver = tf.train.Saver()
         if(checkpoint == -1):
@@ -122,7 +135,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-    return potential
+    return potential, forces
 
 
 ## \internal
@@ -339,4 +352,5 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
 
     return tf.concat([
         nlist_pos,
-        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]), tf.float32)], axis=-1) * nlist_mask
+        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
+                tf.float32)], axis=-1) * nlist_mask
