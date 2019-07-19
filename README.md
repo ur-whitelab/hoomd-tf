@@ -753,7 +753,7 @@ train_op = optimizer.apply_gradients(capped_gvs)
 ```
 
 
-## Neighbor Lists
+### Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG simulations where density is non-uniform.
 
