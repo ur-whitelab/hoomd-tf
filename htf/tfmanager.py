@@ -484,17 +484,20 @@ class TFManager:
                             ' {}'.format(self.bootstrap))
                     self.log.log(8, 'Using bootstrap checkpoint'
                                  ' {}'.format(self.bootstrap))
+                    # only load vars in the checkpoint and the graph!
+                    cp = tf.train.NewCheckpointReader(checkpoint)
+                    var_to_shape_map = cp.get_variable_to_shape_map()
+                    var_list = var_to_shape_map.keys()
                     # convert bootstrap map values into actual variables
                     variable_map = None
                     if self.bootstrap_map is not None:
-                        variables = tf.get_collection(
-                            tf.GraphKeys.GLOBAL_VARIABLES)
+                        variables = var_list
                         variable_map = dict()
                         for k, vname in self.bootstrap_map.items():
                             value = None
                             for v in variables:
-                                if v.name == vname + ':0':
-                                    value = v
+                                if v == vname + ':0':
+                                    value = tf.get_default_graph().get_tensor_by_name(vname + ':0')
                             if value is None:
                                 raise ValueError(
                                     'Could not find variable'
@@ -502,8 +505,18 @@ class TFManager:
                                     ' processing'
                                     ' bootstrap_map'.format(vname))
                             variable_map[k] = value
-                    bootstrap_saver = tf.train.Saver(variable_map,
+                        bootstrap_saver = tf.train.Saver(variable_map,
                                                      **saver_args)
+                    else:
+                        # remove vars that aren't in our graph
+                        filtered_varlist = []
+                        for v in var_to_shape_map.keys():
+                            try:
+                                t = tf.get_default_graph().get_tensor_by_name(v + ':0')
+                                filtered_varlist.append(t)
+                            except KeyError:
+                                pass
+                        bootstrap_saver = tf.train.Saver(filtered_varlist, **saver_args)
                     bootstrap_saver.restore(sess, checkpoint)
                 else:
                     checkpoint = tf.train.latest_checkpoint(
