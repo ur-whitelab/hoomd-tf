@@ -2,6 +2,10 @@ import hoomd.htf as htf
 import sys
 import tensorflow as tf
 
+if(len(sys.argv) != 2):
+    print('Usage: build.py [model_dir]')
+    exit(0)
+model_dir = sys.argv[1]
 
 def make_eds_graph(N, NN, directory, cv_op, set_point):
     '''Currently only computes running mean'''
@@ -65,4 +69,4 @@ def avg_r(graph, N):
     return real_cv, real_cv**2
 
 
-make_eds_graph(64, 30, '/tmp/eds', avg_r, 5.8)
+make_eds_graph(64, 30, model_dir, avg_r, 5.8)

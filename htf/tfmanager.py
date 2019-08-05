@@ -43,14 +43,69 @@ def load_op_library(op):
                       'Expected to be in {}'.format(op, path))
     return mod
 
-
+## \internal
+# \brief TensorFlow manager class
+# \details
+# Manages when TensorFlow performs training and coordinates its
+# communication with HOOMD
 class TFManager:
+    ## \internal
+    # \brief Constructs the tfmanager class
+    # \details
+    # Sets up the TensorFlow graph and sets any placeholder vars.
+    # Handles updating and saving of TensorFlow graph, and passing
+    # output forces back to HOOMD, as well as writing tensorboards.
     def __init__(self, graph_info, device, q,
                  positions_buffer, nlist_buffer,
                  forces_buffer, virial_buffer, log_filename,
                  dtype, debug, write_tensorboard, use_feed,
                  bootstrap, primary, bootstrap_map,
                  save_period, use_xla):
+        R""" Initialize an instance of TFManager.
+
+        Parameters
+        ----------
+        graph_info
+            The structure of the TensorFlow graph, passed as a dict.
+            See tfcompute.py
+        device
+            Which device to run on.
+            See tfcompute.py
+        q
+            Threading queue that is used during execution of TensorFlow.
+        positions_buffer
+            Buffer where particle positions are stored
+        nlist_buffer
+            Address of the neighbor list tensor
+        forces_buffer
+            Address of the forces tensor
+        virial_buffer
+            Address of the virial tensor
+        log_filename
+            Name of the file to output tensorflow logs
+        dtype
+            Data type for tensor values, e.g. int32, float32, etc
+        debug
+            True to run TensorFlow in debug mode
+        write_tensorboard
+            Whether to output a tensorboard file
+        use_feed
+            Whether or not to use a feed dictionary of tensor values
+        bootstrap
+            Location of previously-trained model files to load, otherwise None
+        primary
+            Whether this is the 'primary' instance of TFManager. Only one instance
+            writes logs and saves model files.
+        bootstrap_map
+            A dictionary to be used when bootstrapping, pairing old models' tensor variable
+            names with new ones. Key is new name, value is older model's.
+        save_period
+            How often to save the TensorFlow data. Period here is measured by
+            how many times the TensorFLow model is updated. See tfcompute.py.
+        use_xla
+            If True, enables the accelerated linear algebra library in TensorFlow, which
+            can be useful for large and complicated tensor operations.
+        """
         self.primary = primary
         self.log = logging.getLogger('tensorflow')
         if not primary:
@@ -95,6 +150,160 @@ class TFManager:
                 self.out_nodes.append(tf.get_default_graph(
                         ).get_operation_by_name(n))
 
+    ## \var primary
+    # \internal
+    # \brief Whether or not this is the 'primary' thread
+    # \details
+    # It is only necessary for one thread to save model files and
+    # write logs, so the 'primary' thread is the one assigned to  do this.
+
+    ## \var log
+    # \internal
+    # \brief The logging object to use
+    # \details
+    # This is set to be the 'tensorflow' logger
+
+    ## \var device
+    # \internal
+    # \brief Which device Tensorflow is running on
+    # \details
+    # When GPU execution is enabled and multiple GPU devices are available,
+    # this specifies which GPU to use. Otherwise it will default to the only
+    # available GPU, or the CPU if GPU execution is disabled.
+
+    ## \var q
+    # \internal
+    # \brief Threading queue that is used during execution of TensorFlow.
+
+    ## \var positions_buffer
+    # \internal
+    # \brief The memory address of the particle positions
+    # \details
+    # This is needed for conversion between HOOMD and TensorFlow memory spaces
+
+    ## \var nlist_buffer
+    # \internal
+    # \brief The memory address of the neighbor lists (pairwise distances)
+    # \details
+    # This is needed for conversion between HOOMD and TensorFlow memory spaces
+
+    ## \var forces_buffer
+    # \internal
+    # \brief The memory address of the forces tensor
+    # \details
+    # This is needed for conversion between HOOMD and TensorFlow memory spaces
+
+    ## \var virial_buffer
+    # \internal
+    # \brief The memory address of the virial
+    # \details
+    # This is needed for conversion between HOOMD and TensorFlow memory spaces
+
+    ## \var debug
+    # \internal
+    # \brief Whether to print debug messages
+
+    ## \var step
+    # \internal
+    # \brief Which timestep we are currently looking at
+    # \details
+    # This is tracked in order to print logs and save model files preiodically
+
+    ## \var graph_info
+    # \internal
+    # \brief Dictionary containing structural information about the graph model
+    # \details
+    # NN: maximum number of neighbors per particle
+    # mol_indices: incides of molecules in the system
+    # MN: number of particles per molecule
+    # output_forces: whether this model outputs forces to HOOMD
+    # model_directory: where this model file was written
+    # out_nodes: list of tensors that are output by the model
+    # dtype: data type of the model's data
+    # nlist: the neighbor list tensor
+    # positions: the positoins tensor
+    # forces: the forces tensor
+    # virial: the virial tensor
+
+    ## \var dtype
+    # \internal
+    # \brief The data type used by the tensors in this model
+
+    ## \var write_tensorboard
+    # \internal
+    # \brief Whether to write a tensorboard file or not
+    # \details
+    # Tensorboard files can be loaded to visualize a trained TensorFlow model.
+    # Set this to True to save one in the model directory.
+
+    ## \var use_feed
+    # \internal
+    # \brief Whether to use a feed dictionary for initial tensor values
+
+    ## \var save_period
+    # \internal
+    # \brief How often to save the TensorFlow model parameters
+    # \details
+    # This is how many training periods to wait before saving.
+    # e.g. if we train TensorFlow parameters every 100 steps and save_period
+    # is set to 200, then parameters are saved every 20000 HOOMD timesteps.
+
+    ## \var bootstrap
+    # \internal
+    # \brief The name of the bootstrap directory
+    # \details
+    # The bootstrap directory should contain saved model files from a previously
+    # trained TensorFlow model.
+
+    ## \var bootstrap_map
+    # \internal
+    # \brief Map from one model's tensor names to another
+    # \details
+    # A dictionary to be used when bootstrapping, pairing old models' tensor variable
+    # names with new ones. Key is new name, value is older model's.
+
+    ## \var model_directory
+    # \internal
+    # \brief Where to save model parameters
+    # \details
+    # The directory name to which TensorFlow will write saved model files
+
+    ## \var nneighs
+    # \internal
+    # \brief Max number of neighbors per particle
+
+    ## \var out_nodes
+    # \internal
+    # \brief List of output tensors of the TensorFlow model
+    # \details
+    # TensorFlow output consists of tensors, which must be listed here.
+
+    ## \var summaries
+    # \internal
+    # \brief List of tensors to summarize
+    # \details
+    # TensorFlow can summarize the change in specified tensor values during training.
+    # These tensors are specified here and can be optionally viewed with tensorboard.
+
+    ## \var use_xla
+    # \internal
+    # \brief Whether to use the accelerated linear algebra library
+    # \details
+    # XLA can enhance the speed of execution of many TensorFlow models. Set this
+    # to True to use it.
+
+    R""" update the TensorFlow model.
+
+    Parameters
+    ----------
+    sess
+        TensorFlow session instance. This is how TensorFlow updates are called.
+    feed_dict
+        The dictionary keyed by tensor names and filled with corresponding values.
+        See feed_dict in tfcompute.__init__.
+    batch_index
+        Tracks the batch indices used for execution when batching. See graphbuilder.py
+    """
     def _update(self, sess, feed_dict, batch_index):
         # only update step and save on the first batch.
         if self.step % self.save_period == 0 and batch_index == 0:
@@ -110,7 +319,8 @@ class TFManager:
             self.step += 1
 
         return result
-
+    R""" save model method is called during update
+    Saves TensorFlow model parameters."""
     def _save_model(self, sess, summaries=None):
 
         if not self.primary:
@@ -130,6 +340,10 @@ class TFManager:
             self.tb_writer.add_summary(summaries, self.step)
             self.tb_writer.flush()
 
+    R""" The prepare graph method prepares the TensorFlow graph to execute.
+    First transfers the HOOMD data to TensorFlow control, then gets the device
+    ready to execute and inserts the necessary nodes into the TensorFlow execution
+    graph."""
     def _prepare_graph(self):
         hoomd_to_tf_module = load_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
@@ -188,6 +402,9 @@ class TFManager:
                              's'.format(os.path.join(self.model_directory,
                                                      'model.meta')))
 
+    R""" The prepare forces method readies the force tensor for HOOMD
+    Ensures that the forces and virial are the right dtypes, then shares
+    the memory of the TensorFlow forces with HOOMD."""
     def _prepare_forces(self):
         # insert the output forces
         try:
@@ -226,6 +443,8 @@ class TFManager:
                                      self.virial.shape,
                                      self.device))
 
+    R""" Attach tensorboard to our TensorFlow session.
+    """
     def _attach_tensorboard(self, sess):
 
         self.summaries = tf.summary.merge_all()
@@ -233,6 +452,11 @@ class TFManager:
                 self.model_directory, 'tensorboard'),
                                                sess.graph)
 
+    R""" start_loop method of tfmanager.
+    Prepares GPU for execution, gathers trainable variables,
+    sets up model saving, loads pre-trained variables, sets
+    up tensorboard if requested and parses feed_dicts.
+    """
     def start_loop(self):
 
         self.log.log(10, 'Constructed TF Model graph')
@@ -243,7 +467,7 @@ class TFManager:
             config.graph_options.optimizer_options.global_jit_level = \
                 tf.OptimizerOptions.ON_1
         with tf.Session(config=config) as sess:
-            # resore model checkpoint if there are variables
+            # restore model checkpoint if there are variables
             if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 # first initialize
                 self.log.log(10, 'Found trainable variables...')

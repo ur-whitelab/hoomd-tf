@@ -8,6 +8,13 @@ import pickle
 import hoomd
 
 
+## \internal
+# \brief load the TensorFlow variables from a checkpoint
+#
+# Adds variables from model_directory corresponding to names
+# into the TensorFlow graph, optionally loading from a checkpoint
+# other than the most recently saved one, or setting variable values
+# with a feed_dict
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     # just in case
     tf.reset_default_graph()
@@ -46,9 +53,12 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
-def compute_pairwise_potential(model_directory, r, potential_tensor_name,
+## \internal
+# \brief computes the U(r) for a given TensorFlow model
+def compute_pairwise_potential(model_directory, r,
+                               potential_tensor_name,
                                checkpoint=-1, feed_dict={}):
-    ''' Compute the pairwise potential at r for the given model.
+    R""" Compute the pairwise potential at r for the given model.
 
     Parameters
     ----------
@@ -69,7 +79,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     Returns
     -------
     A 1D array of potentials corresponding the pairwise distances in r.
-    '''
+    """
     # just in case
     tf.reset_default_graph()
     # load graph
@@ -78,7 +88,7 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
-        potential_tensor_name += ':0'
+        potential_tensor_name = potential_tensor_name + ':0'
     potential_tensor = tf.get_default_graph(
         ).get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph(
@@ -89,6 +99,18 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
     np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
 
+    nlist_forces = tf.gradients(potential_tensor, nlist_tensor)[0]
+    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0),
+                                                nlist_forces),
+                               name='nlist-pairwise-force'
+                               '-gradient-raw')
+    zeros = tf.zeros(tf.shape(nlist_forces))
+    nlist_forces = tf.where(tf.is_finite(nlist_forces),
+                            nlist_forces, zeros,
+                            name='nlist-pairwise-force-gradient')
+    nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
+                                 name='nlist-force-gradient')
+    forces = nlist_reduce
     with tf.Session() as sess:
         saver = tf.train.Saver()
         if(checkpoint == -1):
@@ -113,15 +135,21 @@ def compute_pairwise_potential(model_directory, r, potential_tensor_name,
             result = sess.run(potential_tensor, feed_dict={
                     **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
-    return potential
+    return potential, forces
 
 
+## \internal
+# \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
-    '''Given a hoomd system, this will return a mapping
-        from molecule index to particle index
+    R""" Given a hoomd system, this will return a mapping
+    from molecule index to particle index
 
-        This is a slow function and should only be called once.
-    '''
+    This is a slow function and should only be called once.
+    Parameters
+    ---------
+    system
+        The molecular system in HOOMD.
+    """
 
     mapping = []
     mapped = set()
@@ -166,9 +194,11 @@ def find_molecules(system):
     return mapping
 
 
+## \internal
+# \brief Finds mapping operators for coarse-graining
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
-    ''' This will create the necessary indices and values for
+    R""" This will create the necessary indices and values for
     defining a sparse tensor in
     tensorflow that is a mass-weighted M x N mapping operator.
 
@@ -191,7 +221,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     -------
         A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
-    '''
+    """
     import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
@@ -236,10 +266,20 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
+## \internal
+# \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
-    '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
+    R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
-    '''
+    Parameters
+    ----------
+    positions
+        The tensor of particle positions
+    mapping
+        The coarse-grain mapping used to produce the particles in system
+    system
+        The system of particles
+    """
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
@@ -254,7 +294,27 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     return tf.identity(thetamean/np.pi/2*box_dim, name=name)
 
 
+## \internal
+# \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
+    R""" Computer partice pairwise neihgbor lists.
+    Parameters
+    ----------
+    positions
+        Positions of the particles
+    r_cut
+        Cutoff radius (HOOMD units)
+    NN
+        Maximum number of neighbors per particle
+    system
+        The HOOMD system of particles
+    sorted
+        Whether to sort neighbor lists by distance
+    Returns
+    -------
+    nlist
+        An [N X NN X 3] tensor containing neighbor lists of all particles
+    """
     M = tf.shape(positions)[0]
     # Making 3 dim CG nlist
     qexpand = tf.expand_dims(positions, 1)  # one column
@@ -272,14 +332,25 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     dist = tf.norm(dist_mat, axis=2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
-    dist_mat_r = dist * mask_cast
-    topk = tf.math.top_k(dist_mat_r, k=NN, sorted=sorted)
+    if sorted:
+        # replace these masked elements with really large numbers
+        # that will be very negative (therefore not part of "top")
+        dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e10
+        topk = tf.math.top_k(-dist_mat_r, k=NN, sorted=True)
+    else:
+        # all the 0s will disappear as we grab topk
+        dist_mat_r = dist * mask_cast
+        topk = tf.math.top_k(dist_mat_r, k=NN, sorted=False)
 
     # we have the topk, but now we need to remove others
     idx = tf.tile(tf.reshape(tf.range(M), [-1, 1]), [1, NN])
     idx = tf.reshape(idx, [-1, 1])
     flat_idx = tf.concat([idx, tf.reshape(topk.indices, [-1, 1])], -1)
-    nlist = tf.gather_nd(dist_mat * tf.reshape(mask_cast, [M, M, 1]), flat_idx)
-    nlist = tf.reshape(nlist, [-1, NN, 3])
+    # mask is reapplied here, so those huge numbers won't still be in there.
+    nlist_pos = tf.reshape(tf.gather_nd(dist_mat, flat_idx), [-1, NN, 3])
+    nlist_mask = tf.reshape(tf.gather_nd(mask_cast, flat_idx), [-1, NN, 1])
 
-    return nlist
+    return tf.concat([
+        nlist_pos,
+        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
+                tf.float32)], axis=-1) * nlist_mask

@@ -4,23 +4,25 @@ import tensorflow as tf
 import os
 import pickle
 
-
-class graph_builder:
-    '''This is a python class that builds the TF graph.
+R"""This is a python class that builds the TensorFlow graph.
 
        Use safe_div class method to avoid nan forces if doing 1/r
        or equivalent force calculations
-    '''
+"""
 
-    def __init__(self, nneighbor_cutoff, output_forces=True):
-        '''
+class graph_builder:
+    # \internal
+    # \brief Initializes the graphbuilder class
+    R""" Build the TensorFlow graph that will be used during the HOOMD run.
+    
         Parameters
         ------------
         nneighbor_cutoff
             The maximum number of neigbhors to consider (can be 0)
         output_forces
-            True if your graph will compute forces to be used in TF
-        '''
+            True if your graph will compute forces to be used in TensorFlow
+    """
+    def __init__(self, nneighbor_cutoff, output_forces=True):
         # clear any previous graphs
         atom_number = None
         self.atom_number = atom_number
@@ -38,12 +40,10 @@ class graph_builder:
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
         self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
-
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
         self.MN = 0
-
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
         self.update_batch_index_op = \
             self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
@@ -51,10 +51,103 @@ class graph_builder:
                                                 false_fn=lambda: tf.constant(0)))
         self.out_nodes = [self.update_batch_index_op]
 
+    ## \var atom_number
+    # \internal
+    # \brief Number of atoms
+    # \details
+    # defines the placeholder first dimension, which will be the size of the system
+
+    ## \var nneighbor_cutoff
+    # \internal
+    # \brief Max size of neighbor list
+    # \details
+    # Cutoff for maximum number of atoms in each neighbor list
+
+    ## \var nlist
+    # \internal
+    # \brief The neighbor list
+    # \details
+    # This is the tensor where the neighbor list is held
+
+    ## \var virial
+    # \internal
+    # \brief The virial
+    # \details
+    # Virial associated with the neighbor list
+
+    ## \var positions
+    # \internal
+    # \brief The particle positions
+    # \details
+    # Tensor holding the positions of all particles (Euclidean)
+
+    ## \var forces
+    # \internal
+    # \brief The forces tensor
+    # \details
+    # If output_forces is true, this is where those are stored
+
+    ## \var batch_frac
+    # \internal
+    # \brief portion of tensor to use in each batch
+    # \details
+    # When batching large tensors, this determines the size of the batches,
+    # as a fraction of the total size of the tensor which is to be batched
+
+    ## \var batch_index
+    # \internal
+    # \brief Tracks batching index
+    # \details
+    # Ranging from 0 to 1 / batch_frac, tracks which part of the batch we're on
+
+    ## \var output_forces
+    # \internal
+    # \brief Whether to output forces to HOOMD
+    # \details
+    # If true, forces are calculated and passed to HOOMD
+
+    ## \var _nlist_rinv
+    # \internal
+    # \brief the 1/r values for each neighbor pair
+
+    ## \var mol_indices
+    # \internal
+    # \brief Stores molecule indices for each atom
+    # \details
+    # Each atom is assigned an index associated with its corresponding molecule
+
+    ## \var mol_batched
+    # \internal
+    # \brief Whether to batch by molecule
+    # \details
+    # Not yet implemented
+
+    ## \var MN
+    # \internal
+    # \brief Number of molecules
+    # \details
+    # This is how many molecules we have among the atoms in our neighbor list
+
+    ## \var batch_steps
+    # \internal
+    # \brief How many times we have to run our batch calculations
+
+    ## \var update_batch_index_op
+    # \internal
+    # \brief TensorFlow op for batching
+    # \details
+    # Custom op that updates the batch index each time we run a batch calculation
+
+    ## \var out_nodes
+    # \internal
+    # \brief List of TensorFlow ops to put into the graph
+    # \details
+    # This list is combined with the other ops at runtime to form the TF graph
+
     @property
     def nlist_rinv(self):
-        ''' Returns an N x NN tensor of 1 / r for each neighbor
-        '''
+        R""" Returns an N x NN tensor of 1 / r for each neighbor
+        """
         if self._nlist_rinv is None:
             r = self.safe_norm(self.nlist[:, :, :3], axis=2)
             self._nlist_rinv = self.safe_div(1.0, r)
@@ -62,7 +155,7 @@ class graph_builder:
 
     def masked_nlist(self, type_i=None, type_j=None, nlist=None,
                      type_tensor=None):
-        '''Returns a neighbor list masked by the given types.
+        R"""Returns a neighbor list masked by the given types.
 
         Parameters
         ---------
@@ -75,7 +168,7 @@ class graph_builder:
         type_tensor
             An N x 1 tensor containing the types of the nlist origin. If None,
             then self.positions will be used
-        '''
+        """
         if nlist is None:
             nlist = self.nlist
         if type_tensor is None:
@@ -93,7 +186,7 @@ class graph_builder:
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
-        '''Creates a tensor that has the rdf for a given frame.
+        R"""Creates a tensor that has the rdf for a given frame.
 
         Parameters
         ----------
@@ -112,7 +205,7 @@ class graph_builder:
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
 
-        '''
+        """
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
         if nlist is None:
@@ -134,7 +227,7 @@ class graph_builder:
         return result
 
     def running_mean(self, tensor, name, batch_reduction='mean'):
-        '''Computes running mean of the given tensor
+        R"""Computes running mean of the given tensor
 
         Parameters
         ----------
@@ -155,7 +248,7 @@ class graph_builder:
         -------
             A variable containing the running mean
 
-        '''
+        """
         if batch_reduction not in ['mean', 'sum']:
             raise ValueError('Unable to perform {}'
                              'reduction across batches'.format(batch_reduction))
@@ -190,7 +283,7 @@ class graph_builder:
 
     def compute_forces(self, energy, virial=None, positions=None,
                        nlist=None, name=None):
-        ''' Computes pairwise or position-dependent forces (field) given
+        R""" Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle
         or overall energy
 
@@ -210,7 +303,7 @@ class graph_builder:
         as the class attribute virial and will
         be saved automatically.
 
-        '''
+        """
         if virial is None:
             if self.output_forces:
                 virial = True
@@ -289,19 +382,31 @@ class graph_builder:
         return tf.identity(forces, name='computed-forces')
 
     def build_mol_rep(self, MN):
-        '''
+        R"""
         This creates mol_forces, mol_positions, and mol_nlist which are
         mol_number x MN x 4 (mol_forces, mol_positions) and ? x MN x NN x 4 (mol_nlist)
-        tensors batched by molecule, where mol_number is the number of molecules. mol_number
+        tensors batched by molecule, where MN is the number of molecules. MN
         is determined at run time. The MN must be chosen to be large enough to
         encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
-        then the extra entries will be zeros. The specification of what is a molecule
-        will be passed at runtime.
+        then the extra entries will be zeros. Note that your input should be 0 based,
+        but subsequent tensorflow data will be 1 based, since 0 means no atom.
+        The specification of what is a molecule
+        will be passed at runtime, so that it can be dynamic if desired.
 
         To convert a _mol quantity to a per-particle quantity, call
         scatter_mol_quanitity(tensor)
-        '''
-        self.mol_indices = tf.placeholder(tf.int32, shape=[None, MN], name='htf-molecule-index')
+        Parameters
+        ----------
+        MN:
+            The number of molecules
+        """
+
+        self.mol_indices = tf.placeholder(tf.int32,
+                                          shape=[None, MN],
+                                          name='htf-molecule-index')
+        self.rev_mol_indices = tf.placeholder(tf.int32,
+                                              shape=[None, 2],
+                                              name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
         # we add one dummy particle to the positions, nlist, and forces so that
@@ -329,10 +434,10 @@ class graph_builder:
 
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
-        '''
+        R"""
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
-        '''
+        """
         op = tf.where(
                tf.greater(denominator, delta),
                tf.truediv(numerator, denominator + delta),
@@ -343,17 +448,17 @@ class graph_builder:
 
     @staticmethod
     def safe_norm(tensor, delta=1e-7, **kwargs):
-        '''
+        R"""
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
         NOTE: delta of safe_div must be > sqrt(3) * (safe_norm delta)
         #https://github.com/tensorflow/tensorflow/issues/12071
-        '''
+        """
         return tf.norm(tensor + delta, **kwargs)
 
     def save(self, model_directory, force_tensor=None, virial=None,
              out_nodes=[], move_previous=True):
-        '''Save the graph model to specified directory.
+        R"""Save the graph model to specified directory.
 
         Parameters
         ----------
@@ -369,7 +474,7 @@ class graph_builder:
         out_nodes
             Any additional TF graph nodes that should be executed.
             For example, optimizers, printers, etc.
-        '''
+        """
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are'
                              'outputing forces')
@@ -432,18 +537,21 @@ class graph_builder:
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
-        graph_info = {'NN': self.nneighbor_cutoff,
-                      'model_directory': model_directory,
-                      'forces': self.forces.name,
-                      'positions': self.positions.name,
-                      'virial': None if virial is None else virial.name,
-                      'nlist': self.nlist.name,
-                      'dtype': self.nlist.dtype,
-                      'output_forces': self.output_forces,
-                      'out_nodes': [x.name for x in out_nodes],
-                      'mol_indices':
-                          self.mol_indices.name if self.mol_indices is not None else None,
-                      'MN': self.MN
-                      }
+        graph_info = {
+            'NN': self.nneighbor_cutoff,
+            'model_directory': model_directory,
+            'forces': self.forces.name,
+            'positions': self.positions.name,
+            'virial': None if virial is None else virial.name,
+            'nlist': self.nlist.name,
+            'dtype': self.nlist.dtype,
+            'output_forces': self.output_forces,
+            'out_nodes': [x.name for x in out_nodes],
+            'mol_indices':
+            self.mol_indices.name if self.mol_indices is not None else None,
+            'rev_mol_indices':
+            self.rev_mol_indices.name if self.mol_indices is not None else None,
+            'MN': self.MN
+            }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)

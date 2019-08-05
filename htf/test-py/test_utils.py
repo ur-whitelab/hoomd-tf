@@ -16,8 +16,8 @@ class test_loading(unittest.TestCase):
         as_op = v.assign(tf.reduce_sum(h))
         g.save(model_dir, out_nodes=[as_op])
         # run once
+        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
@@ -28,7 +28,6 @@ class test_loading(unittest.TestCase):
             hoomd.run(1)
         # load
         vars = htf.load_variables(model_dir, ['test'])
-        print(vars)
         assert np.abs(vars['test'] - 10) < 10e-10
 
 
@@ -102,7 +101,6 @@ class test_mappings(unittest.TestCase):
             :mapping_matrix.shape[0], :mapping_matrix.shape[1]]
         # make mapping_matrix sum to 1
         ref_slice = mapping_matrix
-        print(map_slice, ref_slice)
         np.testing.assert_array_almost_equal(map_slice, ref_slice)
         # check off-diagnoal slice, which should be 0
         map_slice = dense_mapping[
@@ -147,24 +145,35 @@ class test_mappings(unittest.TestCase):
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         system = type('',
                       (object, ),
-                      {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
-        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, system, True)
+                      {'box': type('', (object,),
+                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
+                                  100., 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(nlist[0, :][0], [9, 9, 9])
-            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-9, -9, -9])
+            # particle 1 is closest to 0
+            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+            # particle 0 is -9 away from 9
+            np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                                 [-9, -9, -9, 0])
 
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         system = type('',
                       (object, ),
-                      {'box': type('', (object,), {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
-        nlist = htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, system, True)
+                      {'box': type('', (object,),
+                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
+                                  5.5, 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
-            np.testing.assert_array_almost_equal(nlist[0, :][0], [3, 3, 3])
-            np.testing.assert_array_almost_equal(nlist[-1, :][0], [-3, -3, -3])
+            # particle 1 is closest to 0
+            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+            # particle later particles on 0 are all 0s because
+            # there were not enough neigbhors
+            np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                                 [0, 0, 0, 0])
 
     def test_nlist_compare(self):
         rcut = 5.0
@@ -172,16 +181,19 @@ class test_mappings(unittest.TestCase):
         # disable sorting
         if c.sorter is not None:
             c.sorter.disable()
+        # want to have a big enough system so that we actually have a cutoff
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
-                                           n=[3, 3, 3])
-        model_dir = build_examples.custom_nlist(3**3 - 1, rcut, system)
+                                           n=[4, 4, 4])
+        model_dir = build_examples.custom_nlist(16, rcut, system)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=None)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                                   )).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut,
+                             save_period=10, batch_size=None)
             # add lj so we can hopefully get particles mixing
             hoomd.run(100)
         variables = hoomd.htf.load_variables(
@@ -189,11 +201,36 @@ class test_mappings(unittest.TestCase):
         # the two nlists need to be sorted to be compared
         nlist = variables['hoomd-r']
         cnlist = variables['htf-r']
-        print(nlist.shape)
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i, :])
             ci = np.sort(cnlist[i, :])
             np.testing.assert_array_almost_equal(ni, ci, decimal=5)
+
+    def test_compute_pairwise_potential(self):
+        model_dir = build_examples.lj_rdf(9 - 1)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 2.5
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                                   )).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut,
+                             save_period=10, batch_size=None)
+            # add lj so we can hopefully get particles mixing
+            hoomd.run(100)
+            potentials = tfcompute.get_forces_array()[3]
+
+        r = np.linspace(0.5, 1.5, 5)
+        potential, *forces = htf.compute_pairwise_potential(model_dir,
+                                                           r, 'energy')
+        np.testing.assert_equal(len(potential), len(r),
+                                'Potentials not calculated correctly')
 
 
 if __name__ == '__main__':

@@ -38,30 +38,30 @@ template <typename Device, typename T>
 class TfToHoomdOp : public OpKernel {
  public:
   explicit TfToHoomdOp(OpKernelConstruction* c)
-      : OpKernel(c), _output_memory(nullptr) {
+      : OpKernel(c), m_output_memory(nullptr) {
 
     // get memory address
     int64 tmp;
     c->GetAttr("address", &tmp);
-    _output_memory = reinterpret_cast<CommStruct*>(tmp);
+    m_output_memory = reinterpret_cast<CommStruct*>(tmp);
   }
 
   void Compute(OpKernelContext* context) override {
     const Tensor& input_tensor = context->input(0);
     auto input = input_tensor.flat<T>();
 
-    if (input.size() > _output_memory->mem_size / _output_memory->element_size ) {
+    if (input.size() > m_output_memory->mem_size / m_output_memory->element_size ) {
       errors::InvalidArgument(
           "Tensor input size is too large for output buffer!");
     }
     // Do the computation.
     TF2IPCFunctor<Device, T>()(context->eigen_device<Device>(), input.size(),
-                               _output_memory, input.data());
+                               m_output_memory, input.data());
   }
 
  private:
-  int _input_size;
-  CommStruct* _output_memory;
+  int m_input_size;
+  CommStruct* m_output_memory;
 };
 
 // Register the CPU kernels.

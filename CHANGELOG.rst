@@ -1,6 +1,23 @@
 Change Log
 ==========
 
+v0.3 (2019-07-03)
+-----------------------
+
+*Enhancements*
+
+- Batching by molecule now has a atom id to mol id/atom id look-up (`rev_mol_indices`)
+- Version string is visible in package
+- Example models now take an argument specifying where to save them
+- When batching, atom sorting is automatically disabled
+- `compute_pairwise_potential` now outputs force as well as potential
+
+*Bug Fixes*
+
+- Computing nlist in TF now correctly sorts when requested
+- Fixed Mac OS specific issues for compiling against existing HOOMD-blue install
+- Running mean computation variables are now marked as untrainable
+
 v0.2 (2019-06-03)
 -----------------------
 
@@ -24,8 +41,6 @@ v0.2 (2019-06-03)
 
 v0.1 (2019-04-22)
 -----------------
-
-*Note:* onlyn major changes are listed here.
 
 - Made Python packages actual dependencies.
 - Switched to using hoomd-blue cuda error codes.

@@ -121,7 +121,7 @@ namespace hoomd_tf
     template <typename T>
         struct CommStructDerived : CommStruct
         {
-        GlobalArray<T>* _array;
+        GlobalArray<T>* m_array;
 
         CommStructDerived(GlobalArray<T>& array, const char* name)
             {
@@ -136,7 +136,7 @@ namespace hoomd_tf
 
         CommStructDerived& operator=(const CommStructDerived<T>& other)
             {
-            _array = other._array;
+            m_array = other.m_array;
             CommStruct::operator=(other);
             return *this;
             }
@@ -145,13 +145,13 @@ namespace hoomd_tf
         void readGPUMemory(void *dest, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);
-            ArrayHandle<T> handle(*_array, access_location::device, access_mode::read);
+            ArrayHandle<T> handle(*m_array, access_location::device, access_mode::read);
             cudaMemcpy(dest, handle.data + offset, n, cudaMemcpyDeviceToDevice);
             }
         void writeGPUMemory(const void* src, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);
-            ArrayHandle<T> handle(*_array, access_location::device, access_mode::overwrite);
+            ArrayHandle<T> handle(*m_array, access_location::device, access_mode::overwrite);
             cudaMemcpy(handle.data + offset, src, n, cudaMemcpyDeviceToDevice);
             }
 #else
@@ -167,13 +167,13 @@ namespace hoomd_tf
         void readCPUMemory(void* dest, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);
-            ArrayHandle<T> handle(*_array, access_location::host, access_mode::read);
+            ArrayHandle<T> handle(*m_array, access_location::host, access_mode::read);
             memcpy(dest, handle.data + offset, n);
             }
         void writeCPUMemory(const void* src, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);
-            ArrayHandle<T> handle(*_array, access_location::host, access_mode::overwrite);
+            ArrayHandle<T> handle(*m_array, access_location::host, access_mode::overwrite);
             memcpy(handle.data + offset, src, n);
             }
         };

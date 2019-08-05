@@ -5,11 +5,14 @@ from hoomd.htf import _htf
 import numpy as np
 import hoomd
 
+R""" tf_array_comm is used to incorporate some
+    native code into pytest framework
+"""
 
 class tf_array_comm:
-    '''tf_array_comm is used to incorporate some
-    native code into pytest framework
-    '''
+    R""" Set up HOOMD context and plug in the memory addresses from
+    C++ module. See C++ bindings.
+    """
     def __init__(self, nparray, hoomd_context=hoomd.context.exec_conf):
         # get numpy array address
         ptr_address, _ = nparray.__array_interface__['data']
@@ -24,12 +27,21 @@ class tf_array_comm:
         else:
             raise RuntimeError('Can only build TFArray Comm on CPU')
 
+    ## \internal
+    # \brief Send an array
+    # See C++ bindings
     def send(self):
         self.cpp_ref.send()
 
+    ## \internal
+    # \brief Receive an array
+    # See C++ bindings
     def receive(self):
         self.cpp_ref.receive()
 
+    ## \internal
+    # \brief Get this array's data
+    # See C++ bindings
     def getArray(self):
         npa = np.empty(self._size)
         array = self.cpp_ref.getArray()
