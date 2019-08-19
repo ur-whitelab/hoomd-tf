@@ -22,8 +22,12 @@ frame = g[0]
 NN = 256
 # build scattering cross-section
 data = [None for _ in range(NN)]
+# Neutron Scattering lengths (NIST)
+# Hydrogen
 data[1] = -3.742
+# Carbon
 data[6] = 6.646
+# Oxygen
 data[8] = 5.805
 N = len(param_sys.atoms)
 cross = np.zeros(len(frame.particles.types), dtype=np.float32)
