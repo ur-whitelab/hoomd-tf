@@ -57,7 +57,7 @@ class TFManager:
     # output forces back to HOOMD, as well as writing tensorboards.
     def __init__(self, graph_info, device, q,
                  positions_buffer, nlist_buffer,
-                 forces_buffer, virial_buffer, log_filename,
+                 forces_buffer, box_buffer, virial_buffer, log_filename,
                  dtype, debug, write_tensorboard, use_feed,
                  bootstrap, primary, bootstrap_map,
                  save_period, use_xla):
@@ -77,6 +77,8 @@ class TFManager:
             Buffer where particle positions are stored
         nlist_buffer
             Address of the neighbor list tensor
+        box_buffer
+            Address of the box tensor
         forces_buffer
             Address of the forces tensor
         virial_buffer
@@ -121,6 +123,7 @@ class TFManager:
         self.nlist_buffer = nlist_buffer
         self.forces_buffer = forces_buffer
         self.virial_buffer = virial_buffer
+        self.box_buffer = box_buffer
         self.debug = debug
         self.step = 0
         self.graph_info = graph_info
@@ -184,6 +187,12 @@ class TFManager:
     ## \var nlist_buffer
     # \internal
     # \brief The memory address of the neighbor lists (pairwise distances)
+    # \details
+    # This is needed for conversion between HOOMD and TensorFlow memory spaces
+
+    ## \var nlist_buffer
+    # \internal
+    # \brief The memory address of the box dimensions
     # \details
     # This is needed for conversion between HOOMD and TensorFlow memory spaces
 
@@ -352,6 +361,9 @@ class TFManager:
             self.positions = hoomd_to_tf(
                 address=self.positions_buffer, shape=[4],
                 T=self.dtype, name='positions-input')
+            self.box = hoomd_to_tf(
+                address=self.box_buffer, shape=[3],
+                T=self.dtype, name='box-input')
             self.nlist = tf.reshape(hoomd_to_tf(address=self.nlist_buffer,
                                                 shape=[self.nneighs * 4],
                                                 T=self.dtype,
@@ -362,6 +374,11 @@ class TFManager:
                          .format(self.positions_buffer,
                                  self.positions.shape,
                                  self.device))
+            self.log.log(10, 'initialized box hoomd_to_tf at address'
+                         ' {:x} with shape {} on {}'
+                         .format(self.box_buffer,
+                                 self.box.shape,
+                                 self.device))
             self.log.log(10, 'initialized nlist hoomd_to_tf at address {:x}'
                          'with shape {} on {}'.format(self.nlist_buffer,
                                                       self.nlist.shape,
@@ -371,9 +388,11 @@ class TFManager:
             with tf.device(self.device):
                 self.positions = tf.cast(self.positions,
                                          self.graph_info['dtype'])
+                self.box = tf.cast(self.box, self.graph_info['dtype'])
                 self.nlist = tf.cast(self.nlist, self.graph_info['dtype'])
 
         input_map = {self.graph_info['nlist']: self.nlist,
+                     self.graph_info['box']: self.box,
                      self.graph_info['positions']: self.positions}
 
         if not self.graph_info['output_forces']:

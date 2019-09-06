@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.4 
+-----------------------
+
+*Enhancements*
+
+- Added box dimension to computation graph (`graph.box` and `graph.box_size`)
+
 v0.3 (2019-07-03)
 -----------------------
 

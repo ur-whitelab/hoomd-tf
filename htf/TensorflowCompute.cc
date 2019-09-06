@@ -93,13 +93,16 @@ void TensorflowCompute<M>::reallocate()
     assert(m_pdata);
 
     // we won't ever override positions,
-    // but the recieve method does exist
+    // but the receive method does exist
     // so we'll cast away until I make a version
     // of TFArrayComm that can't override array
     unsigned int batch_size = m_batch_size == 0 ? m_pdata->getMaxN() : m_batch_size;
     GlobalArray<Scalar4> tmpPos(batch_size, m_exec_conf);
     m_positions_array.swap(tmpPos);
     m_positions_comm = TFArrayComm<M, Scalar4>(m_positions_array, "positions", m_exec_conf);
+    GlobalArray<Scalar3> tmpBox(3, m_exec_conf);
+    m_box_array.swap(tmpBox);
+    m_box_comm = TFArrayComm<M, Scalar3>(m_box_array, "box", m_exec_conf);
     m_forces_comm = TFArrayComm<M, Scalar4>(m_force, "forces", m_exec_conf);
     // In cuda, an array of size 0 breaks things. So even if we aren"t using
     // neighborlist we need to make it size > 0
@@ -157,6 +160,8 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
 
             // get positions
             m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N);
+            updateBox();
+            
             // Now we prepare forces if we're sending it
             // forces are size  N, not batch size so we only do this on first batch
             if (m_force_mode == FORCE_MODE::hoomd2tf && i == 0)
@@ -224,6 +229,26 @@ void TensorflowCompute<M>::sumReferenceForces()
             dest.data[i].w += src.data[i].w;
             }
         }
+    }
+
+template <TFCommMode M>
+void TensorflowCompute<M>::updateBox()
+    {
+    ArrayHandle<Scalar3>* m_box;
+    if(M == TFCommMode::GPU) {
+        #ifdef ENABLE_CUDA
+        m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::device,
+        access_mode::overwrite);
+        #endif
+    }
+    else
+         m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::host,
+        access_mode::overwrite);        
+    
+    const BoxDim& box = m_pdata->getBox();
+    m_box->data[0] = box.getLo();
+    m_box->data[1] = box.getHi();
+    m_box->data[2] = make_scalar3(box.getTiltFactorXY(), box.getTiltFactorXZ(), box.getTiltFactorYZ());
     }
 
 template <TFCommMode M>
@@ -352,6 +377,8 @@ int64_t TensorflowCompute<M>::getPositionsBuffer() const {return m_positions_com
 template<TFCommMode M>
 int64_t TensorflowCompute<M>::getVirialBuffer() const {return m_virial_comm.getAddress();}
 template<TFCommMode M>
+int64_t TensorflowCompute<M>::getBoxBuffer() const {return m_box_comm.getAddress();}
+template<TFCommMode M>
 int64_t TensorflowCompute<M>::getNlistBuffer() const {return m_nlist_comm.getAddress();}
 
 template<TFCommMode M>
@@ -362,6 +389,8 @@ template<TFCommMode M>
 std::vector<Scalar4> TensorflowCompute<M>::getForcesArray() const {return m_forces_comm.getArray();}
 template<TFCommMode M>
 std::vector<Scalar> TensorflowCompute<M>::getVirialArray() const {return m_virial_comm.getArray();}
+template<TFCommMode M>
+std::vector<Scalar3> TensorflowCompute<M>::getBoxArray() const {return m_box_comm.getArray();}
 
 /*! Export the CPU Compute to be visible in the python module
  */
@@ -392,6 +421,9 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
         .def("getForcesBuffer",
             &TensorflowCompute<TFCommMode::CPU>::getForcesBuffer,
             pybind11::return_value_policy::reference)
+        .def("getBoxBuffer",
+            &TensorflowCompute<TFCommMode::CPU>::getBoxBuffer,
+            pybind11::return_value_policy::reference)
         .def("getVirialBuffer",
             &TensorflowCompute<TFCommMode::CPU>::getVirialBuffer,
             pybind11::return_value_policy::reference)
@@ -403,6 +435,9 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module& m)
             pybind11::return_value_policy::take_ownership)
         .def("getForcesArray",
             &TensorflowCompute<TFCommMode::CPU>::getForcesArray,
+            pybind11::return_value_policy::take_ownership)
+        .def("getBoxArray",
+            &TensorflowCompute<TFCommMode::CPU>::getBoxArray,
             pybind11::return_value_policy::take_ownership)
         .def("getVirialArray",
             &TensorflowCompute<TFCommMode::CPU>::getVirialArray,
@@ -571,6 +606,9 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
         .def("getForcesBuffer",
             &TensorflowComputeGPU::getForcesBuffer,
             pybind11::return_value_policy::reference)
+        .def("getBoxBuffer",
+            &TensorflowComputeGPU::getBoxBuffer,
+            pybind11::return_value_policy::reference)
         .def("getVirialBuffer",
             &TensorflowComputeGPU::getVirialBuffer,
             pybind11::return_value_policy::reference)
@@ -582,6 +620,9 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module& m)
             pybind11::return_value_policy::take_ownership)
         .def("getForcesArray",
             &TensorflowComputeGPU::getForcesArray,
+            pybind11::return_value_policy::take_ownership)
+        .def("getBoxArray",
+            &TensorflowComputeGPU::getBoxArray,
             pybind11::return_value_policy::take_ownership)
         .def("getVirialArray",
             &TensorflowComputeGPU::getVirialArray,
