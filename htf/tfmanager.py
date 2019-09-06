@@ -190,7 +190,7 @@ class TFManager:
     # \details
     # This is needed for conversion between HOOMD and TensorFlow memory spaces
 
-    ## \var nlist_buffer
+    ## \var box_buffer
     # \internal
     # \brief The memory address of the box dimensions
     # \details

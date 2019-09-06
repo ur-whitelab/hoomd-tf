@@ -67,6 +67,7 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
 def wrap_graph(directory='/tmp/test-wrap-model'):
     graph = htf.graph_builder(0, output_forces=False)
     p1 = graph.positions[0, :3]

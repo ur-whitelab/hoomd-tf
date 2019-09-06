@@ -184,6 +184,8 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(
                         system.particles[j].net_force, [0, 0, 0], rtol=1e-5)
+
+
     def test_wrap(self):
         model_dir = build_examples.wrap_graph()
         hoomd.context.initialize()
@@ -196,7 +198,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all())
             tfcompute.attach()
             hoomd.run(1)
-            
+
 
     def test_feeddict_func(self):
         model_dir = build_examples.feeddict_graph()
