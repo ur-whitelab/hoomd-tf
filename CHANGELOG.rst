@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.4
+-----------------------
+
+*Enhancements*
+
+- Made it possible to specify period for `out_nodes`
+
 v0.3 (2019-07-03)
 -----------------------
 

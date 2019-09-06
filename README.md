@@ -167,7 +167,7 @@ saving, or pass `None` to remove the automatically calculated virial.
 
 ## Finalizing the Graph
 
-To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
+To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_nodes`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
 
 ## Printing
 
@@ -182,6 +182,19 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 ```
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
+
+## Period of `out_nodes`
+
+You can modify how often tensorflow is called via the `tfcompute.attach` command. You can also have more granular control of operations/tensors passed to `out_nodes` by changing the type to a list whose first element is the tensor and the second argument is the period at which it is computed. For example:
+
+```python
+...graph building code...
+forces = graph.compute_forces(energy)
+print_node = tf.Print(energy, [energy], summarize=1000)
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node, 100])
+```
+
+Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps. 
 
 ## Variables and Restarts
 
