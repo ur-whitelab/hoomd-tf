@@ -146,7 +146,7 @@ class TFManager:
         self.log.log(logging.INFO, '\tname period batch')
         for node in self.graph_info['out_nodes']:
             node_attr = [None, 1, None]
-            if type(node) == type([]):
+            if isinstance(node, list):
                 n = node[0]
                 node_attr[1:len(node)] = node[1:]
             else:
@@ -159,7 +159,8 @@ class TFManager:
                         ).get_operation_by_name(n)
             node_attr[0] = name
             self.out_nodes.append(node_attr)
-            self.log.log(logging.INFO, '\t {} {} {}'.format(node_attr[0].name, node_attr[1], node_attr[2]))
+            self.log.log(logging.INFO, '\t {} {} {}'.format(node_attr[0].name, 
+                node_attr[1], node_attr[2]))
 
     ## \var primary
     # \internal
@@ -319,11 +320,8 @@ class TFManager:
         if batch_index == 0:
             # step starts at -1, so first step is 0
             self.step += 1
-        print(self.out_nodes)
-        print(self.step)
-        print(batch_index)
-        run_nodes = [node[0] for node in self.out_nodes if self.step % node[1] == 0 and (node[2] is None or node[2] == batch_index)]
-        print(run_nodes)
+        run_nodes = [node[0] for node in self.out_nodes 
+            if self.step % node[1] == 0 and (node[2] is None or node[2] == batch_index)]
         result = sess.run(run_nodes, feed_dict=feed_dict)
         # only save on the first batch.
         if self.step % self.save_period == 0 and batch_index == 0:
