@@ -12,6 +12,7 @@ Table of Contents
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
       * [Printing](#printing)
+      * [Period of out nodes](#period-of-out-nodes)
       * [Variables and Restarts](#variables-and-restarts)
       * [Saving and Loading Variables](#saving-and-loading-variables)
       * [Optional: Keras Layers for Model Building](#optional-keras-layers-for-model-building)
@@ -183,18 +184,19 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
 
-## Period of `out_nodes`
+## Period of out nodes
 
 You can modify how often tensorflow is called via the `tfcompute.attach` command. You can also have more granular control of operations/tensors passed to `out_nodes` by changing the type to a list whose first element is the tensor and the second argument is the period at which it is computed. For example:
 
 ```python
 ...graph building code...
 forces = graph.compute_forces(energy)
+avg_force = tf.reduce_mean(forces, axis=-1)
 print_node = tf.Print(energy, [energy], summarize=1000)
-graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node, 100])
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[[print_node, 100], [avg_force, 25]])
 ```
 
-Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps. 
+This will print the energy every 100 steps and compute the average force every 25 steps (although it is unused). Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps. 
 
 ## Variables and Restarts
 
