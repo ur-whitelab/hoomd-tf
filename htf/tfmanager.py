@@ -122,7 +122,7 @@ class TFManager:
         self.forces_buffer = forces_buffer
         self.virial_buffer = virial_buffer
         self.debug = debug
-        self.step = 0
+        self.step = -1
         self.graph_info = graph_info
         self.dtype = dtype
         self.write_tensorboard = write_tensorboard
@@ -142,13 +142,25 @@ class TFManager:
         else:
             self.log.log(8, 'This TF Graph will not modify forces.')
 
-        for n in self.graph_info['out_nodes']:
+        self.log.log(logging.INFO, 'The following quantities will computed:')
+        self.log.log(logging.INFO, '\tname period batch')
+        for node in self.graph_info['out_nodes']:
+            node_attr = [None, 1, None]
+            if isinstance(node, list):
+                n = node[0]
+                node_attr[1:len(node)] = node[1:]
+            else:
+                n = node
             try:
-                self.out_nodes.append(tf.get_default_graph(
-                        ).get_tensor_by_name(n))
+                name = tf.get_default_graph(
+                        ).get_tensor_by_name(n)
             except ValueError:
-                self.out_nodes.append(tf.get_default_graph(
-                        ).get_operation_by_name(n))
+                name = tf.get_default_graph(
+                        ).get_operation_by_name(n)
+            node_attr[0] = name
+            self.out_nodes.append(node_attr)
+            self.log.log(logging.INFO, '\t {} {} {}'.format(node_attr[0].name, 
+                node_attr[1], node_attr[2]))
 
     ## \var primary
     # \internal
@@ -305,18 +317,15 @@ class TFManager:
         Tracks the batch indices used for execution when batching. See graphbuilder.py
     """
     def _update(self, sess, feed_dict, batch_index):
-        # only update step and save on the first batch.
-        if self.step % self.save_period == 0 and batch_index == 0:
-            if self.summaries is not None:
-                result = sess.run(self.out_nodes + [self.summaries],
-                                  feed_dict=feed_dict)
-            else:
-                result = sess.run(self.out_nodes, feed_dict=feed_dict)
-            self._save_model(sess, result[-1])
-        else:
-            result = sess.run(self.out_nodes, feed_dict=feed_dict)
         if batch_index == 0:
+            # step starts at -1, so first step is 0
             self.step += 1
+        run_nodes = [node[0] for node in self.out_nodes 
+            if self.step % node[1] == 0 and (node[2] is None or node[2] == batch_index)]
+        result = sess.run(run_nodes, feed_dict=feed_dict)
+        # only save on the first batch.
+        if self.step % self.save_period == 0 and batch_index == 0:
+            self._save_model(sess, result[-1] if self.summaries is not None else None)
 
         return result
     R""" save model method is called during update
@@ -426,8 +435,8 @@ class TFManager:
         tf_to_hoomd_module = load_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         with tf.device(self.device):
-            self.out_nodes.append(tf_to_hoomd(
-                    self.forces, address=self.forces_buffer))
+            self.out_nodes.append([tf_to_hoomd(
+                    self.forces, address=self.forces_buffer), 1, None])
             self.log.log(10, 'initialized forces tf_to_hoomd at address {:x}'
                          ' with shape {} on {}'.format(self.forces_buffer,
                                                        self.forces.shape,
@@ -435,8 +444,8 @@ class TFManager:
         if self.graph_info['virial'] is not None:
             # virial is Nx3x3
             with tf.device(self.device):
-                self.out_nodes.append(tf_to_hoomd(
-                        self.virial, address=self.virial_buffer))
+                self.out_nodes.append([tf_to_hoomd(
+                        self.virial, address=self.virial_buffer), 1, None])
                 self.log.log(10, 'initialized virial tf_to_hoomd at address'
                              ' {:x} with shape {} on {}'
                              .format(self.virial_buffer,
@@ -448,6 +457,7 @@ class TFManager:
     def _attach_tensorboard(self, sess):
 
         self.summaries = tf.summary.merge_all()
+        self.out_nodes.append([self.summaries, self.save_period, 0])
         self.tb_writer = tf.summary.FileWriter(os.path.join(
                 self.model_directory, 'tensorboard'),
                                                sess.graph)
