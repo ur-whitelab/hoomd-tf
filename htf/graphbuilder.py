@@ -481,7 +481,10 @@ class graph_builder:
             function will be saved.
         out_nodes
             Any additional TF graph nodes that should be executed.
-            For example, optimizers, printers, etc.
+            For example, optimizers, printers, etc. Each element of the
+            list can itself be a list where the first element is the node
+            and the second element is the period indicating how often to
+            execute it.
         """
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are'
@@ -545,6 +548,14 @@ class graph_builder:
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
+        # process out nodes to be names
+        processed_out_nodes = []
+        for n in out_nodes:
+            if type(n) == list:
+                processed_out_nodes.append([n[0].name] + n[1:])
+            else:
+                processed_out_nodes.append(n.name)
+
         graph_info = {
             'NN': self.nneighbor_cutoff,
             'model_directory': model_directory,
@@ -555,7 +566,7 @@ class graph_builder:
             'nlist': self.nlist.name,
             'dtype': self.nlist.dtype,
             'output_forces': self.output_forces,
-            'out_nodes': [x.name for x in out_nodes],
+            'out_nodes': processed_out_nodes,
             'mol_indices':
             self.mol_indices.name if self.mol_indices is not None else None,
             'rev_mol_indices':

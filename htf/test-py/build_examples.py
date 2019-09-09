@@ -117,7 +117,8 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=directory)
+    # compute energy every 10 steps
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
 

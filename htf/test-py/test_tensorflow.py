@@ -167,8 +167,8 @@ class test_compute(unittest.TestCase):
 
     def test_noforce_graph(self):
         model_dir = build_examples.noforce_graph()
+        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
