@@ -35,6 +35,8 @@ class graph_builder:
         self.virial = None
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
+        self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
+        self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
@@ -183,6 +185,12 @@ class graph_builder:
                               [-1, self.nneighbor_cutoff, nlist.shape[2]])
             nlist = nlist * mask
         return nlist
+
+    def wrap_vector(self, r):
+        R"""Computes the minimum image version of the given vector.
+        """
+        return r - tf.math.round(r / self.box_size) * self.box_size
+
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
@@ -554,6 +562,7 @@ class graph_builder:
             'forces': self.forces.name,
             'positions': self.positions.name,
             'virial': None if virial is None else virial.name,
+            'box': self.box.name,
             'nlist': self.nlist.name,
             'dtype': self.nlist.dtype,
             'output_forces': self.output_forces,

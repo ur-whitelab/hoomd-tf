@@ -68,6 +68,16 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     return directory
 
 
+def wrap_graph(directory='/tmp/test-wrap-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    p1 = graph.positions[0, :3]
+    p2 = graph.positions[-1, :3]
+    r = p1 - p2
+    rwrap = graph.wrap_vector(r)
+    # TODO: Smoke test. Think of a better test.
+    graph.save(directory, out_nodes=[rwrap])
+    return directory
+
 def mol_force(directory='/tmp/test-mol-force-model'):
     graph = htf.graph_builder(0, output_forces=False)
     graph.build_mol_rep(3)

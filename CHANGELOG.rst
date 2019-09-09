@@ -1,11 +1,12 @@
 Change Log
 ==========
 
-v0.4
+v0.4 
 -----------------------
 
 *Enhancements*
 
+- Added box dimension to computation graph (`graph.box` and `graph.box_size`)
 - Made it possible to specify period for `out_nodes`
 
 v0.3 (2019-07-03)

@@ -96,7 +96,7 @@ where `NN` is the maximum number of nearest neighbors to consider (can be 0) and
 `output_forces` indicates if the graph will output forces to use in
 the simulation. After building the `graph`, it will have three tensors
 as attributes to use in constructing the TensorFlow graph: `nlist`,
-`positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
+`positions`, `box`, `box_size`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
 containing the nearest neighbors. An entry of all zeros indicates that
 less than `NN` nearest neighbors where present for a particular
 particle. The 4 right-most dimensions are `x,y,z` and `w`, which is
@@ -104,7 +104,9 @@ the particle type. Particle type is an integer starting at 0. Note
 that the `x,y,z` values are a vector originating at the particle and
 ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
-forces via `output_forces=False`.
+forces via `output_forces=False`. `box` is a 3x3 tensor containing the low box coordinate, 
+high box coordinate, and then tilt factors. `box_size` contains just the box length
+in each dimension. 
 
 ## Molecule Batching
 

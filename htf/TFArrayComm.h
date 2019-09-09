@@ -85,6 +85,7 @@ namespace hoomd_tf
 
         /*! Copy contents of given array to this array
          *  \param array the array whose contents to copy into this one
+         * \param offset how much offset to apply to the GIVEN array
          */
         void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0)
             {
