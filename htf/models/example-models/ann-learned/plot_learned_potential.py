@@ -46,12 +46,12 @@ with tf.Session() as sess:
         saver.restore(sess, checkpoint)
         checkpoint_num = 'latest'
     else:
-        checkpoint_str = '{}/model-{}'.format(training_dir, checkpoint_num)
+        checkpoint_str = '{}model-{}'.format(training_dir, checkpoint_num)
         checkpoint = tf.train.load_checkpoint(checkpoint_str)
         print(checkpoint)
         saver.restore(sess, checkpoint_str)
     pos_arr = np.linspace(0., 3.0, 300)
-    long_pos_arr = np.linspace(0., 6.0, 600)
+    long_pos_arr = np.linspace(0., 3.0, 300)
     np_nlist = np.zeros((2, NN, 4))
     nlist = {}
     for i in range(1, 300):  # don't forget the distance is double
@@ -73,7 +73,7 @@ def lj_energy(r):
 
 
 plt.figure()
-plt.plot(2*pos_arr[1:], energy_arr - energy_arr[-1],
+plt.plot(pos_arr[1:], energy_arr - energy_arr[-1],
          label='Neural Network Potential')
 plt.plot(long_pos_arr[1:], lj_energy(long_pos_arr[1:]),
          label='Lennard-Jones Potential')
@@ -93,38 +93,17 @@ NN_min = pos_arr[NN_min_idx]
 
 print('X value at min of calculated LJ: {}'.format(lj_min))
 print('X value at min of Neural Net LJ: {}'.format(NN_min))
-plt.ylim(-10, 10)
-plt.legend(loc='best')
-plt.xlabel(r'$(r\sigma)^{-1}$')
-plt.ylabel(r'$U(r) / \epsilon$')
+SIZE = 14
+plt.legend(loc='best', fontsize=SIZE)
+plt.xlabel(r'$(r\sigma)^{-1}$', fontsize=SIZE)
+plt.ylabel(r'$U(r) / \epsilon$', fontsize=SIZE)
+plt.xticks(np.arange(0., np.max(pos_arr)+0.5, 0.5), fontsize=SIZE)
+plt.yticks(range(-2, 11, 1), fontsize=SIZE)
+plt.ylim(-2, 20)
+plt.savefig('step_{}_ann_potential_zoomout.png'.format(checkpoint_num))
+plt.savefig('step_{}_ann_potential_zoomout.pdf'.format(checkpoint_num))
+plt.savefig('step_{}_ann_potential_zoomout.svg'.format(checkpoint_num))
+plt.ylim(-2, 10)
 plt.savefig('step_{}_ann_potential.png'.format(checkpoint_num))
 plt.savefig('step_{}_ann_potential.pdf'.format(checkpoint_num))
 plt.savefig('step_{}_ann_potential.svg'.format(checkpoint_num))
-plt.figure()
-r_inv = 1 / pos_arr[1:]
-
-
-def corresponding_energy(r_inv, energy_arr):
-    return(energy_arr[np.argmin(1/pos_arr >= 1/r_inv)])
-
-
-new_energy_arr = np.array([corresponding_energy(item, energy_arr)
-                           for item in r_inv])
-lj_en_arr = lj_energy(pos_arr[1:])
-new_lj_en_arr = np.array([corresponding_energy(item, lj_en_arr)
-                          for item in r_inv])
-plt.plot(r_inv, new_energy_arr - new_energy_arr[-1],
-         label='Neural Network Potential')
-plt.plot(r_inv, new_lj_en_arr, label='Lennard-Jones Potential')
-plt.scatter(NN_min, energy_arr[NN_min_idx] - energy_arr[-1],
-            label='NN minimum: {:.5}'.format(NN_min))
-plt.scatter(lj_min, lj_energy(lj_min),
-            label='LJ minimum: {:.5}'.format(lj_min))
-plt.ylim(-10, 10)
-plt.xlim(0, 10)
-plt.legend(loc='best')
-plt.xlabel(r'$r\sigma$')
-plt.ylabel(r'$U((r\sigma)^{-1}) / \epsilon$')
-plt.savefig('step_{}_ann_potential_r_inv.svg'.format(checkpoint_num))
-plt.savefig('step_{}_ann_potential_r_inv.png'.format(checkpoint_num))
-plt.savefig('step_{}_ann_potential_r_inv.pdf'.format(checkpoint_num))

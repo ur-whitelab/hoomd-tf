@@ -167,8 +167,8 @@ class test_compute(unittest.TestCase):
 
     def test_noforce_graph(self):
         model_dir = build_examples.noforce_graph()
+        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -184,6 +184,21 @@ class test_compute(unittest.TestCase):
                 for j in range(N):
                     np.testing.assert_allclose(
                         system.particles[j].net_force, [0, 0, 0], rtol=1e-5)
+
+
+    def test_wrap(self):
+        model_dir = build_examples.wrap_graph()
+        hoomd.context.initialize()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
+            tfcompute.attach()
+            hoomd.run(1)
+
 
     def test_feeddict_func(self):
         model_dir = build_examples.feeddict_graph()

@@ -413,6 +413,7 @@ class tfcompute(hoomd.compute._compute):
         args = {'log_filename': self.log_filename,
                 'graph_info': self.graph_info,
                 'positions_buffer': self.cpp_force.getPositionsBuffer(),
+                'box_buffer': self.cpp_force.getBoxBuffer(),
                 'nlist_buffer': self.cpp_force.getNlistBuffer(),
                 'forces_buffer': self.cpp_force.getForcesBuffer(),
                 'virial_buffer': self.cpp_force.getVirialBuffer(),

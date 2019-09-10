@@ -68,6 +68,16 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     return directory
 
 
+def wrap_graph(directory='/tmp/test-wrap-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    p1 = graph.positions[0, :3]
+    p2 = graph.positions[-1, :3]
+    r = p1 - p2
+    rwrap = graph.wrap_vector(r)
+    # TODO: Smoke test. Think of a better test.
+    graph.save(directory, out_nodes=[rwrap])
+    return directory
+
 def mol_force(directory='/tmp/test-mol-force-model'):
     graph = htf.graph_builder(0, output_forces=False)
     graph.build_mol_rep(3)
@@ -107,7 +117,8 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=directory)
+    # compute energy every 10 steps
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
 
