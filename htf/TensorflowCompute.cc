@@ -234,15 +234,8 @@ void TensorflowCompute<M>::sumReferenceForces()
 template <TFCommMode M>
 void TensorflowCompute<M>::updateBox()
     {
-    ArrayHandle<Scalar3>* m_box;
-    if(M == TFCommMode::GPU) {
-        #ifdef ENABLE_CUDA
-        m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::device,
-        access_mode::overwrite);
-        #endif
-    }
-    else
-         m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::host,
+    ArrayHandle<Scalar3>* m_box = NULL;
+    m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::host,
         access_mode::overwrite);        
     
     const BoxDim& box = m_pdata->getBox();
