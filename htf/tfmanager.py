@@ -493,18 +493,19 @@ class TFManager:
                     if self.bootstrap_map is not None:
                         variables = var_list
                         variable_map = dict()
-                        for k, vname in self.bootstrap_map.items():
+                        for vname, k in self.bootstrap_map.items():
                             value = None
                             for v in variables:
-                                if v == vname + ':0':
-                                    value = tf.get_default_graph().get_tensor_by_name(vname + ':0')
+                                print(k, v, vname + ':0')
+                                if v == vname:
+                                    value = tf.get_default_graph().get_tensor_by_name(k + ':0')
                             if value is None:
                                 raise ValueError(
                                     'Could not find variable'
                                     ' {} in graph while'
                                     ' processing'
                                     ' bootstrap_map'.format(vname))
-                            variable_map[k] = value
+                            variable_map[vname] = value
                         bootstrap_saver = tf.train.Saver(variable_map,
                                                      **saver_args)
                     else:
