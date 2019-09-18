@@ -24,6 +24,7 @@ Table of Contents
    * [Utilities](#utilities)
       * [RDF](#rdf)
       * [Pairwise Potential and Forces](#pairwise-potential-and-forces)
+      * [Biasing with EDS](#biasing-with-eds)
    * [Coarse-Graining Utilities](#coarse-graining-utilities)
       * [Find Molecules](#find-molecules)
       * [Sparse Mapping](#sparse-mapping)
@@ -446,6 +447,19 @@ r = numpy.arange(1, 10, 1)
 potential, forces = htf.compute_pairwise_potential('/path/to/model', r, potential_tensor)
 ...
 ```
+
+## Biasing with EDS
+
+To apply EDS biasing to a system:
+
+```python
+eds_alpha = htf.eds_bias(cv, 3.0, 100)
+eds_energy = eds_alpha * cv
+eds_forces = graph.compute_forces(eds_energy)
+graph.save(eds_forces, 'eds-graph')
+```
+
+where `htf.eds_bias(cv, set_point, periods)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. 
 
 # Coarse-Graining Utilities
 

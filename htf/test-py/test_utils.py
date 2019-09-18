@@ -30,7 +30,6 @@ class test_loading(unittest.TestCase):
         vars = htf.load_variables(model_dir, ['test'])
         assert np.abs(vars['test'] - 10) < 10e-10
 
-
 class test_mappings(unittest.TestCase):
 
     def setUp(self):
