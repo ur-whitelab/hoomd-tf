@@ -131,13 +131,13 @@ graph.build_mol_rep(3)
 v1 = graph.mol_positions[:, 2, :3] - graph.mol_positions[:, 1, :3]
 v2 = graph.mol_positions[:, 0, :3] - graph.mol_positions[:, 1, :3]
 # compute per-molecule dot product and divide by per molecule norm
-c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1), tf.norm(v2 axis=1)
+c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1) / tf.norm(v2 axis=1)
 angles = tf.math.acos(c)
 ```
 
 ## Computing Forces
 
-If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
+If your graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
 ```python
 graph = htf.graph_builder(N - 1)
