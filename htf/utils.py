@@ -280,7 +280,6 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     reset_mean = mean.assign(mean * reset_mask)
     reset_ssd = mean.assign(ssd * reset_mask)
 
-    
     # update statistics
     # do we update? - masked
     with tf.control_dependencies([reset_mean, reset_ssd]):
@@ -289,22 +288,23 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
         update_mean = mean.assign_add(delta / tf.cast(tf.maximum(1, n - period // 2), tf.float32))
         update_ssd = ssd.assign_add(delta * (cv - mean))
 
-
     # update grad
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n,period - 1), tf.float32)
         gradient = update_mask * -  2 * (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
-        update_alpha = tf.cond(tf.equal(n,period - 1), lambda: optimizer.apply_gradients([(gradient, alpha)]), lambda: tf.no_op())
-    
+        update_alpha = tf.cond(tf.equal(n, period - 1), 
+                                lambda: optimizer.apply_gradients([(gradient, alpha)]), 
+                                lambda: tf.no_op())
+
     # update n. Should reset at period
     update_n = n.assign((n + 1) % period)
 
     with tf.control_dependencies([update_alpha, update_n]):
         alpha_dummy = tf.identity(alpha)
-    
+
     return alpha_dummy
-    
+
 ## \internal
 # \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, system, name='center-of-mass'):

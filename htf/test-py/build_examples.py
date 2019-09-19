@@ -125,7 +125,7 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
     # get distance from center
-    rvec = graph.wrap_vector(graph.positions[0,:3])
+    rvec = graph.wrap_vector(graph.positions[0, :3])
     cv = tf.norm(rvec)
     cv_mean = graph.running_mean(cv, name='cv-mean')
     alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5)
