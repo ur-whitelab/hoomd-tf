@@ -146,6 +146,25 @@ class test_compute(unittest.TestCase):
             tfcompute.attach(nlist, r_cut=rcut, save_period=1)
             hoomd.run(5)
 
+    def test_incomplete_bootstrap(self):
+        model_dir = build_examples.trainable_graph(9 - 1)
+        with hoomd.htf.tfcompute(
+            model_dir, bootstrap=build_examples.bootstrap_graph(
+                9 - 1, model_dir),
+            bootstrap_map={'epsilon': 'lj-epsilon'
+                           }) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+            hoomd.run(5)
+
     def test_print(self):
         model_dir = build_examples.print_graph(9 - 1)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
@@ -525,6 +544,7 @@ class test_mol_batching(unittest.TestCase):
     def test_reverse_mol_index(self):
         # need this for logging
         hoomd.context.initialize()
+        # each element is the index of atoms in the molecule
         mi = [[1, 2, 0, 0, 0], [3, 0, 0, 0, 0], [4, 5, 7, 8, 9]]
         rmi = hoomd.htf._make_reverse_indices(mi)
         # should be
