@@ -266,7 +266,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
-def eds_bias(cv, set_point, period, learning_rate=1e-4, cv_scale=1, name='eds'):
+def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
     # set-up variables
     mean = tf.get_variable('{}.mean'.format(name), initializer=0.0, trainable=False)
@@ -293,9 +293,9 @@ def eds_bias(cv, set_point, period, learning_rate=1e-4, cv_scale=1, name='eds'):
     # update grad
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n,period - 1), tf.float32)
-        gradient = update_mask * 2 * (cv - set_point) * ssd / period // 2 / cv_scale
+        gradient = update_mask * -  2 * (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
-        update_alpha = optimizer.apply_gradients([(gradient, alpha)])
+        update_alpha = tf.cond(tf.equal(n,period - 1), lambda: optimizer.apply_gradients([(gradient, alpha)]), lambda: tf.no_op())
     
     # update n. Should reset at period
     update_n = n.assign((n + 1) % period)

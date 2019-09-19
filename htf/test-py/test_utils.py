@@ -233,22 +233,21 @@ class test_mappings(unittest.TestCase):
 
 class test_bias(unittest.TestCase):
     def test_eds(self):
-        T = 10
+        T = 1000
         hoomd.context.initialize()
         model_dir = build_examples.eds_graph()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.mode_standard(dt=0.05)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(save_period=1)
+                    )).randomize_velocities(kT=0.2, seed=2)
+            tfcompute.attach(save_period=10)
             hoomd.run(T)
-        for i in range(T):
-            variables = hoomd.htf.load_variables(
-                model_dir, ['eds.mean', 'eds.ssd', 'eds.n', 'eds.a'], i)
-            assert np.isfinite(variables['eds.a'])
-
+        variables = hoomd.htf.load_variables(
+                model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
+        assert np.isfinite(variables['eds.a'])
+        assert (variables['cv-mean'] - 4)**2 < 0.5
 if __name__ == '__main__':
     unittest.main()

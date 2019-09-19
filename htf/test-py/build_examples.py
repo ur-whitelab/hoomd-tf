@@ -125,12 +125,18 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
     # get distance from center
-    rvec = graph.positions[0,:3]
+    rvec = graph.wrap_vector(graph.positions[0,:3])
     cv = tf.norm(rvec)
-    alpha = htf.eds_bias(cv, 2, 5)
-    energy = cv * alpha
+    cv_mean = graph.running_mean(cv, name='cv-mean')
+    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5)
+    alpha_mean = graph.running_mean(alpha, name='alpha-mean')
+    # eds + harmonic bond
+    energy = (cv - 5) ** 2 + cv * alpha
+    # energy  = cv^2 - 6cv + cv * alpha + C
+    # energy = (cv - (3 + alpha / 2))^2 + C
+    # alpha needs to be = 4
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[alpha])
+    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
     return directory
 
 
