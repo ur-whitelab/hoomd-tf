@@ -128,7 +128,7 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     rvec = graph.positions[0,:3]
     cv = tf.norm(rvec)
     alpha = htf.eds_bias(cv, 2, 5)
-    energy = cv
+    energy = cv * alpha
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[alpha])
     return directory
