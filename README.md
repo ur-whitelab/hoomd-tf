@@ -12,6 +12,7 @@ Table of Contents
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
       * [Printing](#printing)
+      * [Period of out nodes](#period-of-out-nodes)
       * [Variables and Restarts](#variables-and-restarts)
       * [Saving and Loading Variables](#saving-and-loading-variables)
       * [Optional: Keras Layers for Model Building](#optional-keras-layers-for-model-building)
@@ -96,7 +97,7 @@ where `NN` is the maximum number of nearest neighbors to consider (can be 0) and
 `output_forces` indicates if the graph will output forces to use in
 the simulation. After building the `graph`, it will have three tensors
 as attributes to use in constructing the TensorFlow graph: `nlist`,
-`positions`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
+`positions`, `box`, `box_size`, and `forces`. `nlist` is an `N` x `NN` x 4 tensor
 containing the nearest neighbors. An entry of all zeros indicates that
 less than `NN` nearest neighbors where present for a particular
 particle. The 4 right-most dimensions are `x,y,z` and `w`, which is
@@ -104,7 +105,9 @@ the particle type. Particle type is an integer starting at 0. Note
 that the `x,y,z` values are a vector originating at the particle and
 ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
-forces via `output_forces=False`.
+forces via `output_forces=False`. `box` is a 3x3 tensor containing the low box coordinate, 
+high box coordinate, and then tilt factors. `box_size` contains just the box length
+in each dimension. 
 
 ## Molecule Batching
 
@@ -129,13 +132,13 @@ graph.build_mol_rep(3)
 v1 = graph.mol_positions[:, 2, :3] - graph.mol_positions[:, 1, :3]
 v2 = graph.mol_positions[:, 0, :3] - graph.mol_positions[:, 1, :3]
 # compute per-molecule dot product and divide by per molecule norm
-c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1), tf.norm(v2 axis=1)
+c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1) / tf.norm(v2 axis=1)
 angles = tf.math.acos(c)
 ```
 
 ## Computing Forces
 
-If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
+If your graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
 ```python
 graph = htf.graph_builder(N - 1)
@@ -168,7 +171,7 @@ saving, or pass `None` to remove the automatically calculated virial.
 
 ## Finalizing the Graph
 
-To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_node`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
+To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_nodes`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
 
 ## Printing
 
@@ -183,6 +186,20 @@ graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 ```
 
 The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
+
+## Period of out nodes
+
+You can modify how often tensorflow is called via the `tfcompute.attach` command. You can also have more granular control of operations/tensors passed to `out_nodes` by changing the type to a list whose first element is the tensor and the second argument is the period at which it is computed. For example:
+
+```python
+...graph building code...
+forces = graph.compute_forces(energy)
+avg_force = tf.reduce_mean(forces, axis=-1)
+print_node = tf.Print(energy, [energy], summarize=1000)
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[[print_node, 100], [avg_force, 25]])
+```
+
+This will print the energy every 100 steps and compute the average force every 25 steps (although it is unused). Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps. 
 
 ## Variables and Restarts
 

@@ -105,6 +105,9 @@ namespace hoomd_tf
         //! Returns address of TFArrayComm object holding positions
         int64_t getPositionsBuffer() const;
 
+        //! Returns address of TFArrayComm object holding box
+        int64_t getBoxBuffer() const;
+
         //! Returns address of TFArrayComm object holding virial
         int64_t getVirialBuffer() const;
 
@@ -129,6 +132,9 @@ namespace hoomd_tf
 
         //! Returns the array of positions from associated TFArrayComm object
         std::vector<Scalar4> getPositionsArray() const;
+
+        //! Returns the array of box dims from associated TFArrayComm object
+        std::vector<Scalar3> getBoxArray() const;
 
         //! Returns the array of virials from associated TFArrayComm object
         std::vector<Scalar> getVirialArray() const;
@@ -168,6 +174,9 @@ namespace hoomd_tf
         //! Add up all the reference forces from TF to HOOMD
         virtual void sumReferenceForces();
 
+        //! Update box
+        void updateBox();
+
         //! When TF updates are all finished, send word to python
         void finishUpdate(unsigned int offset, float batch_frac);
 
@@ -200,6 +209,12 @@ namespace hoomd_tf
 
         //! array of positions, which is size of batch
         GlobalArray<Scalar4> m_positions_array;
+
+        //! box dims
+        TFArrayComm<M, Scalar3> m_box_comm;
+
+        //! box array
+        GlobalArray<Scalar3> m_box_array;
 
         //! comm object for holding forces
         TFArrayComm<M, Scalar4> m_forces_comm;

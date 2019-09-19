@@ -180,6 +180,7 @@ namespace hoomd_tf
 
     //! Forward declare specialized templates
     template<> CommStructDerived<Scalar4>::CommStructDerived(GlobalArray<Scalar4>&, const char*);
+    template<> CommStructDerived<Scalar3>::CommStructDerived(GlobalArray<Scalar3>&, const char*);
     template<> CommStructDerived<Scalar>::CommStructDerived(GlobalArray<Scalar>&, const char*);
     }
 #endif //GOOGLE_CUDA

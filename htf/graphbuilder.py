@@ -35,6 +35,8 @@ class graph_builder:
         self.virial = None
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
+        self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
+        self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
@@ -183,6 +185,12 @@ class graph_builder:
                               [-1, self.nneighbor_cutoff, nlist.shape[2]])
             nlist = nlist * mask
         return nlist
+
+    def wrap_vector(self, r):
+        R"""Computes the minimum image version of the given vector.
+        """
+        return r - tf.math.round(r / self.box_size) * self.box_size
+
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
@@ -473,7 +481,10 @@ class graph_builder:
             function will be saved.
         out_nodes
             Any additional TF graph nodes that should be executed.
-            For example, optimizers, printers, etc.
+            For example, optimizers, printers, etc. Each element of the
+            list can itself be a list where the first element is the node
+            and the second element is the period indicating how often to
+            execute it.
         """
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are'
@@ -537,16 +548,25 @@ class graph_builder:
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
+        # process out nodes to be names
+        processed_out_nodes = []
+        for n in out_nodes:
+            if type(n) == list:
+                processed_out_nodes.append([n[0].name] + n[1:])
+            else:
+                processed_out_nodes.append(n.name)
+
         graph_info = {
             'NN': self.nneighbor_cutoff,
             'model_directory': model_directory,
             'forces': self.forces.name,
             'positions': self.positions.name,
             'virial': None if virial is None else virial.name,
+            'box': self.box.name,
             'nlist': self.nlist.name,
             'dtype': self.nlist.dtype,
             'output_forces': self.output_forces,
-            'out_nodes': [x.name for x in out_nodes],
+            'out_nodes': processed_out_nodes,
             'mol_indices':
             self.mol_indices.name if self.mol_indices is not None else None,
             'rev_mol_indices':

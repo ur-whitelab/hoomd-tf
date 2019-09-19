@@ -20,6 +20,15 @@ namespace hoomd_tf
         setNumElements(tmp);
         }
 
+    template<>
+    CommStructDerived<Scalar3>::CommStructDerived(GlobalArray<Scalar3>& array, const char* name) :
+        m_array(&array),
+        CommStruct(2, sizeof(Scalar), name)
+        {
+	int tmp[] = {static_cast<int>(array.getNumElements()), 3};
+        setNumElements(tmp);
+        }
+
     //! Define template constructor for Scalar dtype
     template<>
     CommStructDerived<Scalar>::CommStructDerived(GlobalArray<Scalar>& array, const char* name) :
