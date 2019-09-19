@@ -1,13 +1,22 @@
 Change Log
 ==========
 
-v0.4 
+v0.4 (2019-09-25)
 -----------------------
+
+*New Features*
+
+- Added [experiment directed simulation](https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988) biasing to `htf`. 
 
 *Enhancements*
 
 - Added box dimension to computation graph (`graph.box` and `graph.box_size`)
+- Can now wrap position derived distances with `graph.wrap_vector`
 - Made it possible to specify period for `out_nodes`
+
+*Bug Fixes*
+
+- Fixed dangling list element in `rev_mol_indices`
 
 v0.3 (2019-07-03)
 -----------------------
