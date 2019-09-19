@@ -111,6 +111,19 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     return directory
 
 
+def lj_eds(NN, directory='/tmp/test-lj-eds'):
+    graph = htf.graph_builder(NN)
+    # get distance from center (origin)
+    rvec = graph.wrap_vector(graph.positions[:,:3])
+    r = tf.norm(rvec, axis=1)
+    cv = tf.reduce_mean(r)
+    alpha = htf.eds_bias(cv, 8, 5)
+    energy = alpha * cv
+    forces = graph.compute_forces(energy)
+    graph.save(force_tensor=forces, model_directory=directory)
+    return directory
+
+
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]

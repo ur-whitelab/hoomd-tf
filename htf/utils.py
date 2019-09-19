@@ -269,10 +269,10 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 def eds_bias(cv, set_point, period, learning_rate=1e-4, cv_scale=1, name='eds'):
 
     # set-up variables
-    mean = tf.get_variable('{}.mean'.format(name), 0.0)
-    ssd = tf.get_variable('{}.ssd'.format(name), 0.0)
-    n = tf.get_variable('{}.n'.format(name), 0.0)
-    alpha = tf.get_variable('{}.a'.format(name), 0.0)
+    mean = tf.get_variable('{}.mean'.format(name), initializer=0.0)
+    ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0)
+    n = tf.get_variable('{}.n'.format(name), initializer=0.0)
+    alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
 
     # update n. Should reset at period
     update_n = n.assign((n + 1) % period)
