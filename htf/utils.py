@@ -269,19 +269,16 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 def eds_bias(cv, set_point, period, learning_rate=1e-4, cv_scale=1, name='eds'):
 
     # set-up variables
-    mean = tf.get_variable('{}.mean'.format(name), initializer=0.0)
-    ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0)
-    n = tf.get_variable('{}.n'.format(name), initializer=0.0)
+    mean = tf.get_variable('{}.mean'.format(name), initializer=0.0, trainable=False)
+    ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0, trainable=False)
+    n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
     alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
 
-    # update n. Should reset at period
-    update_n = n.assign((n + 1) % period)
     reset_mask = tf.cast((n == 0), tf.float32)
 
     # reset statistics if n is 0
-    with tf.control_dependencies([update_n]):
-        reset_mean = mean.assign(mean * reset_mask)
-        reset_ssd = mean.assign(ssd * reset_mask)
+    reset_mean = mean.assign(mean * reset_mask)
+    reset_ssd = mean.assign(ssd * reset_mask)
 
     
     # update statistics
@@ -289,18 +286,21 @@ def eds_bias(cv, set_point, period, learning_rate=1e-4, cv_scale=1, name='eds'):
     with tf.control_dependencies([reset_mean, reset_ssd]):
         update_mask = tf.cast(n > period // 2, tf.float32)
         delta = (cv - mean) * update_mask
-        update_mean = mean.assign_add(delta / n)
+        update_mean = mean.assign_add(delta / tf.cast(tf.maximum(1, n - period // 2), tf.float32))
         update_ssd = ssd.assign_add(delta * (cv - mean))
 
 
     # update grad
     with tf.control_dependencies([update_mean, update_ssd]):
-        update_mask = tf.cast(n == period - 1, tf.float32)
-        gradient = update_mask * 2 * (cv - set_point) * ssd / n / cv_scale
+        update_mask = tf.cast(tf.equal(n,period - 1), tf.float32)
+        gradient = update_mask * 2 * (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = optimizer.apply_gradients([(gradient, alpha)])
     
-    with tf.control_dependencies([update_alpha]):
+    # update n. Should reset at period
+    update_n = n.assign((n + 1) % period)
+
+    with tf.control_dependencies([update_alpha, update_n]):
         alpha_dummy = tf.identity(alpha)
     
     return alpha_dummy
