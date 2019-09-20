@@ -6,7 +6,7 @@ v0.4 (2019-09-25)
 
 *New Features*
 
-- Added [experiment directed simulation](https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988) biasing to `htf`. 
+- Added experiment directed simulation biasing to `htf`. 
 
 *Enhancements*
 
