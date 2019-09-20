@@ -25,6 +25,7 @@ Table of Contents
    * [Utilities](#utilities)
       * [RDF](#rdf)
       * [Pairwise Potential and Forces](#pairwise-potential-and-forces)
+      * [Biasing with EDS](#biasing-with-eds)
    * [Coarse-Graining Utilities](#coarse-graining-utilities)
       * [Find Molecules](#find-molecules)
       * [Sparse Mapping](#sparse-mapping)
@@ -462,6 +463,28 @@ To compute pairwise potential, use the `graph.compute_pairwise_potential(...)` m
 r = numpy.arange(1, 10, 1)
 potential, forces = htf.compute_pairwise_potential('/path/to/model', r, potential_tensor)
 ...
+```
+
+## Biasing with EDS
+
+To apply [Experiment Directed Simulation](https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988) biasing to a system:
+
+```python
+eds_alpha = htf.eds_bias(cv, set_point=3.0, period=100)
+eds_energy = eds_alpha * cv
+eds_forces = graph.compute_forces(eds_energy)
+graph.save(eds_forces, 'eds-graph')
+```
+
+where `htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. It may be useful 
+to also take the average of `eds_alpha` so that you can use it in a subsequent simulation:
+
+```python
+avg_alpha = graph.running_mean(eds_alpha, name='avg-eds-alpha')
+.....
+# after simulation
+vars = htf.load_variables('model/directory', ['avg-eds-alpha'])
+print(vars['avg-eds-alpha'])
 ```
 
 # Coarse-Graining Utilities

@@ -30,9 +30,7 @@ class test_loading(unittest.TestCase):
         vars = htf.load_variables(model_dir, ['test'])
         assert np.abs(vars['test'] - 10) < 10e-10
 
-
 class test_mappings(unittest.TestCase):
-
     def setUp(self):
         # build system using example from hoomd
         hoomd.context.initialize()
@@ -233,5 +231,23 @@ class test_mappings(unittest.TestCase):
                                 'Potentials not calculated correctly')
 
 
+class test_bias(unittest.TestCase):
+    def test_eds(self):
+        T = 1000
+        hoomd.context.initialize()
+        model_dir = build_examples.eds_graph()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            hoomd.md.integrate.mode_standard(dt=0.05)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=0.2, seed=2)
+            tfcompute.attach(save_period=10)
+            hoomd.run(T)
+        variables = hoomd.htf.load_variables(
+                model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
+        assert np.isfinite(variables['eds.a'])
+        assert (variables['cv-mean'] - 4)**2 < 0.5
 if __name__ == '__main__':
     unittest.main()
