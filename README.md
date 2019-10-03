@@ -668,7 +668,7 @@ numpy
 ## Simple Compiling
 
 This method assumes you already have installed hoomd-blue. You could do that,
-for example, via `conda install -c conda-forget hoomd=2.5.2`.
+for example, via `conda install -c conda-forge hoomd=2.5.2`.
 
 ```bash
 git clone https://github.com/ur-whitelab/hoomd-tf
