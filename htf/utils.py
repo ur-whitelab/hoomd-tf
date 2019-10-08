@@ -354,6 +354,8 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     nlist
         An [N X NN X 3] tensor containing neighbor lists of all particles
     """
+    # Make sure positions is only xyz
+    positions = positions[:, :3]
     M = tf.shape(positions)[0]
     # Making 3 dim CG nlist
     qexpand = tf.expand_dims(positions, 1)  # one column
