@@ -663,12 +663,15 @@ The following packages are required to compile:
 tensorflow == 1.12
 hoomd-blue >= 2.5.0
 numpy
+tbb-devel
 ```
+
+tbb-devel is only required if using the "simple" method below.
 
 ## Simple Compiling
 
 This method assumes you already have installed hoomd-blue. You could do that,
-for example, via `conda install -c conda-forge hoomd=2.5.2`.
+for example, via `conda install -c conda-forge hoomd`.
 
 ```bash
 git clone https://github.com/ur-whitelab/hoomd-tf
