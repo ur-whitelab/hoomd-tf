@@ -9,6 +9,7 @@ Table of Contents
    * [Building the Graph](#building-the-graph)
       * [Molecule Batching](#molecule-batching)
       * [Computing Forces](#computing-forces)
+      * [Neighbor Lists](#neighbor-lists)
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
       * [Printing](#printing)
@@ -161,6 +162,15 @@ which can arise because `nlist` contains 0s for when less than `NN`
 nearest neighbors are found. Note that because `nlist` is a *full*
 neighbor list, you should divide by 2 if your energy is a sum of
 pairwise energies.
+
+## Neighbor lists
+
+As mentioned above, there is `graph.nlist`, which is an `N x NN x 4` neighobr lists. You can
+access masked versions of this with `graph.masked_nlist(self, type_i=None, type_j=None, nlist=None, type_tensor=None)`
+where `type_i/type_j` are optional integers that specify the type of the origin (`type_i`) or neighobr (`type_j`). The `nlist` argument
+allows you to pass in your own neighbor list and `type_tensor` allows you to specify your own list of types,
+if different than what is given by hoomd-blue. You can also access `graph.nlist_rinv` which gives a pre-computed
+`1 / r` `N x NN` matrix.
 
 ## Virial
 
