@@ -87,7 +87,7 @@ namespace hoomd_tf
          *  \param array the array whose contents to copy into this one
          * \param offset how much offset to apply to the GIVEN array
          */
-        void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0)
+        void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0, bool fix4 = false)
             {
             // convert size into mem size
             if(!size)
@@ -108,6 +108,10 @@ namespace hoomd_tf
                     access_location::host,
                     access_mode::read);
                 memcpy(handle.data, ohandle.data + offset, size);
+                // now fix-up the type if necessary
+                if(fix4)
+                    for(int i = 0; i < size / sizeof(T); i++)
+                        handle.data[i].w = static_cast<Scalar> (__scalar_as_int(handle.data[i].w));
                 }
             else
                 {

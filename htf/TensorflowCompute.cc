@@ -159,7 +159,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
                 }
 
             // get positions
-            m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N);
+            m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N, true);
             updateBox();
             
             // Now we prepare forces if we're sending it
@@ -334,7 +334,10 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;
-            buffer[bi * m_nneighs + nnoffset[bi]].w = h_pos.data[k].w;
+            // can't be using this stuffed thing because so
+            // easy for it to die being typecast on the way to
+            // TF
+            buffer[bi * m_nneighs + nnoffset[bi]].w = static_cast<Scalar> (__scalar_as_int(h_pos.data[k].w));
             nnoffset[bi]++;
             }
         }
