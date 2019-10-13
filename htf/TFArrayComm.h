@@ -12,19 +12,13 @@
 #include <stdexcept>
 #include <sstream>
 #include "CommStruct.h"
-
+#ifdef ENABLE_CUDA
+#include "TFArrayComm.cuh"
+#endif //ENABLE_CUDA
 
 /*! \file TFArrayComm.h
     \brief Declaration of TFArrayComm class
 */
-
-#ifdef ENABLE_CUDA
-//! Unstuff integers in gpu array
-extern "C" cudaError_t htf_gpu_unstuff4(Scalar4 *arrray,
-                                       unsigned int N,
-                                       cudaStream_t stream);
-#endif 
-
 
 namespace hoomd_tf
     {
@@ -126,6 +120,7 @@ namespace hoomd_tf
             else
                 {
                 #ifdef ENABLE_CUDA
+                    CHECK_CUDA_ERROR();
                     ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
@@ -139,6 +134,7 @@ namespace hoomd_tf
                     CHECK_CUDA_ERROR();
                     if(unstuff4)
                         htf_gpu_unstuff4(handle.data, size, m_comm_struct.stream);
+                    CHECK_CUDA_ERROR();
                 #endif
                 }
             }
