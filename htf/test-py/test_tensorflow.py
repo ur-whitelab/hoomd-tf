@@ -42,8 +42,14 @@ class test_access(unittest.TestCase):
             hoomd.context.initialize()
             rcut = 3
             # create a system with a few types
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.unitcell(N = 3, a1=[6,0,0], a2=[0,6,0], a3=[0,0,6], 
-                                            position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]], type_name = ['A', 'B', 'C']), n=5)
+            cell = hoomd.lattice.unitcell(
+                N=3,
+                a1=[6, 0, 0],
+                a2=[0, 6, 0],
+                a3=[0, 0, 6],
+                position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
+                type_name=['A', 'B', 'C'])
+            system = hoomd.init.create_lattice(unitcell=cell, n=5)
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
@@ -54,8 +60,8 @@ class test_access(unittest.TestCase):
             pa = tfcompute.get_positions_array()
             nl = tfcompute.get_nlist_array()
             # make sure we get the 3 types
-            assert len(np.unique(nl[:,:,3].astype(np.int))) == 3
-            assert len(np.unique(nl[:,:,3].astype(np.int))) == 3 
+            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
+            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
 
 
 class test_compute(unittest.TestCase):

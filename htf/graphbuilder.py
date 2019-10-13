@@ -185,7 +185,7 @@ class graph_builder:
         if type_j is not None:
             # cannot use boolean mask due to size
             mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
-            nlist = nlist * mask[:,:,tf.newaxis]
+            nlist = nlist * mask[:, :, tf.newaxis]
         return nlist
 
     def wrap_vector(self, r):
