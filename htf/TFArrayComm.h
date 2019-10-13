@@ -120,7 +120,6 @@ namespace hoomd_tf
             else
                 {
                 #ifdef ENABLE_CUDA
-                    CHECK_CUDA_ERROR();
                     ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
@@ -131,9 +130,8 @@ namespace hoomd_tf
                         ohandle.data + offset,
                         size,
                         cudaMemcpyDeviceToDevice);
-                    CHECK_CUDA_ERROR();
                     if(unstuff4)
-                        htf_gpu_unstuff4(handle.data, size, m_comm_struct.stream);
+		      htf_gpu_unstuff4(handle.data, size / sizeof(T), m_comm_struct.stream);
                     CHECK_CUDA_ERROR();
                 #endif
                 }

@@ -11,7 +11,8 @@ extern "C" __global__
 void htf_gpu_unstuff4_kerenl(Scalar4 *array, unsigned int N)
     {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    array[i].w = static_cast<Scalar> (__scalar_as_int(array[i].w));
+    if ( i < N)
+        array[i].w = static_cast<Scalar> (__scalar_as_int(array[i].w));
     }
 
 cudaError_t htf_gpu_unstuff4(Scalar4 *array, unsigned int m_N, cudaStream_t s)
