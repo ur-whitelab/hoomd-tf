@@ -471,7 +471,7 @@ class tfcompute(hoomd.compute._compute):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
-        return self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
+        return self.scalar4_vec_to_np(self.cpp_force.getNlistArray()).reshape(-1, self.nneighbor_cutoff, 4)
 
     def get_forces_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
