@@ -530,7 +530,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
         access_location::device,
         access_mode::read);
     m_tuner->begin();
-    gpu_reshape_nlist(d_nlist_array.data,
+    htf_gpu_reshape_nlist(d_nlist_array.data,
         d_pos.data,
         m_pdata->getN(),
         m_nneighs,
@@ -556,7 +556,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
 void TensorflowComputeGPU::receiveVirial(unsigned int offset, unsigned int batch_size) {
     ArrayHandle<Scalar> h_virial(m_virial, access_location::device, access_mode::overwrite);
     ArrayHandle<Scalar> tf_h_virial(m_virial_array, access_location::device, access_mode::read);
-    gpu_add_virial(h_virial.data + offset,
+    htf_gpu_add_virial(h_virial.data + offset,
         tf_h_virial.data,
         batch_size,
         getVirialPitch(),
@@ -572,7 +572,7 @@ void TensorflowComputeGPU::sumReferenceForces() {
         ArrayHandle<Scalar4> src(forces->getForceArray(),
             access_location::device,
             access_mode::read);
-        gpu_add_scalar4(dest.data,
+        htf_gpu_add_scalar4(dest.data,
             src.data,
             m_force.getNumElements(),
             m_forces_comm.getCudaStream());

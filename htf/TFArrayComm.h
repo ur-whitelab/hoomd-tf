@@ -18,6 +18,14 @@
     \brief Declaration of TFArrayComm class
 */
 
+#ifdef ENABLE_CUDA
+//! Unstuff integers in gpu array
+extern "C" cudaError_t htf_gpu_unstuff4(Scalar4 *arrray,
+                                       unsigned int N,
+                                       cudaStream_t stream);
+#endif 
+
+
 namespace hoomd_tf
     {
 
@@ -85,9 +93,11 @@ namespace hoomd_tf
 
         /*! Copy contents of given array to this array
          *  \param array the array whose contents to copy into this one
-         * \param offset how much offset to apply to the GIVEN array
+         * \param offset how much offset to apply to the given array
+         * \param size how much to copy over from given array
+         * \param unstuff4 Set to true if the 4th column should be converted from stuffed integers to scalars that can be cast to integers
          */
-        void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0, bool fix4 = false)
+        void receiveArray(const GlobalArray<T>& array, int offset = 0, unsigned int size = 0, bool unstuff4 = false)
             {
             // convert size into mem size
             if(!size)
@@ -109,7 +119,7 @@ namespace hoomd_tf
                     access_mode::read);
                 memcpy(handle.data, ohandle.data + offset, size);
                 // now fix-up the type if necessary
-                if(fix4)
+                if(unstuff4)
                     for(int i = 0; i < size / sizeof(T); i++)
                         handle.data[i].w = static_cast<Scalar> (__scalar_as_int(handle.data[i].w));
                 }
@@ -127,6 +137,8 @@ namespace hoomd_tf
                         size,
                         cudaMemcpyDeviceToDevice);
                     CHECK_CUDA_ERROR();
+                    if(unstuff4)
+                        htf_gpu_unstuff4(handle.data, size, m_comm_struct.stream)
                 #endif
                 }
             }
