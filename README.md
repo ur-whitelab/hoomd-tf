@@ -66,7 +66,7 @@ graph = htf.graph_builder(64) # max neighbors = 64
 pair_energy = graph.nlist_rinv # nlist_rinv is neighbor 1 / r
 particle_energy = tf.reduce_sum(pair_energy, axis=1) # sum over neighbors
 forces = graph.compute_forces(energy) # compute forces
-graph.save(forces, 'my_model')
+graph.save('my_model', forces)
 
 ########### Hoomd-Sim Code ################
 hoomd.context.initialize()
@@ -79,7 +79,7 @@ with htf.tfcompute('my_model') as tfcompute:
     nlist = hoomd.md.nlist.cell()
     hoomd.md.integrate.mode_standard(dt=0.005)
     hoomd.md.integrate.nve(group=hoomd.group.all())
-    tfcompute.attach(nlist, r_cut=rcut)
+    tfcompute.attach(nlist, r_cut=3.0)
     hoomd.run(1e3)
 ```
 
@@ -483,7 +483,7 @@ To apply [Experiment Directed Simulation](https://www.tandfonline.com/doi/full/1
 eds_alpha = htf.eds_bias(cv, set_point=3.0, period=100)
 eds_energy = eds_alpha * cv
 eds_forces = graph.compute_forces(eds_energy)
-graph.save(eds_forces, 'eds-graph')
+graph.save('eds-graph', eds_forces)
 ```
 
 where `htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. It may be useful 
@@ -670,25 +670,32 @@ Continue following the compling steps below to complete install.
 
 The following packages are required to compile:
 ```
-tensorflow == 1.12
+tensorflow < 2.0
 hoomd-blue >= 2.5.0
 numpy
 tbb-devel
 ```
 
-tbb-devel is only required if using the "simple" method below.
+tbb-devel is only required if using the "simple" method below. The tensorflow
+versions should be any Tensorflow 1 release. The higher versions, like 1.14, 1.15, 
+will give lots of warnings about migrating code to Tensorflow 2.0.
 
 ## Simple Compiling
 
 This method assumes you already have installed hoomd-blue. You could do that,
-for example, via `conda install -c conda-forge hoomd`.
+for example, via `conda install -c conda-forge hoomd`. Here are the complete steps
+including that
 
 ```bash
+pip install tensorflow==1.14.0
+conda install -c conda-forge hoomd tbb-devel
 git clone https://github.com/ur-whitelab/hoomd-tf
 cd hoomd-tf && mkdir build && cd build
 cmake ..
 make install
 ```
+
+That's it! You can perform this in a conda environment if desired as well. 
 
 ## Compiling with Hoomd-Blue
 
@@ -736,7 +743,7 @@ export PYTHONPATH="$PYTHONPATH:`pwd`"
 ## Conda Environments
 
 If you are using a conda environment, you may need to force CMAKE to find your
-python environment. The following additional flags can help with this:
+python environment. This is rare, we only see it on our compute cluster which has multiple conflicting version of python and conda. The following additional flags can help with this:
 
 ```bash
 cmake .. \
