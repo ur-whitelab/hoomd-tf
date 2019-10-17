@@ -10,7 +10,7 @@
 */
 
 extern "C" __global__
-void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N)
+void htf_gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N)
     {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -23,7 +23,7 @@ void gpu_add_scalar4_kernel(Scalar4 *dest, Scalar4 *src, unsigned int N)
         }
     }
 
-cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int m_N, cudaStream_t s)
+cudaError_t htf_gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int m_N, cudaStream_t s)
     {
     // setup the grid to run the kernel
     int block_size = 256;
@@ -31,7 +31,7 @@ cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int m_N, cudaS
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    gpu_add_scalar4_kernel<<< grid, threads, 0, s >>>(dest, src, m_N);
+    htf_gpu_add_scalar4_kernel<<< grid, threads, 0, s >>>(dest, src, m_N);
 
     // this method always succeds.
     // If you had a cuda* call in this driver, you could return its error code, if not
@@ -40,7 +40,7 @@ cudaError_t gpu_add_scalar4(Scalar4 *dest, Scalar4 *src, unsigned int m_N, cudaS
     }
 
 extern "C" __global__
-void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int m_N, unsigned int m_pitch)
+void htf_gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int m_N, unsigned int m_pitch)
     {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -55,7 +55,7 @@ void gpu_add_virial_kernel(Scalar *dest, Scalar *src, unsigned int m_N, unsigned
         }
     }
 
-cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int m_N, unsigned int m_pitch, cudaStream_t s)
+cudaError_t htf_gpu_add_virial(Scalar *dest, Scalar *src, unsigned int m_N, unsigned int m_pitch, cudaStream_t s)
     {
     // setup the grid to run the kernel
     int block_size = 256;
@@ -63,7 +63,7 @@ cudaError_t gpu_add_virial(Scalar *dest, Scalar *src, unsigned int m_N, unsigned
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    gpu_add_virial_kernel<<< grid, threads, 0, s >>>(dest, src, m_N, m_pitch);
+    htf_gpu_add_virial_kernel<<< grid, threads, 0, s >>>(dest, src, m_N, m_pitch);
 
     // this method always succeds.
     // If you had a cuda* call in this driver, you could return its error code, if not
@@ -82,7 +82,7 @@ scalar4_tex_t pdata_pos_tex;
 texture<unsigned int, 1, cudaReadModeElementType> nlist_tex;
 
 template<unsigned char use_gmem_nlist>
-__global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
+__global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int N,
                                          const unsigned int NN,
                                          const unsigned int offset,
@@ -159,7 +159,7 @@ __global__ void gpu_reshape_nlist_kernel(Scalar4* dest,
     }
 
 
-cudaError_t gpu_reshape_nlist(Scalar4* dest,
+cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
 			      const Scalar4 *d_pos,
 			      const unsigned int N,
                   	      const unsigned int NN,
@@ -218,7 +218,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         if (max_block_size == UINT_MAX)
             {
             cudaFuncAttributes attr;
-            cudaFuncGetAttributes(&attr, gpu_reshape_nlist_kernel<1>);
+            cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<1>);
             max_block_size = attr.maxThreadsPerBlock;
             }
 
@@ -228,7 +228,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         dim3 grid( batch_size / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
 
-        gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
+        htf_gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
             N,
             NN,
             offset,
@@ -246,7 +246,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         if (max_block_size == UINT_MAX)
             {
             cudaFuncAttributes attr;
-            cudaFuncGetAttributes(&attr, gpu_reshape_nlist_kernel<0>);
+            cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<0>);
             max_block_size = attr.maxThreadsPerBlock;
             }
 
@@ -255,7 +255,7 @@ cudaError_t gpu_reshape_nlist(Scalar4* dest,
         // setup the grid to run the kernel
         dim3 grid( batch_size / run_block_size + 1, 1, 1);
         dim3 threads(run_block_size, 1, 1);
-        gpu_reshape_nlist_kernel<0><<< grid, threads, 0, stream>>>(dest,
+        htf_gpu_reshape_nlist_kernel<0><<< grid, threads, 0, stream>>>(dest,
             N,
             NN,
             offset,

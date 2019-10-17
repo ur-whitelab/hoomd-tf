@@ -15,6 +15,7 @@ set(_${COMPONENT_NAME}_sources
 
 set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
+    TFArrayComm.cu
     )
 
 # check if we have python dependencies for compiling

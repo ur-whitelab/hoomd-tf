@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.5
+-----------------------
+
+*Bug Fixes*
+
+- Types are now correctly translated to TF 
+
 v0.4 (2019-09-25)
 -----------------------
 

@@ -159,7 +159,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
                 }
 
             // get positions
-            m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N);
+            m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N, true);
             updateBox();
             
             // Now we prepare forces if we're sending it
@@ -334,7 +334,10 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;
-            buffer[bi * m_nneighs + nnoffset[bi]].w = h_pos.data[k].w;
+            // can't be using this stuffed thing because so
+            // easy for it to die being typecast on the way to
+            // TF
+            buffer[bi * m_nneighs + nnoffset[bi]].w = static_cast<Scalar> (__scalar_as_int(h_pos.data[k].w));
             nnoffset[bi]++;
             }
         }
@@ -527,7 +530,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
         access_location::device,
         access_mode::read);
     m_tuner->begin();
-    gpu_reshape_nlist(d_nlist_array.data,
+    htf_gpu_reshape_nlist(d_nlist_array.data,
         d_pos.data,
         m_pdata->getN(),
         m_nneighs,
@@ -553,7 +556,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
 void TensorflowComputeGPU::receiveVirial(unsigned int offset, unsigned int batch_size) {
     ArrayHandle<Scalar> h_virial(m_virial, access_location::device, access_mode::overwrite);
     ArrayHandle<Scalar> tf_h_virial(m_virial_array, access_location::device, access_mode::read);
-    gpu_add_virial(h_virial.data + offset,
+    htf_gpu_add_virial(h_virial.data + offset,
         tf_h_virial.data,
         batch_size,
         getVirialPitch(),
@@ -569,7 +572,7 @@ void TensorflowComputeGPU::sumReferenceForces() {
         ArrayHandle<Scalar4> src(forces->getForceArray(),
             access_location::device,
             access_mode::read);
-        gpu_add_scalar4(dest.data,
+        htf_gpu_add_scalar4(dest.data,
             src.data,
             m_force.getNumElements(),
             m_forces_comm.getCudaStream());
