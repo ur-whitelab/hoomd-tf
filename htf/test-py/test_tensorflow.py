@@ -61,7 +61,7 @@ class test_access(unittest.TestCase):
             nl = tfcompute.get_nlist_array()
             # make sure we get the 3 types
             assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
-            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
+            assert len(np.unique(pa[:, 3].astype(np.int))) == 3
 
 
 class test_compute(unittest.TestCase):
