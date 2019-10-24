@@ -267,8 +267,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 
 
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
-
-    # set-up variables
+    # set up variables
     mean = tf.get_variable('{}.mean'.format(name), initializer=0.0, trainable=False)
     ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0, trainable=False)
     n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
@@ -304,6 +303,43 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
         alpha_dummy = tf.identity(alpha)
 
     return alpha_dummy
+
+## \internal
+# \brief EDM algorithm biases a CV's free energy surface to become the target
+def edm_bias(cv, target_surface, period, name='edm', hill_prefactor=1.0):
+    R"""Perform Experiment-Directed Metadynamics (EDM) algorithm to bias a
+    collective variable to match a target free energy surface, optionally using
+    global or local tempering.
+    Parameters
+    ----------
+    cv
+        Collective variable to bias to target surface
+    target_surface
+        Desired final free energy surface. MUST have same units as cv.
+    period
+        How often (timesteps) to add a hill to the bias.
+    hill_prefactor
+        Optionally adjust baseline hill height. 1.0 by default."""
+    # set up variables
+    bias_grid = tf.get_variable('{}.bias'.format(name),
+                                initializer=tf.zeros_like(target_surface),
+                                trainable=False)
+    hill_prefactor = tf.get_variable('{}.hill_prefactor'.format(name),
+                                     initializer=tf.constant(hill_prefactor),
+                                     trainable=False)
+    hill = tf.Variable(tf.zeros_like(target_surface), name='{}.hill', trainable=False)
+    # get cv value within its limits -- take limits from target_surface
+    # convert cv coordinates to grid coordinates (or do this externally?)
+    # find hill height based on diff b/w current free energy value (from HOOMD) and target value
+    # add a hill to bias grid at cv location
+    # TODO: see if tf.roll() is usable for this.
+    # idea: use one hill but add it to grid, rolled to line center up to the cv location
+    #       need to use cv location to roll in x, then y
+    #       check if we need to unroll/reroll??
+    # add grid gradient to simulation forces?? -- probably do this in the script itself
+    # return newly-altered bias grid
+    return bias_grid
+    
 
 ## \internal
 # \brief Finds the center of mass of a set of particles
