@@ -35,6 +35,11 @@ class graph_builder:
         self.virial = None
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
+        # hoomd-blue box:
+        # x,y,z -> tilt factors
+        # Lx xyLy xzLz
+        # 0   Ly  yzLz
+        # 0   0    Lz
         self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
@@ -180,10 +185,7 @@ class graph_builder:
         if type_j is not None:
             # cannot use boolean mask due to size
             mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
-            # make it correct size to mask
-            mask = tf.reshape(tf.tile(mask, [1, nlist.shape[2]]),
-                              [-1, self.nneighbor_cutoff, nlist.shape[2]])
-            nlist = nlist * mask
+            nlist = nlist * mask[:, :, tf.newaxis]
         return nlist
 
     def wrap_vector(self, r):

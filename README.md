@@ -9,6 +9,7 @@ Table of Contents
    * [Building the Graph](#building-the-graph)
       * [Molecule Batching](#molecule-batching)
       * [Computing Forces](#computing-forces)
+      * [Neighbor Lists](#neighbor-lists)
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
       * [Printing](#printing)
@@ -25,6 +26,7 @@ Table of Contents
    * [Utilities](#utilities)
       * [RDF](#rdf)
       * [Pairwise Potential and Forces](#pairwise-potential-and-forces)
+      * [Biasing with EDS](#biasing-with-eds)
    * [Coarse-Graining Utilities](#coarse-graining-utilities)
       * [Find Molecules](#find-molecules)
       * [Sparse Mapping](#sparse-mapping)
@@ -64,7 +66,7 @@ graph = htf.graph_builder(64) # max neighbors = 64
 pair_energy = graph.nlist_rinv # nlist_rinv is neighbor 1 / r
 particle_energy = tf.reduce_sum(pair_energy, axis=1) # sum over neighbors
 forces = graph.compute_forces(energy) # compute forces
-graph.save(forces, 'my_model')
+graph.save('my_model', forces)
 
 ########### Hoomd-Sim Code ################
 hoomd.context.initialize()
@@ -77,7 +79,7 @@ with htf.tfcompute('my_model') as tfcompute:
     nlist = hoomd.md.nlist.cell()
     hoomd.md.integrate.mode_standard(dt=0.005)
     hoomd.md.integrate.nve(group=hoomd.group.all())
-    tfcompute.attach(nlist, r_cut=rcut)
+    tfcompute.attach(nlist, r_cut=3.0)
     hoomd.run(1e3)
 ```
 
@@ -131,13 +133,13 @@ graph.build_mol_rep(3)
 v1 = graph.mol_positions[:, 2, :3] - graph.mol_positions[:, 1, :3]
 v2 = graph.mol_positions[:, 0, :3] - graph.mol_positions[:, 1, :3]
 # compute per-molecule dot product and divide by per molecule norm
-c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1), tf.norm(v2 axis=1)
+c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1) / tf.norm(v2 axis=1)
 angles = tf.math.acos(c)
 ```
 
 ## Computing Forces
 
-If you graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
+If your graph is outputting forces, you may either compute forces and pass them to `graph_builder.save(...)` or have them computed via automatic differentiation of a potential energy. Call `graph_builder.compute_forces(energy)` where `energy` is a scalar or tensor that depends on `nlist` and/or `positions`. A tensor of forces will be returned as sum(-dE / dn) - dE / dp where the sum is over the neighbor list. For example, to compute a `1 / r` potential:
 
 ```python
 graph = htf.graph_builder(N - 1)
@@ -160,6 +162,15 @@ which can arise because `nlist` contains 0s for when less than `NN`
 nearest neighbors are found. Note that because `nlist` is a *full*
 neighbor list, you should divide by 2 if your energy is a sum of
 pairwise energies.
+
+## Neighbor lists
+
+As mentioned above, there is `graph.nlist`, which is an `N x NN x 4` neighobr lists. You can
+access masked versions of this with `graph.masked_nlist(self, type_i=None, type_j=None, nlist=None, type_tensor=None)`
+where `type_i/type_j` are optional integers that specify the type of the origin (`type_i`) or neighobr (`type_j`). The `nlist` argument
+allows you to pass in your own neighbor list and `type_tensor` allows you to specify your own list of types,
+if different than what is given by hoomd-blue. You can also access `graph.nlist_rinv` which gives a pre-computed
+`1 / r` `N x NN` matrix.
 
 ## Virial
 
@@ -464,6 +475,28 @@ potential, forces = htf.compute_pairwise_potential('/path/to/model', r, potentia
 ...
 ```
 
+## Biasing with EDS
+
+To apply [Experiment Directed Simulation](https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988) biasing to a system:
+
+```python
+eds_alpha = htf.eds_bias(cv, set_point=3.0, period=100)
+eds_energy = eds_alpha * cv
+eds_forces = graph.compute_forces(eds_energy)
+graph.save('eds-graph', eds_forces)
+```
+
+where `htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. It may be useful 
+to also take the average of `eds_alpha` so that you can use it in a subsequent simulation:
+
+```python
+avg_alpha = graph.running_mean(eds_alpha, name='avg-eds-alpha')
+.....
+# after simulation
+vars = htf.load_variables('model/directory', ['avg-eds-alpha'])
+print(vars['avg-eds-alpha'])
+```
+
 # Coarse-Graining Utilities
 
 ## Find Molecules
@@ -637,22 +670,32 @@ Continue following the compling steps below to complete install.
 
 The following packages are required to compile:
 ```
-tensorflow == 1.12
+tensorflow < 2.0
 hoomd-blue >= 2.5.0
 numpy
+tbb-devel
 ```
+
+tbb-devel is only required if using the "simple" method below. The tensorflow
+versions should be any Tensorflow 1 release. The higher versions, like 1.14, 1.15, 
+will give lots of warnings about migrating code to Tensorflow 2.0.
 
 ## Simple Compiling
 
 This method assumes you already have installed hoomd-blue. You could do that,
-for example, via `conda install -c conda-forget hoomd=2.5.2`.
+for example, via `conda install -c conda-forge hoomd`. Here are the complete steps
+including that
 
 ```bash
+pip install tensorflow==1.14.0
+conda install -c conda-forge hoomd tbb-devel
 git clone https://github.com/ur-whitelab/hoomd-tf
 cd hoomd-tf && mkdir build && cd build
 cmake ..
 make install
 ```
+
+That's it! You can perform this in a conda environment if desired as well. 
 
 ## Compiling with Hoomd-Blue
 
@@ -700,7 +743,7 @@ export PYTHONPATH="$PYTHONPATH:`pwd`"
 ## Conda Environments
 
 If you are using a conda environment, you may need to force CMAKE to find your
-python environment. The following additional flags can help with this:
+python environment. This is rare, we only see it on our compute cluster which has multiple conflicting version of python and conda. The following additional flags can help with this:
 
 ```bash
 cmake .. \

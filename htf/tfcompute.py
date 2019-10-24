@@ -471,7 +471,8 @@ class tfcompute(hoomd.compute._compute):
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
-        return self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
+        nl = self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
+        return nl.reshape(-1, self.nneighbor_cutoff, 4)
 
     def get_forces_array(self):
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
@@ -497,8 +498,9 @@ def _make_reverse_indices(mol_indices):
     num_atoms = 0
     for m in mol_indices:
         num_atoms = max(num_atoms, max(m))
-    # add 1, since we found the largest index
-    num_atoms += 1
+    # you would think add 1, since we found the largest index
+    # but the atoms are 1-indexed to distinguish between
+    # the "no atom" case (hence the - 1 below)
     rmi = [[] for _ in range(num_atoms)]
     for i in range(len(mol_indices)):
         for j in range(len(mol_indices[i])):

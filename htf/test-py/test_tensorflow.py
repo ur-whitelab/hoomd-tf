@@ -39,22 +39,29 @@ class test_access(unittest.TestCase):
         model_dir = build_examples.simple_potential()
         with hoomd.htf.tfcompute(model_dir,
                                  _mock_mode=True) as tfcompute:
-            hoomd.context.initialize('--gpu_error_checking')
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
+            hoomd.context.initialize()
+            rcut = 3
+            # create a system with a few types
+            cell = hoomd.lattice.unitcell(
+                N=3,
+                a1=[6, 0, 0],
+                a2=[0, 6, 0],
+                a3=[0, 0, 6],
+                position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
+                type_name=['A', 'B', 'C'])
+            system = hoomd.init.create_lattice(unitcell=cell, n=5)
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
+            tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(1)
             tfcompute.get_virial_array()
-            tfcompute.get_positions_array()
-            tfcompute.get_nlist_array()
             tfcompute.get_forces_array()
+            pa = tfcompute.get_positions_array()
+            nl = tfcompute.get_nlist_array()
+            # make sure we get the 3 types
+            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
+            assert len(np.unique(pa[:, 3].astype(np.int))) == 3
 
 
 class test_compute(unittest.TestCase):
@@ -133,6 +140,25 @@ class test_compute(unittest.TestCase):
             model_dir, bootstrap=build_examples.bootstrap_graph(
                 9 - 1, model_dir),
             bootstrap_map={'epsilon': 'lj-epsilon', 'sigma': 'lj-sigma'
+                           }) as tfcompute:
+            hoomd.context.initialize()
+            rcut = 5.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+            hoomd.run(5)
+
+    def test_incomplete_bootstrap(self):
+        model_dir = build_examples.trainable_graph(9 - 1)
+        with hoomd.htf.tfcompute(
+            model_dir, bootstrap=build_examples.bootstrap_graph(
+                9 - 1, model_dir),
+            bootstrap_map={'epsilon': 'lj-epsilon'
                            }) as tfcompute:
             hoomd.context.initialize()
             rcut = 5.0
@@ -525,6 +551,7 @@ class test_mol_batching(unittest.TestCase):
     def test_reverse_mol_index(self):
         # need this for logging
         hoomd.context.initialize()
+        # each element is the index of atoms in the molecule
         mi = [[1, 2, 0, 0, 0], [3, 0, 0, 0, 0], [4, 5, 7, 8, 9]]
         rmi = hoomd.htf._make_reverse_indices(mi)
         # should be
