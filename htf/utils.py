@@ -352,7 +352,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     Returns
     -------
     nlist
-        An [N X NN X 3] tensor containing neighbor lists of all particles
+        An [N X NN X 4] tensor containing neighbor lists of all particles and index
     """
     # Make sure positions is only xyz
     positions = positions[:, :3]
