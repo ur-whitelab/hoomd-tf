@@ -41,7 +41,8 @@ class graph_builder:
         # 0   Ly  yzLz
         # 0   0    Lz
         self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
-        self.box_size = self.box[1, :] - self.box[0, :]
+        # assume no tilt factors for now TODO: do this math right
+        self.box_size = tf.linalg.diag_part(self.box)#self.box[1, :] - self.box[0, :] + self.box[2, :]
         if not output_forces:
             self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
         self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
