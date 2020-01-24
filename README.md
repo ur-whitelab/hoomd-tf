@@ -12,9 +12,11 @@ Table of Contents
       * [Neighbor Lists](#neighbor-lists)
       * [Virial](#virial)
       * [Finalizing the Graph](#finalizing-the-graph)
-      * [Printing](#printing)
-      * [Period of out nodes](#period-of-out-nodes)
+      * [Saving Data](#saving-data)
       * [Variables and Restarts](#variables-and-restarts)
+      * [Loading Variables](#loading-variables)
+      * [Period of out nodes](#period-of-out-nodes)
+      * [Printing](#printing)
       * [Saving and Loading Variables](#saving-and-loading-variables)
       * [Optional: Keras Layers for Model Building](#optional-keras-layers-for-model-building)
       * [Complete Examples](#complete-examples)
@@ -185,7 +187,7 @@ To finalize and save your graph, you must call the `graph_builder.save(directory
 
 ## Saving Data
 
-Using variables is the best way to save computed quantities while running a compute graph. You can create a variable using `v = tf.Variable(initial_value, name=name))`. Using a name is critical, since that's how you load it later on. Then assign or accumulate values using the `op1 = v.assign(..)` and `op2 = v.assign_add(...)` operations. You must ensure that these operations are actually called in your graph by using `out_nodes` like in the example below:
+Using variables is the best way to save computed quantities while running a compute graph. You can create a variable using `v = tf.Variable(initial_value, name=name)`. Using a name is critical because that is how you load it after running your simulation. Then assign or accumulate values using the `op1 = v.assign(..)` and `op2 = v.assign_add(...)` operations. You must ensure that these operations are actually called in your graph by using `out_nodes` like in the example below:
 
 ```python
 # set-up graph
@@ -203,7 +205,7 @@ forces = graph.compute_forces(energy)
 graph.save(force_tensor=forces, model_directory=directory, out_nodes=[op])
 ```
 
-This example computes a Lennard-Jones potential and saves the system energy in the variable `total-energy`. The variable will always be written by htf, but do get meaningful data in them you must ensure your ops are passed to `out_nodes`.
+This example computes a Lennard-Jones potential and saves the system energy in the variable `total-energy`. The variable will always be written by htf, but to get meaningful data in them you must ensure your ops are passed to `out_nodes`.
 
 Often you just want a running mean of a variable, for which there is a built-in function:
 
