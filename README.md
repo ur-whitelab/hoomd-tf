@@ -106,9 +106,9 @@ the particle type. Particle type is an integer starting at 0. Note
 that the `x,y,z` values are a vector originating at the particle and
 ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
-forces via `output_forces=False`. `box` is a 3x3 tensor containing the low box coordinate, 
+forces via `output_forces=False`. `box` is a 3x3 tensor containing the low box coordinate,
 high box coordinate, and then tilt factors. `box_size` contains just the box length
-in each dimension. 
+in each dimension.
 
 ## Molecule Batching
 
@@ -183,19 +183,55 @@ saving, or pass `None` to remove the automatically calculated virial.
 
 To finalize and save your graph, you must call the `graph_builder.save(directory, force_tensor=forces, virial = None, out_node=None)` function. `force_tensor` should be your computed forces, either as computed by your graph or as the output from `compute_energy`. If your graph is not outputting forces, then you must provide a tensor which will be computed, `out_nodes`, at each timestep. Your forces should be an `N x 4` tensor with the 4th column indicating per-particle potential energy. The virial should be an `N x 3 x 3` tensor.
 
-## Printing
+## Saving Data
 
-If you would like to print out the values from nodes in your graph, you can
-add a print node to the `out_nodes`. For example:
+Using variables is the best way to save computed quantities while running a compute graph. You can create a variable using `v = tf.Variable(initial_value, name=name))`. Using a name is critical, since that's how you load it later on. Then assign or accumulate values using the `op1 = v.assign(..)` and `op2 = v.assign_add(...)` operations. You must ensure that these operations are actually called in your graph by using `out_nodes` like in the example below:
 
 ```python
-...graph building code...
+# set-up graph
+graph = htf.graph_builder(NN)
+# make my variable
+total_e = tf.Variable(0.0, name='total-energy')
+# compute LJ potential
+inv_r6 = graph.nlist_rinv**6
+p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+energy = tf.reduce_sum(p_energy)
+# make op that assigns value of energy to my variable
+op = total_e.assign(energy)
 forces = graph.compute_forces(energy)
-print_node = tf.Print(energy, [energy], summarize=1000)
-graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
+# add my op to out_nodes while saving graph
+graph.save(force_tensor=forces, model_directory=directory, out_nodes=[op])
 ```
 
-The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
+This example computes a Lennard-Jones potential and saves the system energy in the variable `total-energy`. The variable will always be written by htf, but do get meaningful data in them you must ensure your ops are passed to `out_nodes`.
+
+Often you just want a running mean of a variable, for which there is a built-in function:
+
+```python
+# set-up graph to compute energy
+...
+# we name our variable avg-energy
+graph.running_mean(energy, 'avg-energy')
+# run the simulation
+...
+```
+Note that you need not add anything to `out_nodes` when using this convenience function because it is handled for you.
+
+## Variables and Restarts
+
+In TensorFlow, variables are generally trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graph_builder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graph_builder.save` in your restart script *or* pass `move_previous = False` as a parameter if you re-run `graph_builder.save`.
+
+Variables are also how you save data as seen above. If you are doing training and also computing other variables, be sure to set your variables which you do not want to be affected by training optimization to be `trainable=False` when constructing them.
+
+## Loading Variables
+
+You may load variables after the simulation using the following syntax, which creates a dictionary with entries [`avg-energy`].
+
+```python
+variables  = htf.load_variables(model_dir, ['avg-energy'])
+```
+
+The `load_variables` is general and can be used to load trained, non-trained, or averaged variables. It is important to name your variables so they can be loaded using this function.
 
 ## Period of out nodes
 
@@ -209,34 +245,21 @@ print_node = tf.Print(energy, [energy], summarize=1000)
 graph.save(force_tensor=forces, model_directory=name, out_nodes=[[print_node, 100], [avg_force, 25]])
 ```
 
-This will print the energy every 100 steps and compute the average force every 25 steps (although it is unused). Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps. 
+This will print the energy every 100 steps and compute the average force every 25 steps (although it is unused). Note that these two ways of affecting period both apply. So if the above graph was attached with `tfcompute.attach(..., period=25)` then the `print_node` will be computed every 2500 steps.
 
-## Variables and Restarts
+## Printing
 
-In TensorFlow, variables are trainable parameters. They are required parts of your graph when doing learning. Each `saving_period` (set as arg to `tfcompute.attach`), they are written to your model directory. Note that when a run is started, the latest values of your variables are loaded from your model directory. *If you are starting a new run but you previously ran your model, the old variable values will be loaded.* To prevent this unexpectedly loading old checkpoints, if you run `graph_builder.save` it will move out all old checkpoints. This behavior means that if you want to restart, you should not re-run `graph_builder.save` in your restart script *or* pass `move_previous = False` as a parameter if you re-run `graph_builder.save`.
-
-Variables are how you can save data. They can be accumulated between steps. Be sure to set them to be `trainable=False` if you are also doing learning but would like to accumulate in variables. For example, you can have a variable for running mean. You can load these variables with the `htf.load_variables` command. See next section for details.
-
-## Saving and Loading Variables
-
-`graph_builder` has a convenience function to compute the running mean of some property:
+If you would like to print out the values from nodes in your graph, you can
+add a print node to the `out_nodes`. For example:
 
 ```python
-# set-up graph to compute energy
-...
-# we name our variable avg-energy
-graph.running_mean(energy, 'avg-energy')
-# run the simulation
-...
+...graph building code...
+forces = graph.compute_forces(energy)
+print_node = tf.Print(energy, [energy], summarize=1000)
+graph.save(force_tensor=forces, model_directory=name, out_nodes=[print_node])
 ```
 
-You may then load the variable after the simulation using the following syntax, which creates a dictionary with entries [`avg-energy`].
-
-```python
-variables  = htf.load_variables(model_dir, ['avg-energy'])
-```
-
-The `load_variables` is general and can be used to load trained, non-trained, or averaged variables.
+The `summarize` keyword sets the maximum number of numbers to print. Be wary of printing thousands of numbers per step.
 
 ## Optional: Keras Layers for Model Building
 
@@ -486,7 +509,7 @@ eds_forces = graph.compute_forces(eds_energy)
 graph.save('eds-graph', eds_forces)
 ```
 
-where `htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. It may be useful 
+where `htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)` is the function that computes your lagrange multiplier/eds coupling that you use to bias your simulation. It may be useful
 to also take the average of `eds_alpha` so that you can use it in a subsequent simulation:
 
 ```python
@@ -677,7 +700,7 @@ tbb-devel
 ```
 
 tbb-devel is only required if using the "simple" method below. The tensorflow
-versions should be any Tensorflow 1 release. The higher versions, like 1.14, 1.15, 
+versions should be any Tensorflow 1 release. The higher versions, like 1.14, 1.15,
 will give lots of warnings about migrating code to Tensorflow 2.0.
 
 ## Simple Compiling
@@ -695,7 +718,7 @@ cmake ..
 make install
 ```
 
-That's it! You can perform this in a conda environment if desired as well. 
+That's it! You can perform this in a conda environment if desired as well.
 
 ## Compiling with Hoomd-Blue
 
