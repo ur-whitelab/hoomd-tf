@@ -108,9 +108,10 @@ the particle type. Particle type is an integer starting at 0. Note
 that the `x,y,z` values are a vector originating at the particle and
 ending at its neighbor. `positions` and `forces` are `N` x 4
 tensors. `forces` *only* is available if the graph does not output
-forces via `output_forces=False`. `box` is a 3x3 tensor containing the low box coordinate,
-high box coordinate, and then tilt factors. `box_size` contains just the box length
-in each dimension.
+forces via `output_forces=False`. `box` is a 3x3 tensor. The first row contains
+the low box coordinates (x, y, z). The second row contains the high box coordinates (x, y, z).
+The third row contains the tilt factors (x, y, z). `box_size` contains just the box length
+in each dimension. 
 
 ## Molecule Batching
 
