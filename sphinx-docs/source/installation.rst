@@ -7,7 +7,9 @@ Installation Guide
    :maxdepth: 2
    :caption: Installing HOOMD-TF
 
-   compilation
+   bluehive_install.rst
+   compilation.rst
+   mbuild.rst
 
 .. _unit_tests:
    

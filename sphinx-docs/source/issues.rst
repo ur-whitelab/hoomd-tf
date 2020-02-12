@@ -83,5 +83,3 @@ Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG
 simulations where density is non-uniform.
-
-
