@@ -31,11 +31,10 @@ class graph_builder:
         self.virial = None
         self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
-        # hoomd-blue box:
-        # x,y,z -> tilt factors
-        # Lx xyLy xzLz
-        # 0   Ly  yzLz
-        # 0   0    Lz
+        # our box:
+        # [ [x_low,  y_low,  z_low],
+        #   [x_high, y_high, z_high],
+        #   [x_tilt, y_tilt, z_tilt] ]
         self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
