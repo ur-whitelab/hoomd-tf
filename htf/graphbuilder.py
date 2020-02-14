@@ -15,12 +15,8 @@ class graph_builder:
     # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
     
-        Parameters
-        ------------
-        nneighbor_cutoff
-            The maximum number of neigbhors to consider (can be 0)
-        output_forces
-            True if your graph will compute forces to be used in TensorFlow
+        :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
+        :param output_forces: True if your graph will compute forces to be used in TensorFlow
     """
     def __init__(self, nneighbor_cutoff, output_forces=True):
         # clear any previous graphs
@@ -164,17 +160,16 @@ class graph_builder:
                      type_tensor=None):
         R"""Returns a neighbor list masked by the given types.
 
-        Parameters
-        ---------
-        name
-            The name of the tensor
-        type_i, type_j
-            Use these to select only a certain particle type.
-        nlist
-            By default it will use self.nlist
-        type_tensor
-            An N x 1 tensor containing the types of the nlist origin. If None,
-            then self.positions will be used
+        Args:
+            name
+                The name of the tensor
+            type_i, type_j
+                Use these to select only a certain particle type.
+            nlist
+                By default it will use self.nlist
+            type_tensor
+                An N x 1 tensor containing the types of the nlist origin. If None,
+                then self.positions will be used
         """
         if nlist is None:
             nlist = self.nlist
@@ -239,24 +234,20 @@ class graph_builder:
     def running_mean(self, tensor, name, batch_reduction='mean'):
         R"""Computes running mean of the given tensor
 
-        Parameters
-        ----------
-            tensor
-                The tensor for which you're computing running mean
-            name
-                The name of the variable in which the running mean will be stored
-            batch_reduction
-                If the hoomd data is batched by atom index, how should the component
-                tensor values be reduced? Options are 'mean' and 'sum'. A sum means
-                that tensor values are summed across the batch and then a mean
-                is taking between batches. This makes sense for looking at a system
-                property like pressure. A mean gives a mean across the batch.
-                This would make sense for a per-particle property.
+        :param tensor: The tensor for which you're computing running mean
+        :type tensor: tensor
+        :param name: The name of the variable in which the running mean will be stored
+        :type name: str
+        :param batch_reduction: If the hoomd data is batched by atom index,
+            how should the component tensor values be reduced? Options are
+            'mean' and 'sum'. A sum means that tensor values are summed across
+            the batch and then a mean is taking between batches. This makes sense
+            for looking at a system property like pressure. A mean gives a mean
+            across the batch. This would make sense for a per-particle property.
+        :type batch_reduction: str
 
-
-        Returns
-        -------
-            A variable containing the running mean
+        :return: A variable containing the running mean
+        :rtype: tensor
 
         """
         if batch_reduction not in ['mean', 'sum']:
@@ -292,26 +283,26 @@ class graph_builder:
         return store
 
     def compute_forces(self, energy, virial=None, positions=None,
-                       nlist=None, name=None):
+                       nlist=None):
         R""" Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle
         or overall energy
 
-        Parameters
-        ----------
-        energy
-            The potential energy
-        virial
-             None - (default) virial contribution will be computed
-             if the graph outputs forces
-             Can be set with True/False instead. Note that the virial
-             term that depends on positions is
-             not computed.
-        Returns
-        --------
-        The TF force tensor. Note that the virial part will be stored
-        as the class attribute virial and will
-        be saved automatically.
+        :param energy: The potential energy
+        :type energy: tensor
+        :param virial: Defaults to ``None``. Virial contribution will be computed 
+            if the graph outputs forces. Can be set manually instead. Note
+            that the virial term that depends on positions is not computed.
+        :type virial: bool
+        :param positions: Defaults to ``None``. Particle positions tensor to use
+            for force calculations. If not specified, uses ``self.positions``.
+        :type positions: tensor
+        :param nlist: Defaults to ``None``. Particle-wise neighbor list to use
+            for force calculations. If not specified, uses ``self.nlist``.
+        :type nlist: tensor
+
+        :return: The TF force tensor. Note that the virial part will be stored
+            as the class attribute ``virial`` and will be saved automatically.
 
         """
         if virial is None:
@@ -393,22 +384,22 @@ class graph_builder:
 
     def build_mol_rep(self, MN):
         R"""
-        This creates mol_forces, mol_positions, and mol_nlist which are
-        mol_number x MN x 4 (mol_forces, mol_positions) and ? x MN x NN x 4 (mol_nlist)
-        tensors batched by molecule, where MN is the number of molecules. MN
-        is determined at run time. The MN must be chosen to be large enough to
-        encompass all molecules. If your molecule is 6 atoms and you chose MN=18,
-        then the extra entries will be zeros. Note that your input should be 0 based,
-        but subsequent tensorflow data will be 1 based, since 0 means no atom.
-        The specification of what is a molecule
+        This creates ``mol_forces``, ``mol_positions``, and ``mol_nlist`` which have dimensions
+        mol_number x MN x 4 (``mol_forces``, ``mol_positions``) and
+        ? x MN x NN x 4 (``mol_nlist``) tensors batched by molecule, where MN
+        is the number of molecules. MN is determined at run time. The MN must
+        be chosen to be large enough to encompass all molecules. If your molecule
+        is 6 atoms and you chose MN=18, then the extra entries will be zeros. Note 
+        that your input should be 0 based, but subsequent tensorflow data will be 1 based,
+        since 0 means no atom. The specification of what is a molecule
         will be passed at runtime, so that it can be dynamic if desired.
 
-        To convert a _mol quantity to a per-particle quantity, call
-        scatter_mol_quanitity(tensor)
-        Parameters
-        ----------
-        MN:
-            The number of molecules
+        To convert a mol_quantity to a per-particle quantity, call
+        ``scatter_mol_quanitity(mol_quantity)``
+
+        :param MN: The number of molecules
+        :type MN: int
+        
         """
 
         self.mol_indices = tf.placeholder(tf.int32,

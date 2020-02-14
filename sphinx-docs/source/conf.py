@@ -14,7 +14,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
-print(sys.path)
 
 
 # -- Project information -----------------------------------------------------
@@ -57,3 +56,7 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# ignore the C code import
+autodoc_mock_imports = ['hoomd.htf._htf']

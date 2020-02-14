@@ -1,6 +1,9 @@
+htf
+---
+
 .. rubric:: Details
 
-.. automodule:: htf
+.. automodule:: hoomd.htf
     :synopsis: HOOMD-blue plus TensorFlow.
     :members:
 
