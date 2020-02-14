@@ -290,7 +290,7 @@ class graph_builder:
 
         :param energy: The potential energy
         :type energy: tensor
-        :param virial: Defaults to ``None``. Virial contribution will be computed 
+        :param virial: Defaults to ``None``. Virial contribution will be computed
             if the graph outputs forces. Can be set manually instead. Note
             that the virial term that depends on positions is not computed.
         :type virial: bool
@@ -389,7 +389,7 @@ class graph_builder:
         ? x MN x NN x 4 (``mol_nlist``) tensors batched by molecule, where MN
         is the number of molecules. MN is determined at run time. The MN must
         be chosen to be large enough to encompass all molecules. If your molecule
-        is 6 atoms and you chose MN=18, then the extra entries will be zeros. Note 
+        is 6 atoms and you chose MN=18, then the extra entries will be zeros. Note
         that your input should be 0 based, but subsequent tensorflow data will be 1 based,
         since 0 means no atom. The specification of what is a molecule
         will be passed at runtime, so that it can be dynamic if desired.
@@ -399,7 +399,6 @@ class graph_builder:
 
         :param MN: The number of molecules
         :type MN: int
-        
         """
 
         self.mol_indices = tf.placeholder(tf.int32,

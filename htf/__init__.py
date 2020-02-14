@@ -3,7 +3,7 @@
 
 """ HOOMD-TF
 
-Use TensorFlow to do arbitrary collective variable calculations and 
+Use TensorFlow to do arbitrary collective variable calculations and
 machine learning on-the-fly in HOOMD-blue simulations.
 """
 

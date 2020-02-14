@@ -19,8 +19,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blu
 # -- Project information -----------------------------------------------------
 
 project = 'HOOMD-TF'
-copyright = '2020, Rainier Barrett, Dilnoza Amirkulova, Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
-author = 'Rainier Barrett, Dilnoza Amirkulova, Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
+copyright = '2020, Rainier Barrett, \
+Dilnoza Amirkulova, Maghesree Chakraborty, \
+Heta Gandhi, Andrew D. White'
+author = 'Rainier Barrett, Dilnoza Amirkulova, \
+Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
 
 # The full version, including alpha/beta/rc tags
 release = '0.5'
