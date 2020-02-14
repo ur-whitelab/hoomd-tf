@@ -7,13 +7,14 @@
 HOOMD-TF
 ========
 
+This plugin enables the use of TensorFlow in a
+HOOMD-blue simulation. You can use it to compute forces,
+or other quantities, like collective variables, and do machine learning.
+
 .. toctree::
    :maxdepth: 3
-   :caption: This plugin enables the use of TensorFlow in a
-             HOOMD-blue simulation. You can use it to compute forces,
-             or other quantities, like collective variables, and do machine learning.
+   :caption: Table of Contents
 
-             
    quickstart
    installation
    building_the_graph
@@ -22,4 +23,10 @@ HOOMD-TF
    docker_image
    issues
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Python Code
+
+   htf_package
+   
 * :ref:`search`

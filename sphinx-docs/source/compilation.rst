@@ -1,3 +1,36 @@
+.. _bluehive_installation:
+
+BlueHive Installation
+=====================
+
+After cloning the ``hoomd-tf`` repo, follow these steps:
+
+Load the modules necessary:
+
+.. code:: bash
+
+    module load git anaconda3/2018.12b cmake sqlite cudnn/9.0-7
+
+Set-up virtual python environment *ONCE* to keep packages isolated.
+
+.. code:: bash
+
+    conda create -n hoomd-tf python=3.6
+
+Then whenever you login and *have loaded modules*:
+
+.. code:: bash
+
+    source activate hoomd-tf
+
+Now that Python is ready, install some pre-requisites:
+
+.. code:: bash
+
+    pip install tensorflow-gpu==1.12
+
+Continue following the compling steps below to complete install.
+
 .. _compiling:
 
 Compiling
@@ -111,3 +144,18 @@ Updating Compiled Code
 
 Note: if you modify C++ code, only run make (not cmake). If you modify
 python, just copy over py files (``htf/*py`` to ``build/hoomd/htf``)
+
+.. _mbuild_environment:
+
+MBuild Environment
+------------------
+
+If you are using mbuild, please follow these additional install steps:
+
+.. code:: bash
+
+    conda install numpy cython
+    pip install requests networkx matplotlib scipy pandas plyplus lxml mdtraj oset
+    conda install -c omnia -y openmm parmed
+    conda install -c conda-forge --no-deps -y packmol gsd
+    pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild

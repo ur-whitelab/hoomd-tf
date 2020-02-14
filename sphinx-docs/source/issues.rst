@@ -3,6 +3,9 @@
 Known Issues
 ============
 
+The following is a list of known issues. To report another issue,
+please use the `issue tracker <https://github.com/ur-whitelab/hoomd-tf/issues>`__.
+
 .. _positions_issues:
 
 Using Positions
@@ -70,3 +73,5 @@ Neighbor Lists
 
 Using a max-size neighbor list is non-ideal, especially in CG
 simulations where density is non-uniform.
+
+
