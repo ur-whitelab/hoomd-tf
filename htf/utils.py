@@ -222,7 +222,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
     """
-    import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
     # get system size
@@ -265,8 +264,27 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
-
 def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
+    R""" This will minimize the difference between the mapped forces
+	and calculated CG forces using the Adam oprimizer and give updated
+	CG forces as a M x 3 tensor,
+
+	:param cg_beads: The number of coarse-grained (CG) beads in system
+	:type cg_beads: int
+	:param mapped_forces: A tensor with shape M x 3 where M is number
+	    of CG beads in the system. These are forces mapped from an all
+        atom system.
+    :type mapped_forces: tensor
+	:param calculated_cg_forces: A tensor with shape M x 3 where M is
+	    number of CG beads in the system. These are CG forces estimated
+		using a function or a basis set.
+    :type calculated_cg_forces: tensor
+
+	:return: A variable with updated CG forces
+	:rtype: tensor
+
+	"""
+
     M = cg_beads
     # Make sure shape(mapped_forces) = shape(calculated_cg_forces) = [M x 3]
     if not ((mapped_forces.shape.as_list() == [M, 3]) and
@@ -278,7 +296,7 @@ def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
     calculated_forces.assign(calculated_cg_forces)
     cost = tf.losses.mean_squared_error(mapped_forces, calculated_forces)
     optimizer = tf.train.AdamOptimizer(learning_rate=1e-1).minimize(cost)
-	# optimizer should update the trainable variables 
+	# optimizer should update the trainable variables
     return calculated_forces
 
 
