@@ -266,6 +266,22 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
+def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
+    M = cg_beads
+    # Make sure shape(mapped_forces) = shape(calculated_cg_forces) = [M x 3]
+    if not ((mapped_forces.shape.as_list() == [M, 3]) and
+            (calculated_cg_forces.shape.as_list() == [M, 3])):
+        raise ValueError('mapped_forces and calculated_cg_forces'\
+						 'must have dimension [cg_beads, 3]')
+    # minimize mean squared error
+    calculated_forces = tf.get_variable('calculated-forces', shape=[M, 3])
+    calculated_forces.assign(calculated_cg_forces)
+    cost = tf.losses.mean_squared_error(mapped_forces, calculated_forces)
+    optimizer = tf.train.AdamOptimizer(learning_rate=1e-1).minimize(cost)
+	# optimizer should update the trainable variables 
+    return calculated_forces
+
+
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
     # set-up variables
