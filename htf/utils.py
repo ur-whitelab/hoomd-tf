@@ -267,11 +267,12 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 
 
 def run_from_trajectory(model_directory, universe,
-                        selection='all', function=None, **kwargs):
+                        selection='all', function=None,
+                        r_cut=10., NN=128, **kwargs):
     R""" This will process information from a trajectory and give
-    information about the system. If variable function is specified, then
-        the trajectory will be used to run the function.
-        """
+    information about the system. If variable function is specified,
+    then the trajectory will be used to run the function.
+    """
     # just in case
     tf.reset_default_graph()
     # load graph
@@ -327,14 +328,23 @@ def run_from_trajectory(model_directory, universe,
             return s
     elif function == 'force_matching':
         # map trajectory
-        cg_mapping = sparse_mapping(kwargs[molecule_mapping],
-                                    kwargs[molecule_mapping_index])
+        molecule_mapping = kwargs.get('molecule_mapping')
+        molecule_mapping_index = kwargs.get('molecule_mapping_index')
+        calculated_cg_forces = kwargs.get('calculated_cg_forces')
+        cg_beads = len(molecule_mapping)
+        cg_mapping = sparse_mapping(molecule_mapping,
+                                    molecule_mapping_index)
         # get mapped forces
-        # ....
-        #
-        force_matching(kwargs[cg_beads],
+        mapped_pos = center_of_mass(graph.positions[:, :3],
+                                    cg_mapping, system,
+                                    name='com-mapped-positions')
+        mapped_nlist = compute_nlist(mapped_pos, r_cut, NN,
+                                     system, False)
+        mapped_force = tf.sparse.matmul(cg_mapping, graph.forces,
+                                        name='mapped-forces')
+        force_matching(cg_beads,
                        mapped_force,
-                       kwargs[calculated_cg_forces])
+                       calculated_cg_forces)
 
 
 def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
