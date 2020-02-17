@@ -265,7 +265,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
-## \internal
+# \internal
 # \Applies EDS bias to a system
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
@@ -276,7 +276,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     cv
         The collective variable which is biased in the simulation
     set_point
-        The set point value of the collective variable. 
+        The set point value of the collective variable.
         This is a constant value which is pre-determined by the user and unique to each cv.
     period
         Time steps over which the coupling constant is updated. HOOMD time units are used.
