@@ -21,7 +21,7 @@ SEPARATE_ARGUMENTS( TF_LFLAGS )
 if (ENABLE_CUDA)
 #These have to be added (?)
 # use cuda
-find_package(CUDA 9.0 EXACT REQUIRED)
+find_package(CUDA 9.0)
 include_directories(SYSTEM "${CUDA_INCLUDE_DIRS}/../../")
 
 

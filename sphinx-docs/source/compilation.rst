@@ -9,13 +9,13 @@ Load the modules necessary:
 
 .. code:: bash
 
-    module load git anaconda3/2018.12b cmake sqlite cudnn/9.0-7
+    module load tensorflow/1.15.0/b1 git
 
 Set-up virtual python environment *ONCE* to keep packages isolated.
 
 .. code:: bash
 
-    conda create -n hoomd-tf python=3.6
+    conda create -n hoomd-tf
 
 Then whenever you login and *have loaded modules*:
 
@@ -23,11 +23,6 @@ Then whenever you login and *have loaded modules*:
 
     source activate hoomd-tf
 
-Now that Python is ready, install some pre-requisites:
-
-.. code:: bash
-
-    pip install tensorflow-gpu==1.12
 
 Continue following the compling steps below to complete install.
 
@@ -55,14 +50,13 @@ code to Tensorflow 2.0.
 Simple Compiling
 ----------------
 
-This method assumes you already have installed hoomd-blue. You could do
-that, for example, via ``conda install -c conda-forge hoomd``. Here are
-the complete steps including that
+This method assumes you already have installed hoomd-blue. You could
+do that, for example, via ``conda install -c conda-forge hoomd
+tbb-devel`` or perhaps you installed it via the bluehive module. Here
+are steps **after** installing hoomd-blue
 
 .. code:: bash
 
-    pip install tensorflow==1.14.0
-    conda install -c conda-forge hoomd tbb-devel
     git clone https://github.com/ur-whitelab/hoomd-tf
     cd hoomd-tf && mkdir build && cd build
     cmake ..
