@@ -1,19 +1,34 @@
 Change Log
 ==========
 
-v0.5
+v0.6 (2020-02-21)
+-----------------------
+
+*New Features*
+
+- Added ability to parse trajectory instead of run hoomd-blue simulation.
+- Added multidimensional experiment directed simulation biasing to `htf`.
+- Added standard force-matching method to `htf`.
+
+*Enhancements*
+
+- Migrated documentation to sphinx
+- Added Jupyter notebook examples
+- Various documentation improvements
+
+v0.5 (2019-10-17)
 -----------------------
 
 *Bug Fixes*
 
-- Types are now correctly translated to TF 
+- Types are now correctly translated to TF
 
 v0.4 (2019-09-25)
 -----------------------
 
 *New Features*
 
-- Added experiment directed simulation biasing to `htf`. 
+- Added experiment directed simulation biasing to `htf`.
 
 *Enhancements*
 
