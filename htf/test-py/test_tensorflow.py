@@ -34,34 +34,6 @@ def compute_forces(system, rcut):
     return forces
 
 
-class test_access(unittest.TestCase):
-    def test_access(self):
-        model_dir = build_examples.simple_potential()
-        with hoomd.htf.tfcompute(model_dir,
-                                 _mock_mode=True) as tfcompute:
-            hoomd.context.initialize()
-            rcut = 3
-            # create a system with a few types
-            cell = hoomd.lattice.unitcell(
-                N=3,
-                a1=[6, 0, 0],
-                a2=[0, 6, 0],
-                a3=[0, 0, 6],
-                position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
-                type_name=['A', 'B', 'C'])
-            system = hoomd.init.create_lattice(unitcell=cell, n=5)
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1)
-            tfcompute.get_virial_array()
-            tfcompute.get_forces_array()
-            pa = tfcompute.get_positions_array()
-            nl = tfcompute.get_nlist_array()
-            # make sure we get the 3 types
-            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
-            assert len(np.unique(pa[:, 3].astype(np.int))) == 3
 
 
 class test_compute(unittest.TestCase):
