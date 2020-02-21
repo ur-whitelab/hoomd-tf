@@ -3,6 +3,21 @@
 BlueHive Installation
 =====================
 
+**Feeling Lucky?** Try this for quick results
+
+.. code:: bash
+
+    module load tensorflow/1.15.0/b1 git cmake
+    conda create -n hoomd-tf python=3.7
+    source activate hoomd-tf
+    python -m pip install tensorflow-gpu==1.15.0
+    conda install -c conda-forge hoomd==2.5.2
+    git clone https://github.com/ur-whitelab/hoomd-tf
+    cd hoomd-tf && mkdir build && cd build
+    CXX=g++ CC=gcc cmake ..
+    make install
+    cd .. && python htf/test-py/test_sanity.py
+
 After cloning the ``hoomd-tf`` repo, follow these steps:
 
 Load the modules necessary:
@@ -131,7 +146,7 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
      -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
-     
+
 
 Now compile with make:
 
