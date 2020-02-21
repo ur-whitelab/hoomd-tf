@@ -18,7 +18,8 @@ BlueHive Installation
     make install
     cd .. && python htf/test-py/test_sanity.py
 
-After cloning the ``hoomd-tf`` repo, follow these steps:
+Here are the more detailed steps. Clone the ``hoomd-tf`` repo
+and then follow these steps:
 
 Load the modules necessary:
 
