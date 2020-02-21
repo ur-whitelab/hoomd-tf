@@ -25,37 +25,10 @@ class test_op(unittest.TestCase):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
-        array = np.arange(10, dtype=np.float64).reshape(5, 2)
-        address = array.__array_interface__['data'][0]
-
         with tf.device("/cpu:0"):
-            tf_op = hoomd_to_tf(address=address,
+            tf_op = hoomd_to_tf(address=0,
                                 shape=[2], T=tf.float64,
                                 name='array-64-test')
-
-    def test_op_nparray_run(self):
-        import hoomd
-        import hoomd.htf
-        import tensorflow as tf
-        import numpy as np
-        from hoomd.htf.tfmanager import load_htf_op_library
-        hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
-        hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
-
-        array = np.arange(10, dtype=np.float64).reshape(5, 2)
-        address = array.__array_interface__['data'][0]
-
-        with tf.device("/cpu:0"):
-            tf_op = hoomd_to_tf(address=address,
-                                shape=[2], T=tf.float64,
-                                name='array-64-test')
-
-        with tf.Session() as sess:
-            result = sess.run(tf_op)
-
-        print(result)
-
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,7 +29,7 @@ REGISTER_OP("HoomdToTf")
 
       shape_inference::ShapeHandle shape_unknown = c->Vector(c->UnknownDim());
       shape_inference::ShapeHandle shape_output;
-      TF_RETURN_IF_ERROR(c->Concatenate(shape_unknown, c->input(0), &shape_output));
+      TF_RETURN_IF_ERROR(c->Concatenate(shape_unknown, shape_input, &shape_output));
       c->set_output(0, shape_output);
       return Status::OK();
     });
