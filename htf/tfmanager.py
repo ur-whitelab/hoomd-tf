@@ -26,7 +26,7 @@ def main(q, write_tensorboard=False, profile=False):
         tfm.start_loop()
 
 
-def load_op_library(op):
+def load_htf_op_library(op):
     import hoomd.htf
     path = hoomd.htf.__path__[0]
     try:
@@ -363,7 +363,7 @@ class TFManager:
     ready to execute and inserts the necessary nodes into the TensorFlow execution
     graph."""
     def _prepare_graph(self):
-        hoomd_to_tf_module = load_op_library('hoomd2tf_op')
+        hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
         with tf.device(self.device):
@@ -451,7 +451,7 @@ class TFManager:
         except ValueError:
             raise ValueError('Your graph must contain the following'
                              ' tensors: forces, nlist, positions')
-        tf_to_hoomd_module = load_op_library('tf2hoomd_op')
+        tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         with tf.device(self.device):
             self.out_nodes.append([tf_to_hoomd(
