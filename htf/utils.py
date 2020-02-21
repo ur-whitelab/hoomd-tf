@@ -265,12 +265,13 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
+
 # \internal
 # \Applies EDS bias to a system
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
-
+    
     Parameters
     ---------------
     cv
