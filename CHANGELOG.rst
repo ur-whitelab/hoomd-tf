@@ -8,7 +8,6 @@ v0.6 (2020-02-21)
 
 - Added ability to parse trajectory instead of run hoomd-blue simulation.
 - Added multidimensional experiment directed simulation biasing to `htf`.
-- Added standard force-matching method to `htf`.
 
 *Enhancements*
 
