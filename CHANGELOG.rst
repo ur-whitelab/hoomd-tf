@@ -15,6 +15,7 @@ v0.6 (2020-02-21)
 - Migrated documentation to sphinx
 - Added Jupyter notebook examples
 - Various documentation improvements
+- Added CUDA 10 Support
 
 v0.5 (2019-10-17)
 -----------------------
