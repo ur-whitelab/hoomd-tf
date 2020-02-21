@@ -4,11 +4,6 @@ Change Log
 v0.6 (2020-02-21)
 -----------------------
 
-*New Features*
-
-- Added ability to parse trajectory instead of run hoomd-blue simulation.
-- Added multidimensional experiment directed simulation biasing to `htf`.
-
 *Enhancements*
 
 - Migrated documentation to sphinx
