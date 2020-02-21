@@ -14,7 +14,11 @@ BlueHive Installation
     conda install -c conda-forge hoomd==2.5.2
     git clone https://github.com/ur-whitelab/hoomd-tf
     cd hoomd-tf && mkdir build && cd build
-    CXX=g++ CC=gcc cmake ..
+    CXX=g++ CC=gcc cmake .. \
+      -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+      -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
+      -DPYTHON_EXECUTABLE=$(which python) \
+      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
     make install
     cd .. && python htf/test-py/test_sanity.py
 
