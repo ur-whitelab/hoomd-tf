@@ -95,7 +95,7 @@ Simple Compiling
 
 This method assumes you already have installed hoomd-blue and
 tensorflow. You could do that, for example, via ``conda install -c
-conda-forge hoomd==2.5.2 tbb-devel``. Remember that pip is recommneded for installing
+conda-forge hoomd==2.5.2``. Remember that pip is recommneded for installing
 tensorflow. Here are steps **after** installing hoomd-blue
 
 .. code:: bash
