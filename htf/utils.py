@@ -6,7 +6,6 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-import gsd.hoomd
 
 
 # \internal
@@ -266,19 +265,14 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
-def run_from_trajectory(model_directory, optimizer_tensor_name,
-                        loss_function_tensor_name, universe,
-                        selection='all', r_cut=10., period=10,
-                        feed_dict={}, out_nodes = []):
+def run_from_trajectory(model_directory, universe,
+                        selection='all', r_cut=10.,
+                        period=10, feed_dict={}):
     R""" This will process information from a trajectory and
     run the user defined model on the nlist computed from the trajectory.
 
     :param model_directory: The model directory
     :type model_directory: string
-    :param optimizer_tensor_name: The tensor containing the optimizer
-    :type optimizer_tensor_name: string
-    :param loss_function_tensor_name: The tensor containing the loss function
-    :type loss_function_tensor_name: string
     :param universe: The MDAnalysis universe
     :param selection: The atom groups to extract from universe
     :type selection: string
@@ -297,12 +291,11 @@ def run_from_trajectory(model_directory, optimizer_tensor_name,
         model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
-    optimizer = tf.get_default_graph(
-    ).get_tensor_by_name(model_params[optimizer_tensor_name])
-    loss_function = tf.get_default_graph(
-    ).get_tensor_by_name(model_params[loss_function_tensor_name])
     nlist_tensor = tf.get_default_graph(
     ).get_tensor_by_name(model_params['nlist'])
+    out_nodes = tf.get_default_graph(
+    ).get_tensor_by_name(model_params['out_nodes'])
+
 
     # read trajectory
     box = universe.dimensions
@@ -324,28 +317,29 @@ def run_from_trajectory(model_directory, optimizer_tensor_name,
                           NN=NN, system=system)
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
+        saver = tf.train.Saver()
         for i, ts in enumerate(universe.trajectory):
-            positions = np.concatenate((atom_group.positions,
-                                        type_array), axis=1)
             np_nlist = sess.run(nlist,
                                 feed_dict={
-                                    graph.positions: positions,
+                                    graph.positions: np.concatenate(
+                                        (atom_group.positions,
+                                         type_array),
+                                        axis=1),
                                     graph.box: hoomd_box,
                                     graph.batch_index: 0,
                                     graph.batch_frac: 1})
-            optimizer, loss_function = sess.run([optimizer, loss_function],
-                                                feed_dict={
-                                                    **feed_dict,
-                                                    nlist_tensor: np_nlist})
-            graph.save(model_directory=model_directory,
-                       out_nodes=[*out_nodes, optimizer, loss_function],
-                       move_previous=False)
-    graph.save(model_directory=model_directory,
-               out_nodes=[*out_nodes, optimizer, loss_function],
-               move_previous=False)
+            result = sess.run(out_nodes,
+                              feed_dict={
+                                  **feed_dict,
+                                  nlist_tensor: np_nlist})
+            if i % period == 0:
+                saver.save(sess,
+                           path.join(model_directory, 'model'),
+                           global_step=i)
+    return
 
 
-def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
+def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     R""" This will minimize the difference between the mapped forces
     and calculated CG forces using the Adam oprimizer and give updated
     CG forces as a M x 3 tensor,
@@ -365,19 +359,22 @@ def force_matching(cg_beads, mapped_forces, calculated_cg_forces):
     :rtype: tensor
 
     """
-
-    M = cg_beads
-    # Make sure shape(mapped_forces) = shape(calculated_cg_forces) = [M x 3]
-    if not ((mapped_forces.shape.as_list() == [M, 3]) and
-            (calculated_cg_forces.shape.as_list() == [M, 3])):
-        raise ValueError('mapped_forces and calculated_cg_forces'
-                         'must have dimension [cg_beads, 3]')
+    # Assert that mapped_forces has the right dimensions
+    if not len(mapped_forces.shape.as_list()
+               ) == 2 and mapped_forces.shape.as_list()[1] == 3:
+        raise ValueError('mapped_forces must have the dimension [M x 3]'
+                         'where M is the number of coarse-grained particles')
+    # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
+    if not (mapped_forces.shape.as_list() ==
+            calculated_cg_forces.shape.as_list()):
+        tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
-    cost = tf.losses.mean_squared_error(mapped_forces, calculated_cg_forces)
+    cost = tf.losses.mean_squared_error(mapped_forces,
+                                        calculated_cg_forces)
     # It is assumed here that the user will pass in
     # calculated_cg_forces that depend on trainable variables.
-    optimizer = tf.train.AdamOptimizer(learning_rate=1e-1).minimize(cost)
-    # optimizer should update the trainable variables
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=learning_rate).minimize(cost)
     return optimizer
 
 
