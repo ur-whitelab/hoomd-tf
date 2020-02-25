@@ -283,6 +283,7 @@ def run_from_trajectory(model_directory, universe,
     :type period: int
     :param feed_dict: Allows you to add any other placeholder values
         that need to be added to compute potential in your model
+    :type feed_dict: dict
     """
     # just in case
     tf.reset_default_graph()
@@ -344,8 +345,6 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     and calculated CG forces using the Adam oprimizer and give updated
     CG forces as a M x 3 tensor,
 
-    :param cg_beads: The number of coarse-grained (CG) beads in system
-    :type cg_beads: int
     :param mapped_forces: A tensor with shape M x 3 where M is number
         of CG beads in the system. These are forces mapped from an all
         atom system.
@@ -354,9 +353,11 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
         number of CG beads in the system. These are CG forces estimated
         using a function or a basis set.
     :type calculated_cg_forces: tensor
+    :param learning_rate: The learning_rate for optimization
+    :type learning_rate: float
 
-    :return: A variable with updated CG forces
-    :rtype: tensor
+    :return: The optimizer
+    :rtype: operation
 
     """
     # Assert that mapped_forces has the right dimensions
