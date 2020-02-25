@@ -342,8 +342,7 @@ def run_from_trajectory(model_directory, universe,
 
 def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     R""" This will minimize the difference between the mapped forces
-    and calculated CG forces using the Adam oprimizer and give updated
-    CG forces as a M x 3 tensor,
+    and calculated CG forces using the Adam oprimizer.
 
     :param mapped_forces: A tensor with shape M x 3 where M is number
         of CG beads in the system. These are forces mapped from an all
