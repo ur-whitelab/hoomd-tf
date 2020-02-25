@@ -300,20 +300,27 @@ def run_from_trajectory(model_directory, universe,
 
     # read trajectory
     box = universe.dimensions
+    # define the system
     system = type('',
                   (object, ),
                   {'box': type('', (object, ),
                                {'Lx': box[0],
                                 'Ly': box[1],
                                 'Lz': box[2]})})
+    # get box dimensions
     hoomd_box = [[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]]
     # make type array
+    # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
+    # get unique atom types in the selected atom group
     types = list(np.unique(atom_group.atoms.types))
+    # assicuate atoms types with individual atoms
     type_array = np.array([types.index(i)
                            for i in atom_group.atoms.types]).reshape(-1, 1)
+    # get number of atoms/particles in the system
     N = (np.shape(type_array))[0]
     NN = model_params['NN']
+    # define nlist operation
     nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
                           NN=NN, system=system)
     # Run the model at every nth frame, where n = period
