@@ -10,6 +10,7 @@ BlueHive Installation
     module load tensorflow/1.15.0/b1 git cmake
     conda create -n hoomd-tf python=3.7
     source activate hoomd-tf
+    export CMAKE_PREFIX_PATH=/path/to/environment
     python -m pip install tensorflow-gpu==1.15.0
     conda install -c conda-forge hoomd==2.5.2
     git clone https://github.com/ur-whitelab/hoomd-tf
@@ -47,17 +48,19 @@ Then whenever you login and *have loaded modules*:
 
 Continue following the compling steps below to complete install.
 The simple approach is recommended but **use the following
-different cmake string**
+different cmake step**
 
 .. code:: bash
 
+  export CMAKE_PREFIX_PATH=/path/to/environment
   CXX=g++ CC=gcc cmake ..
 
 If using the hoomd-blue compilation, **use the following
-different cmake string**
+different cmake step**
 
 .. code:: bash
 
+    export CMAKE_PREFIX_PATH=/path/to/environment
     CXX=g++ CC=gcc cmake .. \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
@@ -90,6 +93,14 @@ recommended you install via pip:
 .. code:: bash
 
   pip install tensorflow-gpu==1.15.0
+  
+  
+If you are using a conda environment, you should add the following
+flag if using newer version of hoomd-blue which require `tbb-devel`
+
+.. code:: bash
+
+  export CMAKE_PREFIX_PATH=/path/to/environment
 
 .. _simple_compiling:
 
@@ -182,6 +193,7 @@ conda. The following additional flags can help with this:
 
 .. code:: bash
 
+    export CMAKE_PREFIX_PATH=/path/to/environment
     cmake .. \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
