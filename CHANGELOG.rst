@@ -1,19 +1,29 @@
 Change Log
 ==========
 
-v0.5
+v0.6 (2020-02-21)
+-----------------------
+
+*Enhancements*
+
+- Migrated documentation to sphinx
+- Added Jupyter notebook examples
+- Various documentation improvements
+- Added CUDA 10 Support
+
+v0.5 (2019-10-17)
 -----------------------
 
 *Bug Fixes*
 
-- Types are now correctly translated to TF 
+- Types are now correctly translated to TF
 
 v0.4 (2019-09-25)
 -----------------------
 
 *New Features*
 
-- Added experiment directed simulation biasing to `htf`. 
+- Added experiment directed simulation biasing to `htf`.
 
 *Enhancements*
 

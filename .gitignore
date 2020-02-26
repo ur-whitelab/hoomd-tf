@@ -47,3 +47,5 @@ Images
 
 #pycache files
 __pycache__/
+
+sphinx-docs/docs_out/**
