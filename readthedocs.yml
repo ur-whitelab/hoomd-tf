@@ -1,0 +1,8 @@
+# readthedocs.yml
+# Read the Docs configuration file for HOOMD-TF
+
+python:
+    version: 3.7
+
+conda:
+    environment: environment.yml
