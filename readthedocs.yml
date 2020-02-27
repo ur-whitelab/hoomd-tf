@@ -1,8 +1,8 @@
 # readthedocs.yml
 # Read the Docs configuration file for HOOMD-TF
 
-python:
-    version: 3.7
+sphinx:
+    configuration: sphinx-docs/source/conf.py
 
 conda:
     environment: environment.yml
