@@ -288,15 +288,12 @@ def run_from_trajectory(model_directory, universe,
     # just in case
     tf.reset_default_graph()
     # load graph
-    graph = tf.train.import_meta_graph(path.join('{}/'.format(
-        model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     nlist_tensor = tf.get_default_graph(
     ).get_tensor_by_name(model_params['nlist'])
     out_nodes = tf.get_default_graph(
     ).get_tensor_by_name(model_params['out_nodes'])
-
 
     # read trajectory
     box = universe.dimensions
@@ -321,25 +318,26 @@ def run_from_trajectory(model_directory, universe,
     N = (np.shape(type_array))[0]
     NN = model_params['NN']
     # define nlist operation
-    nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
+    nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
                           NN=NN, system=system)
+    # Now insert nlist into the graph
+    graph = tf.train.import_meta_graph(path.join('{}/'.format(
+        model_directory), 'model.meta'), nlist=nlist_tensor, import_scope='')
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
         saver = tf.train.Saver()
         for i, ts in enumerate(universe.trajectory):
-            np_nlist = sess.run(nlist,
-                                feed_dict={
-                                    graph.positions: np.concatenate(
-                                        (atom_group.positions,
-                                         type_array),
-                                        axis=1),
-                                    graph.box: hoomd_box,
-                                    graph.batch_index: 0,
-                                    graph.batch_frac: 1})
-            result = sess.run(out_nodes,
-                              feed_dict={
-                                  **feed_dict,
-                                  nlist_tensor: np_nlist})
+            sess.run(out_nodes,
+                     feed_dict={
+                         **feed_dict,
+                         graph.positions: np.concatenate(
+                             (atom_group.positions,
+                                 type_array),
+                             axis=1),
+                         graph.box: hoomd_box,
+                         graph.batch_index: 0,
+                         graph.batch_frac: 1,
+                         nlist_tensor: nlist_tensor})
             if i % period == 0:
                 saver.save(sess,
                            path.join(model_directory, 'model'),
