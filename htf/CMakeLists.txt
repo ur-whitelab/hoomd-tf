@@ -18,12 +18,16 @@ set(_${COMPONENT_NAME}_cu_sources
     TFArrayComm.cu
     )
 
-# check if we have python dependencies for compiling
+  # check if we have python dependencies for compiling
+  set(TF_REQUIRE_COMPILER "")
+  if(NOT IGNORE_HTF_COMPILER)
+    set(TF_REQUIRE_COMPILER ${CMAKE_CXX_COMPILER_VERSION})
+  endif()
 set(TF_REQUIRE_VERSION "1.12")
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_tf_version.py ${TF_REQUIRE_VERSION}
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -W ignore ${CMAKE_CURRENT_SOURCE_DIR}/check_tf_version.py ${TF_REQUIRE_VERSION} ${TF_REQUIRE_COMPILER}
     RESULT_VARIABLE ret)
 if(ret EQUAL "1")
-    message(FATAL_ERROR "Could not find suitable tensorflow version to build ${COMPONENT_NAME}")
+    message(FATAL_ERROR "-- Could not find suitable tensorflow or compiler to build ${COMPONENT_NAME} (see messages above)")
 else()
     message("-- Found suitable tensorflow version for minimum ${TF_REQUIRE_VERSION}")
 endif()
