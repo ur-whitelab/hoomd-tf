@@ -25,9 +25,10 @@ REGISTER_OP("HoomdToTf")
       // Taken from common_shape_functions and following
       // example for random_ops.cc in TF source
       shape_inference::ShapeHandle shape_input;
+      TF_RETURN_IF_ERROR(c->MakeShapeFromShapeTensor(0, &shape_input));
+
       shape_inference::ShapeHandle shape_unknown = c->Vector(c->UnknownDim());
       shape_inference::ShapeHandle shape_output;
-      TF_RETURN_IF_ERROR(c->MakeShapeFromShapeTensor(0, &shape_input));
       TF_RETURN_IF_ERROR(c->Concatenate(shape_unknown, shape_input, &shape_output));
       c->set_output(0, shape_output);
       return Status::OK();

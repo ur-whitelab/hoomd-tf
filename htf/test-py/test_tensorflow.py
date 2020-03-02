@@ -63,7 +63,6 @@ class test_access(unittest.TestCase):
             assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
             assert len(np.unique(pa[:, 3].astype(np.int))) == 3
 
-
 class test_compute(unittest.TestCase):
     def test_force_overwrite(self):
         model_dir = build_examples.simple_potential()
