@@ -29,7 +29,7 @@ Load the modules necessary:
 
 .. code:: bash
 
-    module load tensorflow/1.15.0/b1 git cmake
+    module load git anaconda3/2018.12b cmake sqlite cudnn/9.0-7
 
 Set-up virtual python environment *ONCE* to keep packages isolated.
 
