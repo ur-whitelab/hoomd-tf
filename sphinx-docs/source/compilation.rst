@@ -7,7 +7,8 @@ BlueHive Installation
 
 .. code:: bash
 
-    module load tensorflow/1.15.0/b1 git cmake
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
+    export PYTHONNOUSERSITE=True
     conda create -n hoomd-tf python=3.7
     source activate hoomd-tf
     export CMAKE_PREFIX_PATH=/path/to/environment
@@ -29,7 +30,7 @@ Load the modules necessary:
 
 .. code:: bash
 
-    module load tensorflow/1.15.0/b1 git cmake
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
 
 Set-up virtual python environment *ONCE* to keep packages isolated.
 
