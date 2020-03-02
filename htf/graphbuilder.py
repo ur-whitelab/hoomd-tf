@@ -14,7 +14,7 @@ class graph_builder:
     # \internal
     # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
-    
+
         Parameters
         ------------
         nneighbor_cutoff
