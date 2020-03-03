@@ -162,7 +162,7 @@ class TFManager:
                         ).get_operation_by_name(n)
             node_attr[0] = name
             self.out_nodes.append(node_attr)
-            self.log.log(logging.INFO, '\t {} {} {}'.format(node_attr[0].name, 
+            self.log.log(logging.INFO, '\t {} {} {}'.format(node_attr[0].name,
                 node_attr[1], node_attr[2]))
 
     ## \var primary
@@ -329,7 +329,7 @@ class TFManager:
         if batch_index == 0:
             # step starts at -1, so first step is 0
             self.step += 1
-        run_nodes = [node[0] for node in self.out_nodes 
+        run_nodes = [node[0] for node in self.out_nodes
             if self.step % node[1] == 0 and (node[2] is None or node[2] == batch_index)]
         result = sess.run(run_nodes, feed_dict=feed_dict)
         # only save on the first batch.
@@ -476,6 +476,10 @@ class TFManager:
     def _attach_tensorboard(self, sess):
 
         self.summaries = tf.summary.merge_all()
+        if self.summaries is None:
+            self.write_tensorboard = False
+            self.log.warning('Could not find summaries for tensorboard, so not writing')
+            return
         self.out_nodes.append([self.summaries, self.save_period, 0])
         self.tb_writer = tf.summary.FileWriter(os.path.join(
                 self.model_directory, 'tensorboard'),

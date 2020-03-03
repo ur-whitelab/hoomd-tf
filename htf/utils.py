@@ -264,6 +264,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
+
 def run_from_trajectory(model_directory, universe,
                         selection='all', r_cut=10.,
                         period=10, feed_dict={}):
@@ -359,13 +360,12 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     :param learning_rate: The learning_rate for optimization
     :type learning_rate: float
 
-    :return: The optimizer
-    :rtype: operation
+    :return: optimizer, cost
 
     """
     # Assert that mapped_forces has the right dimensions
-    if not len(mapped_forces.shape.as_list()
-               ) == 2 and mapped_forces.shape.as_list()[1] == 3:
+    if not (len(mapped_forces.shape.as_list()
+                ) == 2 and mapped_forces.shape.as_list()[1] == 3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
@@ -379,15 +379,14 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     # calculated_cg_forces that depend on trainable variables.
     optimizer = tf.train.AdamOptimizer(
         learning_rate=learning_rate).minimize(cost)
-    return optimizer
-
+    return optimizer, cost
 
 # \internal
 # \Applies EDS bias to a system
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
-    
+
     Parameters
     ---------------
     cv

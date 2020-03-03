@@ -7,7 +7,8 @@ BlueHive Installation
 
 .. code:: bash
 
-    module load tensorflow/1.15.0/b1 git cmake
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
+    export PYTHONNOUSERSITE=True
     conda create -n hoomd-tf python=3.7
     source activate hoomd-tf
     export CMAKE_PREFIX_PATH=/path/to/environment
@@ -29,7 +30,7 @@ Load the modules necessary:
 
 .. code:: bash
 
-    module load tensorflow/1.15.0/b1 git cmake
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
 
 Set-up virtual python environment *ONCE* to keep packages isolated.
 
@@ -116,7 +117,7 @@ tensorflow. Here are steps **after** installing hoomd-blue
 
     git clone https://github.com/ur-whitelab/hoomd-tf
     cd hoomd-tf && mkdir build && cd build
-    cmake ..
+    CXX=g++ CC=gcc cmake ..
     make install
 
 That's it! Make sure you have a GCC compiler consistent with the
@@ -156,7 +157,7 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
 .. code:: bash
 
     mkdir build && cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release \
+    CXX=g++ CC=gcc cmake .. -DCMAKE_BUILD_TYPE=Release \
      -DENABLE_CUDA=ON -DENABLE_MPI=OFF\
      -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
@@ -194,7 +195,7 @@ conda. The following additional flags can help with this:
 .. code:: bash
 
     export CMAKE_PREFIX_PATH=/path/to/environment
-    cmake .. \
+    CXX=g++ CC=gcc cmake .. \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
     -DPYTHON_EXECUTABLE=$(which python) \

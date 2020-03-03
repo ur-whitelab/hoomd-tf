@@ -138,6 +138,38 @@ class test_mappings(unittest.TestCase):
         # TODO: Come up with a real test of this.
         assert True
 
+    def test_force_matching(self):
+        model_dir = build_examples.lj_force_matching()
+        # calculate lj forces with a leading coeff
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            rcut = 5.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(1)
+
+        variables = hoomd.htf.load_variables(
+            model_dir, ['calculate_forces', 'target_forces'])
+        cost = tf.losses.mean_squared_error(
+            variables['target_forces'], variables['calculated_forces'])
+        optimizer, fm_cost = hoomd.htf.force_matching(
+            variables['target_forces'], variables['calculated_forces'])
+        with tf.Session() as sess:
+            # get cost before optimizing
+            cost = sess.run(cost)
+            # get cost after optimizing
+            _, fm_cost = sess.run(optimizer, cost)
+            # test not equal
+            assert np.any(np.not_equal(cost, fm_cost))
+
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
@@ -249,5 +281,20 @@ class test_bias(unittest.TestCase):
                 model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
         assert np.isfinite(variables['eds.a'])
         assert (variables['cv-mean'] - 4)**2 < 0.5
+
+
+class test_trajectory(unittest.TestCase):
+    def test_run_from_trajectory(self):
+        import math
+        import MDAnalysis as mda
+        universe = mda.Universe('test_topol.pdb', 'test_traj.trr')
+        # load example graph that calculates average energy
+        model_directory = build_examples.run_traj_graph()
+        htf.run_from_trajectory(model_directory, universe)
+        # get evaluated outnodes
+        variables = hoomd.htf.load_variables(model_directory, ['avg_energy'])
+        # assert they are calculated and valid?
+        assert not math.isnan(variables['avg_energy'])
+
 if __name__ == '__main__':
     unittest.main()

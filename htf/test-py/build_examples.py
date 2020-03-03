@@ -121,6 +121,28 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
+def lj_force_matching(directory='/tmp/test-lj-force-matching'):
+    graph = htf.graph_builder(8)
+    nlist = graph.nlist[:, :, :3]
+    # get r
+    r = tf.norm(nlist, axis=2)
+    # compute 1 / r while safely treating r = 0.
+    # pairwise energy. Double count -> divide by 2
+    epsilon = tf.Variable(1.0, name='lj-epsilon', trainable=True)
+    sigma = tf.constant(1.0, name='lj-sigma')
+    inv_r6 = graph.safe_div(sigma**6, r**6)
+    p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    p_energy2 = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    # sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
+    forces = tf.Variable(graph.compute_forces(energy),
+                         name = 'calculated_forces')
+    forces2 = tf.Variable(graph.compute_forces(energy2),
+                         name = 'target_forces')
+    graph.save(model_directory=directory,
+               out_nodes=[forces, forces2])
+    return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
@@ -139,6 +161,22 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
     return directory
 
+def run_traj_graph(directory='/tmp/test-run-traj'):
+    graph = htf.graph_builder(16)
+    nlist = graph.nlist[:, :, :3]
+    r = tf.norm(nlist, axis=2)
+    # compute 1 / r while safely treating r = 0.
+    # pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.safe_div(1., r**6)
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    # sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0),
+                                    'average-energy')
+    graph.save(force_tensor=forces, model_directory=directory,
+               out_nodes=[avg_energy])
+    return directory
 
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
