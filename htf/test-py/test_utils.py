@@ -155,30 +155,13 @@ class test_mappings(unittest.TestCase):
                     )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(1)
-            calculated_forces = tfcompute.get_forces_array()
 
-        model_dir = build_examples.lj_simple()
-        # get lj forces without a leading coeff 
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1)
-            mapped_forces = tfcompute.get_forces_array()
-
-        cost = tf.losses.mean_squared_error(mapped_forces,
-                                                   calculated_forces)
+        variables = hoomd.htf.load_variables(
+            model_dir, ['calculate_forces', 'target_forces'])
+        cost = tf.losses.mean_squared_error(
+            variables['target_forces'], variables['calculated_forces'])
         optimizer, fm_cost = hoomd.htf.force_matching(
-            mapped_forces, calculated_forces)
+            variables['target_forces'], variables['calculated_forces'])
         with tf.Session() as sess:
             # get cost before optimizing
             cost = sess.run(cost)

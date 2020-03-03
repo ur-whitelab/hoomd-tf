@@ -129,34 +129,19 @@ def lj_force_matching(directory='/tmp/test-lj-force-matching'):
     # compute 1 / r while safely treating r = 0.
     # pairwise energy. Double count -> divide by 2
     epsilon = tf.Variable(1.0, name='lj-epsilon', trainable=True)
-    sigma = tf.Variable(1.0, name='lj-sigma')
-    tf.summary.scalar('lj-epsilon', epsilon)
+    sigma = tf.constant(1.0, name='lj-sigma')
     inv_r6 = graph.safe_div(sigma**6, r**6)
     p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    p_energy2 = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     # sum over pairwise energy
-    energy = tf.reduce_sum(p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    # compute energy every 10 steps
-    graph.save(force_tensor=forces,
-               model_directory=directory, out_nodes=[energy])
-    return directory
-
-def lj_simple(directory='/tmp/test-lj-simple'):
-    graph = htf.graph_builder(8)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    sigma = tf.Variable(1.0, name='lj-sigma')
-    inv_r6 = graph.safe_div(sigma**6, r**6)
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    # compute energy every 10 steps
-    graph.save(force_tensor=forces,
-               model_directory=directory, out_nodes=[energy])
+    energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
+    forces = tf.Variable(graph.compute_forces(energy),
+                         name = 'calculated_forces')
+    forces2 = tf.Variable(graph.compute_forces(energy2),
+                         name = 'target_forces')
+    graph.save(model_directory=directory,
+               out_nodes=[forces, forces2])
     return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):
