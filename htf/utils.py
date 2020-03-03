@@ -360,8 +360,7 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     :param learning_rate: The learning_rate for optimization
     :type learning_rate: float
 
-    :return: Adam optimizer
-    :rtype: operation
+    :return: optimizer, cost
 
     """
     # Assert that mapped_forces has the right dimensions
@@ -380,7 +379,7 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     # calculated_cg_forces that depend on trainable variables.
     optimizer = tf.train.AdamOptimizer(
         learning_rate=learning_rate).minimize(cost)
-    return optimizer
+    return optimizer, cost
 
 # \internal
 # \Applies EDS bias to a system
