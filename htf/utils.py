@@ -8,7 +8,7 @@ import pickle
 import hoomd
 
 
-## \internal
+# \internal
 # \brief load the TensorFlow variables from a checkpoint
 #
 # Adds variables from model_directory corresponding to names
@@ -20,11 +20,11 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     tf.reset_default_graph()
     # load graph
     tf.train.import_meta_graph(path.join('{}/'.format(
-                model_directory), 'model.meta'), import_scope='')
+        model_directory), 'model.meta'), import_scope='')
     # add colons if missing
     tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
     run_dict = {n: tf.get_default_graph(
-            ).get_tensor_by_name(n) for n in tf_names}
+    ).get_tensor_by_name(n) for n in tf_names}
 
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -53,7 +53,7 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
-## \internal
+# \internal
 # \brief computes the U(r) for a given TensorFlow model
 def compute_pairwise_potential(model_directory, r,
                                potential_tensor_name,
@@ -84,15 +84,15 @@ def compute_pairwise_potential(model_directory, r,
     tf.reset_default_graph()
     # load graph
     tf.train.import_meta_graph(path.join('{}/'.format(
-                model_directory), 'model.meta'), import_scope='')
+        model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
         potential_tensor_name = potential_tensor_name + ':0'
     potential_tensor = tf.get_default_graph(
-        ).get_tensor_by_name(potential_tensor_name)
+    ).get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph(
-        ).get_tensor_by_name(model_params['nlist'])
+    ).get_tensor_by_name(model_params['nlist'])
 
     # build nlist
     NN = model_params['NN']
@@ -133,12 +133,12 @@ def compute_pairwise_potential(model_directory, r,
             np_nlist[1, 0, 1] = -ri
             # run including passed in feed_dict
             result = sess.run(potential_tensor, feed_dict={
-                    **feed_dict, nlist_tensor: np_nlist})
+                **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
     return potential, forces
 
 
-## \internal
+# \internal
 # \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
     R""" Given a hoomd system, this will return a mapping
@@ -194,7 +194,7 @@ def find_molecules(system):
     return mapping
 
 
-## \internal
+# \internal
 # \brief Finds mapping operators for coarse-graining
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
@@ -222,7 +222,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
     """
-    import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
     # get system size
@@ -266,12 +265,129 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
+def run_from_trajectory(model_directory, universe,
+                        selection='all', r_cut=10.,
+                        period=10, feed_dict={}):
+    R""" This will process information from a trajectory and
+    run the user defined model on the nlist computed from the trajectory.
+
+    :param model_directory: The model directory
+    :type model_directory: string
+    :param universe: The MDAnalysis universe
+    :param selection: The atom groups to extract from universe
+    :type selection: string
+    :param r_cut: The cutoff raduis to use in neighbor list
+        calculations
+    :type r_cut: float
+    :param period: Frequency of reading the trajectory frames
+    :type period: int
+    :param feed_dict: Allows you to add any other placeholder values
+        that need to be added to compute potential in your model
+    :type feed_dict: dict
+    """
+    # just in case
+    tf.reset_default_graph()
+    # load graph
+    with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
+        model_params = pickle.load(f)
+    nlist_tensor = tf.get_default_graph(
+    ).get_tensor_by_name(model_params['nlist'])
+    out_nodes = tf.get_default_graph(
+    ).get_tensor_by_name(model_params['out_nodes'])
+
+    # read trajectory
+    box = universe.dimensions
+    # define the system
+    system = type('',
+                  (object, ),
+                  {'box': type('', (object, ),
+                               {'Lx': box[0],
+                                'Ly': box[1],
+                                'Lz': box[2]})})
+    # get box dimensions
+    hoomd_box = [[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]]
+    # make type array
+    # Select atom group to use in the system
+    atom_group = universe.select_atoms(selection)
+    # get unique atom types in the selected atom group
+    types = list(np.unique(atom_group.atoms.types))
+    # assicuate atoms types with individual atoms
+    type_array = np.array([types.index(i)
+                           for i in atom_group.atoms.types]).reshape(-1, 1)
+    # get number of atoms/particles in the system
+    N = (np.shape(type_array))[0]
+    NN = model_params['NN']
+    # define nlist operation
+    nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
+                          NN=NN, system=system)
+    # Now insert nlist into the graph
+    graph = tf.train.import_meta_graph(path.join('{}/'.format(
+        model_directory), 'model.meta'), nlist=nlist_tensor, import_scope='')
+    # Run the model at every nth frame, where n = period
+    with tf.Session() as sess:
+        saver = tf.train.Saver()
+        for i, ts in enumerate(universe.trajectory):
+            sess.run(out_nodes,
+                     feed_dict={
+                         **feed_dict,
+                         graph.positions: np.concatenate(
+                             (atom_group.positions,
+                                 type_array),
+                             axis=1),
+                         graph.box: hoomd_box,
+                         graph.batch_index: 0,
+                         graph.batch_frac: 1,
+                         nlist_tensor: nlist_tensor})
+            if i % period == 0:
+                saver.save(sess,
+                           path.join(model_directory, 'model'),
+                           global_step=i)
+    return
+
+
+def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
+    R""" This will minimize the difference between the mapped forces
+    and calculated CG forces using the Adam oprimizer.
+
+    :param mapped_forces: A tensor with shape M x 3 where M is number
+        of CG beads in the system. These are forces mapped from an all
+        atom system.
+    :type mapped_forces: tensor
+    :param calculated_cg_forces: A tensor with shape M x 3 where M is
+        number of CG beads in the system. These are CG forces estimated
+        using a function or a basis set.
+    :type calculated_cg_forces: tensor
+    :param learning_rate: The learning_rate for optimization
+    :type learning_rate: float
+
+    :return: The optimizer
+    :rtype: operation
+
+    """
+    # Assert that mapped_forces has the right dimensions
+    if not len(mapped_forces.shape.as_list()
+               ) == 2 and mapped_forces.shape.as_list()[1] == 3:
+        raise ValueError('mapped_forces must have the dimension [M x 3]'
+                         'where M is the number of coarse-grained particles')
+    # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
+    if not (mapped_forces.shape.as_list() ==
+            calculated_cg_forces.shape.as_list()):
+        tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
+    # minimize mean squared error
+    cost = tf.losses.mean_squared_error(mapped_forces,
+                                        calculated_cg_forces)
+    # It is assumed here that the user will pass in
+    # calculated_cg_forces that depend on trainable variables.
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=learning_rate).minimize(cost)
+    return optimizer
+
 # \internal
 # \Applies EDS bias to a system
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
-    
+
     Parameters
     ---------------
     cv
@@ -293,8 +409,14 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     """
 
     # set-up variables
-    mean = tf.get_variable('{}.mean'.format(name), initializer=0.0, trainable=False)
-    ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0, trainable=False)
+    mean = tf.get_variable(
+        '{}.mean'.format(name),
+        initializer=0.0,
+        trainable=False)
+    ssd = tf.get_variable(
+        '{}.ssd'.format(name),
+        initializer=0.0,
+        trainable=False)
     n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
     alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
 
@@ -309,16 +431,26 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     with tf.control_dependencies([reset_mean, reset_ssd]):
         update_mask = tf.cast(n > period // 2, tf.float32)
         delta = (cv - mean) * update_mask
-        update_mean = mean.assign_add(delta / tf.cast(tf.maximum(1, n - period // 2), tf.float32))
+        update_mean = mean.assign_add(
+            delta /
+            tf.cast(
+                tf.maximum(
+                    1,
+                    n -
+                    period //
+                    2),
+                tf.float32))
         update_ssd = ssd.assign_add(delta * (cv - mean))
 
     # update grad
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
-        gradient = update_mask * -  2 * (cv - set_point) * ssd / period // 2 / cv_scale
+        gradient = update_mask * -  2 * \
+            (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
-                               lambda: optimizer.apply_gradients([(gradient, alpha)]),
+                               lambda: optimizer.apply_gradients([(gradient,
+                                                                   alpha)]),
                                lambda: tf.no_op())
 
     # update n. Should reset at period
@@ -329,8 +461,10 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
     return alpha_dummy
 
-## \internal
+# \internal
 # \brief Finds the center of mass of a set of particles
+
+
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
@@ -354,10 +488,10 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     ximean = tf.sparse.matmul(mapping, xi)
     zetamean = tf.sparse.matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
-    return tf.identity(thetamean/np.pi/2*box_dim, name=name)
+    return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-## \internal
+# \internal
 # \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
     R""" Computer partice pairwise neihgbor lists.
@@ -376,7 +510,8 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     Returns
     -------
     nlist
-        An [N X NN X 4] tensor containing neighbor lists of all particles and index
+        An [N X NN X 4] tensor containing neighbor lists of all
+        particles and index
     """
     # Make sure positions is only xyz
     positions = positions[:, :3]
@@ -391,7 +526,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     dist_mat = qTtile - qtile
     # apply minimum image
     box = tf.reshape(tf.convert_to_tensor([
-                system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+        system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(dist_mat, axis=2)
