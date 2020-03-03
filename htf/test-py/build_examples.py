@@ -139,6 +139,22 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
     return directory
 
+def run_traj_graph(directory='/tmp/test-run-traj'):
+    graph = htf.graph_builder(16)
+    nlist = graph.nlist[:, :, :3]
+    r = tf.norm(nlist, axis=2)
+    # compute 1 / r while safely treating r = 0.
+    # pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.safe_div(1., r**6)
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    # sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0),
+                                    'average-energy')
+    graph.save(force_tensor=forces, model_directory=directory,
+               out_nodes=[avg_energy])
+    return directory
 
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)

@@ -360,13 +360,13 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
     :param learning_rate: The learning_rate for optimization
     :type learning_rate: float
 
-    :return: The optimizer
+    :return: Adam optimizer
     :rtype: operation
 
     """
     # Assert that mapped_forces has the right dimensions
-    if not len(mapped_forces.shape.as_list()
-               ) == 2 and mapped_forces.shape.as_list()[1] == 3:
+    if not (len(mapped_forces.shape.as_list()
+                ) == 2 and mapped_forces.shape.as_list()[1] == 3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
