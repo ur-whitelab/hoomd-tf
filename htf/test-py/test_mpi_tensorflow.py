@@ -60,7 +60,7 @@ class test_mpi(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()

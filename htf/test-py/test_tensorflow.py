@@ -41,7 +41,7 @@ class test_access(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()
@@ -81,7 +81,7 @@ class test_compute(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()
@@ -512,7 +512,7 @@ class test_mol_batching(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()

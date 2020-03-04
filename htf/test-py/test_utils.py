@@ -15,7 +15,7 @@ class test_loading(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()
@@ -71,7 +71,7 @@ class test_mappings(unittest.TestCase):
         self.system = hoomd.init.read_snapshot(snapshot)
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()
@@ -260,7 +260,7 @@ class test_bias(unittest.TestCase):
         self.tracker.pre_walk()
 
     def tearDown(self):
-        if self.tracker == None:
+        if self.tracker is None:
             print('Set-up Failed')
         self.tracker.post_walk()
         self.tracker.rm_tracked_files()
