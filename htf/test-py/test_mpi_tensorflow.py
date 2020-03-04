@@ -6,7 +6,9 @@ from hoomd import init
 import unittest
 import build_examples
 import numpy as np
-
+import os
+import shutil
+from tmpFileTracker import tmpFileTracker
 
 def run_tf_lj(N, T):
     model_dir = build_examples.lj_graph(N - 1)
@@ -53,6 +55,17 @@ def run_hoomd_lj(N, T):
 
 
 class test_mpi(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_lj_forces(self):
         # need to be big enough for MPI testing
         # Needs to be perfect square

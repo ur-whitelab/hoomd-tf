@@ -4,9 +4,23 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import build_examples
+import os
+import shutil
+from tmpFileTracker import tmpFileTracker
 
 
 class test_loading(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_load_variables(self):
         model_dir = '/tmp/test-load'
         # make model that does assignment
@@ -32,6 +46,8 @@ class test_loading(unittest.TestCase):
 
 class test_mappings(unittest.TestCase):
     def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
         # build system using example from hoomd
         hoomd.context.initialize()
         snapshot = hoomd.data.make_snapshot(N=10,
@@ -53,6 +69,13 @@ class test_mappings(unittest.TestCase):
                                    [6, 7], [7, 8], [8, 9]]
         snapshot.replicate(1, 3, 3)
         self.system = hoomd.init.read_snapshot(snapshot)
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
 
     def test_find_molecules(self):
         # test out mapping
@@ -232,6 +255,17 @@ class test_mappings(unittest.TestCase):
 
 
 class test_bias(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_eds(self):
         T = 1000
         hoomd.context.initialize()

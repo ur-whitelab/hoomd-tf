@@ -14,7 +14,8 @@ import numpy as np
 import math
 import tensorflow as tf
 import build_examples
-
+import shutil
+from tmpFileTracker import tmpFileTracker
 
 def compute_forces(system, rcut):
     '''1 / r^2 force'''
@@ -35,6 +36,17 @@ def compute_forces(system, rcut):
 
 
 class test_access(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_access(self):
         model_dir = build_examples.simple_potential()
         with hoomd.htf.tfcompute(model_dir,
@@ -64,6 +76,17 @@ class test_access(unittest.TestCase):
             assert len(np.unique(pa[:, 3].astype(np.int))) == 3
 
 class test_compute(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_force_overwrite(self):
         model_dir = build_examples.simple_potential()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
@@ -484,6 +507,17 @@ class test_compute(unittest.TestCase):
 
 
 class test_mol_batching(unittest.TestCase):
+    def setUp(self):
+        self.tracker = tmpFileTracker('/tmp')
+        self.tracker.pre_walk()
+
+    def tearDown(self):
+        if self.tracker == None:
+            print('Set-up Failed')
+        self.tracker.post_walk()
+        self.tracker.rm_tracked_files()
+        self.tracker = None
+
     def test_single_atom(self):
         hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8)
