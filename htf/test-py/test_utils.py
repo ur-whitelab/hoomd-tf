@@ -155,13 +155,13 @@ class test_mappings(unittest.TestCase):
                     )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(1)
-
+            computed_forces = tfcompute.get_forces_array()
         variables = hoomd.htf.load_variables(
-            model_dir, ['calculate_forces', 'target_forces'])
+            model_dir, ['target-forces'])
         cost = tf.losses.mean_squared_error(
-            variables['target_forces'], variables['calculated_forces'])
+            variables['target-forces'], computed_forces)
         optimizer, fm_cost = hoomd.htf.force_matching(
-            variables['target_forces'], variables['calculated_forces'])
+            variables['target_forces'], computed_forces)
         with tf.Session() as sess:
             # get cost before optimizing
             cost = sess.run(cost)

@@ -136,12 +136,12 @@ def lj_force_matching(directory='/tmp/test-lj-force-matching'):
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1, name='energy')
     energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
-    forces = tf.Variable(graph.compute_forces(energy),
-                         name = 'calculated_forces')
-    forces2 = tf.Variable(graph.compute_forces(energy2),
-                         name = 'target_forces')
-    graph.save(model_directory=directory,
-               out_nodes=[forces, forces2])
+    computed_forces = graph.compute_forces(energy)
+    forces2 = graph.compute_forces(energy2)
+    target_forces = tf.identity(forces2, name='target-forces')
+    graph.save(force_tensor=computed_forces, model_directory=directory,
+               out_nodes=[target_forces])
+
     return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):
