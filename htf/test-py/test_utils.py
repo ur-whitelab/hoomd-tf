@@ -292,9 +292,9 @@ class test_trajectory(unittest.TestCase):
         model_directory = build_examples.run_traj_graph()
         htf.run_from_trajectory(model_directory, universe)
         # get evaluated outnodes
-        variables = hoomd.htf.load_variables(model_directory, ['avg_energy'])
+        variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
         # assert they are calculated and valid?
-        assert not math.isnan(variables['avg_energy'])
+        assert not math.isnan(variables['average-energy'])
 
 if __name__ == '__main__':
     unittest.main()
