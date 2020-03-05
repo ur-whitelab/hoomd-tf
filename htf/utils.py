@@ -366,13 +366,14 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
 
     """
     # Assert that mapped_forces has the right dimensions
-    if not (len(mapped_forces.shape.as_list()
-                ) == 2 and mapped_forces.shape.as_list()[1] == 3):
+    print('\n\n{}\n\n'.format(mapped_forces.shape))
+    if not (len(mapped_forces.shape
+                ) == 2 and mapped_forces.shape[1] == 3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
-    if not (mapped_forces.shape.as_list() ==
-            calculated_cg_forces.shape.as_list()):
+    if not (mapped_forces.shape ==
+            calculated_cg_forces.shape):
         tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
     cost = tf.losses.mean_squared_error(mapped_forces,

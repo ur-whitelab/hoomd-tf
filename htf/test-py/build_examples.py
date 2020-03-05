@@ -129,19 +129,21 @@ def lj_force_matching(directory='/tmp/test-lj-force-matching'):
     # compute 1 / r while safely treating r = 0.
     # pairwise energy. Double count -> divide by 2
     epsilon = tf.Variable(1.0, name='lj-epsilon', trainable=True)
-    sigma = tf.constant(1.0, name='lj-sigma')
+    sigma = tf.Variable(1.0, name='lj-sigma')
+    tf.summary.scalar('lj-epsilon', epsilon)
     inv_r6 = graph.safe_div(sigma**6, r**6)
     p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    p_energy2 = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     # sum over pairwise energy
     energy = tf.reduce_sum(p_energy, axis=1, name='energy')
-    energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
     computed_forces = graph.compute_forces(energy)
+    #get target forces without leading variables
+    p_energy2 = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
     forces2 = graph.compute_forces(energy2)
     target_forces = tf.identity(forces2, name='target-forces')
-    graph.save(force_tensor=computed_forces, model_directory=directory,
-               out_nodes=[target_forces])
-
+    graph.save(force_tensor=computed_forces,
+               model_directory=directory,
+               out_nodes=[forces2])
     return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):

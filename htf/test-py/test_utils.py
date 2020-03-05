@@ -155,18 +155,22 @@ class test_mappings(unittest.TestCase):
                     )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut)
             hoomd.run(1)
-            computed_forces = tfcompute.get_forces_array()
+            # compute_forces returns a tensor with forces and energy, 
+            # so grab just forces
+            computed_forces = tfcompute.get_forces_array()[:, :3]
+            nlist = tfcompute.get_nlist_array()
         variables = hoomd.htf.load_variables(
-            model_dir, ['target-forces'])
+            model_dir, ['target-forces'], feed_dict={'nlist-input:0':nlist})
         cost = tf.losses.mean_squared_error(
-            variables['target-forces'], computed_forces)
+            variables['target-forces'][:, :3], computed_forces)
         optimizer, fm_cost = hoomd.htf.force_matching(
-            variables['target_forces'], computed_forces)
+            variables['target-forces'][:, :3], computed_forces)
         with tf.Session() as sess:
             # get cost before optimizing
-            cost = sess.run(cost)
+            cost = sess.run(cost, feed_dict={'nlist-input:0':nlist})
             # get cost after optimizing
-            _, fm_cost = sess.run(optimizer, cost)
+            _, fm_cost = sess.run(optimizer, fm_cost, 
+                                  feed_dict={'nlist-input:0':nlist})
             # test not equal
             assert np.any(np.not_equal(cost, fm_cost))
 
