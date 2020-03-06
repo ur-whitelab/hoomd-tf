@@ -21,6 +21,7 @@ or other quantities, like collective variables, and do machine learning.
    using_the_graph
    utilities
    docker_image
+   changelog.rst
    issues
 
 .. toctree::
