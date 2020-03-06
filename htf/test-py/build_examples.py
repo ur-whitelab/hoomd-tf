@@ -138,6 +138,7 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
     return directory
 
+
 def run_traj_graph(directory='/tmp/test-run-traj'):
     graph = htf.graph_builder(16)
     nlist = graph.nlist[:, :, :3]

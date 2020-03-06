@@ -313,9 +313,9 @@ def run_from_trajectory(model_directory, universe,
     NN = model_params['NN']
     # define nlist operation
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
-                          NN=NN, system=system)
-	# Now insert nlist into the graph
-	# make input map to override nlist
+                                 NN=NN, system=system)
+# Now insert nlist into the graph
+# make input map to override nlist
     input_map = {}
     input_map[model_params['nlist']] = nlist_tensor
     graph = tf.train.import_meta_graph(path.join('{}/'.format(
@@ -327,7 +327,7 @@ def run_from_trajectory(model_directory, universe,
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
         sess.run(tf.group(tf.global_variables_initializer(),
-                 tf.local_variables_initializer()))
+                          tf.local_variables_initializer()))
         saver = tf.train.Saver()
         for i, ts in enumerate(universe.trajectory):
             sess.run(out_nodes,
