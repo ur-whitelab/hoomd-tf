@@ -138,29 +138,6 @@ class test_mappings(unittest.TestCase):
         # TODO: Come up with a real test of this.
         assert True
 
-    def test_force_matching(self):
-        model_dir = build_examples.lj_force_matching(NN=63)
-        # calculate lj forces with a leading coeff
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
-            N = 64
-            NN = 63
-            rcut = 5
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=4)
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
-            hoomd.run(2000)
-            input_nlist = tfcompute.get_nlist_array()
-            variables = hoomd.htf.load_variables(model_dir, ['cost', 'lj-epsilon', 'lj-sigma'],
-                                                 feed_dict=dict({'nlist-input:0':input_nlist}))
-        assert variables['lj-sigma'] != 2.0
-        assert variables['lj-epsilon'] != 2.0
-
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
