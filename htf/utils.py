@@ -287,14 +287,8 @@ def run_from_trajectory(model_directory, universe,
     """
     # just in case
     tf.reset_default_graph()
-    # load graph
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
-    nlist_tensor = tf.get_default_graph(
-    ).get_tensor_by_name(model_params['nlist'])
-    out_nodes = tf.get_default_graph(
-    ).get_tensor_by_name(model_params['out_nodes'])
-
     # read trajectory
     box = universe.dimensions
     # define the system
@@ -320,24 +314,32 @@ def run_from_trajectory(model_directory, universe,
     # define nlist operation
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
                           NN=NN, system=system)
-    # Now insert nlist into the graph
+	# Now insert nlist into the graph
+	# make input map to override nlist
+    input_map = {}
+    input_map[model_params['nlist']] = nlist_tensor
     graph = tf.train.import_meta_graph(path.join('{}/'.format(
-        model_directory), 'model.meta'), nlist=nlist_tensor, import_scope='')
+        model_directory), 'model.meta'), input_map=input_map, import_scope='')
+
+    out_nodes = []
+    for name in model_params['out_nodes']:
+        out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
+        sess.run(tf.group(tf.global_variables_initializer(),
+                 tf.local_variables_initializer()))
         saver = tf.train.Saver()
         for i, ts in enumerate(universe.trajectory):
             sess.run(out_nodes,
                      feed_dict={
                          **feed_dict,
-                         graph.positions: np.concatenate(
+                         model_params['positions']: np.concatenate(
                              (atom_group.positions,
                                  type_array),
                              axis=1),
-                         graph.box: hoomd_box,
-                         graph.batch_index: 0,
-                         graph.batch_frac: 1,
-                         nlist_tensor: nlist_tensor})
+                         model_params['box']: hoomd_box,
+                         'htf-batch-index:0': 0, 
+                         'htf-batch-frac:0': 1})
             if i % period == 0:
                 saver.save(sess,
                            path.join(model_directory, 'model'),
@@ -364,14 +366,15 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
 
     """
     # Assert that mapped_forces has the right dimensions
-    if not (len(mapped_forces.shape.as_list()
-                ) == 2 and mapped_forces.shape.as_list()[1] == 3):
+    print('\n\n{}\n\n'.format(mapped_forces.shape))
+    if not (len(mapped_forces.shape
+                ) == 2 and mapped_forces.shape[1] == 3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
-    if not (mapped_forces.shape.as_list() ==
-            calculated_cg_forces.shape.as_list()):
-        tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
+    #if not (mapped_forces.shape ==
+    #        calculated_cg_forces.shape):
+    #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
     cost = tf.losses.mean_squared_error(mapped_forces,
                                         calculated_cg_forces)

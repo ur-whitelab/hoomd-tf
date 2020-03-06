@@ -139,36 +139,27 @@ class test_mappings(unittest.TestCase):
         assert True
 
     def test_force_matching(self):
-        model_dir = build_examples.lj_force_matching()
+        model_dir = build_examples.lj_force_matching(NN=63)
         # calculate lj forces with a leading coeff
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
+            N = 64
+            NN = 63
+            rcut = 5
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
+                n=4)
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1)
-
-        variables = hoomd.htf.load_variables(
-            model_dir, ['calculate_forces', 'target_forces'])
-        cost = tf.losses.mean_squared_error(
-            variables['target_forces'], variables['calculated_forces'])
-        optimizer, fm_cost = hoomd.htf.force_matching(
-            variables['target_forces'], variables['calculated_forces'])
-        with tf.Session() as sess:
-            # get cost before optimizing
-            cost = sess.run(cost)
-            # get cost after optimizing
-            _, fm_cost = sess.run(optimizer, cost)
-            # test not equal
-            assert np.any(np.not_equal(cost, fm_cost))
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            hoomd.run(2000)
+            input_nlist = tfcompute.get_nlist_array()
+            variables = hoomd.htf.load_variables(model_dir, ['cost', 'lj-epsilon', 'lj-sigma'],
+                                                 feed_dict=dict({'nlist-input:0':input_nlist}))
+        assert variables['lj-sigma'] != 2.0
+        assert variables['lj-epsilon'] != 2.0
 
     def test_compute_nlist(self):
         N = 10
@@ -292,9 +283,9 @@ class test_trajectory(unittest.TestCase):
         model_directory = build_examples.run_traj_graph()
         htf.run_from_trajectory(model_directory, universe)
         # get evaluated outnodes
-        variables = hoomd.htf.load_variables(model_directory, ['avg_energy'])
+        variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
         # assert they are calculated and valid?
-        assert not math.isnan(variables['avg_energy'])
+        assert not math.isnan(variables['average-energy'])
 
 if __name__ == '__main__':
     unittest.main()
