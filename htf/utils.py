@@ -419,3 +419,47 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
         nlist_pos,
         tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
                 tf.float32)], axis=-1) * nlist_mask
+
+def mol_bond_distance(mol_positions,type_i,type_j):
+    if mol_positions is None:
+       raise ValueError('mol_positions not found. Call build_mol_rep()')
+            
+    else:
+        v_ij=mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_ij=tf.norm(v_ij,axis=1)
+        return v_ij
+
+def mol_angle(mol_positions,type_i,type_j,type_k):
+        if mol_positions is None:
+            raise ValueError('mol_positions not found. Call build_mol_rep()')
+            
+        else:
+            v_ij=mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
+            v_jk=mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+            cos_a=tf.einsum('ij,ij->i', v_ij, v_jk)
+            cos_a=np.divide(cos_a,(tf.norm(v_ij,axis=1)*tf.norm(v_jk,axis=1))) #not self!! Also norms shouldn't be zero(may be no need for safe div) test this!!!!!!!!!!!!!!!!!!!!!!!!!
+            angles=tf.math.acos(cos_a)
+            return angles 
+
+def mol_dihedral(mol_positions,type_i,type_j,type_k,type_l):
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    else:
+        v_ij=mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_jk=mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        v_kl=mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
+
+        #calculation of normal vectors
+        n1=np.cross(v_ij,v_jk)
+        n2=np.cross(v_jk,v_kl)
+        n1_norm=tf.norm(n1)
+        n2_norm=tf.norm(n2)
+        if n1_norm==0.0 or n2_norm==0.0:
+            raise GeometryError('Vectors are linear')
+        
+        n1=n1/n1_norm
+        n2=n2/n2_norm
+        cos_d=tf.einsum('ij,ij->i', n1, n2)
+        dihedrals=tf.math.acos(cos_d)
+        return dihedrals
