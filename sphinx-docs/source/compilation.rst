@@ -69,7 +69,7 @@ different cmake step**
     -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
     -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
     -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
-    -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin" -DCUDA_ARCH_LIST=70
+    -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin"
 
 .. _compiling:
 
