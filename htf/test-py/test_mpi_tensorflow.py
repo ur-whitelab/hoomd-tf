@@ -6,10 +6,10 @@ from hoomd import init
 import unittest
 import build_examples
 import numpy as np
+import tempfile
 
-
-def run_tf_lj(N, T):
-    model_dir = build_examples.lj_graph(N - 1)
+def run_tf_lj(N, T, directory = '/tmp/test-lj-potential-model'):
+    model_dir = build_examples.lj_graph(N - 1, directory)
     with hoomd.htf.tfcompute(model_dir,
                                            _mock_mode=False) as tfcompute:
         rcut = 5.0
@@ -53,6 +53,12 @@ def run_hoomd_lj(N, T):
 
 
 class test_mpi(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryFile()
+
+    def tearDown(self):
+        self.tmp.close()
+
     def test_lj_forces(self):
         # need to be big enough for MPI testing
         # Needs to be perfect square
@@ -64,7 +70,7 @@ class test_mpi(unittest.TestCase):
             with self.subTest(decomp=p):
                 hoomd.context.initialize()
                 comm.decomposition(**p)
-                tf_forces = run_tf_lj(N, T)
+                tf_forces = run_tf_lj(N, T, self.tmp)
                 hoomd.context.initialize()
                 comm.decomposition(**p)
                 hoomd_forces = run_hoomd_lj(N, T)
