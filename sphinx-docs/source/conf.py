@@ -12,9 +12,10 @@
 #
 import os
 import sys
+from htf import __version__
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
-from htf import __version__
+
 
 # -- Project information -----------------------------------------------------
 
