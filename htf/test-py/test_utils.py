@@ -249,5 +249,20 @@ class test_bias(unittest.TestCase):
                 model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
         assert np.isfinite(variables['eds.a'])
         assert (variables['cv-mean'] - 4)**2 < 0.5
+
+
+class test_trajectory(unittest.TestCase):
+    def test_run_from_trajectory(self):
+        import math
+        import MDAnalysis as mda
+        universe = mda.Universe('test_topol.pdb', 'test_traj.trr')
+        # load example graph that calculates average energy
+        model_directory = build_examples.run_traj_graph()
+        htf.run_from_trajectory(model_directory, universe)
+        # get evaluated outnodes
+        variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
+        # assert they are calculated and valid?
+        assert not math.isnan(variables['average-energy'])
+
 if __name__ == '__main__':
     unittest.main()
