@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
-from htf.__version__ import __version__
+from htf import __version__
 
 # -- Project information -----------------------------------------------------
 

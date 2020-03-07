@@ -102,6 +102,7 @@ set(files
     tfarraycomm.py
     tfmanager.py
     utils.py
+    version.py
     )
 
 install(FILES ${files}
