@@ -8,7 +8,7 @@ import pickle
 import hoomd
 
 
-## \internal
+# \internal
 # \brief load the TensorFlow variables from a checkpoint
 #
 # Adds variables from model_directory corresponding to names
@@ -20,11 +20,11 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     tf.reset_default_graph()
     # load graph
     tf.train.import_meta_graph(path.join('{}/'.format(
-                model_directory), 'model.meta'), import_scope='')
+        model_directory), 'model.meta'), import_scope='')
     # add colons if missing
     tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
     run_dict = {n: tf.get_default_graph(
-            ).get_tensor_by_name(n) for n in tf_names}
+    ).get_tensor_by_name(n) for n in tf_names}
 
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -53,7 +53,7 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     return combined_result
 
 
-## \internal
+# \internal
 # \brief computes the U(r) for a given TensorFlow model
 def compute_pairwise_potential(model_directory, r,
                                potential_tensor_name,
@@ -84,15 +84,15 @@ def compute_pairwise_potential(model_directory, r,
     tf.reset_default_graph()
     # load graph
     tf.train.import_meta_graph(path.join('{}/'.format(
-                model_directory), 'model.meta'), import_scope='')
+        model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
         potential_tensor_name = potential_tensor_name + ':0'
     potential_tensor = tf.get_default_graph(
-        ).get_tensor_by_name(potential_tensor_name)
+    ).get_tensor_by_name(potential_tensor_name)
     nlist_tensor = tf.get_default_graph(
-        ).get_tensor_by_name(model_params['nlist'])
+    ).get_tensor_by_name(model_params['nlist'])
 
     # build nlist
     NN = model_params['NN']
@@ -133,12 +133,12 @@ def compute_pairwise_potential(model_directory, r,
             np_nlist[1, 0, 1] = -ri
             # run including passed in feed_dict
             result = sess.run(potential_tensor, feed_dict={
-                    **feed_dict, nlist_tensor: np_nlist})
+                **feed_dict, nlist_tensor: np_nlist})
             potential[i] = result[0]
     return potential, forces
 
 
-## \internal
+# \internal
 # \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
     R""" Given a hoomd system, this will return a mapping
@@ -194,7 +194,7 @@ def find_molecules(system):
     return mapping
 
 
-## \internal
+# \internal
 # \brief Finds mapping operators for coarse-graining
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
@@ -271,7 +271,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
-    
+
     Parameters
     ---------------
     cv
@@ -293,8 +293,14 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     """
 
     # set-up variables
-    mean = tf.get_variable('{}.mean'.format(name), initializer=0.0, trainable=False)
-    ssd = tf.get_variable('{}.ssd'.format(name), initializer=0.0, trainable=False)
+    mean = tf.get_variable(
+        '{}.mean'.format(name),
+        initializer=0.0,
+        trainable=False)
+    ssd = tf.get_variable(
+        '{}.ssd'.format(name),
+        initializer=0.0,
+        trainable=False)
     n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
     alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
 
@@ -309,13 +315,22 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     with tf.control_dependencies([reset_mean, reset_ssd]):
         update_mask = tf.cast(n > period // 2, tf.float32)
         delta = (cv - mean) * update_mask
-        update_mean = mean.assign_add(delta / tf.cast(tf.maximum(1, n - period // 2), tf.float32))
+        update_mean = mean.assign_add(
+            delta /
+            tf.cast(
+                tf.maximum(
+                    1,
+                    n -
+                    period //
+                    2),
+                tf.float32))
         update_ssd = ssd.assign_add(delta * (cv - mean))
 
     # update grad
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
-        gradient = update_mask * -  2 * (cv - set_point) * ssd / period // 2 / cv_scale
+        gradient = update_mask * -  2 * \
+            (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
                                lambda: optimizer.apply_gradients([(gradient, alpha)]),
@@ -329,8 +344,10 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
     return alpha_dummy
 
-## \internal
+# \internal
 # \brief Finds the center of mass of a set of particles
+
+
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
@@ -354,10 +371,10 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     ximean = tf.sparse.matmul(mapping, xi)
     zetamean = tf.sparse.matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
-    return tf.identity(thetamean/np.pi/2*box_dim, name=name)
+    return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-## \internal
+# \internal
 # \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
     R""" Computer partice pairwise neihgbor lists.
@@ -391,7 +408,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     dist_mat = qTtile - qtile
     # apply minimum image
     box = tf.reshape(tf.convert_to_tensor([
-                system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+        system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(dist_mat, axis=2)
@@ -422,7 +439,9 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
 
 # \internal
 # \Calculates bond distance between two atoms in a molecule
-def mol_bond_distance(mol_positions,type_i,type_j):
+
+
+def mol_bond_distance(mol_positions, type_i, type_j):
     R""" This method calculates the bond distance given two atoms batched by molecule
 
     Parameters
@@ -440,16 +459,18 @@ def mol_bond_distance(mol_positions,type_i,type_j):
          Tensor containing bond distances
     """
     if mol_positions is None:
-       raise ValueError('mol_positions not found. Call build_mol_rep()')
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
 
     else:
-        v_ij=mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        v_ij=tf.norm(v_ij,axis=1)
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_ij = tf.norm(v_ij, axis=1)
         return v_ij
 
 # \internal
 # \Calculates bond angle given three atoms in a molecule
-def mol_angle(mol_positions,type_i,type_j,type_k):
+
+
+def mol_angle(mol_positions, type_i, type_j, type_k):
     R""" This method calculates the bond angle given three atoms batched by molecule
 
     Parameters
@@ -471,17 +492,24 @@ def mol_angle(mol_positions,type_i,type_j,type_k):
     if mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
     else:
-        v_ij=mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
-        v_jk=mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
-        cos_a=tf.einsum('ij,ij->i', v_ij, v_jk)
-        cos_a=np.divide(cos_a,(tf.norm(v_ij,axis=1)*tf.norm(v_jk,axis=1)))
-        angles=tf.math.acos(cos_a)
+        v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
+        cos_a = np.divide(
+            cos_a,
+            (tf.norm(
+                v_ij,
+                axis=1) *
+                tf.norm(
+                v_jk,
+                axis=1)))
+        angles = tf.math.acos(cos_a)
         return angles
 
 
 # \internal
 # \Calculates dihedral angle given four atoms in a molecule
-def mol_dihedral(mol_positions,type_i,type_j,type_k,type_l):
+def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
     R""" This method calculates the dihedral angle given four atoms batched by molecule
 
     Parameters
@@ -506,19 +534,19 @@ def mol_dihedral(mol_positions,type_i,type_j,type_k,type_l):
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
     else:
-        v_ij=mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        v_jk=mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
-        v_kl=mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
 
-        #calculation of normal vectors
-        n1=tf.linalg.cross(v_ij,v_jk)
-        n2=tf.linalg.cross(v_jk,v_kl)
-        n1_norm=tf.norm(n1)
-        n2_norm=tf.norm(n2)
-        if n1_norm==0.0 or n2_norm==0.0:
+        # calculation of normal vectors
+        n1 = tf.linalg.cross(v_ij, v_jk)
+        n2 = tf.linalg.cross(v_jk, v_kl)
+        n1_norm = tf.norm(n1)
+        n2_norm = tf.norm(n2)
+        if n1_norm == 0.0 or n2_norm == 0.0:
             raise GeometryError('Vectors are linear')
-        n1=n1/n1_norm
-        n2=n2/n2_norm
-        cos_d=tf.einsum('ij,ij->i', n1, n2)
-        dihedrals=tf.math.acos(cos_d)
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        cos_d = tf.einsum('ij,ij->i', n1, n2)
+        dihedrals = tf.math.acos(cos_d)
         return dihedrals
