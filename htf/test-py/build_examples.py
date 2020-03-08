@@ -55,7 +55,6 @@ def gradient_potential():
                model_directory='/tmp/test-gradient-potential-model',
                out_nodes=[energy])
 
-
 def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
@@ -67,6 +66,14 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
+def saving_graph(directory='/tmp/test-saving-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    pos_norm = tf.norm(graph.positions, axis=1)
+    graph.save_tensor(pos_norm, 'v1')
+    graph.running_mean(pos_norm, 'v2')
+    graph.save(directory)
+    return directory
 
 def wrap_graph(directory='/tmp/test-wrap-model'):
     graph = htf.graph_builder(0, output_forces=False)
