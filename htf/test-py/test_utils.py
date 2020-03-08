@@ -7,12 +7,6 @@ import build_examples
 import tempfile
 
 class test_loading(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
-
-    def tearDown(self):
-        self.tmp.close()
-
     def test_load_variables(self):
         model_dir = self.tmp
         # make model that does assignment
@@ -38,7 +32,7 @@ class test_loading(unittest.TestCase):
 
 class test_mappings(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
         # build system using example from hoomd
         hoomd.context.initialize()
         snapshot = hoomd.data.make_snapshot(N=10,
@@ -62,7 +56,7 @@ class test_mappings(unittest.TestCase):
         self.system = hoomd.init.read_snapshot(snapshot)
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_find_molecules(self):
         # test out mapping
@@ -243,10 +237,10 @@ class test_mappings(unittest.TestCase):
 
 class test_bias(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_eds(self):
         T = 1000

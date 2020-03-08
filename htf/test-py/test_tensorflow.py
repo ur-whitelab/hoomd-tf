@@ -36,10 +36,10 @@ def compute_forces(system, rcut):
 
 class test_access(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_access(self):
         model_dir = build_examples.simple_potential(self.tmp)
@@ -71,10 +71,10 @@ class test_access(unittest.TestCase):
 
 class test_compute(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_force_overwrite(self):
         model_dir = build_examples.simple_potential(self.tmp)
@@ -496,11 +496,12 @@ class test_compute(unittest.TestCase):
 
 
 class test_mol_batching(unittest.TestCase):
+
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_single_atom(self):
         hoomd.context.initialize()
