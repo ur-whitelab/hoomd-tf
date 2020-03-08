@@ -8,6 +8,7 @@ import build_examples
 import numpy as np
 import tempfile
 
+
 def run_tf_lj(N, T, directory = '/tmp/test-lj-potential-model'):
     model_dir = build_examples.lj_graph(N - 1, directory)
     with hoomd.htf.tfcompute(model_dir,
