@@ -30,7 +30,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
                                                             ]).shape[1] == 4
 
 
-def benchmark_gradient_potential(directory = '/tmp/benchmark-gradient-potential-model'):
+def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
     graph = htf.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     # get r

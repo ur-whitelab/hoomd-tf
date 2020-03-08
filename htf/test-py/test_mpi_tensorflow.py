@@ -54,10 +54,10 @@ def run_hoomd_lj(N, T):
 
 class test_mpi(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryFile()
+        self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
-        self.tmp.close()
+        shutil.rmtree(self.tmp)
 
     def test_lj_forces(self):
         # need to be big enough for MPI testing
