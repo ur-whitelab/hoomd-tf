@@ -11,7 +11,7 @@ import cProfile
 import queue
 import time
 
-saver_args = {'max_to_keep': 1000}
+saver_args = {'max_to_keep': 1000000}
 
 
 def main(q, write_tensorboard=False, profile=False):
