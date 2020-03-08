@@ -30,7 +30,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
                                                             ]).shape[1] == 4
 
 
-def benchmark_gradient_potential():
+def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
     graph = htf.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     # get r
@@ -39,10 +39,10 @@ def benchmark_gradient_potential():
     energy = tf.reduce_sum(graph.safe_div(1., r), axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/benchmark-gradient-potential-model')
+               model_directory=directory)
 
 
-def gradient_potential():
+def gradient_potential(directory='/tmp/test-gradient-potential-model'):
     graph = htf.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -52,7 +52,7 @@ def gradient_potential():
                                       name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/test-gradient-potential-model',
+               model_directory=directory,
                out_nodes=[energy])
 
 def noforce_graph(directory='/tmp/test-noforce-model'):
