@@ -3,8 +3,18 @@
 Known Issues
 ============
 
-The following is a list of known issues. To report another issue,
-please use the `issue tracker <https://github.com/ur-whitelab/hoomd-tf/issues>`__.
+The following is a list of known issues which have no solution. To
+report issues in general, please use the `issue tracker
+<https://github.com/ur-whitelab/hoomd-tf/issues>`__.
+
+.. _checkpoint_number:
+
+Using Positions
+---------------
+
+The maximum number of checkpoints you can save is limited
+to 1 million. Edit the source in `tfmanager.py` if this
+is too low for your needs
 
 .. _positions_issues:
 
