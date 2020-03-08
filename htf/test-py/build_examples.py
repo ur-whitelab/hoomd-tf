@@ -66,6 +66,7 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
 def saving_graph(directory='/tmp/test-saving-model'):
     graph = htf.graph_builder(0, output_forces=False)
     pos_norm = tf.norm(graph.positions, axis=1)
