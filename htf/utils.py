@@ -222,7 +222,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
     """
-    import numpy as np
     assert type(molecule_mapping[0]) == np.ndarray
     assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
     # get system size
@@ -264,6 +263,88 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         values.extend(vs)
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
+
+
+def run_from_trajectory(model_directory, universe,
+                        selection='all', r_cut=10.,
+                        period=10, feed_dict={}):
+    R""" This will process information from a trajectory and
+    run the user defined model on the nlist computed from the trajectory.
+
+    :param model_directory: The model directory
+    :type model_directory: string
+    :param universe: The MDAnalysis universe
+    :param selection: The atom groups to extract from universe
+    :type selection: string
+    :param r_cut: The cutoff raduis to use in neighbor list
+        calculations
+    :type r_cut: float
+    :param period: Frequency of reading the trajectory frames
+    :type period: int
+    :param feed_dict: Allows you to add any other placeholder values
+        that need to be added to compute potential in your model
+    :type feed_dict: dict
+    """
+    # just in case
+    tf.reset_default_graph()
+    with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
+        model_params = pickle.load(f)
+    # read trajectory
+    box = universe.dimensions
+    # define the system
+    system = type('',
+                  (object, ),
+                  {'box': type('', (object, ),
+                               {'Lx': box[0],
+                                'Ly': box[1],
+                                'Lz': box[2]})})
+    # get box dimensions
+    hoomd_box = [[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]]
+    # make type array
+    # Select atom group to use in the system
+    atom_group = universe.select_atoms(selection)
+    # get unique atom types in the selected atom group
+    types = list(np.unique(atom_group.atoms.types))
+    # assicuate atoms types with individual atoms
+    type_array = np.array([types.index(i)
+                           for i in atom_group.atoms.types]).reshape(-1, 1)
+    # get number of atoms/particles in the system
+    N = (np.shape(type_array))[0]
+    NN = model_params['NN']
+    # define nlist operation
+    nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
+                                 NN=NN, system=system)
+# Now insert nlist into the graph
+# make input map to override nlist
+    input_map = {}
+    input_map[model_params['nlist']] = nlist_tensor
+    graph = tf.train.import_meta_graph(path.join('{}/'.format(
+        model_directory), 'model.meta'), input_map=input_map, import_scope='')
+
+    out_nodes = []
+    for name in model_params['out_nodes']:
+        out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
+    # Run the model at every nth frame, where n = period
+    with tf.Session() as sess:
+        sess.run(tf.group(tf.global_variables_initializer(),
+                          tf.local_variables_initializer()))
+        saver = tf.train.Saver()
+        for i, ts in enumerate(universe.trajectory):
+            sess.run(out_nodes,
+                     feed_dict={
+                         **feed_dict,
+                         model_params['positions']: np.concatenate(
+                             (atom_group.positions,
+                                 type_array),
+                             axis=1),
+                         model_params['box']: hoomd_box,
+                         'htf-batch-index:0': 0,
+                         'htf-batch-frac:0': 1})
+            if i % period == 0:
+                saver.save(sess,
+                           path.join(model_directory, 'model'),
+                           global_step=i)
+    return
 
 
 # \internal
@@ -333,7 +414,8 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
             (cv - set_point) * ssd / period // 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
-                               lambda: optimizer.apply_gradients([(gradient, alpha)]),
+                               lambda: optimizer.apply_gradients([(gradient,
+                                                                   alpha)]),
                                lambda: tf.no_op())
 
     # update n. Should reset at period
@@ -393,7 +475,8 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     Returns
     -------
     nlist
-        An [N X NN X 4] tensor containing neighbor lists of all particles and index
+        An [N X NN X 4] tensor containing neighbor lists of all
+        particles and index
     """
     # Make sure positions is only xyz
     positions = positions[:, :3]
