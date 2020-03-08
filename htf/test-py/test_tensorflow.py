@@ -579,6 +579,7 @@ class test_mol_batching(unittest.TestCase):
         ]
         self.assertEqual(rmi, rmi_ref)
 
+
 class test_saving(unittest.TestCase):
 
     def test_tensor_save(self):
@@ -593,7 +594,7 @@ class test_saving(unittest.TestCase):
             hoomd.run(8)
 
         # now load
-        vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])        
+        vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
 
 if __name__ == '__main__':
     unittest.main()

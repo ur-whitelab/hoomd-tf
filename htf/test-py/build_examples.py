@@ -55,7 +55,6 @@ def gradient_potential():
                model_directory='/tmp/test-gradient-potential-model',
                out_nodes=[energy])
 
-
 def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]

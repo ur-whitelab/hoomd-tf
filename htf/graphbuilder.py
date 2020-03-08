@@ -290,14 +290,14 @@ class graph_builder:
         :type name: str
         :param save_period: How often to save the variable
         :type save_period: int
-        
+
         :return: None
 
         """
 
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
                                 validate_shape=False, dtype=tensor.dtype, trainable=False)
-        
+
         store_op = store.assign(tensor)
         self.out_nodes.append([store_op, save_period])
 
