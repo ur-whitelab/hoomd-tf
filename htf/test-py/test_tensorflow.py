@@ -579,6 +579,21 @@ class test_mol_batching(unittest.TestCase):
         ]
         self.assertEqual(rmi, rmi_ref)
 
+class test_saving(unittest.TestCase):
+
+    def test_tensor_save(self):
+        hoomd.context.initialize()
+        model_dir = build_examples.saving_graph()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+            tfcompute.attach()
+            hoomd.run(8)
+
+        # now load
+        vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])        
 
 if __name__ == '__main__':
     unittest.main()
