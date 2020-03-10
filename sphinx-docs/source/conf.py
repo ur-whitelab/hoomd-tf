@@ -12,10 +12,14 @@
 #
 import os
 import sys
-from htf import __version__
-sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
-sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
+import mock
 
+# create mock hoomd imports for autodocs
+mock_module_names = ['hoomd.htf','hoomd.md','hoomd.md.nlist','hoomd.comm','hoomd']
+for name in mock_module_names:
+    sys.modules[name] = mock.Mock()
+
+from htf import __version__
 
 # -- Project information -----------------------------------------------------
 
