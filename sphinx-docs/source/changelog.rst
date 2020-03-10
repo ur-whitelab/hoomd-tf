@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v0.7
+----
+
+*Enhancements*
+- Docs can now be built without HTF install
+
+
 v0.6 (2020-02-21)
 -----------------------
 
