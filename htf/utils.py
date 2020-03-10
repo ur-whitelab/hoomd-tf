@@ -7,7 +7,6 @@ from os import path
 import pickle
 import hoomd
 
-
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
 #
@@ -60,25 +59,19 @@ def compute_pairwise_potential(model_directory, r,
                                checkpoint=-1, feed_dict={}):
     R""" Compute the pairwise potential at r for the given model.
 
-    Parameters
-    ----------
-    model_directory
-        The model directory
-    r
-        A 1D grid of points at which to compute the potential.
-    potential_tensor_name
-        The tensor containing potential energy.
-    checkpoint
-        Which checkpoint to load. Default is -1, which loads latest checkpoint.
+    :param model_directory: The model directory
+    :param r: A 1D grid of points at which to compute the potential.
+    :param potential_tensor_name: The tensor containing potential energy.
+    :param checkpoint: Which checkpoint to load. Default is -1, which loads
+        latest checkpoint.
         An integer indicates loading
         from the model directory. If you pass a string, it is interpreted
         as a path.
-    feed_dict
-        Allows you to add any other placeholder values that need to be added
-        to compute potential in your model
-    Returns
-    -------
-    A 1D array of potentials corresponding the pairwise distances in r.
+    :param feed_dict: Allows you to add any other placeholder values that need 
+        to be added to compute potential in your model
+
+    :return: A tuple of 1D arrays. First is the potentials corresponding to the 
+        pairwise distances in r, second is the forces.
     """
     # just in case
     tf.reset_default_graph()

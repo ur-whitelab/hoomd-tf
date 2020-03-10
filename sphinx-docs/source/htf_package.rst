@@ -13,7 +13,7 @@ htf
     :maxdepth: 3
 
     graphbuilder
+    tfarraycomm
     tfcompute
     tfmanager
-    tfarraycomm
-
+    utils
