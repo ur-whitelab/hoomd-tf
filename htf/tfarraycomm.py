@@ -31,18 +31,22 @@ class tf_array_comm:
     # \brief Send an array
     # See C++ bindings
     def send(self):
+        R"""Sends an array to the C++ class instance."""
         self.cpp_ref.send()
 
     ## \internal
     # \brief Receive an array
     # See C++ bindings
     def receive(self):
+        R"""Receives an array from the C++ class instance."""
         self.cpp_ref.receive()
 
     ## \internal
     # \brief Get this array's data
     # See C++ bindings
     def getArray(self):
+        R"""Convert C++ array into a numpy array.
+            :return: the converted numpy array"""
         npa = np.empty(self._size)
         array = self.cpp_ref.getArray()
         for i in range(self._size):
