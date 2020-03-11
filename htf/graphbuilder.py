@@ -14,7 +14,6 @@ class graph_builder:
     # \internal
     # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
-    
         :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
     """
@@ -281,6 +280,27 @@ class graph_builder:
                         self.out_nodes.append(batch_op)
         return store
 
+    def save_tensor(self, tensor, name, save_period=1):
+        R"""Saves a tensor to a variable
+
+        :param tensor: The tensor to save
+        :type tensor: tensor
+        :param name: The name of the variable which will be saved
+        :type name: str
+        :param save_period: How often to save the variable
+        :type save_period: int
+
+        :return: None
+
+        """
+
+        store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
+                                validate_shape=False, dtype=tensor.dtype, trainable=False)
+
+        store_op = store.assign(tensor)
+        self.out_nodes.append([store_op, save_period])
+
+
     def compute_forces(self, energy, virial=None, positions=None,
                        nlist=None):
         R""" Computes pairwise or position-dependent forces (field) given
@@ -456,7 +476,7 @@ class graph_builder:
         return tf.norm(tensor + delta, **kwargs)
 
     def save(self, model_directory, force_tensor=None, virial=None,
-             out_nodes=[], move_previous=True):
+             out_nodes=None, move_previous=True):
         R"""Save the graph model to specified directory.
 
         Parameters
@@ -477,6 +497,8 @@ class graph_builder:
             and the second element is the period indicating how often to
             execute it.
         """
+        if out_nodes is None:
+            out_nodes = []
         if force_tensor is None and self.output_forces:
             raise ValueError('You must provide force_tensor if you are'
                              'outputing forces')

@@ -10,8 +10,8 @@ set(_${SUB_COMPONENT_NAME}_cu_sources
 
 
 #get TF specific compiler flags
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_compile_flags()))" OUTPUT_VARIABLE TF_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()))" OUTPUT_VARIABLE TF_LFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -W ignore -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_compile_flags()))" OUTPUT_VARIABLE TF_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -W ignore -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()))" OUTPUT_VARIABLE TF_LFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 #separate flags
 SEPARATE_ARGUMENTS( TF_CFLAGS )
@@ -20,13 +20,13 @@ SEPARATE_ARGUMENTS( TF_LFLAGS )
 if (ENABLE_CUDA)
 #These have to be added (?)
 # use cuda
-find_package(CUDA 9.0 EXACT REQUIRED)
+find_package(CUDA 9.0)
 include_directories(SYSTEM "${CUDA_INCLUDE_DIRS}/../../")
 
 
 #Add TF specific options
 SET(TF_CUDA_ADDITIONAL_OPTIONS ${CUDA_ADDITIONAL_OPTIONS} ${TF_CFLAGS} "-D GOOGLE_CUDA=1 -DNDEBUG--expt-relaxed-constexpr")
-list(APPEND TF_CFLAGS -lcudart -D GOOGLE_CUDA=1  -DNDEBUG)
+list(APPEND TF_CFLAGS -lcudart -D GOOGLE_CUDA=1 -DNDEBUG)
 message(STATUS "CUDA_INCLUDE_DIRS: ${CUDA_INCLUDE_DIRS}")
 message(STATUS "TF_CFLAGS: ${TF_CFLAGS}")
 message(STATUS "TF_LFLAGS: ${TF_LFLAGS}")

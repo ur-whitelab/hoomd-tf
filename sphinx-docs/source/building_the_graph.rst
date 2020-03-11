@@ -140,36 +140,27 @@ Saving Data
 -----------
 
 Using variables is the best way to save computed quantities while
-running a compute graph. You can create a variable using
-``v = tf.Variable(initial_value, name=name)``. Using a name is critical
-because that is how you load it after running your simulation. Then
-assign or accumulate values using the ``op1 = v.assign(..)`` and
-``op2 = v.assign_add(...)`` operations. You must ensure that these
-operations are actually called in your graph by using ``out_nodes`` like
-in the example below:
+running a compute graph. See the :ref:`loading_variables` section for
+loading them. You can save a tensor value to a variable using the
+`graph.save_tensor(tensor, name, save_period)` method. Here is an
+example of computing the LJ potential and saving the system energy at
+each step.
 
 .. code:: python
 
     # set-up graph
     graph = htf.graph_builder(NN)
-    # make my variable
-    total_e = tf.Variable(0.0, name='total-energy')
     # compute LJ potential
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     energy = tf.reduce_sum(p_energy)
-    # make op that assigns value of energy to my variable
-    op = total_e.assign(energy)
+    # save the tensor
+    graph.save_tensor(energy, 'lj-energy')
     forces = graph.compute_forces(energy)
-    # add my op to out_nodes while saving graph
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[op])
+    # save the graph
+    graph.save(force_tensor=forces, model_directory=directory)
 
-This example computes a Lennard-Jones potential and saves the system
-energy in the variable ``total-energy``. The variable will always be
-written by htf, but to get meaningful data in them you must ensure your
-ops are passed to ``out_nodes``.
-
-Often you just want a running mean of a variable, for which there is a
+Often you want a running mean of a variable, for which there is a
 built-in function:
 
 .. code:: python
@@ -180,9 +171,6 @@ built-in function:
     graph.running_mean(energy, 'avg-energy')
     # run the simulation
     ...
-
-Note that you need not add anything to ``out_nodes`` when using this
-convenience function because it is handled for you.
 
 .. _variables_and_restarts:
 

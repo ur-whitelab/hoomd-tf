@@ -30,7 +30,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
                                                             ]).shape[1] == 4
 
 
-def benchmark_gradient_potential():
+def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
     graph = htf.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     # get r
@@ -39,10 +39,10 @@ def benchmark_gradient_potential():
     energy = tf.reduce_sum(graph.safe_div(1., r), axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/benchmark-gradient-potential-model')
+               model_directory=directory)
 
 
-def gradient_potential():
+def gradient_potential(directory='/tmp/test-gradient-potential-model'):
     graph = htf.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -52,9 +52,8 @@ def gradient_potential():
                                       name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/test-gradient-potential-model',
+               model_directory=directory,
                out_nodes=[energy])
-
 
 def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
@@ -67,6 +66,14 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
+def saving_graph(directory='/tmp/test-saving-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    pos_norm = tf.norm(graph.positions, axis=1)
+    graph.save_tensor(pos_norm, 'v1')
+    graph.running_mean(pos_norm, 'v2')
+    graph.save(directory)
+    return directory
 
 def wrap_graph(directory='/tmp/test-wrap-model'):
     graph = htf.graph_builder(0, output_forces=False)
@@ -121,7 +128,6 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
-
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
     # get distance from center
@@ -139,6 +145,23 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
     return directory
 
+
+def run_traj_graph(directory='/tmp/test-run-traj'):
+    graph = htf.graph_builder(16)
+    nlist = graph.nlist[:, :, :3]
+    r = tf.norm(nlist, axis=2)
+    # compute 1 / r while safely treating r = 0.
+    # pairwise energy. Double count -> divide by 2
+    inv_r6 = graph.safe_div(1., r**6)
+    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+    # sum over pairwise energy
+    energy = tf.reduce_sum(p_energy, axis=1)
+    forces = graph.compute_forces(energy)
+    avg_energy = graph.running_mean(tf.reduce_sum(energy, axis=0),
+                                    'average-energy')
+    graph.save(force_tensor=forces, model_directory=directory,
+               out_nodes=[avg_energy])
+    return directory
 
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)

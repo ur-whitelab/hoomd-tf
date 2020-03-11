@@ -4,11 +4,11 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import build_examples
-
+import tempfile
 
 class test_loading(unittest.TestCase):
     def test_load_variables(self):
-        model_dir = '/tmp/test-load'
+        model_dir = self.tmp
         # make model that does assignment
         g = htf.graph_builder(0, False)
         h = tf.ones([10], dtype=tf.float32)
@@ -32,6 +32,7 @@ class test_loading(unittest.TestCase):
 
 class test_mappings(unittest.TestCase):
     def setUp(self):
+        self.tmp = tempfile.mkdtemp()
         # build system using example from hoomd
         hoomd.context.initialize()
         snapshot = hoomd.data.make_snapshot(N=10,
@@ -53,6 +54,9 @@ class test_mappings(unittest.TestCase):
                                    [6, 7], [7, 8], [8, 9]]
         snapshot.replicate(1, 3, 3)
         self.system = hoomd.init.read_snapshot(snapshot)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
 
     def test_find_molecules(self):
         # test out mapping
@@ -182,7 +186,7 @@ class test_mappings(unittest.TestCase):
         # want to have a big enough system so that we actually have a cutoff
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
                                            n=[4, 4, 4])
-        model_dir = build_examples.custom_nlist(16, rcut, system)
+        model_dir = build_examples.custom_nlist(16, rcut, system, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
@@ -205,7 +209,7 @@ class test_mappings(unittest.TestCase):
             np.testing.assert_array_almost_equal(ni, ci, decimal=5)
 
     def test_compute_pairwise_potential(self):
-        model_dir = build_examples.lj_rdf(9 - 1)
+        model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             rcut = 2.5
@@ -225,17 +229,23 @@ class test_mappings(unittest.TestCase):
             potentials = tfcompute.get_forces_array()[3]
 
         r = np.linspace(0.5, 1.5, 5)
-        potential, *forces = htf.compute_pairwise_potential(model_dir,
+        potential, forces = htf.compute_pairwise_potential(model_dir,
                                                            r, 'energy')
         np.testing.assert_equal(len(potential), len(r),
                                 'Potentials not calculated correctly')
 
 
 class test_bias(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
     def test_eds(self):
         T = 1000
         hoomd.context.initialize()
-        model_dir = build_examples.eds_graph()
+        model_dir = build_examples.eds_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -249,5 +259,20 @@ class test_bias(unittest.TestCase):
                 model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
         assert np.isfinite(variables['eds.a'])
         assert (variables['cv-mean'] - 4)**2 < 0.5
+
+
+class test_trajectory(unittest.TestCase):
+    def test_run_from_trajectory(self):
+        import math
+        import MDAnalysis as mda
+        universe = mda.Universe('test_topol.pdb', 'test_traj.trr')
+        # load example graph that calculates average energy
+        model_directory = build_examples.run_traj_graph()
+        htf.run_from_trajectory(model_directory, universe)
+        # get evaluated outnodes
+        variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
+        # assert they are calculated and valid?
+        assert not math.isnan(variables['average-energy'])
+
 if __name__ == '__main__':
     unittest.main()
