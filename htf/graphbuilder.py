@@ -6,14 +6,14 @@ import pickle
 
 R"""This is a python class that builds the TensorFlow graph.
 
-       Use safe_div class method to avoid nan forces if doing 1/r
-       or equivalent force calculations.
+       
 """
 
 class graph_builder:
     # \internal
     # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
+
         :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
         :type nneighbor_cutoff: int
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
@@ -165,6 +165,7 @@ class graph_builder:
             :param nlist: Neighbor list to mask. By default it will use ``self.nlist``.
             :param type_tensor: An N x 1 tensor containing the type(s) of the nlist origin.
                 If None, particle types from ``self.positions`` will be used.
+            :return: The masked neighbor list tensor.
         """
         if nlist is None:
             nlist = self.nlist
@@ -183,13 +184,15 @@ class graph_builder:
 
             :param r: The vector to wrap around the HOOMD box.
             :type r: tensor
+            :return: The wrapped vector as a TF tensor
         """
         return r - tf.math.round(r / self.box_size) * self.box_size
 
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
-        R"""Computes the pairwise radial distribution function.
+        R"""Computes the pairwise radial distribution function, and appends
+            the histogram tensor to the graph's ``out_nodes``.
 
         :param bins: The bins to use for the RDF
         :param name: The name of the tensor containing rdf. The name will be
@@ -241,8 +244,6 @@ class graph_builder:
         :type batch_reduction: str
 
         :return: A variable containing the running mean
-        :rtype: tensor
-
         """
         if batch_reduction not in ['mean', 'sum']:
             raise ValueError('Unable to perform {}'
@@ -287,7 +288,6 @@ class graph_builder:
         :type save_period: int
 
         :return: None
-
         """
 
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
@@ -318,7 +318,6 @@ class graph_builder:
 
         :return: The TF force tensor. Note that the virial part will be stored
             as the class attribute ``virial`` and will be saved automatically.
-
         """
         if virial is None:
             if self.output_forces:
@@ -414,6 +413,7 @@ class graph_builder:
 
         :param MN: The number of molecules
         :type MN: int
+        :return: None
         """
 
         self.mol_indices = tf.placeholder(tf.int32,
@@ -450,14 +450,18 @@ class graph_builder:
     @staticmethod
     def safe_div(numerator, denominator, delta=3e-6, **kwargs):
         R"""
+        Use this method to avoid nan forces if doing 1/r
+        or equivalent force calculations.
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
+        
 
         :param numerator: The numerator.
         :type numerator: tensor
         :param denominator: The denominator.
         :type denominator: tensor
         :param delta: Tolerance for magnitude that triggers safe division.
+        :return: The safe division op (TensorFlow operation)
         """
         op = tf.where(
                tf.greater(denominator, delta),
@@ -478,6 +482,7 @@ class graph_builder:
         :param tensor: the tensor over which to take the norm
         :param delta: small value to add so near-zero is treated without too much
             accuracy loss.
+        :return: The safe norm op (TensorFlow operation)
         """
         return tf.norm(tensor + delta, **kwargs)
 
@@ -496,6 +501,7 @@ class graph_builder:
             list can itself be a list where the first element is the node
             and the second element is the period indicating how often to
             execute it.
+        :return: None
         """
         if out_nodes is None:
             out_nodes = []
