@@ -31,7 +31,6 @@ author = 'Rainier Barrett, Dilnoza Amirkulova, \
 Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
 
 # The full version, including alpha/beta/rc tags
-
 release = __version__
 
 

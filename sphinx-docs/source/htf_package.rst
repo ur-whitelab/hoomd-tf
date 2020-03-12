@@ -16,4 +16,5 @@ htf
     tfarraycomm
     tfcompute
     tfmanager
+    tfarraycomm
     utils

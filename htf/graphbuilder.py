@@ -14,7 +14,6 @@ class graph_builder:
     # \internal
     # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
-
         :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
         :type nneighbor_cutoff: int
         :param output_forces: True if your graph will compute forces to be used in TensorFlow

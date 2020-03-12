@@ -138,6 +138,13 @@ special requirements.
 
     git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
 
+<<<<<<< HEAD
+We are on release v2.5.1 of hoomd-blue
+
+.. code:: bash
+
+    cd hoomd-blue && git checkout tags/v2.5.1
+=======
 We typically use v2.5.2 of hoomd-blue
 
 .. code:: bash
@@ -162,7 +169,6 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
      -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
-
 
 Now compile with make:
 
