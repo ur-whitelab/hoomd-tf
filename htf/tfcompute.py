@@ -2,7 +2,7 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from .utils import find_molecules
-from hoomd.htf import _htf
+import hoomd._htf as _htf
 from .tfmanager import main
 import sys
 import math
@@ -24,6 +24,24 @@ import tensorflow as tf
 # write a tensorboard file, run in "mock mode", and use XLA if available.
 
 class tfcompute(hoomd.compute._compute):
+    R""" TensorFlow Computations for HTF.
+
+        :param tf_model_directory: Directory in which to save the TensorFlow model files.
+        :param log_filename: Name to use for the TensorFlow log file.
+        :param device: Device (GPU) on which to execute, if a specific one is desired.
+        :param bootstrap: If set to a directory, will search for and
+            load a previously-saved model file
+        :param bootstrap_map: A dictionary to be used when bootstrapping, 
+            pairing old models' tensor variable names with new ones.
+            Key is new name, value is older model's.
+        :param _deubug_mode: Set this to True to see more debug messages.
+        :param _mock_mode: Set this to True to run a "fake" calculation
+            of forces that would be passed to the HOOMD simulation without applying them.
+        :param write_tensorboard: If True, a tensorboard file will be written
+            in the tf_model_directory.
+        :param use_xla: If True, enables the accelerated linear algebra library
+            in TensorFlow, which can be useful for large and complicated tensor operations.
+    """
     ## \internal
     # \brief Constructs the tfcompute class
     # \details
@@ -36,29 +54,7 @@ class tfcompute(hoomd.compute._compute):
                  use_xla=False):
         R""" Initialize a tfcompute class instance
 
-        Parameters
-        ---------
-        tf_model_directory
-            Directory in which to save the TensorFlow model files.
-        log_filename
-            Name to use for the TensorFlow log file.
-        device
-            Device (GPU) on which to execute, if a specific one is desired.
-        bootstrap
-            If set to a directory, will search for and load a previously-saved model file
-        bootstrap_map
-            A dictionary to be used when bootstrapping, pairing old models' tensor variable
-            names with new ones. Key is new name, value is older model's.
-        _deubug_mode
-            Set this to True to see more debug messages.
-        _mock_mode
-            Set this to True to run a "fake" calculation of forces that would be passed to
-            the HOOMD simulation without applying them.
-        write_tensorboard
-            If True, a tensorboard file will be written in the tf_model_directory.
-        use_xla
-            If True, enables the accelerated linear algebra library in TensorFlow, which
-            can be useful for large and complicated tensor operations.
+        
         """
 
         # so delete won't fail

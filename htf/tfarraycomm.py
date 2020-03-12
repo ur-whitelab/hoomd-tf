@@ -1,7 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-from hoomd.htf import _htf
+import hoomd._htf as _htf
 import numpy as np
 import hoomd
 
@@ -10,8 +10,7 @@ R""" tf_array_comm is used to incorporate some
 """
 
 class tf_array_comm:
-    R""" Set up HOOMD context and plug in the memory addresses from
-    C++ module. See C++ bindings.
+    R""" Set up HOOMD context and interface with C++ memory. See C++ bindings.
     """
     def __init__(self, nparray, hoomd_context=hoomd.context.exec_conf):
         # get numpy array address
