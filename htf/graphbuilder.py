@@ -7,7 +7,7 @@ import pickle
 R"""This is a python class that builds the TensorFlow graph.
 
        Use safe_div class method to avoid nan forces if doing 1/r
-       or equivalent force calculations
+       or equivalent force calculations.
 """
 
 class graph_builder:
@@ -16,7 +16,9 @@ class graph_builder:
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
 
         :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
+        :type nneighbor_cutoff: int
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
+        :type output_forces: bool
     """
     def __init__(self, nneighbor_cutoff, output_forces=True):
         # clear any previous graphs
@@ -157,18 +159,13 @@ class graph_builder:
 
     def masked_nlist(self, type_i=None, type_j=None, nlist=None,
                      type_tensor=None):
-        R"""Returns a neighbor list masked by the given types.
+        R"""Returns a neighbor list masked by the given particle type(s).
 
-        Args:
-            name
-                The name of the tensor
-            type_i, type_j
-                Use these to select only a certain particle type.
-            nlist
-                By default it will use self.nlist
-            type_tensor
-                An N x 1 tensor containing the types of the nlist origin. If None,
-                then self.positions will be used
+            :param type_i: Use this to select the first particle type.
+            :param type_j: Use this to select a second particle type (optional).
+            :param nlist: Neighbor list to mask. By default it will use ``self.nlist``.
+            :param type_tensor: An N x 1 tensor containing the type(s) of the nlist origin.
+                If None, particle types from ``self.positions`` will be used.
         """
         if nlist is None:
             nlist = self.nlist
@@ -184,31 +181,30 @@ class graph_builder:
 
     def wrap_vector(self, r):
         R"""Computes the minimum image version of the given vector.
+
+            :param r: The vector to wrap around the HOOMD box.
+            :type r: tensor
         """
         return r - tf.math.round(r / self.box_size) * self.box_size
 
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
-        R"""Creates a tensor that has the rdf for a given frame.
+        R"""Computes the pairwise radial distribution function.
 
-        Parameters
-        ----------
-        bins
-            The bins to use for the RDF
-        name
-            The name of the tensor containing rdf. The name will be
+        :param bins: The bins to use for the RDF
+        :param name: The name of the tensor containing rdf. The name will be
             concatenated with '-r' to create a tensor containing the
             r values of the rdf.
-        type_i, type_j
-            Use these to select only a certain particle type.
-        nlist
-            By default it will use self.nlist
-        positions
-            By default will used built-in positions. This tensor is only used
+        :param type_i: Use this to select the first particle type.
+        :param type_j: Use this to select the second particle type.
+        :param nlist: Neighbor list to use for RDF calculation. By default
+            it will use ``self.nlist``.
+        :param positions: Defaults to ``self.positions``. This tensor is only used
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
 
+        :return: Historgram tensor of the RDF.
         """
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
@@ -457,6 +453,12 @@ class graph_builder:
         R"""
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
+
+        :param numerator: The numerator.
+        :type numerator: tensor
+        :param denominator: The denominator.
+        :type denominator: tensor
+        :param delta: Tolerance for magnitude that triggers safe division.
         """
         op = tf.where(
                tf.greater(denominator, delta),
@@ -472,7 +474,11 @@ class graph_builder:
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
         NOTE: delta of safe_div must be > sqrt(3) * (safe_norm delta)
-        #https://github.com/tensorflow/tensorflow/issues/12071
+        See `this TensorFlow issue <https://github.com/tensorflow/tensorflow/issues/12071>`.
+
+        :param tensor: the tensor over which to take the norm
+        :param delta: small value to add so near-zero is treated without too much
+            accuracy loss.
         """
         return tf.norm(tensor + delta, **kwargs)
 
@@ -480,19 +486,13 @@ class graph_builder:
              out_nodes=None, move_previous=True):
         R"""Save the graph model to specified directory.
 
-        Parameters
-        ----------
-        model_directory
-            Multiple files will be saved, including a dictionary with
+        :param model_directory: Multiple files will be saved, including a dictionary with
             information specific to hoomd-tf and TF model files.
-        force_tensor
-            The forces that should be sent to hoomd
-        virial
-            The virial which should be sent to hoomd. If None and you called
+        :param force_tensor: The forces that should be sent to hoomd
+        :param virial: The virial which should be sent to hoomd. If None and you called
             compute_forces, then the virial computed from that
             function will be saved.
-        out_nodes
-            Any additional TF graph nodes that should be executed.
+        :param out_nodes: Any additional TF graph nodes that should be executed.
             For example, optimizers, printers, etc. Each element of the
             list can itself be a list where the first element is the node
             and the second element is the period indicating how often to
