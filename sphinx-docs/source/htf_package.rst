@@ -2,17 +2,16 @@ htf
 ---
 
 .. rubric:: Details
-
-.. automodule:: hoomd.htf
-    :synopsis: HOOMD-blue plus TensorFlow.
-    :members:
-
+HOOMD-blue plus TensorFlow for online machine learning in MD simulations.
+Supports GPU and CPU execution.
+            
 .. rubric:: Modules
 
 .. toctree::
     :maxdepth: 3
 
     graphbuilder
+    tfarraycomm
     tfcompute
     tfmanager
     tfarraycomm

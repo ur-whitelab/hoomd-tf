@@ -13,13 +13,14 @@
 import os
 import sys
 import mock
+from copy import copy
 
-# create mock hoomd imports for autodocs
-mock_module_names = ['hoomd.htf','hoomd.md','hoomd.md.nlist','hoomd.comm','hoomd']
-for name in mock_module_names:
-    sys.modules[name] = mock.Mock()
-
-from htf import __version__
+# get the version string from the codebase
+with open('../../htf/version.py') as f:
+    lines = f.readlines()
+exec(lines[0])
+# The full version, including alpha/beta/rc tags
+release = __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -30,8 +31,6 @@ Heta Gandhi, Andrew D. White'
 author = 'Rainier Barrett, Dilnoza Amirkulova, \
 Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
 
-# The full version, including alpha/beta/rc tags
-release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -66,5 +65,5 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 
-# ignore the C code import
-autodoc_mock_imports = ['hoomd.htf._htf']
+# mock hoomd import so we can generate docs without installing
+autodoc_mock_imports = ['hoomd']
