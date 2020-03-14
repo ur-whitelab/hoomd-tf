@@ -147,7 +147,7 @@ def eds_graph(directory='/tmp/test-lj-eds'):
 
 
 def run_traj_graph(directory='/tmp/test-run-traj'):
-    graph = htf.graph_builder(16)
+    graph = htf.graph_builder(128)
     nlist = graph.nlist[:, :, :3]
     r = tf.norm(nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
