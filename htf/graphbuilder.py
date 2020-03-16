@@ -1,17 +1,12 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+
 import tensorflow as tf
 import os
 import pickle
 
-R"""This is a python class that builds the TensorFlow graph.
-
-       
-"""
 
 class graph_builder:
-    # \internal
-    # \brief Initializes the graphbuilder class
     R""" Build the TensorFlow graph that will be used during the HOOMD run.
 
         :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
@@ -19,7 +14,11 @@ class graph_builder:
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
         :type output_forces: bool
     """
+    # \internal
+    # \brief Initializes the graphbuilder class
     def __init__(self, nneighbor_cutoff, output_forces=True):
+        R""" Build the TensorFlow graph that will be used during the HOOMD run.
+        """
         # clear any previous graphs
         atom_number = None
         self.atom_number = atom_number
