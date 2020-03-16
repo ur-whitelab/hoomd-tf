@@ -164,16 +164,20 @@ class tfcompute(hoomd.compute._compute):
     # speed up some tensor calculations. Use this to toggle
     # whether or not to use it.
 
-    R""" __enter__ method of the HOOMD compute
-    Launches TensorFlow."""
+    
     def __enter__(self):
+        R""" __enter__ method of the HOOMD compute
+        Launches TensorFlow.
+        """
         if not self.mock_mode:
             self._init_tf()
         return self
 
-    R""" __exit__ method of the HOOMD compute
-    Tells TensorFlow to shutdown its instance, through TFManager. """
+
     def __exit__(self, exc_type, exc_value, traceback):
+        R""" __exit__ method of the HOOMD compute
+        Tells TensorFlow to shutdown its instance, through TFManager.
+        """
         # trigger end in task lock
         if not self.mock_mode and self.tfm.is_alive():
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
@@ -181,35 +185,29 @@ class tfcompute(hoomd.compute._compute):
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
                 self.shutdown_tf()
 
-    R""" Attaches the TensorFlow instance to HOOMD.
-    The main method of this class, this method sets up TensorFlow and
-    gets HOOMD ready to interact with it.
-    Parameters
-    ----------
-    nlist
-        The HOOMD neighbor list that will be used as the TensorFlow input.
-    r_cut
-        Cutoff radius for neighbor listing.
-    save_period
-        How often to save the TensorFlow data. Period here is measured by
-        how many times the TensorFLow model is updated. See period.
-    period
-        How many HOOMD steps should pass before updating the TensorFlow model.
-        In combination with save_period, determines how many timesteps pass before
-        TensorFlow saves its data (slow). For example, with a save_period of 200,
-        a period of 4, TensorFlow will write to the tf_model_directory every 800
-        simulation steps.
-    feed_dict
-        The dictionary keyed by tensor names and filled with corresponding values.
-        See feed_dict in __init__.
-    mol_indices
-        Molecule indices for each atom, identifying which molecule each atom belongs to.
-    batch_size
-        The size of batches if we are using batching. Cannot be used if molecule-wise
-        batching is active."""
+
     def attach(self, nlist=None, r_cut=0, save_period=1000,
                period=1, feed_dict=None, mol_indices=None,
                batch_size=None):
+        R""" Attaches the TensorFlow instance to HOOMD.
+        The main method of this class, this method sets up TensorFlow and
+        gets HOOMD ready to interact with it.
+        
+        :param nlist: The HOOMD neighbor list that will be used as the TensorFlow input.
+        :param r_cut: Cutoff radius for neighbor listing.
+        :param save_period: How often to save the TensorFlow data. Period here is measured by
+            how many times the TensorFLow model is updated. See period.
+        :param period: How many HOOMD steps should pass before updating the TensorFlow model.
+            In combination with save_period, determines how many timesteps pass before
+            TensorFlow saves its data (slow). For example, with a save_period of 200,
+            a period of 4, TensorFlow will write to the tf_model_directory every 800
+            simulation steps.
+        :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.
+            See feed_dict in __init__.
+        :param mol_indices: Molecule indices for each atom, identifying which molecule each atom belongs to.
+        :param batch_size: The size of batches if we are using batching. Cannot be used if molecule-wise
+            batching is active.
+        """
         # make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
             hoomd.context.msg.error('Must attach TF after initialization\n')
@@ -344,9 +342,10 @@ class tfcompute(hoomd.compute._compute):
         if not self.mock_mode:
             self._start_tf()
 
-    R""" Sets the HOOMD reference forces to be used by TensorFlow.
-    See C++ comments in TensorFlowCompute.h"""
     def set_reference_forces(self, *forces):
+        R""" Sets the HOOMD reference forces to be used by TensorFlow.
+        See C++ comments in TensorFlowCompute.h
+        """
         if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
             raise ValueError('Only valid to set reference'
                              ' forces if mode is hoomd2tf')
@@ -358,9 +357,10 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.msg.notice(5, 'Will use given force for '
                                      'TFCompute {} \n'.format(f.name))
 
-    R""" Define the cutoff radius used in the neighbor list.
-    Adapted from hoomd/md/pair.py"""
     def rcut(self):
+        R""" Define the cutoff radius used in the neighbor list.
+        Adapted from hoomd/md/pair.py
+        """
         # go through the list of only the active particle types in the sim
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
@@ -377,33 +377,36 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
-    R""" delete method for the compute.
-    Ensures that tensorflow is properly shut down before quitting."""
     def __del__(self):
+        R""" delete method for the compute.
+        Ensures that tensorflow is properly shut down before quitting.
+        """
         if self.tfm and self.tfm.is_alive():
             self.shutdown_tf()
 
-    R""" shut down the TensorFlow instance.
-    """
     def shutdown_tf(self):
+        R""" shut down the TensorFlow instance.
+        """
         # need to terminate orphan
         if not self.q.full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
             self.q.put(None)
         self.tfm.join(1)
 
-    R""" set up the TensorFlow instance.
-    Create threading queue and give it to TensorFlow manager."""
     def _init_tf(self):
+        R""" set up the TensorFlow instance.
+        Create threading queue and give it to TensorFlow manager.
+        """
         self.q = queue.Queue(maxsize=1)
         self.tfm = threading.Thread(target=main, args=(
                 self.q, self.write_tensorboard, self.device))
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 
-    R""" start the TensorFlow instance.
-    Add our class var args to the queue, and print some graph info."""
     def _start_tf(self):
+        R""" start the TensorFlow instance.
+        Add our class var args to the queue, and print some graph info.
+        """
         if not self.cpp_force:
             return
         args = {'log_filename': self.log_filename,
@@ -440,9 +443,12 @@ class tfcompute(hoomd.compute._compute):
         hoomd.context.msg.notice(2, 'TF Session Manager has released control.'
                                  ' Starting HOOMD updates\n')
 
-    R""" Allow TF to read output and we wait for it to finish.
-    """
     def finish_update(self, batch_index, batch_frac):
+        R""" Allow TF to read output and we wait for it to finish.
+        :param batch_index: index of batch to be processed
+        :param batch_frac: fractional batch index, i.e. 
+            ``batch_frac`` = ``batch_index / len(input)``
+        """
         if self.mock_mode:
             return
         fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
@@ -464,16 +470,24 @@ class tfcompute(hoomd.compute._compute):
             raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
 
     def get_positions_array(self):
+        R""" Retrieve positions array as numpy array
+        """
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
+        R""" Retrieve neighbor list array as numpy array
+        """
         nl = self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
         return nl.reshape(-1, self.nneighbor_cutoff, 4)
 
     def get_forces_array(self):
+        R""" Retrieve forces array as numpy array
+        """
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
+        R""" Retrieve virial array as numpy array
+        """
         array = np.array(self.cpp_force.getVirialArray())
         return array.reshape((-1, 9))
 
@@ -481,6 +495,9 @@ class tfcompute(hoomd.compute._compute):
         pass
 
     def scalar4_vec_to_np(self, array):
+        R""" Convert from scalar4 dtype to numpy array
+        :param array: the scalar4 array to be processed
+        """
         npa = np.empty((len(array), 4))
         for i, e in enumerate(array):
             npa[i, 0] = e.x

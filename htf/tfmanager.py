@@ -43,12 +43,43 @@ def load_htf_op_library(op):
                       'Expected to be in {}'.format(op, path))
     return mod
 
+
 ## \internal
 # \brief TensorFlow manager class
 # \details
 # Manages when TensorFlow performs training and coordinates its
 # communication with HOOMD
 class TFManager:
+    R""" TFManager manages TensorFlow training and coordinates communication with HOOMD.
+    Sets up the TensorFlow graph, sets placeholder variable values, updates and
+    saves the TensorFlow graph, passes output forces back to HOOMD, and
+    writes TensorBoard files.
+    
+    :param graph_info: The structure of the TensorFlow graph, passed as a dict.
+        See tfcompute.py
+    :param device: Which device to run on.
+        See tfcompute.py
+    :param q: Threading queue that is used during execution of TensorFlow.
+    :param positions_buffer: Buffer where particle positions are stored
+    :param nlist_buffer: Address of the neighbor list tensor
+    :param box_buffer: Address of the box tensor
+    :param forces_buffer: Address of the forces tensor
+    :param virial_buffer: Address of the virial tensor
+    :param log_filename: Name of the file to output tensorflow logs
+    :param dtype: Data type for tensor values, e.g. int32, float32, etc
+    :param debug: True to run TensorFlow in debug mode
+    :param write_tensorboard: Whether to output a tensorboard file
+    :param use_feed: Whether or not to use a feed dictionary of tensor values
+    :param bootstrap: Location of previously-trained model files to load, otherwise None
+    :param primary: Whether this is the 'primary' instance of TFManager. Only one instance
+        writes logs and saves model files.
+    :param bootstrap_map: A dictionary to be used when bootstrapping, pairing old models' tensor variable
+        names with new ones. Key is new name, value is older model's.
+    :param save_period: How often to save the TensorFlow data. Period here is measured by
+        how many times the TensorFLow model is updated. See tfcompute.py.
+    :param use_xla: If True, enables the accelerated linear algebra library in TensorFlow, which
+        can be useful for large and complicated tensor operations.
+    """
     ## \internal
     # \brief Constructs the tfmanager class
     # \details
@@ -62,31 +93,6 @@ class TFManager:
                  bootstrap, primary, bootstrap_map,
                  save_period, use_xla):
         R""" Initialize an instance of TFManager.
-
-        :graph_info: The structure of the TensorFlow graph, passed as a dict.
-            See tfcompute.py
-        :device: Which device to run on.
-            See tfcompute.py
-        :q: Threading queue that is used during execution of TensorFlow.
-        :positions_buffer: Buffer where particle positions are stored
-        :nlist_buffer: Address of the neighbor list tensor
-        :box_buffer: Address of the box tensor
-        :forces_buffer: Address of the forces tensor
-        :virial_buffer: Address of the virial tensor
-        :log_filename: Name of the file to output tensorflow logs
-        :dtype: Data type for tensor values, e.g. int32, float32, etc
-        :debug: True to run TensorFlow in debug mode
-        :write_tensorboard: Whether to output a tensorboard file
-        :use_feed: Whether or not to use a feed dictionary of tensor values
-        :bootstrap: Location of previously-trained model files to load, otherwise None
-        :primary: Whether this is the 'primary' instance of TFManager. Only one instance
-            writes logs and saves model files.
-        :bootstrap_map: A dictionary to be used when bootstrapping, pairing old models' tensor variable
-            names with new ones. Key is new name, value is older model's.
-        :save_period: How often to save the TensorFlow data. Period here is measured by
-            how many times the TensorFLow model is updated. See tfcompute.py.
-        :use_xla: If True, enables the accelerated linear algebra library in TensorFlow, which
-            can be useful for large and complicated tensor operations.
         """
         self.primary = primary
         self.log = logging.getLogger('tensorflow')
@@ -295,7 +301,7 @@ class TFManager:
 
     
     def _update(self, sess, feed_dict, batch_index):
-        R""" update the TensorFlow model.
+        R""" Update the TensorFlow model.
 
         :param sess: TensorFlow session instance. This is how TensorFlow updates are called.
         :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.

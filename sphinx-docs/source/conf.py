@@ -16,6 +16,7 @@ import mock
 from copy import copy
 
 sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../htf'))
 
 # get the version string from the codebase
 with open('../../htf/version.py') as f:
