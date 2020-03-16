@@ -135,8 +135,8 @@ def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
     r = tf.norm(nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
     # pairwise energy. Double count -> divide by 2
-    epsilon = tf.Variable(2.0, name='lj-epsilon', trainable=True)
-    sigma = tf.Variable(1.0, name='lj-sigma', trainable=True)
+    epsilon = tf.Variable(0.5, name='lj-epsilon', trainable=True)
+    sigma = tf.Variable(0.5, name='lj-sigma', trainable=True)
     tf.summary.scalar('lj-epsilon', epsilon)
     inv_r6 = graph.safe_div(sigma**2, r**2)
     p_energy = epsilon / 2.0 * (- inv_r6)
@@ -150,14 +150,16 @@ def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
     energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
     target_forces = graph.compute_forces(energy2)
     # target_forces = tf.identity(forces2, name='target-forces')
-    cost = tf.losses.mean_squared_error(target_forces[:,:3], computed_forces[:,:3])
-    optimizer = tf.train.AdamOptimizer(
-        learning_rate=1e-2).minimize(cost)
-    # minimizer, new_loss = htf.force_matching(target_forces[:,:3], computed_forces[:,:3])# learning_rate=1e-3)
+    # cost = tf.losses.mean_squared_error(target_forces[:,:3],
+    #                                     computed_forces[:,:3])
+    # optimizer = tf.train.AdamOptimizer(
+    #    learning_rate=1e-2).minimize(cost)
+    minimizer, new_loss = htf.force_matching(target_forces[:,:3], 
+                                             computed_forces[:,:3])
+    graph.save_tensor(new_loss, 'cost')
     graph.save(force_tensor=computed_forces,
                model_directory=directory,
-               out_nodes=[tf.identity(cost, name='cost'),
-                          epsilon, sigma])
+               out_nodes=[epsilon, sigma])
     return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):

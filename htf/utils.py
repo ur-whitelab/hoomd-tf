@@ -284,7 +284,6 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
 
     """
     # Assert that mapped_forces has the right dimensions
-    print('\n\n{}\n\n'.format(mapped_forces.shape))
     if not (len(mapped_forces.shape
                 ) == 2 and mapped_forces.shape[1] == 3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'

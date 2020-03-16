@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import build_examples
 import tempfile
+import shutil
 
 class test_loading(unittest.TestCase):
     def test_load_variables(self):
@@ -149,21 +150,28 @@ class test_mappings(unittest.TestCase):
             hoomd.context.initialize()
             N = 64
             NN = 63
-            rcut = 5
+            rcut = 7.5
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
-                n=4)
+                n=[4,4])
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
-            hoomd.run(2000)
+            hoomd.run(1000)
             input_nlist = tfcompute.get_nlist_array()
-            variables = hoomd.htf.load_variables(model_dir, ['cost', 'lj-epsilon', 'lj-sigma'],
-                                                 feed_dict=dict({'nlist-input:0':input_nlist}))
-        assert variables['lj-sigma'] != 2.0
-        assert variables['lj-epsilon'] != 2.0
+            run1 = hoomd.htf.load_variables(model_dir,
+                                            ['cost', 'lj-epsilon', 'lj-sigma'],
+                                            feed_dict=dict({'nlist-input:0':input_nlist}))
+            cost = run1['cost']
+            hoomd.run(100)
+            input_nlist2 = tfcompute.get_nlist_array()
+            run2 = hoomd.htf.load_variables(model_dir,
+                                            ['cost', 'lj-epsilon', 'lj-sigma'],
+											feed_dict=dict({'nlist-input:0':input_nlist}))
+            new_cost = run2['cost']
+        assert cost != new_cost
 
     def test_compute_nlist(self):
         N = 10
