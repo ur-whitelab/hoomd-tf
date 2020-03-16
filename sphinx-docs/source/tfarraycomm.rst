@@ -9,3 +9,7 @@ tfarraycomm
    :nosignatures:
 
    tf_array_comm
+
+.. automodule:: htf.tfarraycomm
+   :synopsis: TensorFlow Array Communications
+   :members:

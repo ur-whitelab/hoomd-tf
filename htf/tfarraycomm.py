@@ -10,7 +10,11 @@ R""" tf_array_comm is used to incorporate some
 """
 
 class tf_array_comm:
-    R""" Set up HOOMD context and interface with C++ memory. See C++ bindings.
+    R""" Set up HOOMD context and interface with C++ memory.
+
+    :param nparray: numpy array to share with the C++ process
+    :param hoomd_context: HOOMD execution configuration 
+        (defaults to ``hoomd.context.exec_conf``)
     """
     def __init__(self, nparray, hoomd_context=hoomd.context.exec_conf):
         # get numpy array address
