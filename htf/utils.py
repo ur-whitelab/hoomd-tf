@@ -407,7 +407,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 # \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
-        considering PBC. Returns mapped particles.
+    considering PBC. Returns mapped particles.
 
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system

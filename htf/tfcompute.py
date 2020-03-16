@@ -385,7 +385,7 @@ class tfcompute(hoomd.compute._compute):
             self.shutdown_tf()
 
     def shutdown_tf(self):
-        R""" shut down the TensorFlow instance.
+        R""" Shut down the TensorFlow instance.
         """
         # need to terminate orphan
         if not self.q.full():
@@ -445,6 +445,7 @@ class tfcompute(hoomd.compute._compute):
 
     def finish_update(self, batch_index, batch_frac):
         R""" Allow TF to read output and we wait for it to finish.
+
         :param batch_index: index of batch to be processed
         :param batch_frac: fractional batch index, i.e. 
             ``batch_frac`` = ``batch_index / len(input)``
