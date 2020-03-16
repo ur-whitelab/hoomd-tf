@@ -13,7 +13,8 @@
 import os
 import sys
 import mock
-from copy import copy
+
+sys.path.insert(0, os.path.abspath('../../'))
 
 # get the version string from the codebase
 with open('../../htf/version.py') as f:
@@ -66,4 +67,7 @@ html_static_path = ['_static']
 
 
 # mock hoomd import so we can generate docs without installing
-autodoc_mock_imports = ['hoomd']
+autodoc_mock_imports = ['hoomd', 'hoomd.md', 'hoomd.md.nlist', 'hoomd.comm', 'tensorflow','numpy','hoomd._htf']
+
+# define master doc for newer versions of sphinx
+master_doc = 'index'

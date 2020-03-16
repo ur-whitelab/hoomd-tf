@@ -138,13 +138,6 @@ special requirements.
 
     git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
 
-<<<<<<< HEAD
-We are on release v2.5.1 of hoomd-blue
-
-.. code:: bash
-
-    cd hoomd-blue && git checkout tags/v2.5.1
-=======
 We typically use v2.5.2 of hoomd-blue
 
 .. code:: bash
