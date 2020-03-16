@@ -13,6 +13,7 @@
 import os
 import sys
 import mock
+from copy import copy
 
 sys.path.insert(0, os.path.abspath('../../'))
 
@@ -66,7 +67,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 
-# mock hoomd import so we can generate docs without installing
+# mock imports so we can generate docs without installing
 autodoc_mock_imports = ['hoomd', 'hoomd.md', 'hoomd.md.nlist', 'hoomd.comm', 'tensorflow','numpy','hoomd._htf']
 
 # define master doc for newer versions of sphinx
