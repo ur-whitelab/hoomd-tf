@@ -14,4 +14,4 @@ from .tfcompute import tfcompute, _make_reverse_indices
 from .graphbuilder import graph_builder
 from .tfarraycomm import tf_array_comm
 from .utils import *
-__version__ = '0.6'
+from .version import __version__

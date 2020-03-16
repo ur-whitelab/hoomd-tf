@@ -12,6 +12,7 @@
 #
 import os
 import sys
+from htf import __version__
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
 
@@ -26,7 +27,8 @@ author = 'Rainier Barrett, Dilnoza Amirkulova, \
 Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
 
 # The full version, including alpha/beta/rc tags
-release = '0.6'
+
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
