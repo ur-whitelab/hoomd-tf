@@ -9,6 +9,7 @@ import shutil
 
 class test_loading(unittest.TestCase):
     def test_load_variables(self):
+        self.tmp = tempfile.mkdtemp()
         model_dir = self.tmp
         # make model that does assignment
         g = htf.graph_builder(0, False)
