@@ -145,9 +145,9 @@ def mol_features_graph(directory='/tmp/test-mol-features'):
     r=htf.mol_bond_distance(mol_pos,2,1)
     a=htf.mol_angle(mol_pos,1,2,3)
     d=htf.mol_dihedral(mol_pos,1,2,3,4)
-    avg_r=tf.reduce_mean(r)
-    avg_a=tf.reduce_mean(a)
-    avg_d=tf.reduce_mean(d)
+    avg_r=tf.reduce_mean(r,name='avg-r')
+    avg_a=tf.reduce_mean(a,name='avg-a')
+    avg_d=tf.reduce_mean(d,name='avg-d')
     graph.save(model_directory=directory, out_nodes=[avg_r,avg_a,avg_d])
     return directory 
 
