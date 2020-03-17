@@ -578,7 +578,7 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
-        cos_a = np.divide(
+        cos_a = tf.math.divide(
             cos_a,
             (tf.norm(
                 v_ij,
