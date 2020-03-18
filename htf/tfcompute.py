@@ -30,7 +30,7 @@ class tfcompute(hoomd.compute._compute):
         :param device: Device (GPU) on which to execute, if a specific one is desired.
         :param bootstrap: If set to a directory, will search for and
             load a previously-saved model file
-        :param bootstrap_map: A dictionary to be used when bootstrapping, 
+        :param bootstrap_map: A dictionary to be used when bootstrapping,
             pairing old models' tensor variable names with new ones.
             Key is new name, value is older model's.
         :param _deubug_mode: Set this to True to see more debug messages.
@@ -52,8 +52,6 @@ class tfcompute(hoomd.compute._compute):
                  _debug_mode=False, _mock_mode=False, write_tensorboard=False,
                  use_xla=False):
         R""" Initialize a tfcompute class instance
-
-        
         """
 
         # so delete won't fail
@@ -163,7 +161,6 @@ class tfcompute(hoomd.compute._compute):
     # speed up some tensor calculations. Use this to toggle
     # whether or not to use it.
 
-    
     def __enter__(self):
         R""" __enter__ method of the HOOMD compute
         Launches TensorFlow.
@@ -191,7 +188,7 @@ class tfcompute(hoomd.compute._compute):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
-        
+
         :param nlist: The HOOMD neighbor list that will be used as the TensorFlow input.
         :param r_cut: Cutoff radius for neighbor listing.
         :param save_period: How often to save the TensorFlow data. Period here is measured by
@@ -203,9 +200,10 @@ class tfcompute(hoomd.compute._compute):
             simulation steps.
         :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.
             See feed_dict in __init__.
-        :param mol_indices: Molecule indices for each atom, identifying which molecule each atom belongs to.
-        :param batch_size: The size of batches if we are using batching. Cannot be used if molecule-wise
-            batching is active.
+        :param mol_indices: Molecule indices for each atom,
+            identifying which molecule each atom belongs to.
+        :param batch_size: The size of batches if we are using batching. 
+            Cannot be used if molecule-wise batching is active.
         """
         # make sure we have number of atoms and know dimensionality, etc.
         if not hoomd.init.is_initialized():
@@ -446,7 +444,7 @@ class tfcompute(hoomd.compute._compute):
         R""" Allow TF to read output and we wait for it to finish.
 
         :param batch_index: index of batch to be processed
-        :param batch_frac: fractional batch index, i.e. 
+        :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
         if self.mock_mode:

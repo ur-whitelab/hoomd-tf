@@ -12,7 +12,7 @@ import hoomd
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     R""" Adds variables from ``model_directory`` to the TF graph loaded from a checkpoint,
     optionally other than the most recent one, or setting values with a feed dict.
-    
+
     :param model_directory: Directory from which to load model variables.
     :param names: names of TensorFlow variables to load
     :param checkpoint: checkpoint number of the trained model to load from.
@@ -71,10 +71,10 @@ def compute_pairwise_potential(model_directory, r,
         An integer indicates loading
         from the model directory. If you pass a string, it is interpreted
         as a path.
-    :param feed_dict: Allows you to add any other placeholder values that need 
+    :param feed_dict: Allows you to add any other placeholder values that need
         to be added to compute potential in your model
 
-    :return: A tuple of 1D arrays. First is the potentials corresponding to the 
+    :return: A tuple of 1D arrays. First is the potentials corresponding to the
         pairwise distances in r, second is the forces.
     """
     # just in case
@@ -342,8 +342,8 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     :param cv: The collective variable which is biased in the simulation
     :param set_point: The set point value of the collective variable.
         This is a constant value which is pre-determined by the user and unique to each cv.
-    :param period: Time steps over which the coupling constant is updated. HOOMD time units are used.
-        If period=100 alpha will be updated each 100 time steps.
+    :param period: Time steps over which the coupling constant is updated.
+        HOOMD time units are used. If period=100 alpha will be updated each 100 time steps.
     :param learninig_rate: Learninig_rate in the EDS method.
     :param cv_scale: Used to adjust the units of the bias to HOOMD units.
 

@@ -453,7 +453,6 @@ class graph_builder:
         or equivalent force calculations.
         There are some numerical instabilities that can occur during learning
         when gradients are propagated. The delta is problem specific.
-        
 
         :param numerator: The numerator.
         :type numerator: tensor

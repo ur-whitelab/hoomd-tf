@@ -11,6 +11,6 @@ machine learning on-the-fly in HOOMD-blue simulations.
 import hoomd.md
 from htf.tfcompute import tfcompute
 from htf.graphbuilder import graph_builder
-from htf.tfarraycomm import  tf_array_comm
+from htf.tfarraycomm import tf_array_comm
 from htf.utils import *
 from htf.version import __version__

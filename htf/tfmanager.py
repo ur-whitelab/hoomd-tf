@@ -54,7 +54,7 @@ class TFManager:
     Sets up the TensorFlow graph, sets placeholder variable values, updates and
     saves the TensorFlow graph, passes output forces back to HOOMD, and
     writes TensorBoard files.
-    
+
     :param graph_info: The structure of the TensorFlow graph, passed as a dict.
         See tfcompute.py
     :param device: Which device to run on.
@@ -73,12 +73,13 @@ class TFManager:
     :param bootstrap: Location of previously-trained model files to load, otherwise None
     :param primary: Whether this is the 'primary' instance of TFManager. Only one instance
         writes logs and saves model files.
-    :param bootstrap_map: A dictionary to be used when bootstrapping, pairing old models' tensor variable
-        names with new ones. Key is new name, value is older model's.
+    :param bootstrap_map: A dictionary to be used when bootstrapping, 
+        pairing old models' tensor variable names with new ones.
+        Key is new name, value is older model's.
     :param save_period: How often to save the TensorFlow data. Period here is measured by
         how many times the TensorFLow model is updated. See tfcompute.py.
-    :param use_xla: If True, enables the accelerated linear algebra library in TensorFlow, which
-        can be useful for large and complicated tensor operations.
+    :param use_xla: If True, enables the accelerated linear algebra library in TensorFlow,
+        which can be useful for large and complicated tensor operations.
     """
     ## \internal
     # \brief Constructs the tfmanager class
@@ -299,14 +300,14 @@ class TFManager:
     # XLA can enhance the speed of execution of many TensorFlow models. Set this
     # to True to use it.
 
-    
     def _update(self, sess, feed_dict, batch_index):
         R""" Update the TensorFlow model.
 
         :param sess: TensorFlow session instance. This is how TensorFlow updates are called.
         :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.
             See feed_dict in tfcompute.__init__.
-        :param batch_index: Tracks the batch indices used for execution when batching. See graphbuilder.py
+        :param batch_index: Tracks the batch indices used for execution when batching.
+            See graphbuilder.py
         """
         if batch_index == 0:
             # step starts at -1, so first step is 0
