@@ -15,6 +15,8 @@ import math
 import tensorflow as tf
 import build_examples
 
+from tfcompute import _make_reverse_indices
+
 
 def compute_forces(system, rcut):
     '''1 / r^2 force'''

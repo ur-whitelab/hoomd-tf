@@ -1,9 +1,8 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-from .utils import find_molecules
 import hoomd._htf as _htf
-from .tfmanager import main
+from htf.tfmanager import main
 import sys
 import math
 import numpy as np
