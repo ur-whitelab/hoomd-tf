@@ -1,5 +1,9 @@
+.. _graph_builder:
+
 graph_builder
 -------------
+
+.. py:currentmodule:: htf.graphbuilder
 
 .. rubric:: Details
 
