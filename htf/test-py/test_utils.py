@@ -151,12 +151,12 @@ class test_mappings(unittest.TestCase):
         assert True
 
     def test_force_matching(self):
-        model_dir = build_examples.lj_force_matching(NN=63)
+        model_dir = build_examples.lj_force_matching(NN=15)
         # calculate lj forces with a leading coeff
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
-            N = 64
-            NN = 63
+            N = 16
+            NN = N-1
             rcut = 7.5
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -172,17 +172,17 @@ class test_mappings(unittest.TestCase):
             input_nlist = tfcompute.get_nlist_array()
             variables = hoomd.htf.load_variables(
                 model_dir, checkpoint=10,
-                names=['cost', 'lj-epsilon', 'lj-sigma'],
+                names=['loss', 'lj-epsilon', 'lj-sigma'],
                 feed_dict=dict({'nlist-input:0': input_nlist}))
             new_variables = hoomd.htf.load_variables(
                 model_dir, checkpoint=-1,
-                names=['cost', 'lj-epsilon', 'lj-sigma'],
+                names=['loss', 'lj-epsilon', 'lj-sigma'],
                 feed_dict=dict({'nlist-input:0': input_nlist}))
-            cost = variables['cost']
-            new_cost = new_variables['cost']
-        assert cost != new_cost
-        assert new_variables['epsilon'] != 0.9
-        assert new_variables['sigma'] != 1.1
+            loss = variables['loss']
+            new_loss = new_variables['loss']
+        assert loss != new_loss
+        assert new_variables['lj-epsilon'] != 0.9
+        assert new_variables['lj-sigma'] != 1.1
 
     def test_compute_nlist(self):
         N = 10

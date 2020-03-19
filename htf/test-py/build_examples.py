@@ -128,8 +128,8 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
-def lj_force_matching(NN=64, directory='/tmp/test-lj-force-matching'):
-    graph = htf.graph_builder(NN)
+def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
+    graph = htf.graph_builder(NN, output_forces=False)
     # make trainable variables
     epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
     sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
@@ -146,11 +146,12 @@ def lj_force_matching(NN=64, directory='/tmp/test-lj-force-matching'):
     # compare hoomd-blue forces (graph.forces) with our 
     # computed forces
     minimizer, loss = htf.force_matching(graph.forces[:,:3], 
-                                             computed_forces[:,:3], learning_rate=1e-2)
+                                         computed_forces[:,:3],
+                                         learning_rate=1e-2)
     # save loss so we can visualize later
-    graph.save_tensor(loss, 'cost')
+    graph.save_tensor(loss, 'loss')
     # Make sure to have minimizer in out_nodes so that the force matching occurs!
-    graph.save(model_directory='CG_tutorial/force_matching',
+    graph.save(model_directory=directory,
                out_nodes=[minimizer])
     return directory
 
