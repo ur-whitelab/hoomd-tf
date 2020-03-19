@@ -128,38 +128,30 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
     return directory
 
-def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
+def lj_force_matching(NN=64, directory='/tmp/test-lj-force-matching'):
     graph = htf.graph_builder(NN)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    epsilon = tf.Variable(0.5, name='lj-epsilon', trainable=True)
-    sigma = tf.Variable(0.5, name='lj-sigma', trainable=True)
-    tf.summary.scalar('lj-epsilon', epsilon)
-    inv_r6 = graph.safe_div(sigma**2, r**2)
-    p_energy = epsilon / 2.0 * (- inv_r6)
-    # sum over pairwise energy
+    # make trainable variables
+    epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
+    sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
+    # get LJ potential using our variables
+    # uses built in nlist_rinv which provides
+    # r^-1 with each neighbor
+    inv_r6 = sigma**6 * graph.nlist_rinv**6
+    # use 2 * epsilon because nlist is double-counted
+    p_energy = 2.0 * epsilon * (inv_r6**2 - inv_r6)
+    # sum over pairs to get total energy
     energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    # compute forces
     computed_forces = graph.compute_forces(energy)
-    # get target forces without leading variables
-    # sigma2 = tf.Variable(1.0, trainable=False)
-    inv_r62 = graph.safe_div(1.0, r**2)
-    p_energy2 = 1.0 / 2.0 * (- inv_r62)
-    energy2 = tf.reduce_sum(p_energy2, axis=1, name='energy2')
-    target_forces = graph.compute_forces(energy2)
-    # target_forces = tf.identity(forces2, name='target-forces')
-    # cost = tf.losses.mean_squared_error(target_forces[:,:3],
-    #                                     computed_forces[:,:3])
-    # optimizer = tf.train.AdamOptimizer(
-    #    learning_rate=1e-2).minimize(cost)
-    minimizer, new_loss = htf.force_matching(target_forces[:,:3], 
-                                             computed_forces[:,:3])
-    graph.save_tensor(new_loss, 'cost')
-    graph.save(force_tensor=computed_forces,
-               model_directory=directory,
-               out_nodes=[epsilon, sigma])
+    # compare hoomd-blue forces (graph.forces) with our 
+    # computed forces
+    minimizer, loss = htf.force_matching(graph.forces[:,:3], 
+                                             computed_forces[:,:3], learning_rate=1e-2)
+    # save loss so we can visualize later
+    graph.save_tensor(loss, 'cost')
+    # Make sure to have minimizer in out_nodes so that the force matching occurs!
+    graph.save(model_directory='CG_tutorial/force_matching',
+               out_nodes=[minimizer])
     return directory
 
 def eds_graph(directory='/tmp/test-lj-eds'):

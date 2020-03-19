@@ -162,23 +162,27 @@ class test_mappings(unittest.TestCase):
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[4, 4])
             nlist = hoomd.md.nlist.cell(check_period=1)
+            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
-            hoomd.run(1000)
+            hoomd.run(1e3)
             input_nlist = tfcompute.get_nlist_array()
             variables = hoomd.htf.load_variables(
                 model_dir, checkpoint=10,
                 names=['cost', 'lj-epsilon', 'lj-sigma'],
                 feed_dict=dict({'nlist-input:0': input_nlist}))
             new_variables = hoomd.htf.load_variables(
-                model_dir, checkpoint=900,
+                model_dir, checkpoint=-1,
                 names=['cost', 'lj-epsilon', 'lj-sigma'],
                 feed_dict=dict({'nlist-input:0': input_nlist}))
             cost = variables['cost']
             new_cost = new_variables['cost']
         assert cost != new_cost
+        assert new_variables['epsilon'] != 0.9
+        assert new_variables['sigma'] != 1.1
 
     def test_compute_nlist(self):
         N = 10

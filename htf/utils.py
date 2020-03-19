@@ -265,7 +265,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
-def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-1):
+def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
     R""" This will minimize the difference between the mapped forces
     and calculated CG forces using the Adam oprimizer.
 
