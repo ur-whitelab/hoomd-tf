@@ -7,6 +7,7 @@ import unittest
 import build_examples
 import numpy as np
 import tempfile
+import shutil
 
 
 def run_tf_lj(N, T, directory='/tmp/test-lj-potential-model'):

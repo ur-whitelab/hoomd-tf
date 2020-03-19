@@ -8,6 +8,12 @@ import tempfile
 import shutil
 
 class test_loading(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
     def test_load_variables(self):
         self.tmp = tempfile.mkdtemp()
         model_dir = self.tmp
