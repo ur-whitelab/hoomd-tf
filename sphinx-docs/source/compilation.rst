@@ -81,7 +81,7 @@ The following packages are required to compile:
 ::
 
     tensorflow < 2.0
-    hoomd-blue >= 2.5.0
+    hoomd-blue >= 2.5.2
     numpy
     tbb-devel (only for hoomd-blue 2.8 and above)
 
