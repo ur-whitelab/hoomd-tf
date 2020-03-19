@@ -15,6 +15,7 @@ class test_loading(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_load_variables(self):
+        self.tmp = tempfile.mkdtemp()
         model_dir = self.tmp
         # make model that does assignment
         g = htf.graph_builder(0, False)
@@ -148,6 +149,40 @@ class test_mappings(unittest.TestCase):
                                         feed_dict={p: positions})
         # TODO: Come up with a real test of this.
         assert True
+
+    def test_force_matching(self):
+        model_dir = build_examples.lj_force_matching(NN=15)
+        # calculate lj forces with a leading coeff
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 16
+            NN = N-1
+            rcut = 7.5
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[4, 4])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(kT=2, seed=2)
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            hoomd.run(1e3)
+            input_nlist = tfcompute.get_nlist_array()
+            variables = hoomd.htf.load_variables(
+                model_dir, checkpoint=10,
+                names=['loss', 'lj-epsilon', 'lj-sigma'],
+                feed_dict=dict({'nlist-input:0': input_nlist}))
+            new_variables = hoomd.htf.load_variables(
+                model_dir, checkpoint=-1,
+                names=['loss', 'lj-epsilon', 'lj-sigma'],
+                feed_dict=dict({'nlist-input:0': input_nlist}))
+            loss = variables['loss']
+            new_loss = new_variables['loss']
+        assert loss != new_loss
+        assert new_variables['lj-epsilon'] != 0.9
+        assert new_variables['lj-sigma'] != 1.1
 
     def test_compute_nlist(self):
         N = 10
