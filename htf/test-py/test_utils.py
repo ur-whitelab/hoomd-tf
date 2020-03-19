@@ -5,8 +5,15 @@ import numpy as np
 import tensorflow as tf
 import build_examples
 import tempfile
+import shutil
 
 class test_loading(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
     def test_load_variables(self):
         model_dir = self.tmp
         # make model that does assignment
