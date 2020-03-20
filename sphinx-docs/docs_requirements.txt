@@ -1,0 +1,6 @@
+autodocs
+sphinx
+sphinx-rtd-style
+mock
+sys
+os
