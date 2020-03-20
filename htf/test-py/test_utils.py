@@ -141,7 +141,7 @@ class test_mappings(unittest.TestCase):
         # see if we can build it
         N = len(self.system.particles)
         p = tf.placeholder(tf.float32, shape=[N, 3])
-        com = htf.center_of_mass(p, s, self.system)
+        com = htf.center_of_mass(p, s)
         non_pbc_com = tf.sparse.matmul(s, p)
         with tf.Session() as sess:
             positions = self.system.take_snapshot().particles.position
@@ -192,7 +192,7 @@ class test_mappings(unittest.TestCase):
                       {'box': type('', (object,),
                        {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
         nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  100., 9, system, True)
+                                  100., 9, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -209,7 +209,7 @@ class test_mappings(unittest.TestCase):
                       {'box': type('', (object,),
                        {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
         nlist = htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  5.5, 9, system, True)
+                                  5.5, 9, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0

@@ -6,7 +6,7 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-
+import graphbuilder
 
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
@@ -467,7 +467,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 # \brief Finds the center of mass of a set of particles
 
 
-def center_of_mass(positions, mapping, system, name='center-of-mass'):
+def center_of_mass(positions, mapping, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
     Parameters
@@ -483,7 +483,8 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
-    box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
+    graph = graphbuilder.graph_builder(0)
+    box_dim = graph.box_size
     theta = positions / box_dim * 2 * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
@@ -495,7 +496,7 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
 
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
-def compute_nlist(positions, r_cut, NN, system, sorted=False):
+def compute_nlist(positions, r_cut, NN, sorted=False):
     R""" Computer partice pairwise neihgbor lists.
     Parameters
     ----------
@@ -527,8 +528,8 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     # subtract them to get distance matrix
     dist_mat = qTtile - qtile
     # apply minimum image
-    box = tf.reshape(tf.convert_to_tensor([
-        system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+    graph = graphbuilder.graph_builder(0)
+    box = tf.reshape(tf.convert_to_tensor(graph.box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(dist_mat, axis=2)
