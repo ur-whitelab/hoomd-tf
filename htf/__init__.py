@@ -9,7 +9,7 @@ machine learning on-the-fly in HOOMD-blue simulations.
 
 # need to import md to have library available.
 import hoomd.md
-from htf.tfcompute import tfcompute
+from htf import tfcompute
 from htf.graphbuilder import graph_builder
 from htf.tfarraycomm import tf_array_comm
 from htf.utils import *
