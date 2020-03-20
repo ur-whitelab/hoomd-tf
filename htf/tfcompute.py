@@ -202,7 +202,7 @@ class tfcompute(hoomd.compute._compute):
             See feed_dict in __init__.
         :param mol_indices: Molecule indices for each atom,
             identifying which molecule each atom belongs to.
-        :param batch_size: The size of batches if we are using batching. 
+        :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
         """
         # make sure we have number of atoms and know dimensionality, etc.

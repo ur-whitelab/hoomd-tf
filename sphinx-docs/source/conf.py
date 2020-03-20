@@ -13,7 +13,6 @@
 import os
 import sys
 import mock
-from copy import copy
 import sphinx
 sphinx_ver = tuple(map(int, sphinx.__version__.split('.')))
 

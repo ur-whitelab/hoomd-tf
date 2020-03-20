@@ -73,7 +73,7 @@ class TFManager:
     :param bootstrap: Location of previously-trained model files to load, otherwise None
     :param primary: Whether this is the 'primary' instance of TFManager. Only one instance
         writes logs and saves model files.
-    :param bootstrap_map: A dictionary to be used when bootstrapping, 
+    :param bootstrap_map: A dictionary to be used when bootstrapping,
         pairing old models' tensor variable names with new ones.
         Key is new name, value is older model's.
     :param save_period: How often to save the TensorFlow data. Period here is measured by
