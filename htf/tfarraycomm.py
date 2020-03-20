@@ -1,7 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-from hoomd.htf import _htf
+import hoomd.htf._htf as _htf
 import numpy as np
 import hoomd
 
@@ -10,8 +10,11 @@ R""" tf_array_comm is used to incorporate some
 """
 
 class tf_array_comm:
-    R""" Set up HOOMD context and plug in the memory addresses from
-    C++ module. See C++ bindings.
+    R""" Set up HOOMD context and interface with C++ memory.
+
+    :param nparray: numpy array to share with the C++ process
+    :param hoomd_context: HOOMD execution configuration
+        (defaults to ``hoomd.context.exec_conf``)
     """
     def __init__(self, nparray, hoomd_context=hoomd.context.exec_conf):
         # get numpy array address
@@ -31,18 +34,23 @@ class tf_array_comm:
     # \brief Send an array
     # See C++ bindings
     def send(self):
+        R"""Sends the array to the C++ class instance."""
         self.cpp_ref.send()
 
     ## \internal
     # \brief Receive an array
     # See C++ bindings
     def receive(self):
+        R"""Receives the array from the C++ class instance."""
         self.cpp_ref.receive()
 
     ## \internal
     # \brief Get this array's data
     # See C++ bindings
     def getArray(self):
+        R"""Convert C++ array into a numpy array.
+
+        :return: the converted numpy array"""
         npa = np.empty(self._size)
         array = self.cpp_ref.getArray()
         for i in range(self._size):

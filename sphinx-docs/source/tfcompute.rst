@@ -9,3 +9,9 @@ tfcompute
    :nosignatures:
 
    tfcompute
+
+.. rubric:: Details
+
+.. automodule:: htf.tfcompute
+    :synopsis: TensorFlow computations for HTF
+    :members:

@@ -14,9 +14,10 @@ Installation Guide
 Unit Tests
 ----------
 
-To run the unit tests:
+To run the unit tests, run the following from the root
+HOOMD-TF directory:
 
 .. code:: bash
 
-    pytest ../htf/test-py/
+    pytest /htf/test-py/
    

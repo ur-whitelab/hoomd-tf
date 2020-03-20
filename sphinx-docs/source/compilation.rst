@@ -163,7 +163,6 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
 
-
 Now compile with make:
 
 .. code:: bash
