@@ -43,12 +43,44 @@ def load_htf_op_library(op):
                       'Expected to be in {}'.format(op, path))
     return mod
 
+
 ## \internal
 # \brief TensorFlow manager class
 # \details
 # Manages when TensorFlow performs training and coordinates its
 # communication with HOOMD
 class TFManager:
+    R""" TFManager manages TensorFlow training and coordinates communication with HOOMD.
+    Sets up the TensorFlow graph, sets placeholder variable values, updates and
+    saves the TensorFlow graph, passes output forces back to HOOMD, and
+    writes TensorBoard files.
+
+    :param graph_info: The structure of the TensorFlow graph, passed as a dict.
+        See tfcompute.py
+    :param device: Which device to run on.
+        See tfcompute.py
+    :param q: Threading queue that is used during execution of TensorFlow.
+    :param positions_buffer: Buffer where particle positions are stored
+    :param nlist_buffer: Address of the neighbor list tensor
+    :param box_buffer: Address of the box tensor
+    :param forces_buffer: Address of the forces tensor
+    :param virial_buffer: Address of the virial tensor
+    :param log_filename: Name of the file to output tensorflow logs
+    :param dtype: Data type for tensor values, e.g. int32, float32, etc
+    :param debug: True to run TensorFlow in debug mode
+    :param write_tensorboard: Whether to output a tensorboard file
+    :param use_feed: Whether or not to use a feed dictionary of tensor values
+    :param bootstrap: Location of previously-trained model files to load, otherwise None
+    :param primary: Whether this is the 'primary' instance of TFManager. Only one instance
+        writes logs and saves model files.
+    :param bootstrap_map: A dictionary to be used when bootstrapping,
+        pairing old models' tensor variable names with new ones.
+        Key is new name, value is older model's.
+    :param save_period: How often to save the TensorFlow data. Period here is measured by
+        how many times the TensorFLow model is updated. See tfcompute.py.
+    :param use_xla: If True, enables the accelerated linear algebra library in TensorFlow,
+        which can be useful for large and complicated tensor operations.
+    """
     ## \internal
     # \brief Constructs the tfmanager class
     # \details
@@ -62,51 +94,6 @@ class TFManager:
                  bootstrap, primary, bootstrap_map,
                  save_period, use_xla):
         R""" Initialize an instance of TFManager.
-
-        Parameters
-        ----------
-        graph_info
-            The structure of the TensorFlow graph, passed as a dict.
-            See tfcompute.py
-        device
-            Which device to run on.
-            See tfcompute.py
-        q
-            Threading queue that is used during execution of TensorFlow.
-        positions_buffer
-            Buffer where particle positions are stored
-        nlist_buffer
-            Address of the neighbor list tensor
-        box_buffer
-            Address of the box tensor
-        forces_buffer
-            Address of the forces tensor
-        virial_buffer
-            Address of the virial tensor
-        log_filename
-            Name of the file to output tensorflow logs
-        dtype
-            Data type for tensor values, e.g. int32, float32, etc
-        debug
-            True to run TensorFlow in debug mode
-        write_tensorboard
-            Whether to output a tensorboard file
-        use_feed
-            Whether or not to use a feed dictionary of tensor values
-        bootstrap
-            Location of previously-trained model files to load, otherwise None
-        primary
-            Whether this is the 'primary' instance of TFManager. Only one instance
-            writes logs and saves model files.
-        bootstrap_map
-            A dictionary to be used when bootstrapping, pairing old models' tensor variable
-            names with new ones. Key is new name, value is older model's.
-        save_period
-            How often to save the TensorFlow data. Period here is measured by
-            how many times the TensorFLow model is updated. See tfcompute.py.
-        use_xla
-            If True, enables the accelerated linear algebra library in TensorFlow, which
-            can be useful for large and complicated tensor operations.
         """
         self.primary = primary
         self.log = logging.getLogger('tensorflow')
@@ -313,19 +300,15 @@ class TFManager:
     # XLA can enhance the speed of execution of many TensorFlow models. Set this
     # to True to use it.
 
-    R""" update the TensorFlow model.
-
-    Parameters
-    ----------
-    sess
-        TensorFlow session instance. This is how TensorFlow updates are called.
-    feed_dict
-        The dictionary keyed by tensor names and filled with corresponding values.
-        See feed_dict in tfcompute.__init__.
-    batch_index
-        Tracks the batch indices used for execution when batching. See graphbuilder.py
-    """
     def _update(self, sess, feed_dict, batch_index):
+        R""" Update the TensorFlow model.
+
+        :param sess: TensorFlow session instance. This is how TensorFlow updates are called.
+        :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.
+            See feed_dict in tfcompute.__init__.
+        :param batch_index: Tracks the batch indices used for execution when batching.
+            See graphbuilder.py
+        """
         if batch_index == 0:
             # step starts at -1, so first step is 0
             self.step += 1
@@ -337,9 +320,12 @@ class TFManager:
             self._save_model(sess, result[-1] if self.summaries is not None else None)
 
         return result
-    R""" save model method is called during update
-    Saves TensorFlow model parameters."""
     def _save_model(self, sess, summaries=None):
+        R""" The ``_save_model`` method is called during ``update``
+        Saves TensorFlow model parameters.
+
+        :param sess: the TensorFlow session to use for saving
+        """
 
         if not self.primary:
             return
@@ -358,11 +344,13 @@ class TFManager:
             self.tb_writer.add_summary(summaries, self.step)
             self.tb_writer.flush()
 
-    R""" The prepare graph method prepares the TensorFlow graph to execute.
-    First transfers the HOOMD data to TensorFlow control, then gets the device
-    ready to execute and inserts the necessary nodes into the TensorFlow execution
-    graph."""
     def _prepare_graph(self):
+        R""" The prepare graph method prepares the TensorFlow graph to execute.
+        First transfers the HOOMD data to TensorFlow control, then gets the device
+        ready to execute and inserts the necessary nodes into the TensorFlow execution
+        graph.
+        """
+
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
@@ -430,10 +418,12 @@ class TFManager:
                              's'.format(os.path.join(self.model_directory,
                                                      'model.meta')))
 
-    R""" The prepare forces method readies the force tensor for HOOMD
-    Ensures that the forces and virial are the right dtypes, then shares
-    the memory of the TensorFlow forces with HOOMD."""
     def _prepare_forces(self):
+        R""" The prepare forces method readies the force tensor for HOOMD.
+        Ensures that the forces and virial are the right dtypes, then shares
+        the memory of the TensorFlow forces with HOOMD.
+        """
+
         # insert the output forces
         try:
             out = tf.get_default_graph().get_tensor_by_name(
@@ -471,9 +461,12 @@ class TFManager:
                                      self.virial.shape,
                                      self.device))
 
-    R""" Attach tensorboard to our TensorFlow session.
-    """
     def _attach_tensorboard(self, sess):
+        R""" Attach tensorboard to our TensorFlow session.
+
+        :param sess: The TensorFlow session to which TensorBoard
+            will be attached.
+        """
 
         self.summaries = tf.summary.merge_all()
         if self.summaries is None:
@@ -485,12 +478,12 @@ class TFManager:
                 self.model_directory, 'tensorboard'),
                                                sess.graph)
 
-    R""" start_loop method of tfmanager.
-    Prepares GPU for execution, gathers trainable variables,
-    sets up model saving, loads pre-trained variables, sets
-    up tensorboard if requested and parses feed_dicts.
-    """
     def start_loop(self):
+        R""" ``start_loop`` method of tfmanager.
+        Prepares GPU for execution, gathers trainable variables,
+        sets up model saving, loads pre-trained variables, sets
+        up tensorboard if requested and parses feed_dicts.
+        """
 
         self.log.log(10, 'Constructed TF Model graph')
         # make it grow as memory is needed instead of consuming all

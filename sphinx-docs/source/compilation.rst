@@ -81,7 +81,7 @@ The following packages are required to compile:
 ::
 
     tensorflow < 2.0
-    hoomd-blue >= 2.5.0
+    hoomd-blue >= 2.5.2
     numpy
     tbb-devel (only for hoomd-blue 2.8 and above)
 
@@ -162,7 +162,6 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
      -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
-
 
 Now compile with make:
 

@@ -3,8 +3,7 @@
 Utilities
 =========
 
-There are a few convenience functions in ``hoomd.htf`` and the
-``graph_builder`` class for plotting potential energies of pairwise
+There are a few convenience functions for plotting potential energies of pairwise
 potentials and constructing CG mappings.
 
 .. _rdf:
@@ -12,7 +11,7 @@ potentials and constructing CG mappings.
 RDF
 ---
 
-To compute an RDF, use the ``graph.compute_rdf(...)`` method:
+To compute an RDF, use :py:meth:`htf.graphbuilder.graph_builder.compute_rdf`:
 
 .. code:: python
 
@@ -30,8 +29,8 @@ To compute an RDF, use the ``graph.compute_rdf(...)`` method:
 Pairwise Potential and Forces
 -----------------------------
 
-To compute a pairwise potential, use the
-``graph.compute_pairwise_potential(...)`` method:
+To compute a pairwise potential, use 
+:py:meth:`htf.utils.compute_pairwise_potential`:
 
 .. code:: python
 
@@ -47,7 +46,7 @@ Biasing with EDS
 
 To apply `Experiment Directed
 Simulation <https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988>`__
-biasing to a system:
+biasing to a system, use :py:meth:`htf.utils.eds_bias`:
 
 .. code:: python
 
@@ -56,10 +55,10 @@ biasing to a system:
     eds_forces = graph.compute_forces(eds_energy)
     graph.save('eds-graph', eds_forces)
 
-where
+Here,
 ``htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)``
-is the function that computes your lagrange multiplier/eds coupling that
-you use to bias your simulation. It may be useful to also take the
+computes the lagrange multiplier/eds coupling that
+are used to bias the simulation. It may be useful to also take the
 average of ``eds_alpha`` so that you can use it in a subsequent
 simulation:
 
@@ -80,7 +79,7 @@ Find Molecules
 ~~~~~~~~~~~~~~
 
 To go from atom index to particle index, use the
-``hoomd.htf.find_molecules(...)`` method:
+:py:meth:`htf.utils.find_molecules`:
 
 .. code:: python
 
@@ -92,18 +91,18 @@ To go from atom index to particle index, use the
 Sparse Mapping
 ~~~~~~~~~~~~~~
 
-The ``sparse_mapping(...)`` method creates the necessary indices and
+The :py:meth:`htf.utils.sparse_mapping` method creates the necessary indices and
 values for defining a sparse tensor in tensorflow that is a
-mass-weighted MxN mapping operator where M is the number of
-coarse-grained particles and N is the number of atoms in the system. In
-the example,\ ``mapping_per_molecule`` is a list of k x n matrices where
-k is the number of coarse-grained sites for each molecule and n is the
+mass-weighted :math:`M \times N` mapping operator where :math:`M` is the number of
+coarse-grained particles and :math:`N` is the number of atoms in the system. In
+the following example,\ ``mapping_per_molecule`` is a list of :math:`k \times n` matrices where
+:math:`k` is the number of coarse-grained sites for each molecule and :math:`n` is the
 number of atoms in the corresponding molecule. There should be one
 matrix per molecule. Since the example is for a 1 bead mapping per
-molecule the shape is 1 x n. The ordering of the atoms should follow the
+molecule the shape is :math:`1 \times n`. The ordering of the atoms should follow the
 output from the find\_molecules method. The variable
-``molecule_mapping_index`` is the output from the
-``find_molecules(...)`` method.
+``molecule_mapping_index`` is the output from
+:py:meth:`htf.utils.find_molecules`.
 
 .. code:: python
 
@@ -118,9 +117,9 @@ output from the find\_molecules method. The variable
 Center of Mass
 ~~~~~~~~~~~~~~
 
-The ``center_of_mass(...)`` method maps the given positions according to
-the specified mapping operator to coarse-grain site positions
-considering periodic boundary condition. The coarse grain site position
+:py:meth:`htf.utils.center_of_mass` maps the given positions according to
+the specified mapping operator to coarse-grain site positions, while
+considering periodic boundary conditions. The coarse grain site position
 is placed at the center of mass of its constituent atoms.
 
 .. code:: python
@@ -134,17 +133,17 @@ is placed at the center of mass of its constituent atoms.
 Compute Mapped Neighbor List
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``compute_nlist(...)`` method returns the neighbor list for the
-mapped coarse-grained particles. In the example, ``mapped_position`` is
-the mapped particle positions obeying the periodic boundary condition as
-returned by the ``center_of_mass(...) method``, ``rcut`` is the cut-off
+:py:meth:`htf.utils.compute_nlist` returns the neighbor list for a set of
+mapped coarse-grained particles. In the following example, ``mapped_positions`` is
+the mapped particle positions obeying the periodic boundary condition, as
+returned by  :py:meth:`htf.utils.center_of_mass`, ``rcut`` is the cutoff
 radius and ``NN`` is the number of nearest neighbors to be considered
 for the coarse-grained system.
 
 .. code:: python
 
     ...
-    mapped_nlist= htf.compute_nlist(mapped_position, rcut, NN, system)
+    mapped_nlist= htf.compute_nlist(mapped_positions, rcut, NN, system)
     ...
 
 .. _tensorboard:
@@ -153,7 +152,7 @@ Tensorboard
 -----------
 
 You can visualize your models with tensorboard. First, add
-``write_tensorboard=True`` the TensorFlow plugin constructor. This will
+``write_tensorboard=True`` to the :py:class:`htf.tfcompute.tfcompute` constructor. This will
 add a new directory called ``tensorboard`` to your model directory.
 
 After running, you can launch tensorboard like so:
@@ -176,9 +175,10 @@ the Tensorboard summary during the build step:
     tf.summary.scalar('total-energy', tf.reduce_sum(particle_energy))
 
 and then add the ``write_tensorboard=True`` flag during the
-``tfcompute`` initialize. The period of tensorboard writes is controlled
-by the ``saving_period`` flag to the ``tfcompute.attach`` command. View
-the Tensorboard section below to see how to view the resulting scalars.
+:py:class:`htf.tfcompute.tfcompute` initialization.
+The period of tensorboard writes is controlled
+by the ``save_period`` flag to the :py:meth:`htf.tfcompute.tfcompute.attach` command. See
+the Tensorboard section below for how to view the resulting scalars.
 
 Viewing when TF is running on remote server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -221,4 +221,7 @@ Interactive Mode
 Experimental, but you can trace your graph in realtime in a simulation.
 Add both the ``write_tensorboard=True`` to the constructor and the
 ``_debug_mode=True`` flag to ``attach`` command. You then open another
-shell and connect by following the `online instructions for interactive debugging from Tensorboard <https://github.com/tensorflow/tensorboard/tree/master/tensorboard/plugins/debugger#the-debugger-dashboard>`__.
+shell and connect by following the `online instructions for interactive
+debugging from Tensorboard
+<https://github.com/tensorflow/tensorboard/tree/
+master/tensorboard/plugins/debugger#the-debugger-dashboard>`__.
