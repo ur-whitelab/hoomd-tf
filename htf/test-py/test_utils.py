@@ -307,7 +307,10 @@ class test_trajectory(unittest.TestCase):
     def test_run_from_trajectory(self):
         import math
         import MDAnalysis as mda
-        universe = mda.Universe('test_topol.pdb', 'test_traj.trr')
+        import os
+        test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')
+        test_traj = os.path.join(os.path.dirname(__file__), 'test_traj.trr')
+        universe = mda.Universe(test_pdb, test_traj)
         # load example graph that calculates average energy
         model_directory = build_examples.run_traj_graph()
         hoomd.htf.run_from_trajectory(model_directory, universe,
