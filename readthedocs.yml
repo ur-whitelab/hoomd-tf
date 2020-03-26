@@ -3,6 +3,3 @@
 
 sphinx:
     configuration: sphinx-docs/source/conf.py
-
-conda:
-    file: environment.yml
