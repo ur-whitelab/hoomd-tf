@@ -205,7 +205,7 @@ class graph_builder:
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
 
-        :return: Historgram tensor of the RDF.
+        :return: Unormalized RDF.
         """
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
@@ -214,7 +214,7 @@ class graph_builder:
         if positions is None:
             positions = self.positions
         # filter types
-        nlist = self.masked_nlist(type_i, type_j, nlist)
+        nlist = self.masked_nlist(type_i, type_j, nlist, positions[:,3])
         r = tf.norm(nlist[:, :, :3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
                        tf.float32)
@@ -271,7 +271,7 @@ class graph_builder:
                     with tf.control_dependencies([reset_op]):
                         if batch_reduction == 'mean':
                             batch_op = batch_store.assign_add(tensor * self.batch_frac)
-                        elif batch_reduction == 'max':
+                        elif batch_reduction == 'sum':
                             batch_op = batch_store.assign_add(tensor)
                         self.out_nodes.append(batch_op)
         return store
