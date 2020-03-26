@@ -214,7 +214,7 @@ class graph_builder:
         if positions is None:
             positions = self.positions
         # filter types
-        nlist = self.masked_nlist(type_i, type_j, nlist, positions[:,3])
+        nlist = self.masked_nlist(type_i, type_j, nlist, positions[:, 3])
         r = tf.norm(nlist[:, :, :3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
                        tf.float32)

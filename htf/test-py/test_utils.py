@@ -314,7 +314,7 @@ class test_trajectory(unittest.TestCase):
         # load example graph that calculates average energy
         model_directory = build_examples.run_traj_graph()
         hoomd.htf.run_from_trajectory(model_directory, universe,
-                                      period=1, r_cut=25. )
+                                      period=1, r_cut=25.)
         # get evaluated outnodes
         variables = hoomd.htf.load_variables(model_directory,
                                              ['average-energy'])
