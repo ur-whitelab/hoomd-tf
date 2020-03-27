@@ -195,7 +195,7 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
                out_nodes=[avg_energy])
     return directory
 
-def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
+def custom_nlist(NN, r_cut, box_size, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     # get r
@@ -205,7 +205,7 @@ def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     ops = [v.assign(r)]
 
     # compute nlist
-    cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, system)
+    cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, box_size)
     r = tf.norm(cnlist[:, :, :3], axis=2)
     v = tf.get_variable('htf-r', initializer=tf.zeros_like(r),
                         validate_shape=False)

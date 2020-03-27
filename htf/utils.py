@@ -335,8 +335,9 @@ def run_from_trajectory(model_directory, universe,
     N = (np.shape(type_array))[0]
     NN = model_params['NN']
     # define nlist operation
+    box_size = [box[0], box[1], box[2]]
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
-                                 NN=NN, system=system)
+                                 NN=NN, box_size)
     # Now insert nlist into the graph
     # make input map to override nlist
     input_map = {}
@@ -442,7 +443,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
 # \internal
 # \brief Finds the center of mass of a set of particles
-def center_of_mass(positions, mapping, system, name='center-of-mass'):
+def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
 
@@ -455,7 +456,7 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
-    box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
+    box_dim = box_size
     theta = positions / box_dim * 2 * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
@@ -467,7 +468,7 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
 
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
-def compute_nlist(positions, r_cut, NN, system, sorted=False):
+def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     R""" Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
@@ -491,8 +492,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     # subtract them to get distance matrix
     dist_mat = qTtile - qtile
     # apply minimum image
-    box = tf.reshape(tf.convert_to_tensor([
-        system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+    box = tf.reshape(tf.convert_to_tensor(box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(dist_mat, axis=2)

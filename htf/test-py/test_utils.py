@@ -141,7 +141,8 @@ class test_mappings(unittest.TestCase):
         # see if we can build it
         N = len(self.system.particles)
         p = tf.placeholder(tf.float32, shape=[N, 3])
-        com = hoomd.htf.center_of_mass(p, s, self.system)
+        box_size = [self.system.box.Lx, self.system.box.Ly, self.system.box.Lz]
+        com = hoomd.htf.center_of_mass(p, s, box_size)
         non_pbc_com = tf.sparse.matmul(s, p)
         with tf.Session() as sess:
             positions = self.system.take_snapshot().particles.position
@@ -149,6 +150,7 @@ class test_mappings(unittest.TestCase):
                                         feed_dict={p: positions})
         # TODO: Come up with a real test of this.
         assert True
+
 
     def test_force_matching(self):
         model_dir = build_examples.lj_force_matching(NN=15)
@@ -187,12 +189,9 @@ class test_mappings(unittest.TestCase):
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
-        system = type('',
-                      (object, ),
-                      {'box': type('', (object,),
-                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        box_size = [100., 100., 100.,]
         nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  100., 9, system, True)
+                                  100., 9, box_size, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -204,12 +203,9 @@ class test_mappings(unittest.TestCase):
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
-        system = type('',
-                      (object, ),
-                      {'box': type('', (object,),
-                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+        box_size = [100., 100., 100.]
         nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  5.5, 9, system, True)
+                                  5.5, 9, box_size, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -228,7 +224,8 @@ class test_mappings(unittest.TestCase):
         # want to have a big enough system so that we actually have a cutoff
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
                                            n=[4, 4, 4])
-        model_dir = build_examples.custom_nlist(16, rcut, system, self.tmp)
+        box_size = [4., 4., 4.]
+        model_dir = build_examples.custom_nlist(16, rcut, box_size, self.tmp)
         with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
