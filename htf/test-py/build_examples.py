@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Andrew White at the University of Rochester
+Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 import tensorflow as tf
@@ -195,10 +195,11 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
                out_nodes=[avg_energy])
     return directory
 
-def custom_nlist(NN, r_cut, box_size, directory='/tmp/test-custom-nlist'):
+def custom_nlist(NN, r_cut, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     # get r
+    box_size = graph.box_size
     r = tf.norm(nlist, axis=2)
     v = tf.get_variable('hoomd-r', initializer=tf.zeros_like(r),
                         validate_shape=False)

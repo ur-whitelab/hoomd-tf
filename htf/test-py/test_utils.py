@@ -222,10 +222,9 @@ class test_mappings(unittest.TestCase):
         if c.sorter is not None:
             c.sorter.disable()
         # want to have a big enough system so that we actually have a cutoff
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
-                                           n=[4, 4, 4])
-        box_size = [4., 4., 4.]
-        model_dir = build_examples.custom_nlist(16, rcut, box_size, self.tmp)
+        # system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
+                                           # n=[4, 4, 4])
+        model_dir = build_examples.custom_nlist(16, rcut, self.tmp)
         with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)

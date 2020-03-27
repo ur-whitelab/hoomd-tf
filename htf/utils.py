@@ -446,10 +446,10 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
-
+   
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
-    :param system: The system of particles
+    :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param name: The name of the op to add to the TF graph
     """
     # https://en.wikipedia.org/wiki/
@@ -474,7 +474,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     :param positions: Positions of the particles
     :param r_cut: Cutoff radius (HOOMD units)
     :param NN: Maximum number of neighbors per particle
-    :param system: The HOOMD system of particles
+    :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param sorted: Whether to sort neighbor lists by distance
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
