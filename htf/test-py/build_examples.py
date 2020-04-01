@@ -48,8 +48,8 @@ def gradient_potential():
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
         energy = 0.5 * graph.safe_div(numerator=tf.ones_like(
-                neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
-                                      name='energy')
+            neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
+            name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
                model_directory='/tmp/test-gradient-potential-model',
@@ -61,8 +61,8 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones_like(
-            neighs_rs, dtype=neighs_rs.dtype),
-                            denominator=neighs_rs, name='energy')
+        neighs_rs, dtype=neighs_rs.dtype),
+        denominator=neighs_rs, name='energy')
     pos_norm = tf.norm(graph.positions, axis=1)
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
@@ -77,6 +77,7 @@ def wrap_graph(directory='/tmp/test-wrap-model'):
     # TODO: Smoke test. Think of a better test.
     graph.save(directory, out_nodes=[rwrap])
     return directory
+
 
 def mol_force(directory='/tmp/test-mol-force-model'):
     graph = htf.graph_builder(0, output_forces=False)
@@ -118,8 +119,10 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
     # compute energy every 10 steps
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
+    graph.save(force_tensor=forces, model_directory=directory,
+               out_nodes=[[energy, 10]])
     return directory
+
 
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
@@ -135,21 +138,31 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     # energy = (cv - (3 + alpha / 2))^2 + C
     # alpha needs to be = 4
     forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[cv_mean, alpha_mean])
+    graph.save(
+        force_tensor=forces,
+        model_directory=directory,
+        out_nodes=[
+            cv_mean,
+            alpha_mean])
     return directory
 
+
 def mol_features_graph(directory='/tmp/test-mol-features'):
-    graph =htf.graph_builder(50,output_forces=False)
+    graph = htf.graph_builder(50, output_forces=False)
     graph.build_mol_rep(6)
-    mol_pos=graph.mol_positions
-    r=htf.mol_bond_distance(mol_pos,2,1)
-    a=htf.mol_angle(mol_pos,1,2,3)
-    d=htf.mol_dihedral(mol_pos,1,2,3,4)
-    avg_r=tf.reduce_mean(r,name='avg-r')
-    avg_a=tf.reduce_mean(a,name='avg-a')
-    avg_d=tf.reduce_mean(d,name='avg-d')
-    graph.save(model_directory=directory, out_nodes=[avg_r,avg_a,avg_d])
-    return directory 
+    mol_pos = graph.mol_positions
+    r = htf.mol_bond_distance(mol_pos, 2, 1)
+    a = htf.mol_angle(mol_pos, 1, 2, 3)
+    d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+    avg_r = tf.reduce_mean(r)
+    avg_a = tf.reduce_mean(a)
+    avg_d = tf.reduce_mean(d)
+    graph.save_tensor(avg_r, 'avg_r')
+    graph.save_tensor(avg_a, 'avg_a')
+    graph.save_tensor(avg_d, 'avg_d')
+    graph.save(model_directory=directory)
+    return directory
+
 
 def run_traj_graph(directory='/tmp/test-run-traj'):
     graph = htf.graph_builder(16)
@@ -167,6 +180,7 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
     graph.save(force_tensor=forces, model_directory=directory,
                out_nodes=[avg_energy])
     return directory
+
 
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
