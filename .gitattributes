@@ -2,3 +2,4 @@
 #ignore binary line endings
 *.p binary
 *.gsd binary
+*.dcd binary
