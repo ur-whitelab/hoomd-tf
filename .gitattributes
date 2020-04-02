@@ -1,1 +1,6 @@
 * text=auto eol=lf
+#ignore binary line endings
+*.p binary
+*.gsd binary
+*.dcd binary
+*.trr binary
