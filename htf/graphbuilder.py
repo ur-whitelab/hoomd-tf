@@ -193,7 +193,7 @@ class graph_builder:
             if tilt_value is not None:
                 if tilt_value != 0:
                     raise Exception(
-                        'Simulation box is tilted in {}. Current version of Hoomd-tf cannot work with skewed boxes.'.format(tilted_axis[i]))
+                        'Simulation box is tilted in {}. Current version of Hoomd-tf cannot handle skewed boxes.'.format(tilted_axis[i]))
 
 
 
