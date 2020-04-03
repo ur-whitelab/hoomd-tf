@@ -310,10 +310,12 @@ class test_mol_properties(unittest.TestCase):
         import hoomd.group
         import gsd
         import gsd.hoomd
-        g = gsd.hoomd.open('meth20.gsd')
+        import os
+        test_gsd = os.path.join(os.path.dirname(__file__), 'meth20.gsd') 
+		# g = gsd.hoomd.open(test_gsd)
         set_rcut = 12.2
         c = hoomd.context.initialize()
-        system = hoomd.init.read_gsd(filename='meth20.gsd')
+        system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
         model_dir = build_examples.mol_features_graph()
         with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
