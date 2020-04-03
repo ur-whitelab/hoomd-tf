@@ -7,6 +7,7 @@ import build_examples
 import tempfile
 import shutil
 
+
 class test_loading(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -31,12 +32,13 @@ class test_loading(unittest.TestCase):
                 n=[3, 3])
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
+            )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(save_period=1)
             hoomd.run(1)
         # load
         vars = hoomd.htf.load_variables(model_dir, ['test'])
         assert np.abs(vars['test'] - 10) < 10e-10
+
 
 class test_mappings(unittest.TestCase):
     def setUp(self):
@@ -91,7 +93,8 @@ class test_mappings(unittest.TestCase):
             [1, 0, 0],
             [0, 1, 0]]).transpose()
         mapping = hoomd.htf.find_molecules(self.system)
-        s = hoomd.htf.sparse_mapping([mapping_matrix for _ in mapping], mapping)
+        s = hoomd.htf.sparse_mapping(
+            [mapping_matrix for _ in mapping], mapping)
         # see if we can build it
         N = len(self.system.particles)
         p = tf.ones(shape=[N, 1])
@@ -137,7 +140,7 @@ class test_mappings(unittest.TestCase):
             [0, 1, 0]]).transpose()
         mapping = hoomd.htf.find_molecules(self.system)
         s = hoomd.htf.sparse_mapping([mapping_matrix
-                                for _ in mapping], mapping, self.system)
+                                      for _ in mapping], mapping, self.system)
         # see if we can build it
         N = len(self.system.particles)
         p = tf.placeholder(tf.float32, shape=[N, 3])
@@ -166,7 +169,7 @@ class test_mappings(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
+            )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
             hoomd.run(1e3)
             input_nlist = tfcompute.get_nlist_array()
@@ -184,15 +187,21 @@ class test_mappings(unittest.TestCase):
         assert new_variables['lj-epsilon'] != 0.9
         assert new_variables['lj-sigma'] != 1.1
 
+    def test_skewed_box(self):
+        a = hoomd.context.initialize('--mode=cpu')
+        system = hoomd.htf.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                               n=[3, 3])
+        c = hoomd.htf.warp_vector(1)
+
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         system = type('',
                       (object, ),
                       {'box': type('', (object,),
-                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+                                   {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
         nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  100., 9, system, True)
+                                        100., 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -207,9 +216,9 @@ class test_mappings(unittest.TestCase):
         system = type('',
                       (object, ),
                       {'box': type('', (object,),
-                       {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
+                                   {'Lx': 100., 'Ly': 100., 'Lz': 100.})})
         nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  5.5, 9, system, True)
+                                        5.5, 9, system, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -235,7 +244,7 @@ class test_mappings(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                                   )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut,
                              save_period=10, batch_size=None)
             # add lj so we can hopefully get particles mixing
@@ -263,7 +272,7 @@ class test_mappings(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                                   )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut,
                              save_period=10, batch_size=None)
             # add lj so we can hopefully get particles mixing
@@ -272,7 +281,7 @@ class test_mappings(unittest.TestCase):
 
         r = np.linspace(0.5, 1.5, 5)
         potential, forces = hoomd.htf.compute_pairwise_potential(model_dir,
-                                                           r, 'energy')
+                                                                 r, 'energy')
         np.testing.assert_equal(len(potential), len(r),
                                 'Potentials not calculated correctly')
 
@@ -294,11 +303,11 @@ class test_bias(unittest.TestCase):
                 n=[3, 3])
             hoomd.md.integrate.mode_standard(dt=0.05)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=0.2, seed=2)
+            )).randomize_velocities(kT=0.2, seed=2)
             tfcompute.attach(save_period=10)
             hoomd.run(T)
         variables = hoomd.htf.load_variables(
-                model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
+            model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
         assert np.isfinite(variables['eds.a'])
         assert (variables['cv-mean'] - 4)**2 < 0.5
 
@@ -312,10 +321,12 @@ class test_trajectory(unittest.TestCase):
         model_directory = build_examples.run_traj_graph()
         hoomd.htf.run_from_trajectory(model_directory, universe)
         # get evaluated outnodes
-        variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
+        variables = hoomd.htf.load_variables(
+            model_directory, ['average-energy'])
         # assert they are calculated and valid?
         assert not math.isnan(variables['average-energy'])
         assert not variables['average-energy'] == 0
+
 
 if __name__ == '__main__':
     unittest.main()
