@@ -16,6 +16,7 @@ class graph_builder:
     """
     # \internal
     # \brief Initializes the graphbuilder class
+
     def __init__(self, nneighbor_cutoff, output_forces=True):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
@@ -38,109 +39,113 @@ class graph_builder:
         self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
-            self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
-        self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
-        self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
+            self.forces = tf.placeholder(
+                tf.float32, shape=[atom_number, 4], name='forces-input')
+        self.batch_frac = tf.placeholder(
+            tf.float32, shape=[], name='htf-batch-frac')
+        self.batch_index = tf.placeholder(
+            tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
         self.MN = 0
-        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
+        self.batch_steps = tf.get_variable(
+            'htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
         self.update_batch_index_op = \
             self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
                                                 true_fn=lambda: tf.constant(1),
                                                 false_fn=lambda: tf.constant(0)))
         self.out_nodes = [self.update_batch_index_op]
 
-    ## \var atom_number
+    # \var atom_number
     # \internal
     # \brief Number of atoms
     # \details
     # defines the placeholder first dimension, which will be the size of the system
 
-    ## \var nneighbor_cutoff
+    # \var nneighbor_cutoff
     # \internal
     # \brief Max size of neighbor list
     # \details
     # Cutoff for maximum number of atoms in each neighbor list
 
-    ## \var nlist
+    # \var nlist
     # \internal
     # \brief The neighbor list
     # \details
     # This is the tensor where the neighbor list is held
 
-    ## \var virial
+    # \var virial
     # \internal
     # \brief The virial
     # \details
     # Virial associated with the neighbor list
 
-    ## \var positions
+    # \var positions
     # \internal
     # \brief The particle positions
     # \details
     # Tensor holding the positions of all particles (Euclidean)
 
-    ## \var forces
+    # \var forces
     # \internal
     # \brief The forces tensor
     # \details
     # If output_forces is true, this is where those are stored
 
-    ## \var batch_frac
+    # \var batch_frac
     # \internal
     # \brief portion of tensor to use in each batch
     # \details
     # When batching large tensors, this determines the size of the batches,
     # as a fraction of the total size of the tensor which is to be batched
 
-    ## \var batch_index
+    # \var batch_index
     # \internal
     # \brief Tracks batching index
     # \details
     # Ranging from 0 to 1 / batch_frac, tracks which part of the batch we're on
 
-    ## \var output_forces
+    # \var output_forces
     # \internal
     # \brief Whether to output forces to HOOMD
     # \details
     # If true, forces are calculated and passed to HOOMD
 
-    ## \var _nlist_rinv
+    # \var _nlist_rinv
     # \internal
     # \brief the 1/r values for each neighbor pair
 
-    ## \var mol_indices
+    # \var mol_indices
     # \internal
     # \brief Stores molecule indices for each atom
     # \details
     # Each atom is assigned an index associated with its corresponding molecule
 
-    ## \var mol_batched
+    # \var mol_batched
     # \internal
     # \brief Whether to batch by molecule
     # \details
     # Not yet implemented
 
-    ## \var MN
+    # \var MN
     # \internal
     # \brief Number of molecules
     # \details
     # This is how many molecules we have among the atoms in our neighbor list
 
-    ## \var batch_steps
+    # \var batch_steps
     # \internal
     # \brief How many times we have to run our batch calculations
 
-    ## \var update_batch_index_op
+    # \var update_batch_index_op
     # \internal
     # \brief TensorFlow op for batching
     # \details
     # Custom op that updates the batch index each time we run a batch calculation
 
-    ## \var out_nodes
+    # \var out_nodes
     # \internal
     # \brief List of TensorFlow ops to put into the graph
     # \details
@@ -186,19 +191,16 @@ class graph_builder:
             :return: The wrapped vector as a TF tensor
         """
         tilted_axis = ['x axis', 'y axis', 'z axis']
-        #print (tilt_value)
+        # print (tilt_value)
         if self.box is not None:
-            #tilt_value = [self.box.xy, self.box.xz, self.box.yz]
+            # tilt_value = [self.box.xy, self.box.xz, self.box.yz]
             for i in range(3):
                 tilt_value = tf.gather_nd(self.box, [2, i])
                 if tilt_value != 0:
                     raise Exception(
                         'Simulation box is tilted in {}. Current version of Hoomd-tf cannot handle skewed boxes.'.format(tilted_axis[i]))
 
-
-
         return r - tf.math.round(r / self.box_size) * self.box_size
-
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
@@ -282,7 +284,8 @@ class graph_builder:
                     self.out_nodes.append(reset_op)
                     with tf.control_dependencies([reset_op]):
                         if batch_reduction == 'mean':
-                            batch_op = batch_store.assign_add(tensor * self.batch_frac)
+                            batch_op = batch_store.assign_add(
+                                tensor * self.batch_frac)
                         elif batch_reduction == 'max':
                             batch_op = batch_store.assign_add(tensor)
                         self.out_nodes.append(batch_op)
@@ -306,7 +309,6 @@ class graph_builder:
 
         store_op = store.assign(tensor)
         self.out_nodes.append([store_op, save_period])
-
 
     def compute_forces(self, energy, virial=None, positions=None,
                        nlist=None):
@@ -440,22 +442,27 @@ class graph_builder:
         # these dummy particles. Thus we will add one to the mol indices when
         # we do tf compute to prepare.
         ap = tf.concat((
-                tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
-                self.positions),
+            tf.constant([0, 0, 0, 0], dtype=self.positions.dtype,
+                        shape=(1, 4)),
+            self.positions),
             axis=0)
         an = tf.concat(
-            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist),
+            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4),
+                      dtype=self.positions.dtype), self.nlist),
             axis=0)
-        self.mol_positions = tf.reshape(tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
+        self.mol_positions = tf.reshape(
+            tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
         self.mol_nlist = tf.reshape(
             tf.gather(an, self.mol_flat_idx),
             shape=[-1, MN, self.nneighbor_cutoff, 4])
         if not self.output_forces:
             af = tf.concat((
-                    tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
-                    self.forces),
+                tf.constant(
+                    [0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                self.forces),
                 axis=0)
-            self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
+            self.mol_forces = tf.reshape(
+                tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
         self.MN = MN
 
     @staticmethod
@@ -474,9 +481,9 @@ class graph_builder:
         :return: The safe division op (TensorFlow operation)
         """
         op = tf.where(
-               tf.greater(denominator, delta),
-               tf.truediv(numerator, denominator + delta),
-               tf.zeros_like(denominator))
+            tf.greater(denominator, delta),
+            tf.truediv(numerator, denominator + delta),
+            tf.zeros_like(denominator))
 
         # op = tf.divide(numerator, denominator + delta, **kwargs)
         return op
@@ -539,7 +546,7 @@ class graph_builder:
                 with tf.name_scope('add-ws'):
                     force_tensor = tf.concat(
                         [force_tensor, tf.reshape(
-                                self.positions[:, 3], [-1, 1])],
+                            self.positions[:, 3], [-1, 1])],
                         axis=1, name='forces')
 
             self.forces = force_tensor
@@ -571,9 +578,9 @@ class graph_builder:
                     os.rename(os.path.join(model_directory, i),
                               os.path.join(model_directory, bkup_str, i))
             print('Note: Backed-up {} previous model to {}'.format(
-                    model_directory, os.path.join(model_directory, bkup_str)))
+                model_directory, os.path.join(model_directory, bkup_str)))
         meta_graph_def = tf.train.export_meta_graph(filename=(
-                os.path.join(model_directory, 'model.meta')))
+            os.path.join(model_directory, 'model.meta')))
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())
         # save metadata of class
@@ -601,6 +608,6 @@ class graph_builder:
             'rev_mol_indices':
             self.rev_mol_indices.name if self.mol_indices is not None else None,
             'MN': self.MN
-            }
+        }
         with open(os.path.join(model_directory, 'graph_info.p'), 'wb') as f:
             pickle.dump(graph_info, f)
