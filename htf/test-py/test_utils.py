@@ -25,7 +25,7 @@ class test_loading(unittest.TestCase):
         g.save(model_dir, out_nodes=[as_op])
         # run once
         hoomd.context.initialize()
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
@@ -153,7 +153,7 @@ class test_mappings(unittest.TestCase):
     def test_force_matching(self):
         model_dir = build_examples.lj_force_matching(NN=15)
         # calculate lj forces with a leading coeff
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 16
             NN = N-1
@@ -229,7 +229,7 @@ class test_mappings(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
                                            n=[4, 4, 4])
         model_dir = build_examples.custom_nlist(16, rcut, system, self.tmp)
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -252,7 +252,7 @@ class test_mappings(unittest.TestCase):
 
     def test_compute_pairwise_potential(self):
         model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             rcut = 2.5
             system = hoomd.init.create_lattice(
@@ -288,7 +288,7 @@ class test_bias(unittest.TestCase):
         T = 1000
         hoomd.context.initialize()
         model_dir = build_examples.eds_graph(self.tmp)
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
