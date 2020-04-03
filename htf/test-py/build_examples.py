@@ -184,7 +184,7 @@ def eds_graph(directory='/tmp/test-lj-eds'):
 
 
 def mol_features_graph(directory='/tmp/test-mol-features'):
-    graph = htf.graph_builder(50, output_forces=False)
+    graph = htf.graph_builder(500, output_forces=False)
     graph.build_mol_rep(6)
     mol_pos = graph.mol_positions
     r = htf.mol_bond_distance(mol_pos, 2, 1)
