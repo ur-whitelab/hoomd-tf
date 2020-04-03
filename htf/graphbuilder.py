@@ -190,9 +190,10 @@ class graph_builder:
         #print (tilt_value)
         for i in range(3):
             tilt_value = tf.gather_nd(self.positions, [2, i])
-            if tilt_value != 0:
-                raise Exception(
-                    'Simulation box is tilted in {}. Current version of Hoomd-tf cannot work with skewed boxes.'.format(tilted_axis[i]))
+            if tilt_value is not None:
+                if tilt_value != 0:
+                    raise Exception(
+                        'Simulation box is tilted in {}. Current version of Hoomd-tf cannot work with skewed boxes.'.format(tilted_axis[i]))
 
 
 
