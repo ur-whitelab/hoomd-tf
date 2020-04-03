@@ -7,15 +7,18 @@ from os import path
 import pickle
 import hoomd
 
-
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
-#
-# Adds variables from model_directory corresponding to names
-# into the TensorFlow graph, optionally loading from a checkpoint
-# other than the most recently saved one, or setting variable values
-# with a feed_dict
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
+    R""" Adds variables from ``model_directory`` to the TF graph loaded from a checkpoint,
+    optionally other than the most recent one, or setting values with a feed dict.
+
+    :param model_directory: Directory from which to load model variables.
+    :param names: names of TensorFlow variables to load
+    :param checkpoint: checkpoint number of the trained model to load from.
+        Default value is -1 for most recently saved model.
+    :param feed_dict: optionally, use a feed dictionary to populate the model
+    """
     # just in case
     tf.reset_default_graph()
     # load graph
@@ -60,25 +63,19 @@ def compute_pairwise_potential(model_directory, r,
                                checkpoint=-1, feed_dict={}):
     R""" Compute the pairwise potential at r for the given model.
 
-    Parameters
-    ----------
-    model_directory
-        The model directory
-    r
-        A 1D grid of points at which to compute the potential.
-    potential_tensor_name
-        The tensor containing potential energy.
-    checkpoint
-        Which checkpoint to load. Default is -1, which loads latest checkpoint.
+    :param model_directory: The model directory
+    :param r: A 1D grid of points at which to compute the potential.
+    :param potential_tensor_name: The tensor containing potential energy.
+    :param checkpoint: Which checkpoint to load. Default is -1, which loads
+        latest checkpoint.
         An integer indicates loading
         from the model directory. If you pass a string, it is interpreted
         as a path.
-    feed_dict
-        Allows you to add any other placeholder values that need to be added
-        to compute potential in your model
-    Returns
-    -------
-    A 1D array of potentials corresponding the pairwise distances in r.
+    :param feed_dict: Allows you to add any other placeholder values that need
+        to be added to compute potential in your model
+
+    :return: A tuple of 1D arrays. First is the potentials corresponding to the
+        pairwise distances in r, second is the forces.
     """
     # just in case
     tf.reset_default_graph()
@@ -141,16 +138,11 @@ def compute_pairwise_potential(model_directory, r,
 # \internal
 # \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
-    R""" Given a hoomd system, this will return a mapping
-    from molecule index to particle index
-
+    R""" Given a hoomd system, return a mapping from molecule index to particle index.
     This is a slow function and should only be called once.
-    Parameters
-    ---------
-    system
-        The molecular system in HOOMD.
-    """
 
+    :param system: The molecular system in HOOMD.
+    """
     mapping = []
     mapped = set()
     N = len(system.particles)
@@ -202,24 +194,18 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     defining a sparse tensor in
     tensorflow that is a mass-weighted M x N mapping operator.
 
-    Parameters
-    -----------
-    molecule_mapping
-        This is a list of L x M matrices, where M is the number
+    :param molecule_mapping: This is a list of L x M matrices, where M is the number
         of atoms in the molecule and L is the number of coarse-grain
         sites that should come out of the mapping.
         There should be one matrix per molecule.
         The ordering of the atoms should follow
         what is defined in the output from find_molecules
-    molecule_mapping_index
-        This is the output from find_molecules.
-    system
-        The hoomd system. This is used to get mass values
+    :param molecule_mapping_index: This is the output from find_molecules.
+    :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
         weight by mass of the atoms.
-    Returns
-    -------
-        A sparse tensorflow tensor of dimension N x N,
+
+    :return: A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
     """
     assert type(molecule_mapping[0]) == np.ndarray
@@ -265,6 +251,43 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
 
 
+def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
+    R""" This will minimize the difference between the mapped forces
+    and calculated CG forces using the Adam oprimizer.
+
+    :param mapped_forces: A tensor with shape M x 3 where M is number
+        of CG beads in the system. These are forces mapped from an all
+        atom system.
+    :type mapped_forces: tensor
+    :param calculated_cg_forces: A tensor with shape M x 3 where M is
+        number of CG beads in the system. These are CG forces estimated
+        using a function or a basis set.
+    :type calculated_cg_forces: tensor
+    :param learning_rate: The learning_rate for optimization
+    :type learning_rate: float
+
+    :return: optimizer, cost
+
+    """
+    # Assert that mapped_forces has the right dimensions
+    if not (len(mapped_forces.shape
+                ) == 2 and mapped_forces.shape[1] == 3):
+        raise ValueError('mapped_forces must have the dimension [M x 3]'
+                         'where M is the number of coarse-grained particles')
+    # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
+    #if not (mapped_forces.shape ==
+    #        calculated_cg_forces.shape):
+    #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
+    # minimize mean squared error
+    cost = tf.losses.mean_squared_error(mapped_forces,
+                                        calculated_cg_forces)
+    # It is assumed here that the user will pass in
+    # calculated_cg_forces that depend on trainable variables.
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=learning_rate).minimize(cost)
+    return optimizer, cost
+
+
 def run_from_trajectory(model_directory, universe,
                         selection='all', r_cut=10.,
                         period=10, feed_dict={}):
@@ -305,7 +328,7 @@ def run_from_trajectory(model_directory, universe,
     atom_group = universe.select_atoms(selection)
     # get unique atom types in the selected atom group
     types = list(np.unique(atom_group.atoms.types))
-    # assicuate atoms types with individual atoms
+    # associate atoms types with individual atoms
     type_array = np.array([types.index(i)
                            for i in atom_group.atoms.types]).reshape(-1, 1)
     # get number of atoms/particles in the system
@@ -314,8 +337,8 @@ def run_from_trajectory(model_directory, universe,
     # define nlist operation
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
                                  NN=NN, system=system)
-# Now insert nlist into the graph
-# make input map to override nlist
+    # Now insert nlist into the graph
+    # make input map to override nlist
     input_map = {}
     input_map[model_params['nlist']] = nlist_tensor
     graph = tf.train.import_meta_graph(path.join('{}/'.format(
@@ -323,7 +346,10 @@ def run_from_trajectory(model_directory, universe,
 
     out_nodes = []
     for name in model_params['out_nodes']:
-        out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
+        if isinstance(name, list):
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name[0]))
+        else:
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
         sess.run(tf.group(tf.global_variables_initializer(),
@@ -353,24 +379,15 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
 
-    Parameters
-    ---------------
-    cv
-        The collective variable which is biased in the simulation
-    set_point
-        The set point value of the collective variable.
+    :param cv: The collective variable which is biased in the simulation
+    :param set_point: The set point value of the collective variable.
         This is a constant value which is pre-determined by the user and unique to each cv.
-    period
-        Time steps over which the coupling constant is updated. HOOMD time units are used.
-        If period=100 alpha will be updated each 100 time steps.
-    learninig_rate
-        Learninig_rate in the EDS method.
-    cv_scale
-        Used to adjust the units of the bias to HOOMD units.
-    Returns
-    ---------------
-    alpha
-        EDS coupling constant
+    :param period: Time steps over which the coupling constant is updated.
+        HOOMD time units are used. If period=100 alpha will be updated each 100 time steps.
+    :param learninig_rate: Learninig_rate in the EDS method.
+    :param cv_scale: Used to adjust the units of the bias to HOOMD units.
+
+    :return: Alpha, the EDS coupling constant.
     """
 
     # set-up variables
@@ -428,19 +445,14 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
 # \internal
 # \brief Finds the center of mass of a set of particles
-
-
 def center_of_mass(positions, mapping, system, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
-    Parameters
-    ----------
-    positions
-        The tensor of particle positions
-    mapping
-        The coarse-grain mapping used to produce the particles in system
-    system
-        The system of particles
+
+    :param positions: The tensor of particle positions
+    :param mapping: The coarse-grain mapping used to produce the particles in system
+    :param system: The system of particles
+    :param name: The name of the op to add to the TF graph
     """
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
@@ -459,23 +471,15 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, system, sorted=False):
-    R""" Computer partice pairwise neihgbor lists.
-    Parameters
-    ----------
-    positions
-        Positions of the particles
-    r_cut
-        Cutoff radius (HOOMD units)
-    NN
-        Maximum number of neighbors per particle
-    system
-        The HOOMD system of particles
-    sorted
-        Whether to sort neighbor lists by distance
-    Returns
-    -------
-    nlist
-        An [N X NN X 4] tensor containing neighbor lists of all
+    R""" Compute particle pairwise neighbor lists.
+
+    :param positions: Positions of the particles
+    :param r_cut: Cutoff radius (HOOMD units)
+    :param NN: Maximum number of neighbors per particle
+    :param system: The HOOMD system of particles
+    :param sorted: Whether to sort neighbor lists by distance
+
+    :return: An [N X NN X 4] tensor containing neighbor lists of all
         particles and index
     """
     # Make sure positions is only xyz

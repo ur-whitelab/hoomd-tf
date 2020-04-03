@@ -3,18 +3,8 @@
 Known Issues
 ============
 
-The following is a list of known issues which have no solution. To
-report issues in general, please use the `issue tracker
-<https://github.com/ur-whitelab/hoomd-tf/issues>`__.
-
-.. _checkpoint_number:
-
-Using Positions
----------------
-
-The maximum number of checkpoints you can save is limited
-to 1 million. Edit the source in `tfmanager.py` if this
-is too low for your needs
+The following is a list of known issues. To report another issue,
+please use the `issue tracker <https://github.com/ur-whitelab/hoomd-tf/issues>`__.
 
 .. _positions_issues:
 
@@ -56,9 +46,9 @@ initialized so that energies are finite.
 Safe Norm
 ~~~~~~~~~
 
-There is a workaround (``graph_builder.safe_norm``) in Hoomd-TF. There
+There is a workaround (:py:meth:`htf.graphbuilder.graph_builder.safe_norm`) in Hoomd-TF. There
 is almost no performance penalty, so it is fine to replace ``tf.norm``
-with ``graph_builder.safe_norm`` throughout. This method adds a small
+with :py:meth:`htf.graphbuilder.graph_builder.safe_norm` throughout. This method adds a small
 amount to all the norms though, so if you rely on some norms being zero
 it will not work well.
 

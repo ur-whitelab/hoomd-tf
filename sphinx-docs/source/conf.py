@@ -12,10 +12,19 @@
 #
 import os
 import sys
-from htf import __version__
-sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../..')))
-sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../../hoomd-blue')))
+import mock
+import sphinx
+sphinx_ver = tuple(map(int, sphinx.__version__.split('.')))
 
+sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../htf'))
+
+# get the version string from the codebase
+with open('../../htf/version.py') as f:
+    lines = f.readlines()
+exec(lines[0])
+# The full version, including alpha/beta/rc tags
+release = __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -26,9 +35,6 @@ Heta Gandhi, Andrew D. White'
 author = 'Rainier Barrett, Dilnoza Amirkulova, \
 Maghesree Chakraborty, Heta Gandhi, Andrew D. White'
 
-# The full version, including alpha/beta/rc tags
-
-release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,7 +45,13 @@ release = __version__
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx.ext.mathjax'
 ]
+
+if sphinx_ver < (1, 8, 0):
+    autodoc_default_flags = ['inherited-members']
+else:
+    autodoc_default_options = {'inherited-members': None}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -63,5 +75,9 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 
-# ignore the C code import
-autodoc_mock_imports = ['hoomd.htf._htf']
+# mock imports so we can generate docs without installing
+autodoc_mock_imports = ['hoomd', 'hoomd.md', 'hoomd.md.nlist', 'hoomd.comm',
+                        'tensorflow', 'numpy', 'hoomd._htf']
+
+# define master doc for newer versions of sphinx
+master_doc = 'index'

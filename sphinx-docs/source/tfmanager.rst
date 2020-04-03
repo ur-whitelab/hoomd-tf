@@ -5,7 +5,7 @@ tfmanager
 
 .. py:currentmodule:: htf
 
-.. autosummary::
-   :nosignatures:
-
-   TFManager
+.. automodule:: tfmanager
+   :synopsis: TensorFlow Manager.
+   :members:
+      

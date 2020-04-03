@@ -30,7 +30,7 @@ def simple_potential(directory='/tmp/test-simple-potential-model'):
                                                             ]).shape[1] == 4
 
 
-def benchmark_gradient_potential():
+def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
     graph = htf.graph_builder(1024, 64)
     nlist = graph.nlist[:, :, :3]
     # get r
@@ -39,10 +39,10 @@ def benchmark_gradient_potential():
     energy = tf.reduce_sum(graph.safe_div(1., r), axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/benchmark-gradient-potential-model')
+               model_directory=directory)
 
 
-def gradient_potential():
+def gradient_potential(directory='/tmp/test-gradient-potential-model'):
     graph = htf.graph_builder(9 - 1)
     with tf.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
@@ -52,9 +52,8 @@ def gradient_potential():
             name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
-               model_directory='/tmp/test-gradient-potential-model',
+               model_directory=directory,
                out_nodes=[energy])
-
 
 def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
@@ -67,6 +66,14 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
 
+
+def saving_graph(directory='/tmp/test-saving-model'):
+    graph = htf.graph_builder(0, output_forces=False)
+    pos_norm = tf.norm(graph.positions, axis=1)
+    graph.save_tensor(pos_norm, 'v1')
+    graph.running_mean(pos_norm, 'v2')
+    graph.save(directory)
+    return directory
 
 def wrap_graph(directory='/tmp/test-wrap-model'):
     graph = htf.graph_builder(0, output_forces=False)
@@ -124,6 +131,35 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     return directory
 
 
+def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
+    graph = htf.graph_builder(NN, output_forces=False)
+    # make trainable variables
+    epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
+    sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
+    # get LJ potential using our variables
+    # uses built in nlist_rinv which provides
+    # r^-1 with each neighbor
+    inv_r6 = sigma**6 * graph.nlist_rinv**6
+    # use 2 * epsilon because nlist is double-counted
+    p_energy = 2.0 * epsilon * (inv_r6**2 - inv_r6)
+    # sum over pairs to get total energy
+    energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    # compute forces
+    computed_forces = graph.compute_forces(energy)
+    # compare hoomd-blue forces (graph.forces) with our
+    # computed forces
+    minimizer, loss = htf.force_matching(graph.forces[:, :3],
+                                         computed_forces[:, :3],
+                                         learning_rate=1e-2)
+    # save loss so we can visualize later
+    graph.save_tensor(loss, 'loss')
+    # Make sure to have minimizer in out_nodes so that
+    # the force matching occurs!
+    graph.save(model_directory=directory,
+               out_nodes=[minimizer])
+    return directory
+
+
 def eds_graph(directory='/tmp/test-lj-eds'):
     graph = htf.graph_builder(0)
     # get distance from center
@@ -165,7 +201,7 @@ def mol_features_graph(directory='/tmp/test-mol-features'):
 
 
 def run_traj_graph(directory='/tmp/test-run-traj'):
-    graph = htf.graph_builder(16)
+    graph = htf.graph_builder(128)
     nlist = graph.nlist[:, :, :3]
     r = tf.norm(nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
