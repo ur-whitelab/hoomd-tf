@@ -5,6 +5,6 @@ tfarraycomm
 
 .. py:currentmodule:: htf
 
-.. automodule:: htf.tfarraycomm
+.. automodule:: tfarraycomm
    :synopsis: TensorFlow Array Communications
    :members:

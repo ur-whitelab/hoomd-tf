@@ -1,8 +1,8 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-import hoomd.htf._htf as _htf
-from hoomd.htf.tfmanager import main
+import htf._htf as _htf
+from tfmanager import main
 import sys
 import math
 import numpy as np
@@ -241,7 +241,7 @@ class tfcompute(hoomd.compute._compute):
             if mol_indices is None:
                 sys = hoomd.data.system_data(hoomd.context.current.system_definition)
                 mol_indices = \
-                    hoomd.htf.find_molecules(sys)
+                    htf.find_molecules(sys)
             self.mol_indices = mol_indices
             if type(self.mol_indices) != list:
                 raise ValueError('mol_indices must be nested python list')

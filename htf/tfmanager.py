@@ -27,8 +27,8 @@ def main(q, write_tensorboard=False, profile=False):
 
 
 def load_htf_op_library(op):
-    import hoomd.htf
-    path = hoomd.htf.__path__[0]
+    import htf
+    path = htf.__path__[0]
     try:
         op_path = os.path.join(path, op, 'lib_{}'.format(op))
         if os.path.exists(op_path + '.so'):
