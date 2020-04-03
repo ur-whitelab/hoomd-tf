@@ -186,11 +186,11 @@ class graph_builder:
             :return: The wrapped vector as a TF tensor
         """
         tilted_axis = ['x axis', 'y axis', 'z axis']
-        #tilt_value = [self.box.xy, self.box.xz, self.box.yz]
         #print (tilt_value)
-        for i in range(3):
-            if self.positions is not None:
-                tilt_value = tf.gather_nd(self.positions, [2, i])
+        if self.box is not None:
+            #tilt_value = [self.box.xy, self.box.xz, self.box.yz]
+            for i in range(3):
+                tilt_value = tf.gather_nd(self.box, [2, i])
                 if tilt_value != 0:
                     raise Exception(
                         'Simulation box is tilted in {}. Current version of Hoomd-tf cannot handle skewed boxes.'.format(tilted_axis[i]))
