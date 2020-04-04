@@ -140,7 +140,7 @@ To finalize and save your graph, you must call
 
 * ``directory``: where to save your TensorFlow model files
 * ``force_tensor`` (optional): your computed forces, either as
-  computed by your graph or output from :py:meth:`graphbuilder.graph_builder.compute_energy`.
+  computed by your graph or output from :py:meth:`graphbuilder.graph_builder.compute_forces`.
   This should be an ``N x 4`` tensor with the 4th column indicating per-particle potential energy.
 * ``virial`` (optional): the virial tensor to save. The virial should be an ``N x 3 x 3`` tensor.
 * ``out_nodes`` (optional): If your graph is not outputting forces, then you must provide a tensor or list of
@@ -229,7 +229,7 @@ Period of out nodes
 -------------------
 
 You can modify how often tensorflow is called via
-:py:meth:`tfcompute.tfcompute.attach`. You can also have more granular control of
+:py:meth:`tensorflowcompute.tfcompute.attach`. You can also have more granular control of
 operations/tensors passed to ``out_nodes`` by changing the type to a
 list whose first element is the tensor and the second argument is the
 period at which it is computed. For example:
@@ -302,7 +302,7 @@ shows how to set up a neural network model using Keras layers.
 
 The model can then be loaded and trained as normal. Note that 
 ``keras.models.Model.fit()`` is not currently supported. You must train
-using :py:class:`tfcompute.tfcompute` as explained in the next section.
+using :py:class:`tensorflowcompute.tfcompute` as explained in the next section.
 
 .. _complete_examples:
 
