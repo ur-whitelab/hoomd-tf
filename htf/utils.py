@@ -335,9 +335,9 @@ def run_from_trajectory(model_directory, universe,
     N = (np.shape(type_array))[0]
     NN = model_params['NN']
     # define nlist operation
-    box_size = [box[0], box[1], box[2]]
+    #box_size = [box[0], box[1], box[2]]
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
-                                 NN=NN, box_size)
+                                 NN=NN, box_size=[box[0], box[1], box[2]])
     # Now insert nlist into the graph
     # make input map to override nlist
     input_map = {}
@@ -443,7 +443,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
 # \internal
 # \brief Finds the center of mass of a set of particles
-def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
+def center_of_mass(positions, mapping,box_size, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
    
@@ -468,7 +468,7 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
 
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
-def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
+def compute_nlist(positions, r_cut, NN,box_size, sorted=False):
     R""" Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles

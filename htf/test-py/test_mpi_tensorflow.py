@@ -12,7 +12,7 @@ import shutil
 
 def run_tf_lj(N, T, directory='/tmp/test-lj-potential-model'):
     model_dir = build_examples.lj_graph(N - 1, directory)
-    with hoomd.htf.tfcompute(model_dir,
+    with hoomd.htf.tfcompute.tfcompute(model_dir,
                                            _mock_mode=False) as tfcompute:
         rcut = 5.0
         system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),

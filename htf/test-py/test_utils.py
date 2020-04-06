@@ -155,7 +155,7 @@ class test_mappings(unittest.TestCase):
     def test_force_matching(self):
         model_dir = build_examples.lj_force_matching(NN=15)
         # calculate lj forces with a leading coeff
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 16
             NN = N-1
@@ -311,7 +311,7 @@ class test_trajectory(unittest.TestCase):
         variables = hoomd.htf.load_variables(model_directory, ['average-energy'])
         # assert they are calculated and valid?
         assert not math.isnan(variables['average-energy'])
-        assert not variables['average-energy'] == 0
+        assert not variables['average-energy'] == 0.0
 
 if __name__ == '__main__':
     unittest.main()
