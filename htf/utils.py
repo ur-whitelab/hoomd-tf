@@ -328,7 +328,7 @@ def run_from_trajectory(model_directory, universe,
     atom_group = universe.select_atoms(selection)
     # get unique atom types in the selected atom group
     types = list(np.unique(atom_group.atoms.types))
-    # assicuate atoms types with individual atoms
+    # associate atoms types with individual atoms
     type_array = np.array([types.index(i)
                            for i in atom_group.atoms.types]).reshape(-1, 1)
     # get number of atoms/particles in the system
@@ -347,7 +347,10 @@ def run_from_trajectory(model_directory, universe,
 
     out_nodes = []
     for name in model_params['out_nodes']:
-        out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
+        if isinstance(name, list):
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name[0]))
+        else:
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
         sess.run(tf.group(tf.global_variables_initializer(),
