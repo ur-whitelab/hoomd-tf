@@ -189,9 +189,8 @@ class test_mappings(unittest.TestCase):
     def test_compute_nlist(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
-        box_size = [100., 100., 100.,]
-        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  100., 9, box_size, True)
+        box_size = [100., 100., 100.]
+        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, box_size, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -204,8 +203,7 @@ class test_mappings(unittest.TestCase):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         box_size = [100., 100., 100.]
-        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32),
-                                  5.5, 9, box_size, True)
+        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, box_size, True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
