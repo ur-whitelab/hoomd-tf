@@ -195,6 +195,7 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
                out_nodes=[avg_energy])
     return directory
 
+
 def custom_nlist(NN, r_cut, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]
