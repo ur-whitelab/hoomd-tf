@@ -1,7 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-import hoomd.htf._htf as _htf
+from hoomd.htf import _htf
 from hoomd.htf.tfmanager import main
 import sys
 import math
@@ -225,6 +225,7 @@ class tfcompute(hoomd.compute._compute):
         r_cut = float(r_cut)
         self.r_cut = r_cut
         self.batch_size = 0 if batch_size is None else batch_size
+        self.mol_indices = None
 
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
@@ -421,7 +422,8 @@ class tfcompute(hoomd.compute._compute):
                 'debug': self.debug_mode,
                 'primary': hoomd.comm.get_rank() == 0,
                 'device': self.device,
-                'use_xla': self.use_xla}
+                'use_xla': self.use_xla,
+                'mol_indices': [self.mol_indices, self.rev_mol_indices] if self.mol_indices else None}
         self.q.put(args)
         message = ['Starting TF Manager with:']
         for k, v in args.items():
@@ -450,9 +452,6 @@ class tfcompute(hoomd.compute._compute):
         if self.mock_mode:
             return
         fd = {'htf-batch-index:0': batch_index, 'htf-batch-frac:0': batch_frac}
-        if self.mol_indices is not None:
-            fd[self.graph_info['mol_indices']] = self.mol_indices
-            fd[self.graph_info['rev_mol_indices']] = self.rev_mol_indices
         if self.feed_dict is not None:
             if type(self.feed_dict) == dict:
                 value = self.feed_dict

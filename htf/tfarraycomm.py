@@ -1,7 +1,7 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-import hoomd.htf._htf as _htf
+from hoomd.htf import _htf
 import numpy as np
 import hoomd
 

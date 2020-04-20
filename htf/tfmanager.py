@@ -80,6 +80,8 @@ class TFManager:
         how many times the TensorFLow model is updated. See tfcompute.py.
     :param use_xla: If True, enables the accelerated linear algebra library in TensorFlow,
         which can be useful for large and complicated tensor operations.
+    :param mol_indices: The molecucule indices, if doing mol batch (None otherwise)
+
     """
     ## \internal
     # \brief Constructs the tfmanager class
@@ -92,7 +94,7 @@ class TFManager:
                  forces_buffer, box_buffer, virial_buffer, log_filename,
                  dtype, debug, write_tensorboard, use_feed,
                  bootstrap, primary, bootstrap_map,
-                 save_period, use_xla):
+                 save_period, use_xla, mol_indices):
         R""" Initialize an instance of TFManager.
         """
         self.primary = primary
@@ -125,6 +127,7 @@ class TFManager:
         self.out_nodes = []
         self.summaries = None
         self.use_xla = use_xla
+        self.mol_indices = mol_indices
         self._prepare_graph()
         if graph_info['output_forces']:
             self.log.log(8, 'This TF Graph can modify forces.')
@@ -406,6 +409,11 @@ class TFManager:
             if self.graph_info['dtype'] != self.dtype:
                 self.forces = tf.cast(self.forces, self.graph_info['dtype'])
                 input_map[self.graph_info['forces']] = self.forces
+
+        # add mol indices to input map, if necessary
+        if self.mol_indices:
+            input_map[self.graph_info['mol_indices']] = tf.constant(self.mol_indices[0])
+            input_map[self.graph_info['rev_mol_indices']] = tf.constant(self.mol_indices[1])
 
         # now insert into graph
         try:

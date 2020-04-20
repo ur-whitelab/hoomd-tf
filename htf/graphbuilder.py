@@ -418,6 +418,7 @@ class graph_builder:
         self.mol_indices = tf.placeholder(tf.int32,
                                           shape=[None, MN],
                                           name='htf-molecule-index')
+
         self.rev_mol_indices = tf.placeholder(tf.int32,
                                               shape=[None, 2],
                                               name='htf-reverse-molecule-index')
