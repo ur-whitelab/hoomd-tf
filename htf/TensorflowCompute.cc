@@ -306,17 +306,6 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
         unsigned int j = 0;
 
-        if (m_nneighs < size)
-            {
-            m_exec_conf->msg->error()
-                << "Overflow in nlist! Only "
-                << m_nneighs
-                << " space but there are "
-                << size
-                << " neighbors."
-                << std::endl;
-            throw std::runtime_error("Nlist Overflow");
-            }
         for (; j < size; j++)
             {
 
@@ -331,6 +320,19 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
             if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut) continue;
+
+	    if (nnoffset[bi] >= size)
+	      {
+		m_exec_conf->msg->error()
+		  << "Overflow in nlist! Only "
+		  << m_nneighs
+		  << " space but there are "
+		  << size
+		  << " neighbors."
+		  << std::endl;
+		throw std::runtime_error("Nlist Overflow");
+	      }
+
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;
