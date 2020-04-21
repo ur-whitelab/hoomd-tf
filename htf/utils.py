@@ -376,7 +376,7 @@ def run_from_trajectory(model_directory, universe,
 
 # \internal
 # \Applies EDS bias to a system
-def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
+def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
 
@@ -387,9 +387,12 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
         HOOMD time units are used. If period=100 alpha will be updated each 100 time steps.
     :param learninig_rate: Learninig_rate in the EDS method.
     :param cv_scale: Used to adjust the units of the bias to HOOMD units.
-
+    :param name: Name used as prefix on variables.
     :return: Alpha, the EDS coupling constant.
     """
+
+    if name is None:
+        name = 'eds' + cv.name.split(':')[0]
 
     # set-up variables
     mean = tf.get_variable(
@@ -429,8 +432,8 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
         gradient = update_mask * -  2 * \
-            (cv - set_point) * ssd / period // 2 / cv_scale
-        optimizer = tf.train.AdagradOptimizer(learning_rate)
+            (cv - set_point) * ssd / period / 2 / cv_scale
+        optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
                                lambda: optimizer.apply_gradients([(gradient,
                                                                    alpha)]),
