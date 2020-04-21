@@ -296,7 +296,7 @@ class graph_builder:
         self.out_nodes.append([store_op, save_period])
 
 
-    def compute_forces(self, energy, virial=None, positions=None,
+    def compute_forces(self, energy, virial=None, positions=False,
                        nlist=None):
         R""" Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle
@@ -308,8 +308,11 @@ class graph_builder:
             if the graph outputs forces. Can be set manually instead. Note
             that the virial term that depends on positions is not computed.
         :type virial: bool
-        :param positions: Defaults to ``None``. Particle positions tensor to use
-            for force calculations. If not specified, uses ``self.positions``.
+        :param positions: Defaults to ``False``. Particle positions tensor to use
+            for force calculations. If set to ``None``, uses ``self.positions``. If
+            set to ``False`` (default), no position dependent forces will be computed.
+            Only pairwise forces from neighbor list will be applied. If set to a 
+            tensor, that tensor will be used instead of ``self.positions``.
         :type positions: tensor
         :param nlist: Defaults to ``None``. Particle-wise neighbor list to use
             for force calculations. If not specified, uses ``self.nlist``.
