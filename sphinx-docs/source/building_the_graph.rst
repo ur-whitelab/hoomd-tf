@@ -3,7 +3,7 @@
 Building the Graph
 ==================
 
-To construct a graph, create a :py:class:`htf.graphbuilder.graph_builder` instance:
+To construct a graph, create a :py:class:`graphbuilder.graph_builder` instance:
 
 .. code:: python
 
@@ -40,7 +40,7 @@ Molecule Batching
 It may be simpler to have positions or neighbor lists or forces arranged
 by molecule. For example, you may want to look at only a particular bond
 or subset of atoms in a molecule. To do this, you can call
-:py:meth:`htf.graphbuilder.graph_builder.build_mol_rep`, whose argument
+:py:meth:`graphbuilder.graph_builder.build_mol_rep`, whose argument
 ``MN`` is the maximum number of atoms
 in a molecule. This will create the following new attributes:
 ``mol_positions``, ``mol_nlist``, and ``mol_forces`` (if your graph has
@@ -55,7 +55,7 @@ are the middle atom:
 .. code:: python
 
     import hoomd.htf as htf
-    graph = htf.graph_builder(0)
+    graph = graph_builder(0)
     graph.build_mol_rep(3)
     # want slice for all molecules (:)
     # want h1 (0), o (1), h2(2)
@@ -72,9 +72,9 @@ Computing Forces
 ----------------
 
 If your graph is outputting forces, you may either compute forces and
-pass them to :py:meth:`htf.graphbuilder.graph_builder.save` or have them computed via
+pass them to :py:meth:`graphbuilder.graph_builder.save` or have them computed via
 automatic differentiation of a potential energy. Call
-:py:meth:`htf.graphbuilder.graph_builder.compute_forces` with the argument ``energy``,
+:py:meth:`graphbuilder.graph_builder.compute_forces` with the argument ``energy``,
 which can be either a scalar or a tensor which depends on ``nlist`` and/or ``positions``. A tensor of
 forces will be returned as :math:`\sum_i(\frac{-\partial E} {\partial n_i}) - \frac{dE} {dp}`, where the sum is over
 the neighbor list. For example, to compute a :math:`1 / r` potential:
@@ -94,7 +94,7 @@ the neighbor list. For example, to compute a :math:`1 / r` potential:
     forces = graph.compute_forces(energy)
 
 Notice that in the above example that we have used the
-:py:meth:`htf.graphbuilder.graph_builder.safe_div` method, which allows
+:py:meth:`graphbuilder.graph_builder.safe_div` method, which allows
 us to safely treat a :math:`1 / 0`, which can arise because ``nlist``
 contains 0s for when fewer than ``NN``
 nearest neighbors are found.
@@ -108,10 +108,10 @@ pairwise energies.
 Neighbor lists
 --------------
 
-As mentioned above, :py:class:`htf.graphbuilder.graph_builder` contains a member called
+As mentioned above, :py:class:`graphbuilder.graph_builder` contains a member called
 ``nlist``, which is an ``N x NN x 4``
 neighobr list tensor. You can ask for masked versions of this with
-:py:meth:`htf.graphbuilder.graph_builder.masked_nlist`
+:py:meth:`graphbuilder.graph_builder.masked_nlist`
 where ``type_i`` and ``type_j`` are optional integers that specify the type of
 the origin (``type_i``) or neighobr (``type_j``). The ``nlist`` argument
 allows you to pass in your own neighbor list and ``type_tensor`` allows
@@ -125,7 +125,7 @@ Virial
 ------
 
 The virial is computed and added to the graph if you use the
-:py:meth:`htf.graphbuilder.graph_builder.compute_forces` method
+:py:meth:`graphbuilder.graph_builder.compute_forces` method
 and your energy has a non-zero derivative
 with respect to ``nlist``. You may also explicitly pass the virial when
 saving, or pass ``None`` to remove the automatically-calculated virial.
@@ -136,11 +136,11 @@ Finalizing the Graph
 --------------------
 
 To finalize and save your graph, you must call
-:py:meth:`htf.graphbuilder.graph_builder.save` with the following arguments:
+:py:meth:`graphbuilder.graph_builder.save` with the following arguments:
 
 * ``directory``: where to save your TensorFlow model files
 * ``force_tensor`` (optional): your computed forces, either as
-  computed by your graph or output from :py:meth:`htf.graphbuilder.graph_builder.compute_energy`.
+  computed by your graph or output from :py:meth:`graphbuilder.graph_builder.compute_forces`.
   This should be an ``N x 4`` tensor with the 4th column indicating per-particle potential energy.
 * ``virial`` (optional): the virial tensor to save. The virial should be an ``N x 3 x 3`` tensor.
 * ``out_nodes`` (optional): If your graph is not outputting forces, then you must provide a tensor or list of
@@ -154,7 +154,7 @@ Saving Data
 Using variables is the best way to save computed quantities while
 running a compute graph. See the :ref:`loading_variables` section for
 loading them. You can save a tensor value to a variable using 
-:py:meth:`htf.graphbuilder.graph_builder.save_tensor`. Here is an
+:py:meth:`graphbuilder.graph_builder.save_tensor`. Here is an
 example of computing the LJ potential and saving the system energy at
 each step.
 
@@ -173,7 +173,7 @@ each step.
     graph.save(force_tensor=forces, model_directory=directory)
 
 Often you may want a running mean of a variable, for which there is a
-built-in, :py:meth:`htf.graphbuilder.graph_builder.running_mean`:
+built-in, :py:meth:`graphbuilder.graph_builder.running_mean`:
 
 .. code:: python
 
@@ -191,17 +191,17 @@ Variables and Restarts
 
 In TensorFlow, variables are generally trainable parameters. They are
 required parts of your graph when doing learning. Each ``save_period``
-(set as arg to :py:meth:`htf.tfcompute.tfcompute.attach`),
+(set as arg to :py:meth:`tensorflowcompute.tfcompute.attach`),
 they are written to your model directory.
 Note that when a run is started, the latest values of your
 variables are loaded from your model directory. *If you are starting a
 new run but you previously ran your model, the old variable values will
 be loaded.* To prevent this unexpectedly loading old checkpoints, if you
-run :py:meth:`htf.graphbuilder.graph_builder.save`, it will move out all old checkpoints. This
+run :py:meth:`graphbuilder.graph_builder.save`, it will move out all old checkpoints. This
 behavior means that if you want to restart, you should not re-run
-:py:meth:`htf.graphbuilder.graph_builder.save` in your restart script, *nor* should you pass
+:py:meth:`graphbuilder.graph_builder.save` in your restart script, *nor* should you pass
 ``move_previous = False`` as a parameter if you re-run
-:py:meth:`htf.graphbuilder.graph_builder.save`.
+:py:meth:`graphbuilder.graph_builder.save`.
 
 Variables are also how you save data as seen above. If you are doing
 training and also computing other variables, be sure to set your
@@ -219,7 +219,7 @@ You may load variables after the simulation using the following syntax:
 
     variables  = htf.load_variables(model_dir, ['avg-energy'])
 
-The :py:meth:`htf.utils.load_variables` is general and can be used to load trained,
+The :py:meth:`utils.load_variables` is general and can be used to load trained,
 non-trained, or averaged variables. **It is important to name your custom
 variables so they can be loaded using this function.**
 
@@ -229,7 +229,7 @@ Period of out nodes
 -------------------
 
 You can modify how often tensorflow is called via
-:py:meth:`htf.tfcompute.tfcompute.attach`. You can also have more granular control of
+:py:meth:`tensorflowcompute.tfcompute.attach`. You can also have more granular control of
 operations/tensors passed to ``out_nodes`` by changing the type to a
 list whose first element is the tensor and the second argument is the
 period at which it is computed. For example:
@@ -302,7 +302,7 @@ shows how to set up a neural network model using Keras layers.
 
 The model can then be loaded and trained as normal. Note that 
 ``keras.models.Model.fit()`` is not currently supported. You must train
-using :py:class:`htf.tfcompute.tfcompute` as explained in the next section.
+using :py:class:`tensorflowcompute.tfcompute` as explained in the next section.
 
 .. _complete_examples:
 

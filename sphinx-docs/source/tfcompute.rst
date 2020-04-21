@@ -5,13 +5,8 @@ tfcompute
 
 .. py:currentmodule:: htf
 
-.. autosummary::
-   :nosignatures:
-
-   tfcompute
-
 .. rubric:: Details
 
-.. automodule:: htf.tfcompute
+.. automodule:: tensorflowcompute
     :synopsis: TensorFlow computations for HTF
     :members:

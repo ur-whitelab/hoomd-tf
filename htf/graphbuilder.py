@@ -205,7 +205,7 @@ class graph_builder:
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
 
-        :return: Unormalized RDF.
+        :return: Historgram tensor of the RDF (not normalized).
         """
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
