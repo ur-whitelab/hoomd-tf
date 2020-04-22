@@ -7,7 +7,7 @@ To use the included docker image:
 
 .. code:: bash
 
-    docker build -t hoomd-tf htf
+    docker build -t hoomd-tf .
 
 To run the container:
 
