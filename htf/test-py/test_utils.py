@@ -7,6 +7,7 @@ import build_examples
 import tempfile
 import shutil
 
+
 class test_loading(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -92,7 +93,8 @@ class test_mappings(unittest.TestCase):
             [1, 0, 0],
             [0, 1, 0]]).transpose()
         mapping = hoomd.htf.find_molecules(self.system)
-        s = hoomd.htf.sparse_mapping([mapping_matrix for _ in mapping], mapping)
+        s = hoomd.htf.sparse_mapping(
+            [mapping_matrix for _ in mapping], mapping)
         # see if we can build it
         N = len(self.system.particles)
         p = tf.ones(shape=[N, 1])
@@ -138,7 +140,7 @@ class test_mappings(unittest.TestCase):
             [0, 1, 0]]).transpose()
         mapping = hoomd.htf.find_molecules(self.system)
         s = hoomd.htf.sparse_mapping([mapping_matrix
-                                for _ in mapping], mapping, self.system)
+                                      for _ in mapping], mapping, self.system)
         # see if we can build it
         N = len(self.system.particles)
         p = tf.placeholder(tf.float32, shape=[N, 3])
@@ -152,14 +154,13 @@ class test_mappings(unittest.TestCase):
         # TODO: Come up with a real test of this.
         assert True
 
-
     def test_force_matching(self):
         model_dir = build_examples.lj_force_matching(NN=15)
         # calculate lj forces with a leading coeff
         with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             hoomd.context.initialize()
             N = 16
-            NN = N-1
+            NN = N - 1
             rcut = 7.5
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -169,7 +170,7 @@ class test_mappings(unittest.TestCase):
             lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
+            )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
             hoomd.run(1e3)
             input_nlist = tfcompute.get_nlist_array()
@@ -191,7 +192,14 @@ class test_mappings(unittest.TestCase):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         box_size = [100., 100., 100.]
-        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32), 100., 9, box_size, True)
+        nlist = hoomd.htf.compute_nlist(
+            tf.cast(
+                positions,
+                tf.float32),
+            100.,
+            9,
+            box_size,
+            True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -204,7 +212,14 @@ class test_mappings(unittest.TestCase):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         box_size = [100., 100., 100.]
-        nlist = hoomd.htf.compute_nlist(tf.cast(positions, tf.float32), 5.5, 9, box_size, True)
+        nlist = hoomd.htf.compute_nlist(
+            tf.cast(
+                positions,
+                tf.float32),
+            5.5,
+            9,
+            box_size,
+            True)
         with tf.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
@@ -268,7 +283,7 @@ class test_mappings(unittest.TestCase):
 
         r = np.linspace(0.5, 1.5, 5)
         potential, forces = hoomd.htf.compute_pairwise_potential(model_dir,
-                                                           r, 'energy')
+                                                                 r, 'energy')
         np.testing.assert_equal(len(potential), len(r),
                                 'Potentials not calculated correctly')
 
@@ -306,14 +321,14 @@ class test_mol_properties(unittest.TestCase):
         import gsd
         import gsd.hoomd
         import os
-        test_gsd = os.path.join(os.path.dirname(__file__), 'meth20.gsd') 
-		# g = gsd.hoomd.open(test_gsd)
+        test_gsd = os.path.join(os.path.dirname(__file__), 'meth20.gsd')
+        # g = gsd.hoomd.open(test_gsd)
         set_rcut = 12.2
         c = hoomd.context.initialize()
         system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
         model_dir = build_examples.mol_features_graph()
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             # set-up pppm
             charged = hoomd.group.all()
@@ -396,9 +411,9 @@ class test_mol_properties(unittest.TestCase):
             nvt = hoomd.md.integrate.nvt(
                 group=group_all, kT=298.15 * kT, tau=350 / 48.9)
             nvt.randomize_velocities(1234)
-            hoomd.run(500)
-            tfcompute.attach(nlist, r_cut=set_rcut, period=1, save_period=10)
             hoomd.run(1000)
+            tfcompute.attach(nlist, r_cut=set_rcut, period=1, save_period=10)
+            hoomd.run(500)
             variables = hoomd.htf.load_variables(
                 model_dir, ['avg_r', 'avg_a', 'avg_d'])
             assert np.isfinite(variables['avg_r'])
