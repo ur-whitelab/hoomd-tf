@@ -328,7 +328,7 @@ class test_mol_properties(unittest.TestCase):
         system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
         model_dir = build_examples.mol_features_graph()
-        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             # set-up pppm
             charged = hoomd.group.all()
