@@ -321,9 +321,9 @@ class test_mol_properties(unittest.TestCase):
         import gsd
         import gsd.hoomd
         import os
-        test_gsd = os.path.join(os.path.dirname(__file__), 'meth20.gsd')
+        test_gsd = os.path.join(os.path.dirname(__file__), 'meth.gsd')
         # g = gsd.hoomd.open(test_gsd)
-        set_rcut = 12.2
+        set_rcut = 6.0
         c = hoomd.context.initialize()
         system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
