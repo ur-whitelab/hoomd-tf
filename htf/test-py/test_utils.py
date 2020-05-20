@@ -315,7 +315,7 @@ class test_bias(unittest.TestCase):
 
 
 class test_mol_properties(unittest.TestCase):
-    def test_mol_features(self):
+    def test_mol_features():
         import hoomd.md
         import hoomd.group
         import gsd
@@ -328,7 +328,7 @@ class test_mol_properties(unittest.TestCase):
         system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
         model_dir = build_examples.mol_features_graph()
-        with hoomd.htf.tfcompute.tfcompute(model_dir) as tfcompute:
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
             nlist = hoomd.md.nlist.cell()
             # set-up pppm
             charged = hoomd.group.all()
@@ -411,9 +411,9 @@ class test_mol_properties(unittest.TestCase):
             nvt = hoomd.md.integrate.nvt(
                 group=group_all, kT=298.15 * kT, tau=350 / 48.9)
             nvt.randomize_velocities(1234)
-            hoomd.run(1000)
+            hoomd.run(5000)
             tfcompute.attach(nlist, r_cut=set_rcut, period=1, save_period=10)
-            hoomd.run(500)
+            hoomd.run(1000)
             variables = hoomd.htf.load_variables(
                 model_dir, ['avg_r', 'avg_a', 'avg_d'])
             assert np.isfinite(variables['avg_r'])
