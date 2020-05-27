@@ -37,23 +37,23 @@ modeling community. The most mature applications are in batch learning with data
 For example, one can run a molecular dynamics (MD) or density functional theory (DFT) simulation to completion, from which the trajectory is then used as
 input data to train a deep neural network that reproduces the energetics at a fraction of the computational cost.
 Some recent examples include an energy-conserving force-field learned with a custom gradient-domain
-model `@ChmielaConservedEnergyMLFF2017`, DFT-based neural network force-fields `@SmithDFTNNPotential2017`,
-and a neural network coarse-grained potential `@WangCGML2019`.
-A limitation of these methods is that they treat the molecular modeling calculations as a static dataset, whereas molecular modeling calculations can be treated as interrogative functions, opening the door to methods like reinforcement learning or active learning. Thus there is a clear limitation of existing implementations due to their sequential nature of going from calculation to ML. Another practical issue is that neural network force-field implementations often duplicate standard ML frameworks, preventing them from keeping progress with state-of-the art methods. For example `@RuppMLAtomizationE2012` and `@BotuMLQMMD` are benchmark works in this field and custom implementations. This limits the scope and speed of translating ML advances to the molecular modeling community.
+model [@ChmielaConservedEnergyMLFF2017], DFT-based neural network force-fields [@SmithDFTNNPotential2017],
+and a neural network coarse-grained potential [@WangCGML2019].
+A limitation of these methods is that they treat the molecular modeling calculations as a static dataset, whereas molecular modeling calculations can be treated as interrogative functions, opening the door to methods like reinforcement learning or active learning. Thus there is a clear limitation of existing implementations due to their sequential nature of going from calculation to ML. Another practical issue is that neural network force-field implementations often duplicate standard ML frameworks, preventing them from keeping progress with state-of-the art methods. For example [@RuppMLAtomizationE2012] and [@BotuMLQMMD] are benchmark works in this field and custom implementations. This limits the scope and speed of translating ML advances to the molecular modeling community.
 
 
 This need has led us to develop HOOMD-TF, a flexible direct integration of a standard ML library and standard molecular simulation framework that maintains GPU acceleration. Our goals are to improve the reproducibility of ML methods in molecular simulation, ease translation of ML advances, and remove the need for sequential simulation and ML. This should enable active learning, reinforcement learning, and online learning of molecular simulations. 
 
-There are other applications focusing on ML in molecular modeling, such as [DeepChem](https://www.deepchem.io/) and `@Aspuru-GuzikMaterialsDiscovery2015`,
+There are other applications focusing on ML in molecular modeling, such as [DeepChem](https://www.deepchem.io/) and [@Aspuru-GuzikMaterialsDiscovery2015],
 which are largely concerned with property prediction and representation. There is also a similar work to HOOMD-TF by
-`@EastmanOpenMMNN2018`, [OpenMM-NN](https://github.com/openmm/openmm-nn), which allows the use of pre-trained TensorFlow models in [OpenMM](http://openmm.org/) `@PandeOpenMM2013`. In contrast,
+[@EastmanOpenMMNN2018], [OpenMM-NN](https://github.com/openmm/openmm-nn), which allows the use of pre-trained TensorFlow models in [OpenMM](http://openmm.org/) [@PandeOpenMM2013]. In contrast,
 this work fills the niche of online model training, while also allowing pre-trained model imports in MD simulation,
 coarse-grained force-field learning, collective variable calculation and manipulation, and force-field biasing.
 
 # Summary
 
-The HOOMD-TF package pairs the TensorFlow ML library `@tensorflow2015whitepaper` with the HOOMD-blue
-simulation engine `@AndersonHOOMD2019` to allow for flexible online ML and tensor calculations 
+The HOOMD-TF package pairs the TensorFlow ML library [@tensorflow2015whitepaper] with the HOOMD-blue
+simulation engine [@AndersonHOOMD2019] to allow for flexible online ML and tensor calculations 
 during HOOMD-blue simulations. Since both TensorFlow and HOOMD-blue are GPU-accelerated, HOOMD-TF
 was designed with a GPU-GPU communication scheme that minimizes 
 latency between GPU memory to preserve execution speed.
@@ -69,7 +69,7 @@ can learn as the simulation is running, learning can be terminated as soon as th
 requiring only one simulation iteration.
 
 HOOMD-TF uses TensorFlow to save and load models, and is therefore compatible with pre-trained TensorFlow models. TensorFlow's TensorBoard
-utility can also be used to track and examine model training and performance. HOOMD-TF can be used independent of HOOMD-blue by using trajectories via the MDAnalysis framework `@MDAnalysis2011, @MDAnalysis2016`. This allows for previously-trained TensorFlow
+utility can also be used to track and examine model training and performance. HOOMD-TF can be used independent of HOOMD-blue by using trajectories via the MDAnalysis framework [@MDAnalysis2011; @MDAnalysis2016]. This allows for previously-trained TensorFlow
 models to be used on trajectories that were produced by other MD engines, analysis of new CVs
 from a previously-run simulation, and training of models from trajectories.
 
