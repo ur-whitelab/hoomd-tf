@@ -241,7 +241,8 @@ class tfcompute(hoomd.compute._compute):
             if mol_indices is None:
                 sys = hoomd.data.system_data(hoomd.context.current.system_definition)
                 mol_indices = \
-                    htf.find_molecules(sys)
+                    hoomd.htf.find_molecules(sys)
+
             self.mol_indices = mol_indices
             if type(self.mol_indices) != list:
                 raise ValueError('mol_indices must be nested python list')
