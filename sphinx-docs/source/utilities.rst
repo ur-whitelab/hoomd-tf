@@ -11,7 +11,7 @@ potentials and constructing CG mappings.
 RDF
 ---
 
-To compute an RDF, use :py:meth:`htf.graphbuilder.graph_builder.compute_rdf`:
+To compute an RDF, use :py:meth:`graphbuilder.graph_builder.compute_rdf`:
 
 .. code:: python
 
@@ -30,7 +30,7 @@ Pairwise Potential and Forces
 -----------------------------
 
 To compute a pairwise potential, use 
-:py:meth:`htf.utils.compute_pairwise_potential`:
+:py:meth:`utils.compute_pairwise_potential`:
 
 .. code:: python
 
@@ -46,7 +46,7 @@ Biasing with EDS
 
 To apply `Experiment Directed
 Simulation <https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988>`__
-biasing to a system, use :py:meth:`htf.utils.eds_bias`:
+biasing to a system, use :py:meth:`utils.eds_bias`:
 
 .. code:: python
 
@@ -79,7 +79,7 @@ Find Molecules
 ~~~~~~~~~~~~~~
 
 To go from atom index to particle index, use the
-:py:meth:`htf.utils.find_molecules`:
+:py:meth:`utils.find_molecules`:
 
 .. code:: python
 
@@ -91,7 +91,7 @@ To go from atom index to particle index, use the
 Sparse Mapping
 ~~~~~~~~~~~~~~
 
-The :py:meth:`htf.utils.sparse_mapping` method creates the necessary indices and
+The :py:meth:`utils.sparse_mapping` method creates the necessary indices and
 values for defining a sparse tensor in tensorflow that is a
 mass-weighted :math:`M \times N` mapping operator where :math:`M` is the number of
 coarse-grained particles and :math:`N` is the number of atoms in the system. In
@@ -102,7 +102,7 @@ matrix per molecule. Since the example is for a 1 bead mapping per
 molecule the shape is :math:`1 \times n`. The ordering of the atoms should follow the
 output from the find\_molecules method. The variable
 ``molecule_mapping_index`` is the output from
-:py:meth:`htf.utils.find_molecules`.
+:py:meth:`utils.find_molecules`.
 
 .. code:: python
 
@@ -117,7 +117,7 @@ output from the find\_molecules method. The variable
 Center of Mass
 ~~~~~~~~~~~~~~
 
-:py:meth:`htf.utils.center_of_mass` maps the given positions according to
+:py:meth:`utils.center_of_mass` maps the given positions according to
 the specified mapping operator to coarse-grain site positions, while
 considering periodic boundary conditions. The coarse grain site position
 is placed at the center of mass of its constituent atoms.
@@ -133,10 +133,10 @@ is placed at the center of mass of its constituent atoms.
 Compute Mapped Neighbor List
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:meth:`htf.utils.compute_nlist` returns the neighbor list for a set of
+:py:meth:`utils.compute_nlist` returns the neighbor list for a set of
 mapped coarse-grained particles. In the following example, ``mapped_positions`` is
 the mapped particle positions obeying the periodic boundary condition, as
-returned by  :py:meth:`htf.utils.center_of_mass`, ``rcut`` is the cutoff
+returned by  :py:meth:`utils.center_of_mass`, ``rcut`` is the cutoff
 radius and ``NN`` is the number of nearest neighbors to be considered
 for the coarse-grained system.
 

@@ -523,3 +523,117 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
         nlist_pos,
         tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
                 tf.float32)], axis=-1) * nlist_mask
+
+# \internal
+# \Calculates bond distance between two atoms in a molecule
+
+
+def mol_bond_distance(mol_positions, type_i, type_j):
+    R""" This method calculates the bond distance given two atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    Returns
+    -------------
+    v_ij
+         Tensor containing bond distances
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    else:
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_ij = tf.norm(v_ij, axis=1)
+        return v_ij
+
+# \internal
+# \Calculates bond angle given three atoms in a molecule
+
+
+def mol_angle(mol_positions, type_i, type_j, type_k):
+    R""" This method calculates the bond angle given three atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    type_k
+         Index of the third atom (int type)
+    Returns
+    -------------
+    angles
+         Tensor containing bond angles
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+    else:
+        v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
+        cos_a = tf.math.divide(
+            cos_a,
+            (tf.norm(
+                v_ij,
+                axis=1) *
+                tf.norm(
+                v_jk,
+                axis=1)))
+        angles = tf.math.acos(cos_a)
+        return angles
+
+
+# \internal
+# \Calculates dihedral angle given four atoms in a molecule
+def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
+    R""" This method calculates the dihedral angle given four atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    type_k
+         Index of the third atom (int type)
+    type_l
+         Index of the fourth atom (int type)
+    Returns
+    -------------
+    dihedrals
+         Tensor containing dihedral angles
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    else:
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
+
+        # calculation of normal vectors
+        n1 = tf.linalg.cross(v_ij, v_jk)
+        n2 = tf.linalg.cross(v_jk, v_kl)
+        n1_norm = tf.norm(n1)
+        n2_norm = tf.norm(n2)
+        if n1_norm == 0.0 or n2_norm == 0.0:
+            raise GeometryError('Vectors are linear')
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        cos_d = tf.einsum('ij,ij->i', n1, n2)
+        dihedrals = tf.math.acos(cos_d)
+        return dihedrals

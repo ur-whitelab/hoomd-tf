@@ -40,10 +40,10 @@ first containing atoms 0 and 1 and the second containing atom 1. Note
 that the molecules can be different size and atoms can exist in multiple
 molecules.
 
-If you do not call :py:meth:`htf.graphbuilder.graph_builder.build_mol_rep`
+If you do not call :py:meth:`graphbuilder.graph_builder.build_mol_rep`
 while building your graph, you can
 optionally split your batches to be smaller than the entire system. This
-is set via the ``batch_size`` integer argument to :py:meth:`htf.tfcompute.tfcompute.attach`.
+is set via the ``batch_size`` integer argument to :py:meth:`tfcompute.tfcompute.attach`.
 This can help for high-memory simulations where you cannot spare the GPU memory to
 have each tensor be the size of your system.
 

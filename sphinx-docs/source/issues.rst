@@ -46,9 +46,9 @@ initialized so that energies are finite.
 Safe Norm
 ~~~~~~~~~
 
-There is a workaround (:py:meth:`htf.graphbuilder.graph_builder.safe_norm`) in Hoomd-TF. There
+There is a workaround (:py:meth:`graphbuilder.graph_builder.safe_norm`) in Hoomd-TF. There
 is almost no performance penalty, so it is fine to replace ``tf.norm``
-with :py:meth:`htf.graphbuilder.graph_builder.safe_norm` throughout. This method adds a small
+with :py:meth:`graphbuilder.graph_builder.safe_norm` throughout. This method adds a small
 amount to all the norms though, so if you rely on some norms being zero
 it will not work well.
 
