@@ -80,7 +80,7 @@ def wrap_graph(directory='/tmp/test-wrap-model'):
     p1 = graph.positions[0, :3]
     p2 = graph.positions[-1, :3]
     r = p1 - p2
-    rwrap = graph.wrap_vector(r)
+    rwrap = graph.wrap_vector(r,boxdim=None)
     # TODO: Smoke test. Think of a better test.
     graph.save(directory, out_nodes=[rwrap])
     return directory
