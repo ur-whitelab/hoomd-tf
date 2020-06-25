@@ -8,5 +8,5 @@ HOOMD-TF directory:
 
 .. code:: bash
 
-    pytest /htf/test-py/
+    pytest htf/test-py/
    
