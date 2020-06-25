@@ -45,7 +45,9 @@ hoomd-blue
     CXX=g++ CC=gcc cmake ..
     make install
 
-That's it! Check your install by running ``python -c import hoomd; import hoomd.htf;``
+That's it! Check your install by running ``python
+htf/test-py/test_sanity.py``.  If you have installed with GPU support, also
+check with ``python htf/test-py/_test_gpu_sanity.py``.
 
 .. _compiling_with_hoomd_blue:
 
