@@ -12,8 +12,10 @@ The following packages are required to compile:
     numpy
     tbb-devel (only for hoomd-blue 2.8 and above)
 
-tbb-devel is only required if using the "simple" method below and are
-using hoomd-blue 2.8 or above. The tensorflow versions should be any
+tbb-devel is required for hoomd-blue 2.8 or above when using the
+hoomd-blue conda release. It is not automatically installed when
+installing hoomd-blue, so use ``conda install -c conda-forge
+tbb-devel`` to install. The Tensorflow version should be any
 Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
 lots of warnings about migrating code to Tensorflow 2.0. It is
 recommended you install via pip:
@@ -21,24 +23,20 @@ recommended you install via pip:
 .. code:: bash
 
   pip install tensorflow-gpu==1.15.0
-  
-  
-If you are using a conda environment, you should add the following
-flag if using newer version of hoomd-blue which require `tbb-devel`
-
-.. code:: bash
-
-  export CMAKE_PREFIX_PATH=/path/to/environment
 
 .. _simple_compiling:
 
 Simple Compiling
 ----------------
 
-This method assumes you already have installed hoomd-blue and
-tensorflow. You could do that, for example, via ``conda install -c
-conda-forge hoomd==2.5.2``. Remember that pip is recommneded for installing
-tensorflow. Here are steps **after** installing hoomd-blue
+Install hoomd-blue and Tensorflow by your preferred method. If you
+want to install hoomd-blue without GPU support, you can just use the
+conda release via ``conda install -c conda-forge hoomd==2.5.2``. You
+should then similarily use the CPU version of Tensorflow. If you would
+like GPU support, compile hoomd-blue using `their instructions
+<http://hoomd-blue.readthedocs.io>`_. Remember that pip is recommneded
+for installing Tensorflow. Here are steps **after** installing
+hoomd-blue
 
 .. code:: bash
 
@@ -47,11 +45,7 @@ tensorflow. Here are steps **after** installing hoomd-blue
     CXX=g++ CC=gcc cmake ..
     make install
 
-That's it! Make sure you have a GCC compiler consistent with the
-tensorflow version you have installed (assuming you installed
-tensorflow via pip). To see your tensorflow GCC compiler, try
-`python -c 'import tensorflow;
-print(tensorflow.__compiler_version__)'`
+That's it! Check your install by running ``python -c import hoomd; import hoomd.htf;``
 
 .. _compiling_with_hoomd_blue:
 
@@ -155,12 +149,12 @@ If you are using mbuild, please follow these additional install steps:
     conda install -c conda-forge --no-deps -y packmol gsd
     pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild
 
-.. _bluehive_installation:
+.. _hpc_installation:
 
-BlueHive Installation
+HPC Installation
 =====================
 
-**Feeling Lucky?** Try this for quick results
+These are instructions for our group's cluster (BlueHive), and not for general users. **Feeling Lucky?** Try this for quick results
 
 .. code:: bash
 

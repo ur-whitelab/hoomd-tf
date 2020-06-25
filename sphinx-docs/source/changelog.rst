@@ -4,8 +4,25 @@ Change Log
 v0.7
 ----
 
+*New Features*
+
+- Added pre-built molecular features
+
 *Enhancements*
+
 - Docs can now be built without HTF install
+- mol batching performance is much better
+- Simplified variable saving
+- More example notebooks
+- Supports dynamic boxes
+- Better EDS bias naming
+- Prevents accidentally computing forces from positions, instead of nlist
+- Added guards against compiler mismatch
+- Added sanity tests to prevent unsupported CPU/GPU modes
+
+*Bug Fixes*
+
+- Empty tensorboard summaries no longer crash
 
 
 v0.6 (2020-02-21)
