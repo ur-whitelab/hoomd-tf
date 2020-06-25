@@ -3,10 +3,10 @@
 graph_builder
 -------------
 
-.. py:currentmodule:: htf.graphbuilder
+.. py:currentmodule:: htf
 
 .. rubric:: Details
 
-.. automodule:: htf.graphbuilder
+.. automodule:: graphbuilder
     :synopsis: Graph builder.
     :members:           

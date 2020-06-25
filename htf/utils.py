@@ -328,15 +328,16 @@ def run_from_trajectory(model_directory, universe,
     atom_group = universe.select_atoms(selection)
     # get unique atom types in the selected atom group
     types = list(np.unique(atom_group.atoms.types))
-    # assicuate atoms types with individual atoms
+    # associate atoms types with individual atoms
     type_array = np.array([types.index(i)
                            for i in atom_group.atoms.types]).reshape(-1, 1)
     # get number of atoms/particles in the system
     N = (np.shape(type_array))[0]
     NN = model_params['NN']
     # define nlist operation
+    # box_size = [box[0], box[1], box[2]]
     nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
-                                 NN=NN, system=system)
+                                 NN=NN, box_size=[box[0], box[1], box[2]])
     # Now insert nlist into the graph
     # make input map to override nlist
     input_map = {}
@@ -346,7 +347,10 @@ def run_from_trajectory(model_directory, universe,
 
     out_nodes = []
     for name in model_params['out_nodes']:
-        out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
+        if isinstance(name, list):
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name[0]))
+        else:
+            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
     with tf.Session() as sess:
         sess.run(tf.group(tf.global_variables_initializer(),
@@ -372,7 +376,7 @@ def run_from_trajectory(model_directory, universe,
 
 # \internal
 # \Applies EDS bias to a system
-def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
+def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
     R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
     to be used as the EDS bias in the simulation.
 
@@ -383,9 +387,12 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
         HOOMD time units are used. If period=100 alpha will be updated each 100 time steps.
     :param learninig_rate: Learninig_rate in the EDS method.
     :param cv_scale: Used to adjust the units of the bias to HOOMD units.
-
+    :param name: Name used as prefix on variables.
     :return: Alpha, the EDS coupling constant.
     """
+
+    if name is None:
+        name = 'eds' + cv.name.split(':')[0]
 
     # set-up variables
     mean = tf.get_variable(
@@ -425,7 +432,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
         gradient = update_mask * -  2 * \
-            (cv - set_point) * ssd / period // 2 / cv_scale
+            (cv - set_point) * ssd / period / 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
                                lambda: optimizer.apply_gradients([(gradient,
@@ -440,22 +447,22 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name='eds'):
 
     return alpha_dummy
 
+
 # \internal
 # \brief Finds the center of mass of a set of particles
-def center_of_mass(positions, mapping, system, name='center-of-mass'):
+def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
-
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
-    :param system: The system of particles
+    :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param name: The name of the op to add to the TF graph
     """
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
-    box_dim = [system.box.Lx, system.box.Ly, system.box.Lz]
+    box_dim = box_size
     theta = positions / box_dim * 2 * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
@@ -467,13 +474,13 @@ def center_of_mass(positions, mapping, system, name='center-of-mass'):
 
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
-def compute_nlist(positions, r_cut, NN, system, sorted=False):
+def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     R""" Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
     :param r_cut: Cutoff radius (HOOMD units)
     :param NN: Maximum number of neighbors per particle
-    :param system: The HOOMD system of particles
+    :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param sorted: Whether to sort neighbor lists by distance
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
@@ -491,8 +498,7 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
     # subtract them to get distance matrix
     dist_mat = qTtile - qtile
     # apply minimum image
-    box = tf.reshape(tf.convert_to_tensor([
-        system.box.Lx, system.box.Ly, system.box.Lz]), [1, 1, 3])
+    box = tf.reshape(tf.convert_to_tensor(box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(dist_mat, axis=2)
@@ -520,3 +526,117 @@ def compute_nlist(positions, r_cut, NN, system, sorted=False):
         nlist_pos,
         tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
                 tf.float32)], axis=-1) * nlist_mask
+
+# \internal
+# \Calculates bond distance between two atoms in a molecule
+
+
+def mol_bond_distance(mol_positions, type_i, type_j):
+    R""" This method calculates the bond distance given two atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    Returns
+    -------------
+    v_ij
+         Tensor containing bond distances
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    else:
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_ij = tf.norm(v_ij, axis=1)
+        return v_ij
+
+# \internal
+# \Calculates bond angle given three atoms in a molecule
+
+
+def mol_angle(mol_positions, type_i, type_j, type_k):
+    R""" This method calculates the bond angle given three atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    type_k
+         Index of the third atom (int type)
+    Returns
+    -------------
+    angles
+         Tensor containing bond angles
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+    else:
+        v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
+        cos_a = tf.math.divide(
+            cos_a,
+            (tf.norm(
+                v_ij,
+                axis=1) *
+                tf.norm(
+                v_jk,
+                axis=1)))
+        angles = tf.math.acos(cos_a)
+        return angles
+
+
+# \internal
+# \Calculates dihedral angle given four atoms in a molecule
+def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
+    R""" This method calculates the dihedral angle given four atoms batched by molecule
+
+    Parameters
+    -------------
+    mol_positions
+        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
+        method in graphbuilder
+    type_i
+         Index of the first atom (int type)
+    type_j
+         Index of the second atom (int type)
+    type_k
+         Index of the third atom (int type)
+    type_l
+         Index of the fourth atom (int type)
+    Returns
+    -------------
+    dihedrals
+         Tensor containing dihedral angles
+    """
+    if mol_positions is None:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    else:
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
+        v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
+
+        # calculation of normal vectors
+        n1 = tf.linalg.cross(v_ij, v_jk)
+        n2 = tf.linalg.cross(v_jk, v_kl)
+        n1_norm = tf.norm(n1)
+        n2_norm = tf.norm(n2)
+        if n1_norm == 0.0 or n2_norm == 0.0:
+            raise GeometryError('Vectors are linear')
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        cos_d = tf.einsum('ij,ij->i', n1, n2)
+        dihedrals = tf.math.acos(cos_d)
+        return dihedrals

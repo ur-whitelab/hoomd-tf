@@ -1,10 +1,12 @@
 Quickstart Tutorial
 ===================
 
-To compute a ``1 / r`` pairwise potential with Hoomd-TF:
+Here's an example of how you use Hoomd-TF. To compute a ``1 / r``
+pairwise potential:
 
 .. code:: python
 
+    import hoomd, hoomd.md
     import hoomd.htf as htf
     import tensorflow as tf
 
@@ -12,7 +14,7 @@ To compute a ``1 / r`` pairwise potential with Hoomd-TF:
     graph = htf.graph_builder(64) # max neighbors = 64
     pair_energy = graph.nlist_rinv # nlist_rinv is neighbor 1 / r
     particle_energy = tf.reduce_sum(pair_energy, axis=1) # sum over neighbors
-    forces = graph.compute_forces(energy) # compute forces
+    forces = graph.compute_forces(particle_energy) # compute forces
     graph.save('my_model', forces)
 
     ########### Hoomd-Sim Code ################
@@ -37,4 +39,4 @@ and simulates it for 1000 timesteps under the potential defined in our
 Hoomd-TF model. The general process of using Hoomd-TF is to build a
 TensorFlow computation graph, load the graph, and then attach the graph.
 See :ref:`building_the_graph` and :ref:`using_the_graph` for a more detailed
-description.
+description. Or see a complete set of `Jupyter Notebook tutorials <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_.

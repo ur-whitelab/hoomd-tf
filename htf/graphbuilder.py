@@ -205,7 +205,7 @@ class graph_builder:
             to get the origin particle's type. So if you're making your own,
             just make sure column 4 has the type index.
 
-        :return: Historgram tensor of the RDF.
+        :return: Historgram tensor of the RDF (not normalized).
         """
         # to prevent type errors later on
         r_range = [float(r) for r in r_range]
@@ -214,7 +214,7 @@ class graph_builder:
         if positions is None:
             positions = self.positions
         # filter types
-        nlist = self.masked_nlist(type_i, type_j, nlist)
+        nlist = self.masked_nlist(type_i, type_j, nlist, positions[:, 3])
         r = tf.norm(nlist[:, :, :3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
                        tf.float32)
@@ -271,7 +271,7 @@ class graph_builder:
                     with tf.control_dependencies([reset_op]):
                         if batch_reduction == 'mean':
                             batch_op = batch_store.assign_add(tensor * self.batch_frac)
-                        elif batch_reduction == 'max':
+                        elif batch_reduction == 'sum':
                             batch_op = batch_store.assign_add(tensor)
                         self.out_nodes.append(batch_op)
         return store
@@ -296,7 +296,7 @@ class graph_builder:
         self.out_nodes.append([store_op, save_period])
 
 
-    def compute_forces(self, energy, virial=None, positions=None,
+    def compute_forces(self, energy, virial=None, positions=False,
                        nlist=None):
         R""" Computes pairwise or position-dependent forces (field) given
         a potential energy function that computes per-particle
@@ -308,8 +308,11 @@ class graph_builder:
             if the graph outputs forces. Can be set manually instead. Note
             that the virial term that depends on positions is not computed.
         :type virial: bool
-        :param positions: Defaults to ``None``. Particle positions tensor to use
-            for force calculations. If not specified, uses ``self.positions``.
+        :param positions: Defaults to ``False``. Particle positions tensor to use
+            for force calculations. If set to ``True``, uses ``self.positions``. If
+            set to ``False`` (default), no position dependent forces will be computed.
+            Only pairwise forces from neighbor list will be applied. If set to a 
+            tensor, that tensor will be used instead of ``self.positions``.
         :type positions: tensor
         :param nlist: Defaults to ``None``. Particle-wise neighbor list to use
             for force calculations. If not specified, uses ``self.nlist``.
@@ -325,7 +328,7 @@ class graph_builder:
                 virial = False
         if nlist is None:
             nlist = self.nlist
-        if positions is None:
+        if positions is True:
             positions = self.positions
         with tf.name_scope('force-gradient'):
             # compute -gradient wrt positions
@@ -418,6 +421,7 @@ class graph_builder:
         self.mol_indices = tf.placeholder(tf.int32,
                                           shape=[None, MN],
                                           name='htf-molecule-index')
+
         self.rev_mol_indices = tf.placeholder(tf.int32,
                                               shape=[None, 2],
                                               name='htf-reverse-molecule-index')

@@ -48,8 +48,8 @@ def gradient_potential(directory='/tmp/test-gradient-potential-model'):
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(nlist, axis=2)
         energy = 0.5 * graph.safe_div(numerator=tf.ones_like(
-                neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
-                                      name='energy')
+            neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
+            name='energy')
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
                model_directory=directory,
@@ -60,8 +60,8 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(nlist, axis=2)
     energy = graph.safe_div(numerator=tf.ones_like(
-            neighs_rs, dtype=neighs_rs.dtype),
-                            denominator=neighs_rs, name='energy')
+        neighs_rs, dtype=neighs_rs.dtype),
+        denominator=neighs_rs, name='energy')
     pos_norm = tf.norm(graph.positions, axis=1)
     graph.save(directory, out_nodes=[energy, pos_norm])
     return directory
@@ -85,6 +85,7 @@ def wrap_graph(directory='/tmp/test-wrap-model'):
     graph.save(directory, out_nodes=[rwrap])
     return directory
 
+
 def mol_force(directory='/tmp/test-mol-force-model'):
     graph = htf.graph_builder(0, output_forces=False)
     graph.build_mol_rep(3)
@@ -107,7 +108,7 @@ def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
     graph = htf.graph_builder(0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1., ps)
-    force = graph.compute_forces(energy)
+    force = graph.compute_forces(energy, positions=True)
     graph.save(directory, force_tensor=force, out_nodes=[energy])
     return directory
 
@@ -125,7 +126,8 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
     energy = tf.reduce_sum(p_energy, axis=1)
     forces = graph.compute_forces(energy)
     # compute energy every 10 steps
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[[energy, 10]])
+    graph.save(force_tensor=forces, model_directory=directory,
+               out_nodes=[[energy, 10]])
     return directory
 
 
@@ -164,17 +166,37 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     rvec = graph.wrap_vector(graph.positions[0, :3])
     cv = tf.norm(rvec)
     cv_mean = graph.running_mean(cv, name='cv-mean')
-    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5)
+    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5, name='eds')
     alpha_mean = graph.running_mean(alpha, name='alpha-mean')
     # eds + harmonic bond
     energy = (cv - 5) ** 2 + cv * alpha
     # energy  = cv^2 - 6cv + cv * alpha + C
     # energy = (cv - (3 + alpha / 2))^2 + C
     # alpha needs to be = 4
-    forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces,
-               model_directory=directory,
-               out_nodes=[cv_mean, alpha_mean])
+    forces = graph.compute_forces(energy, positions=True)
+    graph.save(
+        force_tensor=forces,
+        model_directory=directory,
+        out_nodes=[
+            cv_mean,
+            alpha_mean])
+    return directory
+
+
+def mol_features_graph(directory='/tmp/test-mol-features'):
+    graph = htf.graph_builder(50, output_forces=False)
+    graph.build_mol_rep(6)
+    mol_pos = graph.mol_positions
+    r = htf.mol_bond_distance(mol_pos, 2, 1)
+    a = htf.mol_angle(mol_pos, 1, 2, 3)
+    d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+    avg_r = tf.reduce_mean(r)
+    avg_a = tf.reduce_mean(a)
+    avg_d = tf.reduce_mean(d)
+    graph.save_tensor(avg_r, 'avg_r')
+    graph.save_tensor(avg_a, 'avg_a')
+    graph.save_tensor(avg_d, 'avg_d')
+    graph.save(model_directory=directory)
     return directory
 
 
@@ -195,17 +217,19 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
                out_nodes=[avg_energy])
     return directory
 
+
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     graph = htf.graph_builder(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     # get r
+    box_size = graph.box_size
     r = tf.norm(nlist, axis=2)
     v = tf.get_variable('hoomd-r', initializer=tf.zeros_like(r),
                         validate_shape=False)
     ops = [v.assign(r)]
 
     # compute nlist
-    cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, system)
+    cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, box_size)
     r = tf.norm(cnlist[:, :, :3], axis=2)
     v = tf.get_variable('htf-r', initializer=tf.zeros_like(r),
                         validate_shape=False)

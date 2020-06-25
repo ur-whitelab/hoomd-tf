@@ -97,7 +97,7 @@ ENDMACRO(copy_file)
 
 set(files
     __init__.py
-    tfcompute.py
+    tensorflowcompute.py
     graphbuilder.py
     tfarraycomm.py
     tfmanager.py

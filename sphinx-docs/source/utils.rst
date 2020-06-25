@@ -10,6 +10,6 @@ These are imported automatically when ``htf`` is imported.
 
 .. rubric:: Details
 
-.. automodule:: htf.utils
+.. automodule:: utils
     :synopsis: Utility functions.
     :members:           

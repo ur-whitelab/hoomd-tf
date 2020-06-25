@@ -1,76 +1,3 @@
-.. _bluehive_installation:
-
-BlueHive Installation
-=====================
-
-**Feeling Lucky?** Try this for quick results
-
-.. code:: bash
-
-    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
-    export PYTHONNOUSERSITE=True
-    conda create -n hoomd-tf python=3.7
-    source activate hoomd-tf
-    export CMAKE_PREFIX_PATH=/path/to/environment
-    python -m pip install tensorflow-gpu==1.15.0
-    conda install -c conda-forge hoomd==2.5.2
-    git clone https://github.com/ur-whitelab/hoomd-tf
-    cd hoomd-tf && mkdir build && cd build
-    CXX=g++ CC=gcc cmake .. \
-      -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-      -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
-      -DPYTHON_EXECUTABLE=$(which python)
-    make install
-    cd .. && python htf/test-py/test_sanity.py
-
-Here are the more detailed steps. Clone the ``hoomd-tf`` repo
-and then follow these steps:
-
-Load the modules necessary:
-
-.. code:: bash
-
-    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
-
-Set-up virtual python environment *ONCE* to keep packages isolated.
-
-.. code:: bash
-
-    conda create -n hoomd-tf python=3.7
-    source activate hoomd-tf
-    python -m pip install tensorflow-gpu==1.15.0
-
-Then whenever you login and *have loaded modules*:
-
-.. code:: bash
-
-    source activate hoomd-tf
-
-
-Continue following the compling steps below to complete install.
-The simple approach is recommended but **use the following
-different cmake step**
-
-.. code:: bash
-
-  export CMAKE_PREFIX_PATH=/path/to/environment
-  CXX=g++ CC=gcc cmake ..
-
-If using the hoomd-blue compilation, **use the following
-different cmake step**
-
-.. code:: bash
-
-    export CMAKE_PREFIX_PATH=/path/to/environment
-    CXX=g++ CC=gcc cmake .. \
-    -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-    -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
-    -DPYTHON_EXECUTABLE=$(which python) \
-    -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
-    -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
-    -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
-    -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin"
-
 .. _compiling:
 
 Compiling
@@ -85,8 +12,10 @@ The following packages are required to compile:
     numpy
     tbb-devel (only for hoomd-blue 2.8 and above)
 
-tbb-devel is only required if using the "simple" method below and are
-using hoomd-blue 2.8 or above. The tensorflow versions should be any
+tbb-devel is required for hoomd-blue 2.8 or above when using the
+hoomd-blue conda release. It is not automatically installed when
+installing hoomd-blue, so use ``conda install -c conda-forge
+tbb-devel`` to install. The Tensorflow version should be any
 Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
 lots of warnings about migrating code to Tensorflow 2.0. It is
 recommended you install via pip:
@@ -94,24 +23,20 @@ recommended you install via pip:
 .. code:: bash
 
   pip install tensorflow-gpu==1.15.0
-  
-  
-If you are using a conda environment, you should add the following
-flag if using newer version of hoomd-blue which require `tbb-devel`
-
-.. code:: bash
-
-  export CMAKE_PREFIX_PATH=/path/to/environment
 
 .. _simple_compiling:
 
 Simple Compiling
 ----------------
 
-This method assumes you already have installed hoomd-blue and
-tensorflow. You could do that, for example, via ``conda install -c
-conda-forge hoomd==2.5.2``. Remember that pip is recommneded for installing
-tensorflow. Here are steps **after** installing hoomd-blue
+Install hoomd-blue and Tensorflow by your preferred method. If you
+want to install hoomd-blue without GPU support, you can just use the
+conda release via ``conda install -c conda-forge hoomd==2.5.2``. You
+should then similarily use the CPU version of Tensorflow. If you would
+like GPU support, compile hoomd-blue using `their instructions
+<http://hoomd-blue.readthedocs.io>`_. Remember that pip is recommneded
+for installing Tensorflow. Here are steps **after** installing
+hoomd-blue
 
 .. code:: bash
 
@@ -120,11 +45,9 @@ tensorflow. Here are steps **after** installing hoomd-blue
     CXX=g++ CC=gcc cmake ..
     make install
 
-That's it! Make sure you have a GCC compiler consistent with the
-tensorflow version you have installed (assuming you installed
-tensorflow via pip). To see your tensorflow GCC compiler, try
-`python -c 'import tensorflow;
-print(tensorflow.__compiler_version__)'`
+That's it! Check your install by running ``python
+htf/test-py/test_sanity.py``.  If you have installed with GPU support, also
+check with ``python htf/test-py/_test_gpu_sanity.py``.
 
 .. _compiling_with_hoomd_blue:
 
@@ -227,3 +150,78 @@ If you are using mbuild, please follow these additional install steps:
     conda install -c omnia -y openmm parmed
     conda install -c conda-forge --no-deps -y packmol gsd
     pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild
+
+.. _hpc_installation:
+
+HPC Installation
+=====================
+
+These are instructions for our group's cluster (BlueHive), and not for general users. **Feeling Lucky?** Try this for quick results
+
+.. code:: bash
+
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
+    export PYTHONNOUSERSITE=True
+    conda create -n hoomd-tf python=3.7
+    source activate hoomd-tf
+    export CMAKE_PREFIX_PATH=/path/to/environment
+    python -m pip install tensorflow-gpu==1.15.0
+    conda install -c conda-forge hoomd==2.5.2
+    git clone https://github.com/ur-whitelab/hoomd-tf
+    cd hoomd-tf && mkdir build && cd build
+    CXX=g++ CC=gcc cmake .. \
+      -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+      -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
+      -DPYTHON_EXECUTABLE=$(which python)
+    make install
+    cd .. && python htf/test-py/test_sanity.py
+
+Here are the more detailed steps. Clone the ``hoomd-tf`` repo
+and then follow these steps:
+
+Load the modules necessary:
+
+.. code:: bash
+
+    module load cmake gcc/7.3.0 cudnn/10.0-7.5.0 anaconda3/2019.10
+
+Set-up virtual python environment *ONCE* to keep packages isolated.
+
+.. code:: bash
+
+    conda create -n hoomd-tf python=3.7
+    source activate hoomd-tf
+    python -m pip install tensorflow-gpu==1.15.0
+
+Then whenever you login and *have loaded modules*:
+
+.. code:: bash
+
+    source activate hoomd-tf
+
+
+Continue following the compling steps below to complete install.
+The simple approach is recommended but **use the following
+different cmake step**
+
+.. code:: bash
+
+  export CMAKE_PREFIX_PATH=/path/to/environment
+  CXX=g++ CC=gcc cmake ..
+
+If using the hoomd-blue compilation, **use the following
+different cmake step**
+
+.. code:: bash
+
+    export CMAKE_PREFIX_PATH=/path/to/environment
+    CXX=g++ CC=gcc cmake .. \
+    -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+    -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
+    -DPYTHON_EXECUTABLE=$(which python) \
+    -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
+    -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
+    -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
+    -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin"
+
+    
