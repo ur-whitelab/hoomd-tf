@@ -114,7 +114,7 @@ namespace hoomd_tf
                 memcpy(handle.data, ohandle.data + offset, size);
                 // now fix-up the type if necessary
                 if(unstuff4)
-                    for(int i = 0; i < size / sizeof(T); i++)
+                    for(unsigned int i = 0; i < size / sizeof(T); i++)
                         handle.data[i].w = static_cast<Scalar> (__scalar_as_int(handle.data[i].w));
                 }
             else
