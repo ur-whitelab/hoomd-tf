@@ -135,7 +135,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
         // Batch the operations
         // if batch_size == 0, that means do as big as we need to
         unsigned int batch_size = m_batch_size == 0 ? m_pdata->getN() : m_batch_size;
-        for(int i = 0; i <  m_pdata->getN() / batch_size + 1; i++)
+        for(unsigned int i = 0; i <  m_pdata->getN() / batch_size + 1; i++)
             {
             offset = i * batch_size;
             // compute batch size so that we don't exceed atom number.
@@ -295,7 +295,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
     // for each particle
     int bi = 0;
-    for (int i = batch_offset; i < batch_offset + batch_size; i++, bi++)
+    for (unsigned int i = batch_offset; i < batch_offset + batch_size; i++, bi++)
         {
         // access the particle's position and type (MEM TRANSFER: 4 scalars)
         Scalar3 pi =

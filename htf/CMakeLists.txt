@@ -44,6 +44,8 @@ endif(ENABLE_CUDA)
 
 add_library (_${COMPONENT_NAME}_static STATIC ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
 pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
+# add visilibty flag, which is missing from hoomd?
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
 if(APPLE)
 set_target_properties(_${COMPONENT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/..;@loader_path")
