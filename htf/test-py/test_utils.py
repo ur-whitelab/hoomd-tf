@@ -172,7 +172,7 @@ class test_mappings(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all(
             )).randomize_velocities(kT=2, seed=2)
             tfcompute.attach(nlist, r_cut=rcut, save_period=10)
-            hoomd.run(1e3)
+            hoomd.run(1e2)
             input_nlist = tfcompute.get_nlist_array()
             variables = hoomd.htf.load_variables(
                 model_dir, checkpoint=10,
@@ -315,7 +315,7 @@ class test_bias(unittest.TestCase):
 
 
 class test_mol_properties(unittest.TestCase):
-    def test_mol_features(self):
+    def disabled_test_mol_features(self):
         import hoomd.md
         import hoomd.group
         import gsd
@@ -411,9 +411,9 @@ class test_mol_properties(unittest.TestCase):
             nvt = hoomd.md.integrate.nvt(
                 group=group_all, kT=298.15 * kT, tau=350 / 48.9)
             nvt.randomize_velocities(1234)
-            hoomd.run(5000)
+            hoomd.run(500)
             tfcompute.attach(nlist, r_cut=set_rcut, period=1, save_period=10)
-            hoomd.run(1000)
+            hoomd.run(100)
             variables = hoomd.htf.load_variables(
                 model_dir, ['avg_r', 'avg_a', 'avg_d'])
             assert np.isfinite(variables['avg_r'])
