@@ -309,7 +309,7 @@ class graph_builder:
             that the virial term that depends on positions is not computed.
         :type virial: bool
         :param positions: Defaults to ``False``. Particle positions tensor to use
-            for force calculations. If set to ``None``, uses ``self.positions``. If
+            for force calculations. If set to ``True``, uses ``self.positions``. If
             set to ``False`` (default), no position dependent forces will be computed.
             Only pairwise forces from neighbor list will be applied. If set to a 
             tensor, that tensor will be used instead of ``self.positions``.
@@ -328,7 +328,7 @@ class graph_builder:
                 virial = False
         if nlist is None:
             nlist = self.nlist
-        if positions is None:
+        if positions is True:
             positions = self.positions
         with tf.name_scope('force-gradient'):
             # compute -gradient wrt positions

@@ -108,7 +108,7 @@ def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
     graph = htf.graph_builder(0, output_forces=True)
     ps = tf.norm(graph.positions, axis=1)
     energy = graph.safe_div(1., ps)
-    force = graph.compute_forces(energy)
+    force = graph.compute_forces(energy, positions=True)
     graph.save(directory, force_tensor=force, out_nodes=[energy])
     return directory
 
@@ -166,14 +166,14 @@ def eds_graph(directory='/tmp/test-lj-eds'):
     rvec = graph.wrap_vector(graph.positions[0, :3])
     cv = tf.norm(rvec)
     cv_mean = graph.running_mean(cv, name='cv-mean')
-    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5)
+    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5, name='eds')
     alpha_mean = graph.running_mean(alpha, name='alpha-mean')
     # eds + harmonic bond
     energy = (cv - 5) ** 2 + cv * alpha
     # energy  = cv^2 - 6cv + cv * alpha + C
     # energy = (cv - (3 + alpha / 2))^2 + C
     # alpha needs to be = 4
-    forces = graph.compute_forces(energy)
+    forces = graph.compute_forces(energy, positions=True)
     graph.save(
         force_tensor=forces,
         model_directory=directory,
