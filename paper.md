@@ -47,7 +47,7 @@ This need has led us to develop HOOMD-TF, a flexible direct integration of a sta
 There are other applications focusing on ML in molecular modeling, such as [DeepChem](https://www.deepchem.io/) and `@Aspuru-GuzikMaterialsDiscovery2015`,
 which are largely concerned with property prediction and representation. There are also similar works to HOOMD-TF called
 [OpenMM-NN](https://github.com/openmm/openmm-nn) `@EastmanOpenMMNN2018`, which allows the use of pre-trained TensorFlow models in [OpenMM](http://openmm.org/) `@PandeOpenMM2013`, and TorchANI `@GaoTorchANI2020`, which uses PyTorch `@PyTorch` for similar purposes. In contrast,
-this work fills the niche of online model training, while also allowing pre-trained model imports in MD simulation,
+HOOMD-TF fills the niche of online model training, while also allowing pre-trained model imports in MD simulation,
 coarse-grained force-field learning, collective variable calculation and manipulation, and force-field biasing.
 
 # Summary
