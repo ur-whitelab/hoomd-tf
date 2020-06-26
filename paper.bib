@@ -1,0 +1,158 @@
+@article{ChmielaConservedEnergyMLFF2017,
+abstract = {Using conservation of energy—a fundamental property of closed classical and quantum mechanical systems—we develop an efficient gradient-domain machine learning (GDML) approach to construct accurate molecular force fields using a restricted number of samples from ab initio molecular dynamics (AIMD) trajectories. The GDML implementation is able to reproduce global potential energy surfaces of intermediate-sized molecules with an accuracy of 0.3 kcal mol−1 for energies and 1 kcal mol−1 {\AA}̊−1 for atomic forces using only 1000 conformational geometries for training. We demonstrate this accuracy for AIMD trajectories of molecules, including benzene, toluene, naphthalene, ethanol, uracil, and aspirin. The challenge of constructing conservative force fields is accomplished in our work by learning in a Hilbert space of vector-valued functions that obey the law of energy conservation. The GDML approach enables quantitative molecular dynamics simulations for molecules at a fraction of cost of explicit AIMD calculations, thereby allowing the construction of efficient force fields with the accuracy and transferability of high-level ab initio methods.},
+author = {Chmiela, Stefan and Tkatchenko, Alexandre and Sauceda, Huziel E. and Poltavsky, Igor and Sch{\"{u}}tt, Kristof T. and M{\"{u}}ller, Klaus-Robert},
+doi = {10.1126/sciadv.1603015},
+file = {::},
+issn = {2375-2548},
+journal = {Sci. Adv.},
+month = {may},
+number = {5},
+pages = {e1603015},
+publisher = {American Association for the Advancement of Science},
+title = {{Machine learning of accurate energy-conserving molecular force fields}},
+url = {http://advances.sciencemag.org/lookup/doi/10.1126/sciadv.1603015},
+volume = {3},
+year = {2017}
+}
+
+@article{SmithDFTNNPotential2017,
+abstract = {We demonstrate how a deep neural network (NN) trained on a data set of quantum mechanical (QM) DFT calculated energies can learn an accurate and transferable atomistic potential for organic molecules containing H, C, N, and O atoms.},
+author = {Smith, J. S. and Isayev, O. and Roitberg, A. E.},
+doi = {10.1039/C6SC05720A},
+file = {::},
+issn = {2041-6520},
+journal = {Chem. Sci.},
+month = {mar},
+number = {4},
+pages = {3192--3203},
+publisher = {Royal Society of Chemistry},
+title = {{ANI-1: an extensible neural network potential with DFT accuracy at force field computational cost}},
+url = {http://xlink.rsc.org/?DOI=C6SC05720A},
+volume = {8},
+year = {2017}
+}
+
+@article{WangCGML2019,
+abstract = {Atomistic or ab initio molecular dynamics simulations are widely used to predict thermodynamics and kinetics and relate them to molecular structure. A common approach to go beyond the time- and length-scales accessible with such computationally expensive simulations is the definition of coarse-grained molecular models. Existing coarse-graining approaches define an effective interaction potential to match defined properties of high-resolution models or experimental data. In this paper, we reformulate coarse-graining as a supervised machine learning problem. We use statistical learning theory to decompose the coarse-graining error and cross-validation to select and compare the performance of different models. We introduce CGnets, a deep learning approach, that learns coarse-grained free energy functions and can be trained by a force-matching scheme. CGnets maintain all physically relevant invariances and allow one to incorporate prior physics knowledge to avoid sampling of unphysical structures. We show that CGnets can capture all-atom explicit-solvent free energy surfaces with models using only a few coarse-grained beads and no solvent, while classical coarse-graining methods fail to capture crucial features of the free energy surface. Thus, CGnets are able to capture multibody terms that emerge from the dimensionality reduction.},
+archivePrefix = {arXiv},
+arxivId = {1812.01736},
+author = {Wang, Jiang and Olsson, Simon and Wehmeyer, Christoph and P{\'{e}}rez, Adri{\`{a}} and Charron, Nicholas E. and {De Fabritiis}, Gianni and No{\'{e}}, Frank and Clementi, Cecilia},
+doi = {10.1021/acscentsci.8b00913},
+eprint = {1812.01736},
+issn = {23747951},
+journal = {ACS Central Science},
+month = {may},
+number = {5},
+pages = {755--767},
+publisher = {American Chemical Society},
+title = {{Machine Learning of Coarse-Grained Molecular Dynamics Force Fields}},
+volume = {5},
+year = {2019}
+}
+
+@article{RuppMLAtomizationE2012,
+author = {Rupp, Matthias and Tkatchenko, Alexandre and M{\"{u}}ller, Klaus-Robert and {Anatole Von Lilienfeld}, O},
+doi = {10.1103/PhysRevLett.108.058301},
+file = {::},
+journal = {Phys. Rev. Lett.},
+pages = {058301},
+title = {{Fast and Accurate Modeling of Molecular Atomization Energies with Machine Learning}},
+url = {https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.108.058301},
+volume = {108},
+year = {2012}
+}
+
+@article{BotuMLQMMD,
+abstract = {Quantum mechanics-based ab initio molecular dynamics (MD) simulation schemes offer an accurate and direct means to monitor the time evolution of materials. Nevertheless, the expensive and repetitive energy and force computations required in such simulations lead to significant bottlenecks. Here, we lay the foundations for an accelerated ab initio MD approach integrated with a machine learning framework. The proposed algorithm learns from previously visited configurations in a continuous and adaptive manner on-the-fly, and predicts (with chemical accuracy) the energies and atomic forces of a new configuration at a minuscule fraction of the time taken by conventional ab initio methods. Key elements of this new accelerated ab initio MD paradigm include representations of atomic configurations by numerical fingerprints, a learning algorithm to map the fingerprints to the properties, a decision engine that guides the choice of the prediction scheme, and requisite amount of ab initio data. The performance of each aspect of the proposed scheme is critically evaluated for Al in several different chemical environments. This work has enormous implications beyond ab initio MD acceleration. It can also lead to accelerated structure and property prediction schemes, and accurate force fields.},
+author = {Botu, Venkatesh and Ramprasad, Rampi},
+doi = {10.1002/qua.24836},
+file = {::},
+journal = {Int. J. Quantum Chem.},
+number = {115},
+pages = {1074--1083},
+title = {{Adaptive Machine Learning Framework to Accelerate Ab Initio Molecular Dynamics}},
+url = {https://rampi.ims.uconn.edu/wp-content/uploads/sites/486/2016/12/129.pdf},
+year = {2015}
+}
+
+@article{Aspuru-GuzikMaterialsDiscovery2015,
+author = {Pyzer-Knapp, Edward O. and Li, Kewei and Aspuru-Guzik, Alan},
+title = {Learning from the Harvard Clean Energy Project: The Use of Neural Networks to Accelerate Materials Discovery},
+journal = {Advanced Functional Materials},
+volume = {25},
+number = {41},
+pages = {6495-6502},
+keywords = {big data, materials genomes, machine learning, neural networks, organic materials screening, organic photovoltaics},
+doi = {10.1002/adfm.201501919},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/adfm.201501919},
+eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/adfm.201501919},
+abstract = {Here, the employment of multilayer perceptrons, a type of artificial neural network, is proposed as part of a computational funneling procedure for high-throughput organic materials design. Through the use of state of the art algorithms and a large amount of data extracted from the Harvard Clean Energy Project, it is demonstrated that these methods allow a great reduction in the fraction of the screening library that is actually calculated. Neural networks can reproduce the results of quantum-chemical calculations with a large level of accuracy. The proposed approach allows to carry out large-scale molecular screening projects with less computational time. This, in turn, allows for the exploration of increasingly large and diverse libraries.},
+year = {2015}
+}
+
+
+@misc{EastmanOpenMMNN2018,
+   author = {Peter Eastman},
+   year = {2018},
+   note = {https://github.com/pandegroup/openmm-nn},
+   title = {OpenMM Neural Network Plugin}
+}
+
+@article{PandeOpenMM2013,
+author = {Eastman, Peter, and Friedrichs, Mark S. , and Chodera, John D., and Radmer, Randall J. , and  Bruns, Christopher M., and  Ku, Joy P., and  Beauchamp, Kyle A., and  Lane, Thomas J.,  and Wang, Lee-Ping, and Shukla, Diwakar, and Tye, Tony , and  Houston, Mike, and  Stich, Timo, and  Klein, Christoph, and Shirts, Michael R., and Pande, Vijay S. },
+doi = {10.1021/ct300857j},
+journal = {Journal of Chemical Theory and Computation},
+number = {1},
+pages = {461-469},
+publisher = {ACS Publications},
+title = {{OpenMM 4: A Reusable, Extensible, Hardware Independent Library for High Performance Molecular Simulation}},
+url = {https://pubs.acs.org/doi/abs/10.1021/ct300857j},
+volume = {9},
+year = {2013}
+}
+
+@misc{tensorflow2015whitepaper,
+annote = {Software available from tensorflow.org},
+author = {Mart\'in Abadi and Ashish{\~{}}Agarwal and Paul{\~{}}Barham and Eugene{\~{}}Brevdo and Zhifeng{\~{}}Chen and Craig{\~{}}Citro and Greg{\~{}}S.{\~{}}Corrado and Andy{\~{}}Davis and Jeffrey{\~{}}Dean and Matthieu{\~{}}Devin and Sanjay{\~{}}Ghemawat and Ian{\~{}}Goodfellow and Andrew{\~{}}Harp and Geoffrey{\~{}}Irving and Michael{\~{}}Isard and Jia, Yangqing and Rafal{\~{}}Jozefowicz and Lukasz{\~{}}Kaiser and Manjunath{\~{}}Kudlur and Josh{\~{}}Levenberg and Dandelion{\~{}}Man{\'{e}} and Rajat{\~{}}Monga and Sherry{\~{}}Moore and Derek{\~{}}Murray and Chris{\~{}}Olah and Mike{\~{}}Schuster and Jonathon{\~{}}Shlens and Benoit{\~{}}Steiner and Ilya{\~{}}Sutskever and Kunal{\~{}}Talwar and Paul{\~{}}Tucker and Vincent{\~{}}Vanhoucke and Vijay{\~{}}Vasudevan and Fernanda{\~{}}Vi{\'{e}}gas and Oriol{\~{}}Vinyals and Pete{\~{}}Warden and Martin{\~{}}Wattenberg and Martin{\~{}}Wicke and Yuan{\~{}}Yu and Xiaoqiang{\~{}}Zheng},
+title = {{TensorFlow: Large-Scale Machine Learning on Heterogeneous Systems}},
+url = {https://www.tensorflow.org/},
+year = {2015}
+}
+
+@article{AndersonHOOMD2019,
+abstract = {HOOMD-blue is a particle simulation engine designed for nano- and colloidal-scale molecular dynamics and hard particle Monte Carlo simulations. It has been actively developed since March 2007 and available open source since August 2008. HOOMD-blue is a Python package with a high performance C++/CUDA backend that we built from the ground up for GPU acceleration. The Python interface allows users to combine HOOMD-blue with with other packages in the Python ecosystem to create simulation and analysis workflows. We employ software engineering practices to develop, test, maintain, and expand the code.},
+archivePrefix = {arXiv},
+arxivId = {1308.5587},
+author = {Anderson, Joshua A. and Glaser, Jens and Glotzer, Sharon C.},
+doi = {10.1016/j.commatsci.2019.109363},
+eprint = {1308.5587},
+file = {::},
+issn = {09270256},
+month = {aug},
+title = {{HOOMD-blue: A Python package for high-performance molecular dynamics and hard particle Monte Carlo simulations}},
+url = {https://www.sciencedirect.com/science/article/pii/S0927025619306627},
+year = {2019}
+}
+
+@InProceedings{ MDAnalysis2016,
+  author    = { {R}ichard {J}. {G}owers and {M}ax {L}inke and {J}onathan {B}arnoud and {T}yler {J}. {E}. {R}eddy and {M}anuel {N}. {M}elo and {S}ean {L}. {S}eyler and {J}an {D}omański and {D}avid {L}. {D}otson and {S}ébastien {B}uchoux and {I}an {M}. {K}enney and {O}liver {B}eckstein },
+  title     = { {M}{D}{A}nalysis: {A} {P}ython {P}ackage for the {R}apid {A}nalysis of {M}olecular {D}ynamics {S}imulations },
+  booktitle = { {P}roceedings of the 15th {P}ython in {S}cience {C}onference },
+  pages     = { 98 - 105 },
+  year      = { 2016 },
+  editor    = { {S}ebastian {B}enthall and {S}cott {R}ostrup },
+  doi       = { 10.25080/Majora-629e541a-00e }
+}
+
+@article{MDAnalysis2011,
+author = {Michaud-Agrawal, N., Denning, E.J., Woolf, T.B., and Beckstein, O.},
+doi = {10.1002/jcc.21787},
+journal = {Journal of Computational Chemistry},
+number = {10},
+pages = {2319--2327},
+publisher = {Wiley},
+title = {{MDAnalysis: A toolkit for the analysis of molecular dynamics simulations}},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/jcc.21787},
+volume = {32},
+year = {2011}
+}
