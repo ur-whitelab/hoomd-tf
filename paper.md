@@ -45,8 +45,8 @@ A limitation of these methods is that they treat the molecular modeling calculat
 This need has led us to develop HOOMD-TF, a flexible direct integration of a standard ML library and standard molecular simulation framework that maintains GPU acceleration. Our goals are to improve the reproducibility of ML methods in molecular simulation, ease translation of ML advances, and remove the need for sequential simulation and ML. This should enable active learning, reinforcement learning, and online learning of molecular simulations. 
 
 There are other applications focusing on ML in molecular modeling, such as [DeepChem](https://www.deepchem.io/) and `@Aspuru-GuzikMaterialsDiscovery2015`,
-which are largely concerned with property prediction and representation. There is also a similar work to HOOMD-TF by
-`@EastmanOpenMMNN2018`, [OpenMM-NN](https://github.com/openmm/openmm-nn), which allows the use of pre-trained TensorFlow models in [OpenMM](http://openmm.org/) `@PandeOpenMM2013`. In contrast,
+which are largely concerned with property prediction and representation. There are also similar works to HOOMD-TF called
+[OpenMM-NN](https://github.com/openmm/openmm-nn) `@EastmanOpenMMNN2018`, which allows the use of pre-trained TensorFlow models in [OpenMM](http://openmm.org/) `@PandeOpenMM2013`, and TorchANI `@GaoTorchANI2020`, which uses PyTorch `@PyTorch` for similar purposes. In contrast,
 this work fills the niche of online model training, while also allowing pre-trained model imports in MD simulation,
 coarse-grained force-field learning, collective variable calculation and manipulation, and force-field biasing.
 
@@ -71,7 +71,7 @@ requiring only one simulation iteration. Contrast this with a popular force-matc
 HOOMD-TF uses TensorFlow to save and load models, and is therefore compatible with pre-trained TensorFlow models. TensorFlow's TensorBoard
 utility can also be used to track and examine model training and performance. HOOMD-TF can be used independent of HOOMD-blue by using trajectories via the MDAnalysis framework `@MDAnalysis2011, @MDAnalysis2016`. This allows for previously-trained TensorFlow
 models to be used on trajectories that were produced by other MD engines, analysis of new CVs
-from a previously-run simulation, and training of models from trajectories.
+from a previously-run simulation, and training of models from trajectories. This offline execution scheme is functionally similar to TorchANI `@GaoTorchANI2020`. TorchANI uses PyTorch `@PyTorch` rather than TensorFlow to implement the ANI deep learning models `@SmithANI2017`, with many of the same advantages provided by HOOMD-TF. TorchANI is not an MD engine, so it has less support for specific features like neighbor lists or particle mesh Ewald summation.
 
 Overall, HOOMD-TF makes online ML in MD simulations possible with little additional effort, and
 eases the use of TensorFlow models on MD trajectories for both machine learning and analysis.
@@ -79,8 +79,6 @@ The ability to tightly integrate trained ML models in HOOMD-TF can enable their 
 by removing the need for custom implementations and improve reproducibility in the field. The online functionality of HOOMD-TF enables the use of simulations as interrogable models rather than static data generators, allowing direct use in an active and/or reinforcement learning framework.
 TensorFlow computation graphs allow for transparent and simple model designation with a high
  degree of customizability, replicability, and efficiency.
- 
-It is important to note that during the preparation of this submission, the authors have become aware of a similar work using PyTorch `@PyTorch`, called TorchANI `@GaoTorchANI2020`. This work implements the ANI deep learning models `@SmithANI2017` with many of the same advantages provided by HOOMD-TF.
 
 # Accessing the Software
 
