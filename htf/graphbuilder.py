@@ -16,7 +16,7 @@ class graph_builder:
     """
     # \internal
     # \brief Initializes the graphbuilder class
-    def __init__(self, nneighbor_cutoff, output_forces=True):
+    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         # clear any previous graphs
@@ -52,6 +52,13 @@ class graph_builder:
                                                 true_fn=lambda: tf.constant(1),
                                                 false_fn=lambda: tf.constant(0)))
         self.out_nodes = [self.update_batch_index_op]
+
+        # add check for nlist size
+        if check_nlist:
+            NN = tf.reduce_max(tf.reduce_sum(tf.cast(self.nlist[:, :, 0] > 0, tf.dtypes.int32), axis=1), axis=0)
+            check_op = tf.Assert(tf.less(NN, nneighbor_cutoff), ['Neighbor list is full!'])
+            self.out_nodes.append(check_op)
+        
 
     ## \var atom_number
     # \internal

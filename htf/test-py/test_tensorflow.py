@@ -56,7 +56,7 @@ class test_access(unittest.TestCase):
                 a2=[0, 6, 0],
                 a3=[0, 0, 6],
                 position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
-                type_name=['A', 'B', 'C'])
+ type_name=['A', 'B', 'C'])
             system = hoomd.init.create_lattice(unitcell=cell, n=5)
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
@@ -602,10 +602,16 @@ class test_mol_batching(unittest.TestCase):
 
 
 class test_saving(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
 
     def test_tensor_save(self):
         hoomd.context.initialize()
-        model_dir = build_examples.saving_graph()
+        model_dir = build_examples.saving_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                                n=[3, 3])
@@ -616,6 +622,38 @@ class test_saving(unittest.TestCase):
 
         # now load
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
+
+class test_nlist(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
+
+    def _test_cpu_overflow(self):        
+        '''Use too small neighbor list and ensure error is thrown
+        TODO: It works, but the tfmanager thread early exit causes main thread to hang
+        '''
+        N = 8 * 8
+        model_dir = build_examples.lj_graph(4, self.tmp, check_nlist=True)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            T = 10
+            rcut = 10.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[8, 8])
+            nlist = hoomd.md.nlist.cell(check_period=1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nvt(group=hoomd.group.all(),
+                                   kT=1, tau=0.2
+                                   ).randomize_velocities(seed=1)
+            tfcompute.attach(nlist, r_cut=rcut)
+            with self.assertRaises(tf.errors.InvalidArgumentError):
+                hoomd.run(2)
+
+        
 
 if __name__ == '__main__':
     unittest.main()
