@@ -56,7 +56,7 @@ class test_access(unittest.TestCase):
                 a2=[0, 6, 0],
                 a3=[0, 0, 6],
                 position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
- type_name=['A', 'B', 'C'])
+                type_name=['A', 'B', 'C'])
             system = hoomd.init.create_lattice(unitcell=cell, n=5)
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.005)
@@ -623,6 +623,7 @@ class test_saving(unittest.TestCase):
         # now load
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
 
+
 class test_nlist(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -630,8 +631,7 @@ class test_nlist(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-
-    def _test_cpu_overflow(self):        
+    def _test_cpu_overflow(self):
         '''Use too small neighbor list and ensure error is thrown
         TODO: It works, but the tfmanager thread early exit causes main thread to hang
         '''
@@ -653,7 +653,6 @@ class test_nlist(unittest.TestCase):
             with self.assertRaises(tf.errors.InvalidArgumentError):
                 hoomd.run(2)
 
-        
 
 if __name__ == '__main__':
     unittest.main()

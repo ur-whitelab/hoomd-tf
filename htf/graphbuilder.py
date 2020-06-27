@@ -14,8 +14,10 @@ class graph_builder:
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
         :type output_forces: bool
         :type check_nlist: bool
-        :param check_nlist: True will raise error if neighbor list overflows (nneighbor_cutoff too low)
+        :param check_nlist: True will raise error if neighbor 
+                            list overflows (nneighbor_cutoff too low)
     """
+
     # \internal
     # \brief Initializes the graphbuilder class
     def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False):
@@ -57,7 +59,9 @@ class graph_builder:
 
         # add check for nlist size
         if check_nlist:
-            NN = tf.reduce_max(tf.reduce_sum(tf.cast(self.nlist[:, :, 0] > 0, tf.dtypes.int32), axis=1), axis=0)
+            NN = tf.reduce_max(tf.reduce_sum(tf.cast(self.nlist[:, :, 0] > 0, 
+                                                     tf.dtypes.int32), axis=1), 
+                                                     axis=0)
             check_op = tf.Assert(tf.less(NN, nneighbor_cutoff), ['Neighbor list is full!'])
             self.out_nodes.append(check_op)
         
