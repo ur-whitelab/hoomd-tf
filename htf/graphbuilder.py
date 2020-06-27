@@ -13,6 +13,8 @@ class graph_builder:
         :type nneighbor_cutoff: int
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
         :type output_forces: bool
+        :type check_nlist: bool
+        :param check_nlist: True will raise error if neighbor list overflows (nneighbor_cutoff too low)
     """
     # \internal
     # \brief Initializes the graphbuilder class
