@@ -71,7 +71,7 @@ requiring only one simulation iteration. Contrast this with a popular force-matc
 HOOMD-TF uses TensorFlow to save and load models, and is therefore compatible with pre-trained TensorFlow models. TensorFlow's TensorBoard
 utility can also be used to track and examine model training and performance. HOOMD-TF can be used independent of HOOMD-blue by using trajectories via the MDAnalysis framework [@MDAnalysis2011; @MDAnalysis2016]. This allows for previously-trained TensorFlow
 models to be used on trajectories that were produced by other MD engines, analysis of new CVs
-from a previously-run simulation, and training of models from trajectories. This offline execution scheme is functionally similar to TorchANI [@GaoTorchANI2020]. TorchANI uses PyTorch [@PyTorch] rather than TensorFlow to implement the ANI deep learning models [@SmithANI2017], with many of the same advantages provided by HOOMD-TF. TorchANI is not an MD engine, so it has less support for specific features like neighbor lists or particle mesh Ewald summation.
+from a previously-run simulation, and training of models from trajectories. This offline execution scheme is functionally similar to TorchANI [@GaoTorchANI2020]. TorchANI uses [PyTorch](https://pytorch.org/) [@PyTorch] rather than TensorFlow to implement the ANI deep learning models [@SmithANI2017], with many of the same advantages provided by HOOMD-TF. TorchANI is not an MD engine, so it has less support for specific features like neighbor lists or particle mesh Ewald summation.
 
 Overall, HOOMD-TF makes online ML in MD simulations possible with little additional effort, and
 eases the use of TensorFlow models on MD trajectories for both machine learning and analysis.
