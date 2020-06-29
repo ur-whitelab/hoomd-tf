@@ -617,5 +617,14 @@ class test_saving(unittest.TestCase):
         # now load
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
 
+    def test_tensor_save_var_fail(self):
+
+        graph = hoomd.htf.graph_builder(0, output_forces=False)
+        v = tf.Variable(0, name='foo')
+        with self.assertRaises(ValueError):
+            graph.save_tensor(v, 'v')
+
+
+
 if __name__ == '__main__':
     unittest.main()
