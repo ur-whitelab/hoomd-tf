@@ -289,6 +289,11 @@ class graph_builder:
         :return: None
         """
 
+        # make sure it is a tensor
+        if type(tensor) != tf.Tensor:
+            raise ValueError('save_tensor requires a tf.Tensor '
+                             'but given type {}'.format(type(tensor)))
+
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
                                 validate_shape=False, dtype=tensor.dtype, trainable=False)
 
