@@ -39,8 +39,11 @@ build/*
 *.aux
 *.log
 
-Images
+#Images
 *.png
+
+#Numpy
+*.npz
 
 #VScode
 *.vscode

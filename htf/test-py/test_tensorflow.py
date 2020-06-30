@@ -608,7 +608,6 @@ class test_saving(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-
     def test_tensor_save(self):
         hoomd.context.initialize()
         model_dir = build_examples.saving_graph(self.tmp)
@@ -622,6 +621,12 @@ class test_saving(unittest.TestCase):
 
         # now load
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
+        
+    def test_tensor_save_var_fail(self):
+        graph = hoomd.htf.graph_builder(0, output_forces=False)
+        v = tf.Variable(0, name='foo')
+        with self.assertRaises(ValueError):
+            graph.save_tensor(v, 'v')
 
 
 class test_nlist(unittest.TestCase):
