@@ -33,8 +33,8 @@ namespace hoomd_tf
         num_dims(num_dims),
         element_size(element_size),
         offset(0),
-        name(name),
-        mem_size(0)
+	mem_size(0),
+        name(name)
         {}
 
         //! Set number of elements and calculate needed memory
@@ -42,7 +42,7 @@ namespace hoomd_tf
             {
             size_t size = 1;
             num_elements = new int[num_dims];
-            for(unsigned int i = 0; i < num_dims; i++)
+            for(int i = 0; i < num_dims; i++)
                 {
                 num_elements[i] = num_elements_t[i];
                 size *= num_elements[i];
@@ -74,7 +74,7 @@ namespace hoomd_tf
         std::ostream& print(std::ostream& os) const
             {
             os << name <<  ":\n  " << "Dims: [";
-            for(unsigned int i = 0; i < num_dims; i++)
+            for(int i = 0; i < num_dims; i++)
                 {
                 os << num_elements[i] << " ";
                 }
