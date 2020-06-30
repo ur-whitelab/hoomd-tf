@@ -293,8 +293,9 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
     // need for periodic image correction
     const BoxDim& box = m_pdata->getBox();
 
-    // for each particle
-    int bi = 0;
+    // for each particle adjust nlist
+    // bi is buffer index
+    unsigned int bi = 0; 
     for (unsigned int i = batch_offset; i < batch_offset + batch_size; i++, bi++)
         {
         // access the particle's position and type (MEM TRANSFER: 4 scalars)
@@ -321,6 +322,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             dx = box.minImage(dx);
             if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut) continue;
 
+	    /*
 	    if (nnoffset[bi] >= size)
 	      {
 		m_exec_conf->msg->error()
@@ -332,7 +334,10 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 		  << std::endl;
 		throw std::runtime_error("Nlist Overflow");
 	      }
-
+	    */
+	    // prevent segmentation fault
+	    // we check for this in TF ops
+            nnoffset[bi] %= size;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;

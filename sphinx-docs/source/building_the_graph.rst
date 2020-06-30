@@ -10,11 +10,15 @@ To construct a graph, create a :py:class:`graphbuilder.graph_builder` instance:
     import hoomd.htf as htf
     graph = htf.graph_builder(NN, output_forces)
 
-where ``NN`` is the maximum number of nearest neighbors to consider (can
-be 0) and ``output_forces`` indicates if the graph will output forces to
-use in the simulation. After building the ``graph``, it will have five
-tensors as attributes that can be used when constructing the TensorFlow graph:
-``nlist``, ``positions``, ``box``, ``box_size``, and ``forces``:
+where ``NN`` is the maximum number of nearest neighbors to consider
+(can be 0). This is an upper-bound, so choose a large number. If you
+are unsure, you can guess and add ``check_nlist = True``. This will
+cause the program to halt if you choose too low.
+``output_forces`` indicates if the graph will output forces to use in
+the simulation. After building the ``graph``, it will have five
+tensors as attributes that can be used when constructing the
+TensorFlow graph: ``nlist``, ``positions``, ``box``, ``box_size``, and
+``forces``:
 
 * ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest
   neighbors. An entry of all zeros indicates that less than ``NN`` nearest

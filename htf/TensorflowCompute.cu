@@ -118,8 +118,7 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
     else
         next_neigh = texFetchUint(d_nlist, nlist_tex, head_idx);
 
-    // loop over neighbors
-    assert(n_neigh <= NN);
+    unsigned int dest_idx = 0;
     for (int neigh_idx = 0; neigh_idx < n_neigh; neigh_idx++)
         {
 
@@ -149,11 +148,15 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
 
         if (rsq < (rmax * rmax))
         {
-            dest[(idx - offset) * NN + neigh_idx].x = dx.x;
-            dest[(idx - offset) * NN + neigh_idx].y = dx.y;
-            dest[(idx - offset) * NN + neigh_idx].z = dx.z;
-            dest[(idx - offset) * NN + neigh_idx].w = static_cast<Scalar> (typej);
-
+            dest[(idx - offset) * NN + dest_idx].x = dx.x;
+            dest[(idx - offset) * NN + dest_idx].y = dx.y;
+            dest[(idx - offset) * NN + dest_idx].z = dx.z;
+            dest[(idx - offset) * NN + dest_idx].w = static_cast<Scalar> (typej);
+	    dest_idx += 1;
+	    // prevent overflow. Note this should not happen
+	    // we check for it later, but this prevents 
+	    // illegeal mem access
+	    dest_idx %= NN;
             }
         }
     }

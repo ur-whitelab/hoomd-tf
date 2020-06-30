@@ -113,8 +113,8 @@ def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
     return directory
 
 
-def lj_graph(NN, directory='/tmp/test-lj-potential-model'):
-    graph = htf.graph_builder(NN)
+def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
+    graph = htf.graph_builder(NN, **kw_args)
     nlist = graph.nlist[:, :, :3]
     # get r
     r = tf.norm(nlist, axis=2)
