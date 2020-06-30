@@ -35,7 +35,7 @@ provides a pre-built version of tensorflow which has
 specific GCC and Python versions. When you compile
 hoomd-tf, these must match what is found by cmake. So if your version
 of tensorflow used gcc-7x, then you must have gcc-7x available on your machine.
-Or, if you install tensorflow-gpu 1.12 then you must have python 3.6.
+The cmake script in hoomd-tf will check for this and tell you if they do not match.
 
 
 .. _simple_compiling:
