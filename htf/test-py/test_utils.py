@@ -6,7 +6,7 @@ import tensorflow as tf
 import build_examples
 import tempfile
 import shutil
-import imp
+
 
 class test_loading(unittest.TestCase):
     def setUp(self):
@@ -424,27 +424,31 @@ class test_mol_properties(unittest.TestCase):
 class test_trajectory(unittest.TestCase):
     def test_run_from_trajectory(self):
         try:
-            imp.find_module('MDAnalysis')
+            import MDAnalysis as mda
             found = True
         except ImportError:
             found = False
-        if found==True:
+        if found:
             import math
-            import MDAnalysis as mda
             import os
-            test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')
-            test_traj = os.path.join(os.path.dirname(__file__), 'test_traj.trr')
+            test_pdb = os.path.join(
+                os.path.dirname(__file__), 'test_topol.pdb')
+            test_traj = os.path.join(
+                os.path.dirname(__file__), 'test_traj.trr')
             universe = mda.Universe(test_pdb, test_traj)
             # load example graph that calculates average energy
             model_directory = build_examples.run_traj_graph()
             hoomd.htf.run_from_trajectory(model_directory, universe,
-                                      period=1, r_cut=25.)
+                                          period=1, r_cut=25.)
             # get evaluated outnodes
             variables = hoomd.htf.load_variables(model_directory,
-                                             ['average-energy'])
+                                                 ['average-energy'])
             # assert they are calculated and valid?
             assert not math.isnan(variables['average-energy'])
             assert not variables['average-energy'] == 0.0
+        else:
+            print('Import MDAnalysis fails, skipping test_run_from_trajectory')
+
 
 if __name__ == '__main__':
     unittest.main()
