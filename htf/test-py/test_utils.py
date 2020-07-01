@@ -425,29 +425,23 @@ class test_trajectory(unittest.TestCase):
     def test_run_from_trajectory(self):
         try:
             import MDAnalysis as mda
-            found = True
         except ImportError:
-            found = False
-        if found:
-            import math
-            import os
-            test_pdb = os.path.join(
-                os.path.dirname(__file__), 'test_topol.pdb')
-            test_traj = os.path.join(
-                os.path.dirname(__file__), 'test_traj.trr')
-            universe = mda.Universe(test_pdb, test_traj)
-            # load example graph that calculates average energy
-            model_directory = build_examples.run_traj_graph()
-            hoomd.htf.run_from_trajectory(model_directory, universe,
-                                          period=1, r_cut=25.)
-            # get evaluated outnodes
-            variables = hoomd.htf.load_variables(model_directory,
-                                                 ['average-energy'])
-            # assert they are calculated and valid?
-            assert not math.isnan(variables['average-energy'])
-            assert not variables['average-energy'] == 0.0
-        else:
-            print('Import MDAnalysis fails, skipping test_run_from_trajectory')
+            self.skipTest("MDAnalysis not available; skipping test_run_from_trajectory")
+        import math
+        import os
+        test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')
+        test_traj = os.path.join(os.path.dirname(__file__), 'test_traj.trr')
+        universe = mda.Universe(test_pdb, test_traj)
+        # load example graph that calculates average energy
+        model_directory = build_examples.run_traj_graph()
+        hoomd.htf.run_from_trajectory(model_directory, universe,
+                                      period=1, r_cut=25.)
+        # get evaluated outnodes
+        variables = hoomd.htf.load_variables(model_directory,
+                                             ['average-energy'])
+        # assert they are calculated and valid?
+        assert not math.isnan(variables['average-energy'])
+        assert not variables['average-energy'] == 0.0
 
 
 if __name__ == '__main__':
