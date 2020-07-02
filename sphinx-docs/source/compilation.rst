@@ -224,4 +224,15 @@ different cmake step**
     -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
     -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin"
 
-    
+.. _optional_dependencies:
+
+Optional Dependencies
+=====================
+Following packages are optional:
+.. code:: bash
+
+   MDAnalysis 
+ 
+ :py:class:`utils.run_from_trajectory` uses `MDAnalysis` for trajectory parsing
+  
+  
