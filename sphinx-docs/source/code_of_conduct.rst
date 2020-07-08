@@ -45,3 +45,21 @@ follow the documentation style to ensure a smooth learning curve.
 
 6. Be inclusive. Discrimination based on age, disability, ethnicity, familial status, gender identity, nationality, religion, sex,
 sexual orientation, or any legally-protected group will not be tolerated.
+
+Reporting Issues
+----------------
+
+`Issues can be reported via GitHub <https://github.com/ur-whitelab/hoomd-tf/issues/>`_. When opening an issue, please be as specific as
+possible, and provide a way to replicate your issue so it can be addressed readily.
+
+Contributing
+------------
+
+Contributions are welcome and can be submitted by `opening a pull request on our GitHub <https://github.com/ur-whitelab/hoomd-tf/pulls>`_.
+As with reporting an issue, pull requests for contributions should be as specific as possible for smooth integration into the codebase. Please
+ensure that all tests pass before opening a pull request. If your PR includes new functionality, please also include unit testing for it, following
+the testing and documentation framework (see `here <https://github.com/ur-whitelab/hoomd-tf/tree/master/htf/test-py>`_).
+A contribution PR should include:
+
+1. What the contribution is meant to address.
+2. How to run any new unit tests (if applicable).
