@@ -16,6 +16,7 @@ or other quantities, like collective variables, and do machine learning.
    :caption: Table of Contents
 
    quickstart
+   code_of_conduct
    installation
    unit_tests
    building_the_graph
