@@ -32,6 +32,7 @@ tbb-devel` to install. The Tensorflow version should be any
 Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
 lots of warnings about migrating code to Tensorflow 2.0. It is
 recommended you install via pip:
+
     pip install tensorflow-gpu==1.15.0
 
 
