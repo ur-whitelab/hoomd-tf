@@ -423,8 +423,11 @@ class test_mol_properties(unittest.TestCase):
 
 class test_trajectory(unittest.TestCase):
     def test_run_from_trajectory(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest("MDAnalysis not available; skipping test_run_from_trajectory")
         import math
-        import MDAnalysis as mda
         import os
         test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')
         test_traj = os.path.join(os.path.dirname(__file__), 'test_traj.trr')

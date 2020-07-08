@@ -69,6 +69,14 @@ simulation:
     # after simulation
     vars = htf.load_variables('model/directory', ['avg-eds-alpha'])
     print(vars['avg-eds-alpha'])
+    
+.. _traj_parsing:
+    
+Trajectory Parsing
+----------------
+
+To process information from a trajectory, use 
+:py:meth:`utils.run_from_trajectory`:
 
 .. _coarse_graining:
 
