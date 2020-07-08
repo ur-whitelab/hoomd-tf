@@ -15,4 +15,24 @@ In addition to all these, the TensorFlow interface of HOOMD-TF makes implementin
 
 See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/) to learn about what Hoomd-TF can do. 
 
+
+# Prerequisites
+
+The following packages are required to compile:
+
+* `tensorflow < 2.0`
+* `hoomd-blue >= 2.5.2`
+* `numpy`
+* `tbb-devel (only for hoomd-blue 2.8 and above)`
+
+tbb-devel is required for hoomd-blue 2.8 or above when using the
+hoomd-blue conda release. It is not automatically installed when
+installing hoomd-blue, so use `conda install -c conda-forge
+tbb-devel` to install. The Tensorflow version should be any
+Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
+lots of warnings about migrating code to Tensorflow 2.0. It is
+recommended you install via pip:
+    pip install tensorflow-gpu==1.15.0
+
+
 &copy; University of Rochester
