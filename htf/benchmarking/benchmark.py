@@ -1,6 +1,5 @@
-import hoomd.htf
+import hoomd.htf as htf
 from hoomd.htf import tfcompute
-from hoomd.htf.test_py.build_examples import lj_graph
 import hoomd
 import hoomd.md
 import hoomd.dump
@@ -16,7 +15,7 @@ import tensorflow as tf
 
 
 if(len(argv) != 4):
-    print('Usage: benchmark_xla.py [N_PARTICLES (int)] [EXECUTION_MODE (str, either "cpu" or "gpu")] [SAVE_DIRECTORY (optional)]')
+    print('Usage: benchmark_xla.py [N_PARTICLES (int)] [EXECUTION_MODE (str, either "cpu" or "gpu")] [SAVE_DIRECTORY]')
     exit(0)
 
 N = int(argv[1])
@@ -27,9 +26,38 @@ if mode_string != 'cpu' and mode_string !='gpu':
     raise(ValueError('Execution mode argument must be either "cpu" or "gpu".'))
 model_dir = '{}/{}_benchmarking'.format(save_directory, mode_string)
 
-NN = 128
+def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
+    graph = htf.graph_builder(NN, output_forces=False)
+    # make trainable variables
+    epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
+    sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
+    # get LJ potential using our variables
+    # uses built in nlist_rinv which provides
+    # r^-1 with each neighbor
+    inv_r6 = sigma**6 * graph.nlist_rinv**6
+    # use 2 * epsilon because nlist is double-counted
+    p_energy = 2.0 * epsilon * (inv_r6**2 - inv_r6)
+    # sum over pairs to get total energy
+    energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    # compute forces
+    computed_forces = graph.compute_forces(energy)
+    # compare hoomd-blue forces (graph.forces) with our
+    # computed forces
+    minimizer, loss = htf.force_matching(graph.forces[:, :3],
+                                         computed_forces[:, :3],
+                                         learning_rate=1e-2)
+    # save loss so we can visualize later
+    graph.save_tensor(loss, 'loss')
+    # Make sure to have minimizer in out_nodes so that
+    # the force matching occurs!
+    graph.save(model_directory=directory,
+               out_nodes=[minimizer])
+    return directory
 
-lj_graph(NN, model_dir)
+
+NN = 63
+
+lj_force_matching(NN, model_dir)
 
 with hoomd.htf.tfcompute(model_dir,
                          _mock_mode=False,
@@ -62,7 +90,7 @@ with hoomd.htf.tfcompute(model_dir,
                                                limit_hours=2)
     
 # write results
-with open('{}-particles_{}_time.txt'.format(N, use_xla), 'w+') as f:
+with open('{}-particles_{}_time.txt'.format(N, mode_string), 'w+') as f:
     f.write('Elapsed time with {} particles: {}'.format(N,str(benchmark_results)))
 
 print('Elapsed time with {} particles: {}'.format(N,str(benchmark_results)))
