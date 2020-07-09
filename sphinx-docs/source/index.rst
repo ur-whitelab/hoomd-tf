@@ -32,6 +32,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    :caption: Table of Contents
 
    quickstart
+   code_of_conduct
    installation
    unit_tests
    building_the_graph
