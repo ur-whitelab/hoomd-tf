@@ -6,6 +6,7 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
+import MDAnalysis as mda
 
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
@@ -188,6 +189,29 @@ def find_molecules(system):
 
 # \internal
 # \brief Finds mapping operators for coarse-graining
+def matrix_mapping(molecule, beads_distribution):
+    R""" This will create a M x N mass weighted mapping matrix where M is the number
+        of atoms in the molecule and N is the number of mapping beads.
+    :param molecule: This is atom selection in the molecule.
+    :param beads_distribution: This is a dictionary of beads distribution, where keys should
+     be {Bead_1, Bead_2, ...} and values should be the atoms as strings just like how they appear
+     in the topology file.
+
+    :return: An array of M x N.
+    """
+    Mws_dict = dict(zip(molecule.names, molecule.masses))
+    M, N = len(beads_distribution), len(molecule)
+    CG_matrix = np.zeros((M, N))
+    index = 0
+    for s in range(M):
+        for i, atom in enumerate(beads_distribution['Bead_{}'.format(str(s+1))]):
+            CG_matrix[s, i+index] = [v for k,
+                                       v in Mws_dict.items() if atom in k][0]
+        index += np.count_nonzero(CG_matrix[s])
+        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
+
+    return CG_matrix
+
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     R""" This will create the necessary indices and values for
