@@ -53,7 +53,7 @@ coarse-grained force-field learning, collective variable calculation and manipul
 # Summary
 
 The HOOMD-TF package pairs the TensorFlow ML library [@tensorflow2015whitepaper] with the HOOMD-blue
-simulation engine [@AndersonHOOMD2019] to allow for flexible online ML and tensor calculations 
+simulation engine [@Anderson2020HOOMD] to allow for flexible online ML and tensor calculations 
 during HOOMD-blue simulations. Since both TensorFlow and HOOMD-blue are GPU-accelerated, HOOMD-TF
 was designed with a GPU-GPU communication scheme that minimizes 
 latency between GPU memory to preserve execution speed.
