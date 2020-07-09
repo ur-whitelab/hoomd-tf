@@ -68,8 +68,8 @@ class test_access(unittest.TestCase):
             pa = tfcompute.get_positions_array()
             nl = tfcompute.get_nlist_array()
             # make sure we get the 3 types
-            assert len(np.unique(nl[:, :, 3].astype(np.int))) == 3
-            assert len(np.unique(pa[:, 3].astype(np.int))) == 3
+            self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))),3)
+            self.assertEqual(len(np.unique(pa[:, 3].astype(np.int))), 3)
 
 class test_compute(unittest.TestCase):
     def setUp(self):
@@ -455,6 +455,30 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(energy[-1],
                                                energy[-2], atol=1e-3)
 
+
+    def test_nlist_count(self):
+        '''Make sure nlist is full, not half
+        '''
+        model_dir = build_examples.lj_graph(9 - 1, self.tmp)
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            hoomd.context.initialize()
+            N = 3 * 3
+            NN = N - 1
+            T = 10
+            rcut = 5.0
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.001)
+            hoomd.md.integrate.nve(group=hoomd.group.all(
+                    )).randomize_velocities(seed=1, kT=0.8)
+            tfcompute.attach(nlist, r_cut=rcut)
+            hoomd.run(1) #in lattice, should have 4 neighbors
+            nl = tfcompute.get_nlist_array()
+            ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
+            self.assertEqual(np.min(count), 4)
+
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to
         # pressure differences of 1e-3.
@@ -650,7 +674,7 @@ class test_nlist(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-    def _test_cpu_overflow(self):
+    def test_overflow(self):
         '''Use too small neighbor list and ensure error is thrown
         TODO: It works, but the tfmanager thread early exit causes main thread to hang
         '''
