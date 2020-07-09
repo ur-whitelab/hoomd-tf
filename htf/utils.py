@@ -142,6 +142,8 @@ def find_molecules(system):
     This is a slow function and should only be called once.
 
     :param system: The molecular system in HOOMD.
+
+    :return: A list of length L (number of molecules) whose elements are lists of atom indices
     """
     mapping = []
     mapped = set()
@@ -223,7 +225,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         There should be one matrix per molecule.
         The ordering of the atoms should follow
         what is defined in the output from find_molecules
-    :param molecule_mapping_index: This is the output from find_molecules.
+    :param molecule_mapping_index: This is the output from find_molecules. 
+         A list of length L (number of molecules) whose elements are lists of atom indices
     :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
         weight by mass of the atoms.
@@ -232,7 +235,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         where N is number of atoms
     """
     assert type(molecule_mapping[0]) == np.ndarray
-    assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
     M = sum([m.shape[0] for m in molecule_mapping])
@@ -255,7 +257,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
                     if system is not None:
                         vs.append(system.particles[mmi[j]].mass)
                     else:
-                        vs.append(1.)
+                        vs.append(mm[i, j])
         # now scale values by mases
         if system is not None:
             # now add up masses
@@ -271,7 +273,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         indices.extend(idx)
         values.extend(vs)
         total_i += len(masses)
-    return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
+    return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
 
 
 def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
