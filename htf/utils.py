@@ -6,7 +6,6 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-import MDAnalysis as mda
 
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
