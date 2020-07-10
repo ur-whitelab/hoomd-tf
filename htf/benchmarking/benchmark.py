@@ -15,16 +15,19 @@ import tensorflow as tf
 
 
 if(len(argv) != 4):
-    print('Usage: benchmark_xla.py [N_PARTICLES (int)] [EXECUTION_MODE (str, either "cpu" or "gpu")] [SAVE_DIRECTORY]')
+    print('Usage: benchmark_xla.py [N_PARTICLES (int)]\
+                                   [EXECUTION_MODE (str, either "cpu" or "gpu")]\
+                                   [SAVE_DIRECTORY]')
     exit(0)
 
 N = int(argv[1])
 mode_string = argv[2].lower()
 save_directory = argv[3]
 
-if mode_string != 'cpu' and mode_string !='gpu':
+if mode_string != 'cpu' and mode_string != 'gpu':
     raise(ValueError('Execution mode argument must be either "cpu" or "gpu".'))
 model_dir = '{}/{}_benchmarking'.format(save_directory, mode_string)
+
 
 def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
     graph = htf.graph_builder(NN, output_forces=False)
@@ -69,8 +72,9 @@ with hoomd.htf.tfcompute(model_dir,
     
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[sqrt_N, sqrt_N])
-    nlist = hoomd.md.nlist.cell(check_period = 1)
-    lj = hoomd.md.pair.lj(rcut, nlist)# basic LJ forces from HOOMD
+    nlist = hoomd.md.nlist.cell(check_period=1)
+    # basic LJ forces from HOOMD
+    lj = hoomd.md.pair.lj(rcut, nlist)
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
     hoomd.md.integrate.mode_standard(dt=0.005)
     hoomd.md.integrate.langevin(group=hoomd.group.all(), kT=1.0, seed=42)
@@ -88,9 +92,9 @@ with hoomd.htf.tfcompute(model_dir,
                                                repeat=5,
                                                steps=50000,
                                                limit_hours=2)
-    
+
 # write results
 with open('{}-particles_{}_time.txt'.format(N, mode_string), 'w+') as f:
-    f.write('Elapsed time with {} particles: {}'.format(N,str(benchmark_results)))
+    f.write('Elapsed time with {} particles: {}'.format(N, str(benchmark_results)))
 
-print('Elapsed time with {} particles: {}'.format(N,str(benchmark_results)))
+print('Elapsed time with {} particles: {}'.format(N, str(benchmark_results)))
