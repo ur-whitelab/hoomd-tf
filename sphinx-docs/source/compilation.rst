@@ -3,6 +3,9 @@
 Compiling
 =========
 
+Prerequisites
+----------------
+
 The following packages are required to compile:
 
 ::
@@ -24,6 +27,17 @@ recommended you install via pip:
 
   pip install tensorflow-gpu==1.15.0
 
+Python and GCC requirements
+----------------
+
+If you install tensorflow with pip, as recommended, this
+provides a pre-built version of tensorflow which has
+specific GCC and Python versions. When you compile
+hoomd-tf, these must match what is found by cmake. So if your version
+of tensorflow used gcc-7x, then you must have gcc-7x available on your machine.
+The cmake script in hoomd-tf will check for this and tell you if they do not match.
+
+
 .. _simple_compiling:
 
 Simple Compiling
@@ -32,11 +46,11 @@ Simple Compiling
 Install hoomd-blue and Tensorflow by your preferred method. If you
 want to install hoomd-blue without GPU support, you can just use the
 conda release via ``conda install -c conda-forge hoomd==2.5.2``. You
-should then similarily use the CPU version of Tensorflow. If you would
+should then similarly use the CPU version of Tensorflow (`pip install tensorflow==1.15`). If you would
 like GPU support, compile hoomd-blue using `their instructions
-<http://hoomd-blue.readthedocs.io>`_. Remember that pip is recommneded
+<http://hoomd-blue.readthedocs.io>`_. Remember that pip is recommended
 for installing Tensorflow. Here are steps **after** installing
-hoomd-blue
+hoomd-blue and tensorflow
 
 .. code:: bash
 
@@ -234,5 +248,3 @@ Following packages are optional:
    MDAnalysis 
  
  :py:class:`utils.run_from_trajectory` uses `MDAnalysis` for trajectory parsing
-  
-  
