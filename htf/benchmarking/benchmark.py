@@ -69,7 +69,7 @@ with hoomd.htf.tfcompute(model_dir,
     hoomd.context.initialize('--mode={}'.format(mode_string))
     rcut = 3.0
     sqrt_N = int(sqrt(N))
-    
+
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[sqrt_N, sqrt_N])
     nlist = hoomd.md.nlist.cell(check_period=1)
