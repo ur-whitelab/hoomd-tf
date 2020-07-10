@@ -19,6 +19,7 @@ v0.7
 - Prevents accidentally computing forces from positions, instead of nlist
 - Added guards against compiler mismatch
 - Added sanity tests to prevent unsupported CPU/GPU modes
+- Added benchmarking script
 
 *Bug Fixes*
 
