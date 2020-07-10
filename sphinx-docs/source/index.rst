@@ -35,6 +35,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    code_of_conduct
    installation
    unit_tests
+   benchmarking
    building_the_graph
    using_the_graph
    utilities
