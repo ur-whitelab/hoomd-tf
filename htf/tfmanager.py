@@ -104,7 +104,7 @@ class TFManager:
         else:
             fh = logging.FileHandler(log_filename)
             self.log.addHandler(fh)
-            self.log.setLevel(logging.INFO)
+            self.log.setLevel(logging.WARNING)
 
         self.device = device
         self.q = q

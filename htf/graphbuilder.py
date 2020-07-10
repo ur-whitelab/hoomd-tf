@@ -13,10 +13,14 @@ class graph_builder:
         :type nneighbor_cutoff: int
         :param output_forces: True if your graph will compute forces to be used in TensorFlow
         :type output_forces: bool
+        :type check_nlist: bool
+        :param check_nlist: True will raise error if neighbor
+                            list overflows (nneighbor_cutoff too low)
     """
+
     # \internal
     # \brief Initializes the graphbuilder class
-    def __init__(self, nneighbor_cutoff, output_forces=True):
+    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         # clear any previous graphs
@@ -52,6 +56,15 @@ class graph_builder:
                                                 true_fn=lambda: tf.constant(1),
                                                 false_fn=lambda: tf.constant(0)))
         self.out_nodes = [self.update_batch_index_op]
+
+        # add check for nlist size
+        if check_nlist:
+            NN = tf.reduce_max(tf.reduce_sum(tf.cast(self.nlist[:, :, 0] > 0,
+                                                     tf.dtypes.int32), axis=1),
+                               axis=0)
+            check_op = tf.Assert(tf.less(NN, nneighbor_cutoff), ['Neighbor list is full!'])
+            self.out_nodes.append(check_op)
+
 
     ## \var atom_number
     # \internal
@@ -288,6 +301,11 @@ class graph_builder:
 
         :return: None
         """
+
+        # make sure it is a tensor
+        if type(tensor) != tf.Tensor:
+            raise ValueError('save_tensor requires a tf.Tensor '
+                             'but given type {}'.format(type(tensor)))
 
         store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
                                 validate_shape=False, dtype=tensor.dtype, trainable=False)
