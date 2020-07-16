@@ -18,6 +18,7 @@ or other quantities, like collective variables, and do machine learning.
    quickstart
    installation
    unit_tests
+   benchmarking
    building_the_graph
    using_the_graph
    utilities
