@@ -53,11 +53,13 @@ class graph_builder:
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
         # update batch index and wrap around int32 max to avoid overflow
         self.update_batch_index_op = \
-            self.batch_steps.assign(tf.math.floormod(self.batch_steps + tf.cond(tf.equal(self.batch_index, tf.constant(0)),
-                                                                                true_fn=lambda: tf.constant(1),
-                                                                                false_fn=lambda: tf.constant(0)),
-                                                     2**31 - 1)
-                                    )
+            self.batch_steps.assign(tf.math.floormod(
+                self.batch_steps + tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                                           true_fn=lambda: tf.constant(
+                    1),
+                    false_fn=lambda: tf.constant(0)),
+                2**31 - 1)
+            )
         self.out_nodes = [self.update_batch_index_op]
 
         # add check for nlist size
