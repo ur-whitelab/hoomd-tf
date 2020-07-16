@@ -9,6 +9,8 @@ import hoomd
 
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
+
+
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     R""" Adds variables from ``model_directory`` to the TF graph loaded from a checkpoint,
     optionally other than the most recent one, or setting values with a feed dict.
@@ -193,10 +195,9 @@ def find_molecules(system):
 def matrix_mapping(molecule, beads_distribution):
     R""" This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
-    :param molecule: This is atom selection in the molecule.
-    :param beads_distribution: This is a dictionary of beads distribution, where keys should
-     be {Bead_1, Bead_2, ...} and values should be the atoms as strings just like how they appear
-     in the topology file.
+    :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
+    :param beads_distribution: This is a list of beads distribution lists, Note that
+    each list should contain the atoms as strings just like how they appear in the topology file.
 
     :return: An array of M x N.
     """
@@ -205,13 +206,14 @@ def matrix_mapping(molecule, beads_distribution):
     CG_matrix = np.zeros((M, N))
     index = 0
     for s in range(M):
-        for i, atom in enumerate(beads_distribution['Bead_{}'.format(str(s+1))]):
+        for i, atom in enumerate(beads_distribution[s]):
             CG_matrix[s, i+index] = [v for k,
-                                       v in Mws_dict.items() if atom in k][0]
+                                     v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
         CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
 
     return CG_matrix
+
 
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
@@ -300,7 +302,7 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
-    #if not (mapped_forces.shape ==
+    # if not (mapped_forces.shape ==
     #        calculated_cg_forces.shape):
     #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
@@ -373,7 +375,8 @@ def run_from_trajectory(model_directory, universe,
     out_nodes = []
     for name in model_params['out_nodes']:
         if isinstance(name, list):
-            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name[0]))
+            out_nodes.append(
+                tf.get_default_graph().get_tensor_by_name(name[0]))
         else:
             out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
