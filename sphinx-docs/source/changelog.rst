@@ -6,7 +6,7 @@ v0.7 (7/17/2020)
 
 *JOSS Review*
 
-Hoomd-TF has been published as a [peer-reviewed article](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90) in the
+Hoomd-TF has been published as a `peer-reviewed article <https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90>`_ in the
 Journal of Open Source Software (JOSS)
 
 *New Features*
