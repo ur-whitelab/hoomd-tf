@@ -26,6 +26,16 @@ maximum distance for to consider particles as being neighbors. ``nlist``
 is optional and is not required if your graph doesn't use the ``nlist``
 object (you passed ``NN = 0`` when building your graph).
 
+Logging
+--------
+
+The default logging level of Tensorflow is relatively noisy. You can reduce
+the amount of logged statements via
+
+.. code:: python
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+
 Batching
 --------
 
