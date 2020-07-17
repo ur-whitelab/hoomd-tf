@@ -51,10 +51,15 @@ class graph_builder:
         self.mol_batched = False
         self.MN = 0
         self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
+        # update batch index and wrap around int32 max to avoid overflow
         self.update_batch_index_op = \
-            self.batch_steps.assign_add(tf.cond(tf.equal(self.batch_index, tf.constant(0)),
-                                                true_fn=lambda: tf.constant(1),
-                                                false_fn=lambda: tf.constant(0)))
+            self.batch_steps.assign(tf.math.floormod(
+                self.batch_steps + tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                                           true_fn=lambda: tf.constant(
+                    1),
+                    false_fn=lambda: tf.constant(0)),
+                2**31 - 1)
+            )
         self.out_nodes = [self.update_batch_index_op]
 
         # add check for nlist size
@@ -329,7 +334,7 @@ class graph_builder:
         :param positions: Defaults to ``False``. Particle positions tensor to use
             for force calculations. If set to ``True``, uses ``self.positions``. If
             set to ``False`` (default), no position dependent forces will be computed.
-            Only pairwise forces from neighbor list will be applied. If set to a 
+            Only pairwise forces from neighbor list will be applied. If set to a
             tensor, that tensor will be used instead of ``self.positions``.
         :type positions: tensor
         :param nlist: Defaults to ``None``. Particle-wise neighbor list to use
