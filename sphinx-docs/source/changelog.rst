@@ -1,30 +1,40 @@
 Change Log
 ==========
 
-v0.7
+v0.7 (7/17/2020)
 ----
+
+*JOSS Review*
+
+Hoomd-TF has been published as a [peer-reviewed article](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90) in the
+Journal of Open Source Software (JOSS)
 
 *New Features*
 
 - Added pre-built molecular features
+- Added MDAnalysis style selection for defining mapping operators
 
 *Enhancements*
 
 - Docs can now be built without HTF install
 - mol batching performance is much better
 - Simplified variable saving
-- More example notebooks
+- More example notebooks and reduced file sizes of example trajectories
 - Supports dynamic boxes
 - Better EDS bias naming
 - Prevents accidentally computing forces from positions, instead of nlist
 - Added guards against compiler mismatch
 - Added sanity tests to prevent unsupported CPU/GPU modes
 - Added benchmarking script
+- Added check for nlist overflows on GPU
+- Added check for mismatch on saving variables/tensors
+- Fixed all compiler warnings
+- Added Dockerfile for containerized use
 
 *Bug Fixes*
 
 - Empty tensorboard summaries no longer crash
-
+- Prevented import issues with name clashes between packages and classes
 
 v0.6 (2020-02-21)
 -----------------------
