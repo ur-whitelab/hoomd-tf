@@ -46,7 +46,7 @@ Simple Compiling
 Install hoomd-blue and Tensorflow by your preferred method. If you
 want to install hoomd-blue without GPU support, you can just use the
 conda release via ``conda install -c conda-forge hoomd==2.5.2``. You
-should then similarly use the CPU version of Tensorflow (`pip install tensorflow==1.15`). If you would
+should then similarly use the CPU version of Tensorflow (``pip install tensorflow==1.15``). If you would
 like GPU support, compile hoomd-blue using `their instructions
 <http://hoomd-blue.readthedocs.io>`_. Remember that pip is recommended
 for installing Tensorflow. Here are steps **after** installing
