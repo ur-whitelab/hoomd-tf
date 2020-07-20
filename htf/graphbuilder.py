@@ -203,7 +203,9 @@ class graph_builder:
             :type r: tensor
             :return: The wrapped vector as a TF tensor
         """
-        return r - tf.math.round(r / self.box_size) * self.box_size
+        check_op = tf.Assert(tf.less(tf.reduce_sum(self.box[2]), 0.0001), ['box is skewed'])
+        with tf.control_dependencies([check_op]):
+            return r - tf.math.round(r / self.box_size) * self.box_size
 
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,

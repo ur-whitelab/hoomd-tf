@@ -244,12 +244,26 @@ class test_compute(unittest.TestCase):
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
             tfcompute.attach()
             hoomd.run(1)
 
+    def _test_skew_fails(self):
+        model_dir = build_examples.wrap_graph(self.tmp)
+        hoomd.context.initialize()
+        with hoomd.htf.tfcompute(model_dir) as tfcompute:
+            system = hoomd.init.create_lattice(
+                unitcell=hoomd.lattice.sq(a=4.0),
+                n=[3, 3])
+            # add tilt here
+            hoomd.update.box_resize(xy=0.5)
+            hoomd.run(1)
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
+            tfcompute.attach()
+            with self.assertRaises(RuntimeError):
+                hoomd.run(1)
 
     def test_feeddict_func(self):
         model_dir = build_examples.feeddict_graph(self.tmp)
@@ -621,7 +635,7 @@ class test_saving(unittest.TestCase):
 
         # now load
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
-        
+
     def test_tensor_save_var_fail(self):
         graph = hoomd.htf.graph_builder(0, output_forces=False)
         v = tf.Variable(0, name='foo')
