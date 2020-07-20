@@ -154,6 +154,31 @@ class test_mappings(unittest.TestCase):
         # TODO: Come up with a real test of this.
         assert True
 
+    def test_skewed_box(self):
+        model_dir = 'test_skewed_box'
+        graph = hoomd.htf.graph_builder(0, output_forces=False)
+        hoomd.context.initialize('--mode=cpu')
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
+                                           n=[3, 3, 3])
+        box_skews = [system.box.xy, system.box.xz, system.box.yz]
+        box_skews = tf.convert_to_tensor(box_skews)
+        graph.save_tensor(box_skews, 'Box_skews')
+        graph.save(model_dir)
+        with hoomd.htf.tfcompute(model_dir, device='/CPU:0') as tfcompute:
+            rcut = 5
+            nlist = hoomd.md.nlist.cell()
+            hoomd.md.integrate.mode_standard(dt=0.005)
+            hoomd.md.integrate.nve(group=hoomd.group.all())
+            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
+            hoomd.run(1e2)
+        variables = hoomd.htf.load_variables(model_dir, ['Box_skews'])
+        skews = variables['Box_skews']
+        graph.wrap_vector(10, skews)
+        try:
+            shutil.rmtree(model_dir)
+        except OSError as e:
+            print("Error: %s - %s." % (e.filename, e.strerror))
+
     def test_force_matching(self):
         model_dir = build_examples.lj_force_matching(NN=15)
         # calculate lj forces with a leading coeff

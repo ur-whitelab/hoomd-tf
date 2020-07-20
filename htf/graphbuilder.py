@@ -196,13 +196,24 @@ class graph_builder:
             nlist = nlist * mask[:, :, tf.newaxis]
         return nlist
 
-    def wrap_vector(self, r):
-        R"""Computes the minimum image version of the given vector.
+    def wrap_vector(self, r, box_skews=None):
+        R"""Computes the minimum image version of the given vector and raises an error for skewed boxes.
 
             :param r: The vector to wrap around the HOOMD box.
             :type r: tensor
+            :param box_skews: Array for the HOOMD box skews.
             :return: The wrapped vector as a TF tensor
         """
+        tilted_axis = ['x axis', 'y axis', 'z axis']
+        if box_skews is None:
+            box_skews = self.box
+        else:
+            tilt_value = box_skews
+            for i in range(3):
+                if tilt_value[i] != 0:
+                    raise Exception(
+                        'Simulation box is tilted in {}. Current version of Hoomd-tf cannot does not support skewed boxes.'.format(tilted_axis[i]))
+
         return r - tf.math.round(r / self.box_size) * self.box_size
 
 
