@@ -17,15 +17,17 @@ authors:
   - name: Heta A Gandhi
     orcid: 0000-0002-9465-3840
     affiliation: 1
-  - name: Geemi Wellawatte
+  - name: Geemi P Wellawatte
     orcid: 0000-0002-3772-6927
-    affiliation: 1
+    affiliation: 2
   - name: Andrew D White
     orcid: 0000-0002-6647-3965
     affiliation: 1
 affiliations:
  - name: University of Rochester Chemical Engineering Department
    index: 1
+ - name: University of Rochester Chemistry Department
+   index: 2
 date: 27 February 2020
 bibliography: paper.bib
 ---
