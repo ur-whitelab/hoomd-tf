@@ -23,7 +23,7 @@ Specific Guidelines
 We, the contributors and participants, aim to:
 
 1. Be welcoming. Any and all who are willing and able to contribute to this project
-should feel to participate. To this end, we encourage the use of public communication
+should feel welcome to participate. To this end, we encourage the use of public communication
 such as GitHub issue tracking as much as possible, to ensure those who join later can
 benefit from any useful discussion.
 
