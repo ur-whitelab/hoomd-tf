@@ -9,6 +9,8 @@ import hoomd
 
 # \internal
 # \brief load the TensorFlow variables from a checkpoint
+
+
 def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     R""" Adds variables from ``model_directory`` to the TF graph loaded from a checkpoint,
     optionally other than the most recent one, or setting values with a feed dict.
@@ -142,6 +144,8 @@ def find_molecules(system):
     This is a slow function and should only be called once.
 
     :param system: The molecular system in HOOMD.
+
+    :return: A list of length L (number of molecules) whose elements are lists of atom indices
     """
     mapping = []
     mapped = set()
@@ -188,6 +192,29 @@ def find_molecules(system):
 
 # \internal
 # \brief Finds mapping operators for coarse-graining
+def matrix_mapping(molecule, beads_distribution):
+    R""" This will create a M x N mass weighted mapping matrix where M is the number
+        of atoms in the molecule and N is the number of mapping beads.
+    :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
+    :param beads_distribution: This is a list of beads distribution lists, Note that
+    each list should contain the atoms as strings just like how they appear in the topology file.
+
+    :return: An array of M x N.
+    """
+    Mws_dict = dict(zip(molecule.names, molecule.masses))
+    M, N = len(beads_distribution), len(molecule)
+    CG_matrix = np.zeros((M, N))
+    index = 0
+    for s in range(M):
+        for i, atom in enumerate(beads_distribution[s]):
+            CG_matrix[s, i+index] = [v for k,
+                                     v in Mws_dict.items() if atom in k][0]
+        index += np.count_nonzero(CG_matrix[s])
+        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
+
+    return CG_matrix
+
+
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     R""" This will create the necessary indices and values for
@@ -200,7 +227,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         There should be one matrix per molecule.
         The ordering of the atoms should follow
         what is defined in the output from find_molecules
-    :param molecule_mapping_index: This is the output from find_molecules.
+    :param molecule_mapping_index: This is the output from find_molecules. 
+         A list of length L (number of molecules) whose elements are lists of atom indices
     :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
         weight by mass of the atoms.
@@ -209,7 +237,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         where N is number of atoms
     """
     assert type(molecule_mapping[0]) == np.ndarray
-    assert molecule_mapping[0].dtype in [np.int, np.int32, np.int64]
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
     M = sum([m.shape[0] for m in molecule_mapping])
@@ -232,7 +259,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
                     if system is not None:
                         vs.append(system.particles[mmi[j]].mass)
                     else:
-                        vs.append(1.)
+                        vs.append(mm[i, j])
         # now scale values by mases
         if system is not None:
             # now add up masses
@@ -248,7 +275,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         indices.extend(idx)
         values.extend(vs)
         total_i += len(masses)
-    return tf.SparseTensor(indices=indices, values=values, dense_shape=[M, N])
+    return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
 
 
 def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
@@ -275,7 +302,7 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
         raise ValueError('mapped_forces must have the dimension [M x 3]'
                          'where M is the number of coarse-grained particles')
     # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
-    #if not (mapped_forces.shape ==
+    # if not (mapped_forces.shape ==
     #        calculated_cg_forces.shape):
     #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
@@ -348,7 +375,8 @@ def run_from_trajectory(model_directory, universe,
     out_nodes = []
     for name in model_params['out_nodes']:
         if isinstance(name, list):
-            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name[0]))
+            out_nodes.append(
+                tf.get_default_graph().get_tensor_by_name(name[0]))
         else:
             out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
