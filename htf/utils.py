@@ -211,7 +211,8 @@ def matrix_mapping(molecule, beads_distribution):
                                      v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
         CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
-
+    # Cheking that all atoms in the topology are included in the bead distribution list:
+    assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
     return CG_matrix
 
 
