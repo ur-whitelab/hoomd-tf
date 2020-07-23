@@ -195,7 +195,7 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list):
         Depnding on the size of your system, this fuction might be slow to run.
 
     :param topology: The tpr topology file from GROMACS.
-    :param atoms_in_molecule_list: This is a list atoms lists in every molecule type in the system.
+    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type in the system.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
     """
