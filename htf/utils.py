@@ -190,8 +190,41 @@ def find_molecules(system):
     return mapping
 
 
+def find_molecules_from_topology(universe, atoms_in_molecule_list):
+    R""" Given a universe from MDAnaylis and list of atoms in every molecule type in the system, return a mapping from molecule index to particle index.
+        Depnding on the size of your system, this fuction might be slow to run.
+
+    :param topology: The tpr topology file from GROMACS.
+    :param atoms_in_molecule_list: This is a list atoms lists in every molecule type in the system.
+
+    :return: A list of length L (number of molecules) whose elements are lists of atom indices.
+    """
+    
+    # Getting total number of atoms in topology
+    Total_number_of_atoms = universe.atoms.n_atoms
+
+    # Getting the list of every redidue type name in topology
+    _, idx = np.unique(universe.atoms.resnames, return_index=True)
+    resname_list = universe.atoms.resnames[np.sort(idx)].tolist()
+
+    molecule_list_indexed = []
+    molecule_to_be_added = []
+    for i in range(Total_number_of_atoms):
+        resname_type_index = resname_list.index(universe.atoms.resnames[i])
+        molecule_length = len(atoms_in_molecule_list[resname_type_index])
+        if len(molecule_to_be_added) < molecule_length:
+            molecule_to_be_added.append(i)
+        if len(molecule_to_be_added) == molecule_length:
+            molecule_list_indexed.append(molecule_to_be_added)
+            molecule_to_be_added = []
+    assert molecule_list_indexed[-1][-1] == Total_number_of_atoms - \
+        1, 'Mismatch found between the number of atoms in the system and the final index value. Check your atoms_in_molecule_list input.'
+    return molecule_list_indexed
+
 # \internal
 # \brief Finds mapping operators for coarse-graining
+
+
 def matrix_mapping(molecule, beads_distribution):
     R""" This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
