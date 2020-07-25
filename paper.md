@@ -24,9 +24,9 @@ authors:
     orcid: 0000-0002-6647-3965
     affiliation: 1
 affiliations:
- - name: University of Rochester Chemical Engineering Department
+ - name: University of Rochester Chemical Engineering Department, Rochester, New York, United States of America
    index: 1
- - name: University of Rochester Chemistry Department
+ - name: University of Rochester Chemistry Department, Rochester, New York, United States of America
    index: 2
 date: 27 February 2020
 bibliography: paper.bib
