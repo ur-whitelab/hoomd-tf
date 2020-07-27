@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v1.0.1 (7/27/2020)
+----
+
+*Bug fixes*
+- Prevented CPU overflow when nlist is too small (and added unit test)
+- Adding check on mapping validity
+
 v1.0 (7/20/2020)
 ----
 
