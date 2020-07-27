@@ -400,7 +400,6 @@ class tfcompute(hoomd.compute._compute):
         self.q = [queue.Queue(maxsize=1), queue.Queue(maxsize=1)]
         self.tfm = threading.Thread(target=main, args=(
                 self.q, self.write_tensorboard, self.device))
-        #self.tfm.daemon = True
         self.tfm.start()
         hoomd.context.msg.notice(2, 'Started TF Session Manager.\n')
 

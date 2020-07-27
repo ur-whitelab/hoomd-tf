@@ -68,7 +68,7 @@ class test_access(unittest.TestCase):
             pa = tfcompute.get_positions_array()
             nl = tfcompute.get_nlist_array()
             # make sure we get the 3 types
-            self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))),3)
+            self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))), 3)
             self.assertEqual(len(np.unique(pa[:, 3].astype(np.int))), 3)
 
 class test_compute(unittest.TestCase):
@@ -455,7 +455,6 @@ class test_compute(unittest.TestCase):
                     np.testing.assert_allclose(energy[-1],
                                                energy[-2], atol=1e-3)
 
-
     def test_nlist_count(self):
         '''Make sure nlist is full, not half
         '''
@@ -474,7 +473,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.nve(group=hoomd.group.all(
                     )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1) #in lattice, should have 4 neighbors
+            hoomd.run(1) # in lattice, should have 4 neighbors
             nl = tfcompute.get_nlist_array()
             ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
             self.assertEqual(np.min(ncount), 4)
