@@ -73,6 +73,7 @@ class tfcompute(hoomd.compute._compute):
         self.bootstrap_map = bootstrap_map
         self.feed_dict = None
         self.use_xla = use_xla
+        self._force_shutdown = True
 
     ## \var tfm
     # \internal
@@ -175,7 +176,7 @@ class tfcompute(hoomd.compute._compute):
         Tells TensorFlow to shutdown its instance, through TFManager.
         """
         # trigger end in task lock
-        if not self.mock_mode and self.tfm.is_alive():
+        if not self.mock_mode and self.tfm.is_alive() and self._force_shutdown:
             hoomd.context.msg.notice(2, 'Sending exit signal.\n')
             if self.tfm and self.tfm.is_alive():
                 hoomd.context.msg.notice(2, 'Shutting down TF Manually.\n')
@@ -260,7 +261,7 @@ class tfcompute(hoomd.compute._compute):
                                      'Increase MN in your graph.')
                 while len(mi) < self.graph_info['MN']:
                     mi.append(0)
-                    
+
             # now make reverse
             self.rev_mol_indices = _make_reverse_indices(self.mol_indices)
 
@@ -387,16 +388,16 @@ class tfcompute(hoomd.compute._compute):
         R""" Shut down the TensorFlow instance.
         """
         # need to terminate orphan
-        if not self.q.full():
+        if not self.q[0].full():
             hoomd.context.msg.notice(2, 'TF Queue is waiting, sending None\n')
-            self.q.put(None)
+            self.q[0].put(None)
         self.tfm.join(1)
 
     def _init_tf(self):
         R""" set up the TensorFlow instance.
         Create threading queue and give it to TensorFlow manager.
         """
-        self.q = queue.Queue(maxsize=1)
+        self.q = [queue.Queue(maxsize=1), queue.Queue(maxsize=1)]
         self.tfm = threading.Thread(target=main, args=(
                 self.q, self.write_tensorboard, self.device))
         self.tfm.start()
@@ -425,7 +426,7 @@ class tfcompute(hoomd.compute._compute):
                 'device': self.device,
                 'use_xla': self.use_xla,
                 'mol_indices': [self.mol_indices, self.rev_mol_indices] if self.mol_indices else None}
-        self.q.put(args)
+        self.q[0].put(args)
         message = ['Starting TF Manager with:']
         for k, v in args.items():
             if k == 'graph_info':
@@ -437,7 +438,7 @@ class tfcompute(hoomd.compute._compute):
             message.append('\t  {: <18}: {: >20}'.format(str(k), str(v)))
         for m in message:
             hoomd.context.msg.notice(8, m + '\n')
-        self.q.join()
+        self.q[0].join()
         if not self.tfm.is_alive():
             exit()
         hoomd.context.msg.notice(2, 'TF Session Manager has released control.'
@@ -457,15 +458,17 @@ class tfcompute(hoomd.compute._compute):
             if type(self.feed_dict) == dict:
                 value = self.feed_dict
             else:
-                value = self.feed_dict(self)
+                value = self.feed_dict(self,)
                 assert value is not None, 'feed_dict callable failed to provide value'
-            self.q.put({**value, **fd}, block=False)
+            self.q[0].put({**value, **fd}, block=False)
         else:
-            self.q.put(fd, block=False)
-        self.q.join()
-        if not self.tfm.is_alive():
-            hoomd.context.msg.error('TF Session Manager has unexpectedly stopped\n')
-            raise RuntimeError('TF Session Manager has unexpectedly stopped\n')
+            self.q[0].put(fd, block=False)
+        self.q[0].join()
+        result, e = self.q[1].get()
+        if not result:
+            self._force_shutdown = False
+            raise e
+
 
     def get_positions_array(self):
         R""" Retrieve positions array as numpy array

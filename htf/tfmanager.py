@@ -9,6 +9,7 @@ import os
 import pickle
 import cProfile
 import queue
+import copy
 import time
 
 saver_args = {'max_to_keep': 1000000}
@@ -16,7 +17,7 @@ saver_args = {'max_to_keep': 1000000}
 
 def main(q, write_tensorboard=False, profile=False):
 
-    tfm_args = q.get()
+    tfm_args = q[0].get()
     tfm = TFManager(q=q,
                     write_tensorboard=write_tensorboard, **tfm_args)
     if(profile):
@@ -576,14 +577,14 @@ class TFManager:
                 self._attach_tensorboard(sess)
             # indicating we are ready to begin
             self.log.log(10, 'Completed TF Set-up')
-            self.q.task_done()
+            self.q[0].task_done()
             cumtime = 0
             processing_cumtime = 0
-            result = None
+            result = True, None
             feed_dict = None
             while True:
                 try:
-                    raw_feed_dict = self.q.get()
+                    raw_feed_dict = self.q[0].get()
                     if raw_feed_dict is None:
                         self.log.info('Empty Queue')
                         raise queue.Empty()
@@ -612,7 +613,11 @@ class TFManager:
                         feed_dict[tensor] = v
                     processing_cumtime += (time.perf_counter() - last_clock)
                     last_clock = time.perf_counter()
-                    result = self._update(sess, feed_dict, bi)
+                    self._update(sess, feed_dict, bi)
+                except Exception as e:
+                    result = False, e
+                    return
                 finally:
                     cumtime += (time.perf_counter() - last_clock)
-                    self.q.task_done()
+                    self.q[0].task_done()
+                    self.q[1].put(result)
