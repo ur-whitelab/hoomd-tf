@@ -249,7 +249,7 @@ class test_compute(unittest.TestCase):
             tfcompute.attach()
             hoomd.run(1)
 
-    def _test_skew_fails(self):
+    def test_skew_fails(self):
         model_dir = build_examples.wrap_graph(self.tmp)
         hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
@@ -262,7 +262,7 @@ class test_compute(unittest.TestCase):
             hoomd.md.integrate.mode_standard(dt=0.005)
             hoomd.md.integrate.nve(group=hoomd.group.all())
             tfcompute.attach()
-            with self.assertRaises(RuntimeError):
+            with self.assertRaises(tf.errors.InvalidArgumentError):
                 hoomd.run(1)
 
     def test_feeddict_func(self):
