@@ -477,7 +477,7 @@ class test_compute(unittest.TestCase):
             hoomd.run(1) #in lattice, should have 4 neighbors
             nl = tfcompute.get_nlist_array()
             ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
-            self.assertEqual(np.min(count), 4)
+            self.assertEqual(np.min(ncount), 4)
 
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to

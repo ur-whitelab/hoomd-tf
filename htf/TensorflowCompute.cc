@@ -161,7 +161,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
             // get positions
             m_positions_comm.receiveArray(m_pdata->getPositions(), offset, N, true);
             updateBox();
-            
+
             // Now we prepare forces if we're sending it
             // forces are size  N, not batch size so we only do this on first batch
             if (m_force_mode == FORCE_MODE::hoomd2tf && i == 0)
@@ -236,8 +236,8 @@ void TensorflowCompute<M>::updateBox()
     {
     ArrayHandle<Scalar3>* m_box = NULL;
     m_box = new ArrayHandle<Scalar3>(m_box_array, access_location::host,
-        access_mode::overwrite);        
-    
+        access_mode::overwrite);
+
     const BoxDim& box = m_pdata->getBox();
     m_box->data[0] = box.getLo();
     m_box->data[1] = box.getHi();
@@ -295,7 +295,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
     // for each particle adjust nlist
     // bi is buffer index
-    unsigned int bi = 0; 
+    unsigned int bi = 0;
     for (unsigned int i = batch_offset; i < batch_offset + batch_size; i++, bi++)
         {
         // access the particle's position and type (MEM TRANSFER: 4 scalars)
@@ -321,23 +321,6 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
             if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut) continue;
-
-	    /*
-	    if (nnoffset[bi] >= size)
-	      {
-		m_exec_conf->msg->error()
-		  << "Overflow in nlist! Only "
-		  << m_nneighs
-		  << " space but there are "
-		  << size
-		  << " neighbors."
-		  << std::endl;
-		throw std::runtime_error("Nlist Overflow");
-	      }
-	    */
-	    // prevent segmentation fault
-	    // we check for this in TF ops
-            nnoffset[bi] %= size;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
             buffer[bi * m_nneighs + nnoffset[bi]].z = dx.z;
@@ -345,7 +328,9 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
             // easy for it to die being typecast on the way to
             // TF
             buffer[bi * m_nneighs + nnoffset[bi]].w = static_cast<Scalar> (__scalar_as_int(h_pos.data[k].w));
-            nnoffset[bi]++;
+            // prevent segmentation fault
+	        // we check for NN overflows this in TF ops
+            nnoffset[bi] = (nnoffset[bi] + 1) % m_nneighs;
             }
         }
     free(nnoffset);
