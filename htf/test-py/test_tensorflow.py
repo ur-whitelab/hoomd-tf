@@ -13,6 +13,7 @@ import glob
 import numpy as np
 import math
 import tensorflow as tf
+tf.compat.v1.disable_v2_behavior()
 import build_examples
 
 from hoomd.htf.tensorflowcompute import _make_reverse_indices
@@ -38,6 +39,7 @@ def compute_forces(system, rcut):
 
 class test_access(unittest.TestCase):
     def setUp(self):
+        hoomd.context.initialize()
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -47,7 +49,6 @@ class test_access(unittest.TestCase):
         model_dir = build_examples.simple_potential(self.tmp)
         with hoomd.htf.tfcompute(model_dir,
                                  _mock_mode=True) as tfcompute:
-            hoomd.context.initialize()
             rcut = 3
             # create a system with a few types
             cell = hoomd.lattice.unitcell(
@@ -73,6 +74,7 @@ class test_access(unittest.TestCase):
 
 class test_compute(unittest.TestCase):
     def setUp(self):
+        hoomd.context.initialize()
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -81,7 +83,6 @@ class test_compute(unittest.TestCase):
     def test_force_overwrite(self):
         model_dir = build_examples.simple_potential(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -107,7 +108,6 @@ class test_compute(unittest.TestCase):
     def test_nonlist(self):
         model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
                 n=[32, 32])
@@ -118,7 +118,6 @@ class test_compute(unittest.TestCase):
             hoomd.run(10)
 
     def test_full_batch(self):
-        hoomd.context.initialize()
         model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -129,7 +128,6 @@ class test_compute(unittest.TestCase):
             hoomd.run(10)
 
     def test_write_empty_tensorboard(self):
-        hoomd.context.initialize()
         model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir, write_tensorboard=True) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -144,7 +142,6 @@ class test_compute(unittest.TestCase):
         model_dir = build_examples.trainable_graph(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir,
                                  write_tensorboard=True) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
@@ -166,7 +163,6 @@ class test_compute(unittest.TestCase):
                 9 - 1, model_dir),
             bootstrap_map={'epsilon': 'lj-epsilon', 'sigma': 'lj-sigma'
                            }) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -185,7 +181,6 @@ class test_compute(unittest.TestCase):
                 9 - 1, model_dir),
             bootstrap_map={'epsilon': 'lj-epsilon'
                            }) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -200,7 +195,6 @@ class test_compute(unittest.TestCase):
     def test_print(self):
         model_dir = build_examples.print_graph(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -218,7 +212,6 @@ class test_compute(unittest.TestCase):
 
     def test_noforce_graph(self):
         model_dir = build_examples.noforce_graph(self.tmp)
-        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
             NN = N - 1
@@ -239,7 +232,6 @@ class test_compute(unittest.TestCase):
 
     def test_wrap(self):
         model_dir = build_examples.wrap_graph(self.tmp)
-        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -251,7 +243,6 @@ class test_compute(unittest.TestCase):
 
     def test_skew_fails(self):
         model_dir = build_examples.wrap_graph(self.tmp)
-        hoomd.context.initialize()
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -268,7 +259,6 @@ class test_compute(unittest.TestCase):
     def test_feeddict_func(self):
         model_dir = build_examples.feeddict_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -290,7 +280,6 @@ class test_compute(unittest.TestCase):
     def test_feeddict(self):
         model_dir = build_examples.feeddict_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -311,7 +300,6 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         model_dir = build_examples.lj_graph(N - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             T = 10
             rcut = 5.0
             system = hoomd.init.create_lattice(
@@ -332,7 +320,6 @@ class test_compute(unittest.TestCase):
                                   for j in range(N)])
             tf_forces = np.array(tf_forces)
         # now run with stock lj
-        hoomd.context.initialize()
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -357,7 +344,6 @@ class test_compute(unittest.TestCase):
     def test_running_mean(self):
         model_dir = build_examples.lj_running_mean(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -411,7 +397,6 @@ class test_compute(unittest.TestCase):
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             rcut = 5.0
             system = hoomd.init.create_lattice(
                 unitcell=hoomd.lattice.sq(a=4.0),
@@ -430,7 +415,6 @@ class test_compute(unittest.TestCase):
     def test_lj_energy(self):
         model_dir = build_examples.lj_graph(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             T = 10
@@ -460,7 +444,6 @@ class test_compute(unittest.TestCase):
         '''
         model_dir = build_examples.lj_graph(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             T = 10
@@ -486,7 +469,6 @@ class test_compute(unittest.TestCase):
         # set that high.
         model_dir = build_examples.lj_graph(9 - 1, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             N = 3 * 3
             NN = N - 1
             rcut = 5.0
@@ -538,12 +520,12 @@ class test_mol_batching(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
+        hoomd.context.initialize()
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
     def test_single_atom(self):
-        hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
@@ -558,7 +540,6 @@ class test_mol_batching(unittest.TestCase):
             hoomd.run(8)
 
     def test_single_atom_batched(self):
-        hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
         with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
             N = 3 * 3
@@ -574,7 +555,6 @@ class test_mol_batching(unittest.TestCase):
             hoomd.run(8)
 
     def test_single_atom_malformed(self):
-        hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
         with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
             N = 3 * 3
@@ -590,7 +570,6 @@ class test_mol_batching(unittest.TestCase):
             hoomd.run(8)
 
     def test_multi_atom(self):
-        hoomd.context.initialize()
         model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             N = 3 * 3
@@ -607,7 +586,6 @@ class test_mol_batching(unittest.TestCase):
             hoomd.run(8)
 
     def test_mol_force_output(self):
-        hoomd.context.initialize()
         model_dir = build_examples.mol_force(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -618,8 +596,6 @@ class test_mol_batching(unittest.TestCase):
             hoomd.run(8)
 
     def test_reverse_mol_index(self):
-        # need this for logging
-        hoomd.context.initialize()
         # each element is the index of atoms in the molecule
         mi = [[1, 2, 0, 0, 0], [3, 0, 0, 0, 0], [4, 5, 7, 8, 9]]
         rmi = _make_reverse_indices(mi)
@@ -640,13 +616,13 @@ class test_mol_batching(unittest.TestCase):
 
 class test_saving(unittest.TestCase):
     def setUp(self):
+        hoomd.context.initialize()
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
     def test_tensor_save(self):
-        hoomd.context.initialize()
         model_dir = build_examples.saving_graph(self.tmp)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
             system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
@@ -669,6 +645,8 @@ class test_saving(unittest.TestCase):
 class test_nlist(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
+        hoomd.context.initialize()
+
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -680,7 +658,6 @@ class test_nlist(unittest.TestCase):
         N = 8 * 8
         model_dir = build_examples.lj_graph(4, self.tmp, check_nlist=True)
         with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
             T = 10
             rcut = 10.0
             system = hoomd.init.create_lattice(

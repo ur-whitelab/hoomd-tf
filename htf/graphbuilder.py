@@ -26,35 +26,35 @@ class graph_builder:
         # clear any previous graphs
         atom_number = None
         self.atom_number = atom_number
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
         self.nneighbor_cutoff = nneighbor_cutoff
         # use zeros so that we don't need to feed to start session
-        self.nlist = tf.placeholder(tf.float32,
+        self.nlist = tf.compat.v1.placeholder(tf.float32,
                                     shape=[atom_number, nneighbor_cutoff, 4],
                                     name='nlist-input')
         self.virial = None
-        self.positions = tf.placeholder(tf.float32, shape=[atom_number, 4],
+        self.positions = tf.compat.v1.placeholder(tf.float32, shape=[atom_number, 4],
                                         name='positions-input')
         # our box:
         # [ [x_low,  y_low,  z_low],
         #   [x_high, y_high, z_high],
         #   [x_tilt, y_tilt, z_tilt] ]
-        self.box = tf.placeholder(tf.float32, shape=[3, 3], name='box-input')
+        self.box = tf.compat.v1.placeholder(tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
         if not output_forces:
-            self.forces = tf.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
-        self.batch_frac = tf.placeholder(tf.float32, shape=[], name='htf-batch-frac')
-        self.batch_index = tf.placeholder(tf.int32, shape=[], name='htf-batch-index')
+            self.forces = tf.compat.v1.placeholder(tf.float32, shape=[atom_number, 4], name='forces-input')
+        self.batch_frac = tf.compat.v1.placeholder(tf.float32, shape=[], name='htf-batch-frac')
+        self.batch_index = tf.compat.v1.placeholder(tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
         self.MN = 0
-        self.batch_steps = tf.get_variable('htf-batch-steps', dtype=tf.int32, initializer=0, trainable=False)
+        self.batch_steps = tf.Variable(name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
         # update batch index and wrap around int32 max to avoid overflow
         self.update_batch_index_op = \
             self.batch_steps.assign(tf.math.floormod(
-                self.batch_steps + tf.cond(tf.equal(self.batch_index, tf.constant(0)),
+                self.batch_steps + tf.cond(pred=tf.equal(self.batch_index, tf.constant(0)),
                                            true_fn=lambda: tf.constant(
                     1),
                     false_fn=lambda: tf.constant(0)),
@@ -64,7 +64,7 @@ class graph_builder:
 
         # add check for nlist size
         if check_nlist:
-            NN = tf.reduce_max(tf.reduce_sum(tf.cast(self.nlist[:, :, 0] > 0,
+            NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
                                                      tf.dtypes.int32), axis=1),
                                axis=0)
             check_op = tf.Assert(tf.less(NN, nneighbor_cutoff), ['Neighbor list is full!'])
@@ -189,7 +189,7 @@ class graph_builder:
         if type_tensor is None:
             type_tensor = self.positions[:, 3]
         if type_i is not None:
-            nlist = tf.boolean_mask(nlist, tf.equal(type_tensor, type_i))
+            nlist = tf.boolean_mask(tensor=nlist, mask=tf.equal(type_tensor, type_i))
         if type_j is not None:
             # cannot use boolean mask due to size
             mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
@@ -203,7 +203,7 @@ class graph_builder:
             :type r: tensor
             :return: The wrapped vector as a TF tensor
         """
-        check_op = tf.Assert(tf.less(tf.reduce_sum(self.box[2]), 0.0001), ['box is skewed'])
+        check_op = tf.Assert(tf.less(tf.reduce_sum(input_tensor=self.box[2]), 0.0001), ['box is skewed'])
         with tf.control_dependencies([check_op]):
             return r - tf.math.round(r / self.box_size) * self.box_size
 
@@ -235,7 +235,7 @@ class graph_builder:
             positions = self.positions
         # filter types
         nlist = self.masked_nlist(type_i, type_j, nlist, positions[:, 3])
-        r = tf.norm(nlist[:, :, :3], axis=2)
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
                        tf.float32)
         shell_rs = tf.linspace(r_range[0], r_range[1], nbins + 1)
@@ -267,24 +267,24 @@ class graph_builder:
         if batch_reduction not in ['mean', 'sum']:
             raise ValueError('Unable to perform {}'
                              'reduction across batches'.format(batch_reduction))
-        store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
+        store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
                                 validate_shape=False, dtype=tf.float32, trainable=False)
-        with tf.name_scope(name + '-batch'):
+        with tf.compat.v1.name_scope(name + '-batch'):
             # keep batch avg
-            batch_store = tf.get_variable(name + '-batch',
-                                          initializer=tf.zeros_like(tensor),
+            batch_store = tf.Variable(name=name + '-batch',
+                                          initial_value=tf.zeros_like(tensor),
                                           validate_shape=False, dtype=tf.float32, trainable=False)
             with tf.control_dependencies([self.update_batch_index_op]):
                 # moving the batch store to normal store after batch is complete
                 move_op = store.assign(tf.cond(
-                    tf.equal(self.batch_index, tf.constant(0)),
+                    pred=tf.equal(self.batch_index, tf.constant(0)),
                     true_fn=lambda: (batch_store - store) /
                     tf.cast(self.batch_steps, dtype=tf.float32) + store,
                     false_fn=lambda: store))
                 self.out_nodes.append(move_op)
                 with tf.control_dependencies([move_op]):
                     reset_op = batch_store.assign(tf.cond(
-                        tf.equal(self.batch_index, tf.constant(0)),
+                        pred=tf.equal(self.batch_index, tf.constant(0)),
                         true_fn=lambda: tf.zeros_like(tensor),
                         false_fn=lambda: batch_store))
                     self.out_nodes.append(reset_op)
@@ -314,7 +314,7 @@ class graph_builder:
             raise ValueError('save_tensor requires a tf.Tensor '
                              'but given type {}'.format(type(tensor)))
 
-        store = tf.get_variable(name, initializer=tf.zeros_like(tensor),
+        store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
                                 validate_shape=False, dtype=tensor.dtype, trainable=False)
 
         store_op = store.assign(tensor)
@@ -355,29 +355,29 @@ class graph_builder:
             nlist = self.nlist
         if positions is True:
             positions = self.positions
-        with tf.name_scope('force-gradient'):
+        with tf.compat.v1.name_scope('force-gradient'):
             # compute -gradient wrt positions
             if positions is not False:
-                pos_forces = tf.gradients(tf.negative(energy), positions)[0]
+                pos_forces = tf.gradients(ys=tf.negative(energy), xs=positions)[0]
             else:
                 pos_forces = None
             if pos_forces is not None:
                 pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
             # minus sign cancels when going from force on
             # neighbor to force on origin in nlist
-            nlist_forces = tf.gradients(energy, nlist)[0]
+            nlist_forces = tf.gradients(ys=energy, xs=nlist)[0]
             if nlist_forces is not None:
                 nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
                                            name='nlist-pairwise-force'
                                                 '-gradient-raw')
-                zeros = tf.zeros(tf.shape(nlist_forces))
-                nlist_forces = tf.where(tf.is_finite(nlist_forces),
+                zeros = tf.zeros(tf.shape(input=nlist_forces))
+                nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
                                         nlist_forces, zeros,
                                         name='nlist-pairwise-force-gradient')
-                nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
+                nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                              name='nlist-force-gradient')
                 if virial:
-                    with tf.name_scope('virial-calc'):
+                    with tf.compat.v1.name_scope('virial-calc'):
                         # now treat virial
                         nlist3 = nlist[:, :, :3]
                         rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
@@ -407,20 +407,20 @@ class graph_builder:
             print('WARNING: Your energy is multidimensional per particle.'
                   'Hopefully that is intentional')
             energy = tf.reshape(
-                tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))),
-                [tf.shape(forces)[0], 1])
+                tf.reduce_sum(input_tensor=energy, axis=list(range(1, len(energy.shape)))),
+                [tf.shape(input=forces)[0], 1])
             forces = tf.concat([forces[:, :3], energy], -1)
         elif len(energy.shape) == 0:
             forces = tf.concat([forces[:, :3],
                                 tf.reshape(tf.tile(tf.reshape(energy, [1]),
-                                                   tf.shape(forces)[0:1]),
+                                                   tf.shape(input=forces)[0:1]),
                                            shape=[-1, 1])],
                                -1)
         else:
             forces = tf.concat(
                 [forces[:, :3], tf.reshape(
                     energy,
-                    [tf.shape(forces)[0], 1])], -1)
+                    [tf.shape(input=forces)[0], 1])], -1)
         return tf.identity(forces, name='computed-forces')
 
     def build_mol_rep(self, MN):
@@ -443,11 +443,11 @@ class graph_builder:
         :return: None
         """
 
-        self.mol_indices = tf.placeholder(tf.int32,
+        self.mol_indices = tf.compat.v1.placeholder(tf.int32,
                                           shape=[None, MN],
                                           name='htf-molecule-index')
 
-        self.rev_mol_indices = tf.placeholder(tf.int32,
+        self.rev_mol_indices = tf.compat.v1.placeholder(tf.int32,
                                               shape=[None, 2],
                                               name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
@@ -490,7 +490,7 @@ class graph_builder:
         :param delta: Tolerance for magnitude that triggers safe division.
         :return: The safe division op (TensorFlow operation)
         """
-        op = tf.where(
+        op = tf.compat.v1.where(
                tf.greater(denominator, delta),
                tf.truediv(numerator, denominator + delta),
                tf.zeros_like(denominator))
@@ -511,7 +511,7 @@ class graph_builder:
             accuracy loss.
         :return: The safe norm op (TensorFlow operation)
         """
-        return tf.norm(tensor + delta, **kwargs)
+        return tf.norm(tensor=tensor + delta, **kwargs)
 
     def save(self, model_directory, force_tensor=None, virial=None,
              out_nodes=None, move_previous=True):
@@ -553,7 +553,7 @@ class graph_builder:
                     'gave a ' + ','.join([str(x) for x in force_tensor.shape]))
             if force_tensor.shape[1] == 3:
                 # add w information if it was removed
-                with tf.name_scope('add-ws'):
+                with tf.compat.v1.name_scope('add-ws'):
                     force_tensor = tf.concat(
                         [force_tensor, tf.reshape(
                                 self.positions[:, 3], [-1, 1])],
@@ -589,7 +589,7 @@ class graph_builder:
                               os.path.join(model_directory, bkup_str, i))
             print('Note: Backed-up {} previous model to {}'.format(
                     model_directory, os.path.join(model_directory, bkup_str)))
-        meta_graph_def = tf.train.export_meta_graph(filename=(
+        meta_graph_def = tf.compat.v1.train.export_meta_graph(filename=(
                 os.path.join(model_directory, 'model.meta')))
         # with open(os.path.join(model_directory, 'model.pb2'), 'wb') as f:
         # f.write(tf.get_default_graph().as_graph_def().SerializeToString())

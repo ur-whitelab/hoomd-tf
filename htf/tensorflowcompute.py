@@ -75,6 +75,10 @@ class tfcompute(hoomd.compute._compute):
         self.use_xla = use_xla
         self._force_shutdown = True
 
+        # make sure we're initialized, so we can have logging
+        if not hoomd.init.is_initialized():
+            raise RuntimeError('Must initialize hoomd first')
+
     ## \var tfm
     # \internal
     # \brief TensorFlow manager used by the computer
@@ -206,10 +210,6 @@ class tfcompute(hoomd.compute._compute):
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
         """
-        # make sure we have number of atoms and know dimensionality, etc.
-        if not hoomd.init.is_initialized():
-            hoomd.context.msg.error('Must attach TF after initialization\n')
-            raise RuntimeError('Error creating TF')
         if self.tfm is None and not self.mock_mode:
             raise Exception('You must use the with statement to construct '
                             'and attach a tfcompute')

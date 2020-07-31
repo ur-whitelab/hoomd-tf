@@ -146,10 +146,10 @@ class TFManager:
             else:
                 n = node
             try:
-                name = tf.get_default_graph(
+                name = tf.compat.v1.get_default_graph(
                         ).get_tensor_by_name(n)
             except ValueError:
-                name = tf.get_default_graph(
+                name = tf.compat.v1.get_default_graph(
                         ).get_operation_by_name(n)
             node_attr[0] = name
             self.out_nodes.append(node_attr)
@@ -336,7 +336,7 @@ class TFManager:
 
         if self.saver is not None:
             self.log.log(8, 'Writing {} variables at TF step {}'.format(
-                    len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES
+                    len(tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES
                                           )), self.step))
             self.saver.save(sess, os.path.join(self.model_directory, 'model'),
                             global_step=self.step)
@@ -418,7 +418,7 @@ class TFManager:
 
         # now insert into graph
         try:
-            self.graph = tf.train.import_meta_graph(os.path.join(
+            self.graph = tf.compat.v1.train.import_meta_graph(os.path.join(
                     self.model_directory, 'model.meta'), input_map=input_map,
                                                     import_scope='')
         except ValueError:
@@ -435,12 +435,12 @@ class TFManager:
 
         # insert the output forces
         try:
-            out = tf.get_default_graph().get_tensor_by_name(
+            out = tf.compat.v1.get_default_graph().get_tensor_by_name(
                 self.graph_info['forces'])
             # make sure forces will be output in correct precision to hoomd
             self.forces = tf.cast(out, self.dtype)
             if self.graph_info['virial'] is not None:
-                out = tf.get_default_graph().get_tensor_by_name(
+                out = tf.compat.v1.get_default_graph().get_tensor_by_name(
                     self.graph_info['virial'])
                 # make sure forces will be output in correct precision to hoomd
                 self.virial = tf.cast(out, self.dtype)
@@ -477,13 +477,13 @@ class TFManager:
             will be attached.
         """
 
-        self.summaries = tf.summary.merge_all()
+        self.summaries = tf.compat.v1.summary.merge_all()
         if self.summaries is None:
             self.write_tensorboard = False
             self.log.warning('Could not find summaries for tensorboard, so not writing')
             return
         self.out_nodes.append([self.summaries, self.save_period, 0])
-        self.tb_writer = tf.summary.FileWriter(os.path.join(
+        self.tb_writer = tf.compat.v1.summary.FileWriter(os.path.join(
                 self.model_directory, 'tensorboard'),
                                                sess.graph)
 
@@ -496,20 +496,20 @@ class TFManager:
 
         self.log.log(10, 'Constructed TF Model graph')
         # make it grow as memory is needed instead of consuming all
-        gpu_options = tf.GPUOptions(allow_growth=True)
-        config = tf.ConfigProto(gpu_options=gpu_options)
+        gpu_options = tf.compat.v1.GPUOptions(allow_growth=True)
+        config = tf.compat.v1.ConfigProto(gpu_options=gpu_options)
         if self.use_xla:
             config.graph_options.optimizer_options.global_jit_level = \
-                tf.OptimizerOptions.ON_1
-        with tf.Session(config=config) as sess:
+                tf.compat.v1.OptimizerOptions.ON_1
+        with tf.compat.v1.Session(config=config) as sess:
             # restore model checkpoint if there are variables
-            if len(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)) > 0:
+            if len(tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES)) > 0:
                 # first initialize
                 self.log.log(10, 'Found trainable variables...')
-                sess.run(tf.group(tf.global_variables_initializer(),
-                                  tf.local_variables_initializer()))
+                sess.run(tf.group(tf.compat.v1.global_variables_initializer(),
+                                  tf.compat.v1.local_variables_initializer()))
                 self.log.log(10, 'Trainable vars initialized')
-                self.saver = tf.train.Saver(**saver_args)
+                self.saver = tf.compat.v1.train.Saver(**saver_args)
                 if self.bootstrap is not None:
                     checkpoint = tf.train.latest_checkpoint(self.bootstrap)
                     if checkpoint is None:
@@ -520,7 +520,7 @@ class TFManager:
                     self.log.log(8, 'Using bootstrap checkpoint'
                                  ' {}'.format(self.bootstrap))
                     # only load vars in the checkpoint and the graph!
-                    cp = tf.train.NewCheckpointReader(checkpoint)
+                    cp = tf.compat.v1.train.NewCheckpointReader(checkpoint)
                     var_to_shape_map = cp.get_variable_to_shape_map()
                     var_list = var_to_shape_map.keys()
                     # convert bootstrap map values into actual variables
@@ -533,7 +533,7 @@ class TFManager:
                             for v in variables:
                                 print(k, v, vname + ':0')
                                 if v == vname:
-                                    value = tf.get_default_graph().get_tensor_by_name(k + ':0')
+                                    value = tf.compat.v1.get_default_graph().get_tensor_by_name(k + ':0')
                             if value is None:
                                 raise ValueError(
                                     'Could not find variable'
@@ -541,18 +541,18 @@ class TFManager:
                                     ' processing'
                                     ' bootstrap_map'.format(vname))
                             variable_map[vname] = value
-                        bootstrap_saver = tf.train.Saver(variable_map,
+                        bootstrap_saver = tf.compat.v1.train.Saver(variable_map,
                                                      **saver_args)
                     else:
                         # remove vars that aren't in our graph
                         filtered_varlist = []
                         for v in var_to_shape_map.keys():
                             try:
-                                t = tf.get_default_graph().get_tensor_by_name(v + ':0')
+                                t = tf.compat.v1.get_default_graph().get_tensor_by_name(v + ':0')
                                 filtered_varlist.append(t)
                             except KeyError:
                                 pass
-                        bootstrap_saver = tf.train.Saver(filtered_varlist, **saver_args)
+                        bootstrap_saver = tf.compat.v1.train.Saver(filtered_varlist, **saver_args)
                     bootstrap_saver.restore(sess, checkpoint)
                 else:
                     checkpoint = tf.train.latest_checkpoint(
@@ -609,7 +609,7 @@ class TFManager:
                     feed_dict = dict()
                     bi = raw_feed_dict['htf-batch-index:0']
                     for k, v in raw_feed_dict.items():
-                        tensor = tf.get_default_graph().get_tensor_by_name(k)
+                        tensor = tf.compat.v1.get_default_graph().get_tensor_by_name(k)
                         feed_dict[tensor] = v
                     processing_cumtime += (time.perf_counter() - last_clock)
                     last_clock = time.perf_counter()

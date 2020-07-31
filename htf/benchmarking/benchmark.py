@@ -41,7 +41,7 @@ def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
     # use 2 * epsilon because nlist is double-counted
     p_energy = 2.0 * epsilon * (inv_r6**2 - inv_r6)
     # sum over pairs to get total energy
-    energy = tf.reduce_sum(p_energy, axis=1, name='energy')
+    energy = tf.reduce_sum(input_tensor=p_energy, axis=1, name='energy')
     # compute forces
     computed_forces = graph.compute_forces(energy)
     # compare hoomd-blue forces (graph.forces) with our

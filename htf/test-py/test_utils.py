@@ -3,6 +3,7 @@ import hoomd.htf
 import unittest
 import numpy as np
 import tensorflow as tf
+tf.compat.v1.disable_v2_behavior()
 import build_examples
 import tempfile
 import shutil
@@ -21,8 +22,8 @@ class test_loading(unittest.TestCase):
         # make model that does assignment
         g = hoomd.htf.graph_builder(0, False)
         h = tf.ones([10], dtype=tf.float32)
-        v = tf.get_variable('test', shape=[], trainable=False)
-        as_op = v.assign(tf.reduce_sum(h))
+        v = tf.compat.v1.get_variable('test', shape=[], trainable=False)
+        as_op = v.assign(tf.reduce_sum(input_tensor=h))
         g.save(model_dir, out_nodes=[as_op])
         # run once
         hoomd.context.initialize()
@@ -98,10 +99,10 @@ class test_mappings(unittest.TestCase):
         # see if we can build it
         N = len(self.system.particles)
         p = tf.ones(shape=[N, 1])
-        m = tf.sparse.matmul(s, p)
+        m = tf.sparse.sparse_dense_matmul(s, p)
         dense_mapping = tf.sparse.to_dense(s)
-        msum = tf.reduce_sum(m)
-        with tf.Session() as sess:
+        msum = tf.reduce_sum(input_tensor=m)
+        with tf.compat.v1.Session() as sess:
             msum = sess.run(msum)
             # here we are doing sum, not center of mass.
             # So this is like com forces
@@ -143,11 +144,11 @@ class test_mappings(unittest.TestCase):
                                       for _ in mapping], mapping, self.system)
         # see if we can build it
         N = len(self.system.particles)
-        p = tf.placeholder(tf.float32, shape=[N, 3])
+        p = tf.compat.v1.placeholder(tf.float32, shape=[N, 3])
         box_size = [self.system.box.Lx, self.system.box.Ly, self.system.box.Lz]
         com = hoomd.htf.center_of_mass(p, s, box_size)
-        non_pbc_com = tf.sparse.matmul(s, p)
-        with tf.Session() as sess:
+        non_pbc_com = tf.sparse.sparse_dense_matmul(s, p)
+        with tf.compat.v1.Session() as sess:
             positions = self.system.take_snapshot().particles.position
             com, non_pbc_com = sess.run([com, non_pbc_com],
                                         feed_dict={p: positions})
@@ -200,7 +201,7 @@ class test_mappings(unittest.TestCase):
             9,
             box_size,
             True)
-        with tf.Session() as sess:
+        with tf.compat.v1.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
             np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
@@ -220,7 +221,7 @@ class test_mappings(unittest.TestCase):
             9,
             box_size,
             True)
-        with tf.Session() as sess:
+        with tf.compat.v1.Session() as sess:
             nlist = sess.run(nlist)
             # particle 1 is closest to 0
             np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])

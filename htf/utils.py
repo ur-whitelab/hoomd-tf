@@ -22,17 +22,17 @@ def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
     :param feed_dict: optionally, use a feed dictionary to populate the model
     """
     # just in case
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     # load graph
-    tf.train.import_meta_graph(path.join('{}/'.format(
+    tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
         model_directory), 'model.meta'), import_scope='')
     # add colons if missing
     tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
-    run_dict = {n: tf.get_default_graph(
+    run_dict = {n: tf.compat.v1.get_default_graph(
     ).get_tensor_by_name(n) for n in tf_names}
 
-    with tf.Session() as sess:
-        saver = tf.train.Saver()
+    with tf.compat.v1.Session() as sess:
+        saver = tf.compat.v1.train.Saver()
         if(checkpoint == -1):
             # get latest
             checkpoint_str = model_directory
@@ -80,17 +80,17 @@ def compute_pairwise_potential(model_directory, r,
         pairwise distances in r, second is the forces.
     """
     # just in case
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     # load graph
-    tf.train.import_meta_graph(path.join('{}/'.format(
+    tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
         model_directory), 'model.meta'), import_scope='')
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     if ':' not in potential_tensor_name:
         potential_tensor_name = potential_tensor_name + ':0'
-    potential_tensor = tf.get_default_graph(
+    potential_tensor = tf.compat.v1.get_default_graph(
     ).get_tensor_by_name(potential_tensor_name)
-    nlist_tensor = tf.get_default_graph(
+    nlist_tensor = tf.compat.v1.get_default_graph(
     ).get_tensor_by_name(model_params['nlist'])
 
     # build nlist
@@ -98,20 +98,20 @@ def compute_pairwise_potential(model_directory, r,
     np_nlist = np.zeros((2, NN, 4))
     potential = np.empty(len(r))
 
-    nlist_forces = tf.gradients(potential_tensor, nlist_tensor)[0]
+    nlist_forces = tf.gradients(ys=potential_tensor, xs=nlist_tensor)[0]
     nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0),
                                                 nlist_forces),
                                name='nlist-pairwise-force'
                                '-gradient-raw')
-    zeros = tf.zeros(tf.shape(nlist_forces))
-    nlist_forces = tf.where(tf.is_finite(nlist_forces),
+    zeros = tf.zeros(tf.shape(input=nlist_forces))
+    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
                             nlist_forces, zeros,
                             name='nlist-pairwise-force-gradient')
-    nlist_reduce = tf.reduce_sum(nlist_forces, axis=1,
+    nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                  name='nlist-force-gradient')
     forces = nlist_reduce
-    with tf.Session() as sess:
-        saver = tf.train.Saver()
+    with tf.compat.v1.Session() as sess:
+        saver = tf.compat.v1.train.Saver()
         if(checkpoint == -1):
             # get latest
             checkpoint_str = model_directory
@@ -307,11 +307,11 @@ def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
     #        calculated_cg_forces.shape):
     #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
     # minimize mean squared error
-    cost = tf.losses.mean_squared_error(mapped_forces,
+    cost = tf.compat.v1.losses.mean_squared_error(mapped_forces,
                                         calculated_cg_forces)
     # It is assumed here that the user will pass in
     # calculated_cg_forces that depend on trainable variables.
-    optimizer = tf.train.AdamOptimizer(
+    optimizer = tf.compat.v1.train.AdamOptimizer(
         learning_rate=learning_rate).minimize(cost)
     return optimizer, cost
 
@@ -337,7 +337,7 @@ def run_from_trajectory(model_directory, universe,
     :type feed_dict: dict
     """
     # just in case
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
         model_params = pickle.load(f)
     # read trajectory
@@ -370,21 +370,21 @@ def run_from_trajectory(model_directory, universe,
     # make input map to override nlist
     input_map = {}
     input_map[model_params['nlist']] = nlist_tensor
-    graph = tf.train.import_meta_graph(path.join('{}/'.format(
+    graph = tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
         model_directory), 'model.meta'), input_map=input_map, import_scope='')
 
     out_nodes = []
     for name in model_params['out_nodes']:
         if isinstance(name, list):
             out_nodes.append(
-                tf.get_default_graph().get_tensor_by_name(name[0]))
+                tf.compat.v1.get_default_graph().get_tensor_by_name(name[0]))
         else:
-            out_nodes.append(tf.get_default_graph().get_tensor_by_name(name))
+            out_nodes.append(tf.compat.v1.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
-    with tf.Session() as sess:
-        sess.run(tf.group(tf.global_variables_initializer(),
-                          tf.local_variables_initializer()))
-        saver = tf.train.Saver()
+    with tf.compat.v1.Session() as sess:
+        sess.run(tf.group(tf.compat.v1.global_variables_initializer(),
+                          tf.compat.v1.local_variables_initializer()))
+        saver = tf.compat.v1.train.Saver()
         for i, ts in enumerate(universe.trajectory):
             sess.run(out_nodes,
                      feed_dict={
@@ -424,16 +424,16 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
         name = 'eds' + cv.name.split(':')[0]
 
     # set-up variables
-    mean = tf.get_variable(
+    mean = tf.compat.v1.get_variable(
         '{}.mean'.format(name),
         initializer=0.0,
         trainable=False)
-    ssd = tf.get_variable(
+    ssd = tf.compat.v1.get_variable(
         '{}.ssd'.format(name),
         initializer=0.0,
         trainable=False)
-    n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
-    alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
+    n = tf.compat.v1.get_variable('{}.n'.format(name), initializer=0, trainable=False)
+    alpha = tf.compat.v1.get_variable('{}.a'.format(name), initializer=0.0)
 
     reset_mask = tf.cast((n == 0), tf.float32)
 
@@ -462,11 +462,11 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
         gradient = update_mask * -  2 * \
             (cv - set_point) * ssd / period / 2 / cv_scale
-        optimizer = tf.train.AdamOptimizer(learning_rate)
-        update_alpha = tf.cond(tf.equal(n, period - 1),
-                               lambda: optimizer.apply_gradients([(gradient,
+        optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate)
+        update_alpha = tf.cond(pred=tf.equal(n, period - 1),
+                               true_fn=lambda: optimizer.apply_gradients([(gradient,
                                                                    alpha)]),
-                               lambda: tf.no_op())
+                               false_fn=lambda: tf.no_op())
 
     # update n. Should reset at period
     update_n = n.assign((n + 1) % period)
@@ -495,8 +495,8 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     theta = positions / box_dim * 2 * np.pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
-    ximean = tf.sparse.matmul(mapping, xi)
-    zetamean = tf.sparse.matmul(mapping, zeta)
+    ximean = tf.sparse.sparse_dense_matmul(mapping, xi)
+    zetamean = tf.sparse.sparse_dense_matmul(mapping, zeta)
     thetamean = tf.math.atan2(zetamean, ximean)
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
@@ -517,7 +517,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     """
     # Make sure positions is only xyz
     positions = positions[:, :3]
-    M = tf.shape(positions)[0]
+    M = tf.shape(input=positions)[0]
     # Making 3 dim CG nlist
     qexpand = tf.expand_dims(positions, 1)  # one column
     qTexpand = tf.expand_dims(positions, 0)  # one row
@@ -527,10 +527,10 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     # subtract them to get distance matrix
     dist_mat = qTtile - qtile
     # apply minimum image
-    box = tf.reshape(tf.convert_to_tensor(box_size), [1, 1, 3])
+    box = tf.reshape(tf.convert_to_tensor(value=box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
     # mask distance matrix to remove things beyond cutoff and zeros
-    dist = tf.norm(dist_mat, axis=2)
+    dist = tf.norm(tensor=dist_mat, axis=2)
     mask = (dist <= r_cut) & (dist >= 5e-4)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
     if sorted:
@@ -582,7 +582,7 @@ def mol_bond_distance(mol_positions, type_i, type_j):
 
     else:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        v_ij = tf.norm(v_ij, axis=1)
+        v_ij = tf.norm(tensor=v_ij, axis=1)
         return v_ij
 
 # \internal
@@ -617,10 +617,10 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
         cos_a = tf.math.divide(
             cos_a,
             (tf.norm(
-                v_ij,
+                tensor=v_ij,
                 axis=1) *
                 tf.norm(
-                v_jk,
+                tensor=v_jk,
                 axis=1)))
         angles = tf.math.acos(cos_a)
         return angles
@@ -660,8 +660,8 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
         # calculation of normal vectors
         n1 = tf.linalg.cross(v_ij, v_jk)
         n2 = tf.linalg.cross(v_jk, v_kl)
-        n1_norm = tf.norm(n1)
-        n2_norm = tf.norm(n2)
+        n1_norm = tf.norm(tensor=n1)
+        n2_norm = tf.norm(tensor=n2)
         if n1_norm == 0.0 or n2_norm == 0.0:
             raise GeometryError('Vectors are linear')
         n1 = n1 / n1_norm
