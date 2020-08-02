@@ -1,3 +1,17 @@
+Make graphbuilder into Keras model
+Convert TFManager into Layer(?) that gets nlist, forces, etc.
+Then call keras model or run fit. Maybe have two different mechanisms (attach_inference vs attach_train?)
+    attach_inference: load SavedModel, run call
+    attach_train: Keras runs show (batch_size= hoomd run steps?)
+
+Milestone 1:
+
+- Create new pysource files--
+(0) graphbuilder becomes SimData - Keras model with dictionary as output
+(1) Need model build code that takes SimData and outputs are user defined
+(2) model is called in @tf.function where we have inputs, outputs
+
+
 TensorFlow 2.0 Upgrade Script
 -----------------------------
 Converted 15 files

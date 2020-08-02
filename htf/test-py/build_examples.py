@@ -8,25 +8,19 @@ import hoomd.htf as htf
 import pickle
 
 
-def simple_potential(directory='/tmp/test-simple-potential-model'):
-    graph = htf.graph_builder(9 - 1)
-    nlist = graph.nlist[:, :, :3]
+def simple_potential():
+    data = htf.SimData(9 - 1)
+    nlist = data.nlist[:, :, :3]
     neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
     # no need to use netwon's law because nlist should be double counted
     fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
                         name='nan-pairwise-forces')
     zeros = tf.zeros_like(nlist)
-    real_fr = tf.compat.v1.where(tf.math.is_finite(fr), fr, zeros,
+    real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
                             name='pairwise-forces')
     forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
-    graph.save(force_tensor=forces, model_directory=directory)
-    return directory
-    # check graph info
-    with open('/tmp/test-simple-potential-model/graph_info.p', 'rb') as f:
-        gi = pickle.load(f)
-        assert gi['forces'] != 'forces:0'
-        assert tf.compat.v1.get_default_graph().get_tensor_by_name(gi['forces'
-                                                            ]).shape[1] == 4
+    model = htf.HTFModel(data, forces=forces)
+    return model
 
 
 def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):

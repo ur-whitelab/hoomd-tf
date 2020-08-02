@@ -44,6 +44,59 @@ def load_htf_op_library(op):
                       'Expected to be in {}'.format(op, path))
     return mod
 
+class Hoomd2TF(tf.keras.layers.Layer):
+    def __init__(self, nonbatch_input_shape, **kwargs):
+        super(Hoomd2TF, self).__init__(**kwargs)
+        self.address = 0
+        self.nonbatch_input_shape = nonbatch_input_shape
+
+    def build(self, input_shape):
+        if self.address == 0:
+            raise ValueError('Memory address must be set before build')
+        hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
+        hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
+        self.hoomd_to_tf = hoomd_to_tf(
+            address=self.address,
+            shape = [input_shape[0]] + self.nonbatch_input_shape,
+            dtype=self.dtype,
+            name=self.name + '-input'
+        )
+
+    @tf.function
+    def call(self, inputs, **kwargs):
+        return self.hoomd_to_tf(inputs)
+
+class TF2Hoomd(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(TF2Hoomd, self).__init__(**kwargs)
+        self.address = 0
+
+    def build(self, input_shape):
+        if self.address == 0:
+            raise ValueError('Memory address must be set before build')
+        tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
+        tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
+        self.tf_to_hoomd = tf_to_hoomd(
+            address=self.address,
+            name=self.name + '-output'
+        )
+
+    @tf.function
+    def call(self, inputs, **kwargs):
+        return self.tf_to_hoomd(inputs)
+
+
+class NList(Hoomd2TF):
+    def __init__(self, neighbor_number):
+        super(NList, self).__init__(4 * neighbor_number, name='_nlist')
+        self.neighbor_number = neighbor_number
+    def call(self, inputs, **kwargs):
+        result = super(NList, self).call(inputs, **kwargs)
+        return tf.reshape(result, [[-1, self.neighbor_number, 4]])
+
+class OutputForces(TF2Hoomd):
+    def __init__(self):
+        super(OutputForces, self).__init__(name='_output-forces')
 
 ## \internal
 # \brief TensorFlow manager class

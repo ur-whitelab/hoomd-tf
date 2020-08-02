@@ -99,11 +99,9 @@ ENDMACRO(copy_file)
 
 set(files
     __init__.py
+    layers.py
     tensorflowcompute.py
-    graphbuilder.py
     tfarraycomm.py
-    tfmanager.py
-    utils.py
     version.py
     )
 
