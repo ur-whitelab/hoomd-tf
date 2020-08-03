@@ -32,8 +32,6 @@ class SimData(tf.Module):
                                     name='nlist-input')
         self.output_forces = output_forces
         self.dtype = dtype
-        self.inputs = [self.nlist]
-        return
         self.virial = None
         self.positions = tf.keras.Input(dtype=tf.float32, shape=[4],
                                         name='positions-input')
@@ -43,8 +41,11 @@ class SimData(tf.Module):
         #   [x_tilt, y_tilt, z_tilt] ]
         self.box = tf.keras.Input(dtype=tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
+        self.inputs = [self.nlist, self.positions]
         if not output_forces:
             self.forces = tf.keras.Input(dtype=tf.float32, shape=[4], name='forces-input')
+            self.inputs.append(self.forces)
+        return
         self.batch_frac = tf.keras.Input(dtype=tf.float32, shape=[], name='htf-batch-frac')
         self.batch_index = tf.keras.Input(dtype=tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
@@ -76,20 +77,29 @@ class SimData(tf.Module):
         self.inputs = [self.nlist]
 
     # @tf.function
-    def compute_inputs(self,dtype, nlist_addr):
+    def compute_inputs(self, dtype, nlist_addr, positions_addr):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
         tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
 
-        nlist = tf.reshape(hoomd_to_tf(
-                address=nlist_addr,
-                shape = [4 * self.nneighbor_cutoff],
+        if self.nneighbor_cutoff > 0:
+            nlist = tf.reshape(hoomd_to_tf(
+                    address=nlist_addr,
+                    shape = [4 * self.nneighbor_cutoff],
+                    T=dtype,
+                    name='nlist-input'
+                ), [-1, self.nneighbor_cutoff, 4])
+        else:
+            nlist = tf.reshape(tf.constant([0.]), [1,1,1])
+        pos = hoomd_to_tf(
+                address=positions_addr,
+                shape = [4],
                 T=dtype,
-                name='nlist-input'
-            ), [-1, self.nneighbor_cutoff, 4])
-        return tf.cast(nlist, self.dtype)
+                name='pos-input'
+            )
+        return tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype)
 
     # @tf.function
     def compute_outputs(self, dtype, force_addr, forces):
@@ -202,7 +212,7 @@ class SimData(tf.Module):
         """
         if self._nlist_rinv is None:
             r = self.safe_norm(self.nlist[:, :, :3], axis=2)
-            self._nlist_rinv = self.safe_div(1.0, r)
+            self._nlist_rinv = self.tf.math.divide_no_nan(1.0, r)
         return self._nlist_rinv
 
     def masked_nlist(self, type_i=None, type_j=None, nlist=None,
@@ -404,8 +414,40 @@ class SimData(tf.Module):
             self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
         self.MN = MN
 
+
+class ForceComputer(tf.GradientTape):
+    def __init__(self, sim_data):
+        super(ForceComputer, self).__init__(True)
+        self.nlist = sim_data.nlist
+        self.positions = sim_data.positions
+        self.watches = [self.nlist, self.positions]
+    def __enter__(self):
+        r = super(ForceComputer, self).__enter__()
+        [r.watch(w) for w in self.watches]
+        return r
+    def get_forces(self, energy):
+        forces = self.gradient(energy, self.positions)
+        return forces
+
 @tf.function
-def compute_forces(energy, nlist, positions=False, virial=False):
+def compute_nlist_forces(energy, nlist):
+    nlist_forces = tf.gradients(ys=energy, xs=nlist)[0]
+    if nlist_forces is None:
+        raise ValueError('Found no nlist gradients in compute_nlist_forces')
+    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
+                                name='nlist-pairwise-force'
+                                    '-gradient-raw')
+    zeros = tf.zeros(tf.shape(input=nlist_forces))
+    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
+                            nlist_forces, zeros,
+                            name='nlist-pairwise-force-gradient')
+    nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
+                                    name='nlist-force-gradient')
+    return _add_energy(energy, nlist_reduce)
+
+
+@tf.function
+def compute_position_forces(energy, positions=None):
     R""" Computes pairwise or position-dependent forces (field) given
     a potential energy function that computes per-particle
     or overall energy
@@ -430,102 +472,17 @@ def compute_forces(energy, nlist, positions=False, virial=False):
         as the class attribute ``virial`` and will be saved automatically.
     """
     # compute -gradient wrt positions
-    if positions:
-        pos_forces = tf.gradients(ys=tf.negative(energy), xs=positions)[0]
-    else:
-        pos_forces = None
-    if pos_forces is not None:
-        pos_forces = tf.identity(pos_forces, name='pos-force-gradient')
-    # minus sign cancels when going from force on
-    # neighbor to force on origin in nlist
-    nlist_forces = tf.gradients(ys=energy, xs=nlist)[0]
-    if nlist_forces is not None:
-        nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
-                                    name='nlist-pairwise-force'
-                                        '-gradient-raw')
-        zeros = tf.zeros(tf.shape(input=nlist_forces))
-        nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
-                                nlist_forces, zeros,
-                                name='nlist-pairwise-force-gradient')
-        nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
-                                        name='nlist-force-gradient')
-        if virial:
-            # now treat virial
-            nlist3 = nlist[:, :, :3]
-            rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
-            # F / rs
-            nlist_r_mag = graph_builder.safe_norm(
-                nlist3, axis=2, name='nlist-r-mag')
-            nlist_force_mag = graph_builder.safe_norm(
-                nlist_forces, axis=2, name='nlist-force-mag')
-            F_rs = safe_div(nlist_force_mag, 2.0 *
-                                    nlist_r_mag)
-            # sum over neighbors: F / r * (r (outter) r)
-            virial_result = -1.0 * tf.einsum('ij,ijkl->ikl',
-                                            F_rs, rij_outter)
-    if pos_forces is None and nlist_forces is None:
-        raise ValueError('Found no dependence on positions or neighbors'
-                            'so forces cannot be computed')
-    if pos_forces is not None and nlist_forces is not None:
-        forces = tf.add(nlist_reduce, pos_forces, name='forces-added')
-    elif pos_forces is None:
-        forces = nlist_reduce
-    else:
-        forces = pos_forces
-
-    # set w to be potential energy
-    if len(energy.shape) > 1:
-        # reduce energy to be correct shape
-        print('WARNING: Your energy is multidimensional per particle.'
-                'Hopefully that is intentional')
-        energy = tf.reshape(
-            tf.reduce_sum(input_tensor=energy, axis=list(range(1, len(energy.shape)))),
-            [tf.shape(input=forces)[0], 1])
-        forces = tf.concat([forces[:, :3], energy], -1)
-    elif len(energy.shape) == 0:
-        forces = tf.concat([forces[:, :3],
-                            tf.reshape(tf.tile(tf.reshape(energy, [1]),
-                                                tf.shape(input=forces)[0:1]),
-                                        shape=[-1, 1])],
-                            -1)
-    else:
-        forces = tf.concat(
-            [forces[:, :3], tf.reshape(
-                energy,
-                [tf.shape(input=forces)[0], 1])], -1)
-    if virial:
-        return tf.identity(forces, name='computed-forces'), tf.identity(virial_result, name='computed-virial')
-    return tf.identity(forces, name='computed-forces')
-
-@tf.function
-def safe_div(numerator, denominator, delta=3e-6, **kwargs):
-    R"""
-    Use this method to avoid nan forces if doing 1/r
-    or equivalent force calculations.
-    There are some numerical instabilities that can occur during learning
-    when gradients are propagated. The delta is problem specific.
-
-    :param numerator: The numerator.
-    :type numerator: tensor
-    :param denominator: The denominator.
-    :type denominator: tensor
-    :param delta: Tolerance for magnitude that triggers safe division.
-    :return: The safe division op (TensorFlow operation)
-    """
-    op = tf.compat.v1.where(
-            tf.greater(denominator, delta),
-            tf.truediv(numerator, denominator + delta),
-            tf.zeros_like(denominator))
-
-    # op = tf.divide(numerator, denominator + delta, **kwargs)
-    return op
+    pos_forces = tf.gradients(ys=tf.negative(energy), xs=positions)[0]
+    if pos_forces is None:
+        raise ValueError('Found no pos gradients in compute_pos_forces')
+    return _add_energy(energy, pos_forces)
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):
     R"""
     There are some numerical instabilities that can occur during learning
     when gradients are propagated. The delta is problem specific.
-    NOTE: delta of safe_div must be > sqrt(3) * (safe_norm delta)
+    NOTE: delta of tf.math.divide_no_nan must be > sqrt(3) * (safe_norm delta)
     See `this TensorFlow issue <https://github.com/tensorflow/tensorflow/issues/12071>`.
 
     :param tensor: the tensor over which to take the norm

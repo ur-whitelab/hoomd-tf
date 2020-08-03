@@ -106,26 +106,28 @@ class test_compute(unittest.TestCase):
             hoomd.run(100)
 
     def test_nonlist(self):
-        model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[32, 32])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach()
-            hoomd.run(10)
+        data = hoomd.htf.SimData(0)
+        model = build_examples.benchmark_nonlist_graph(data)
+        tfcompute = hoomd.htf.tfcompute(data)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[32, 32])
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(model)
+        hoomd.run(10)
 
     def test_full_batch(self):
-        model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[32, 32])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(batch_size=None)
-            hoomd.run(10)
+        data = hoomd.htf.SimData(0)
+        model = build_examples.benchmark_nonlist_graph(data)
+        tfcompute = hoomd.htf.tfcompute(data)
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                            n=[32, 32])
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(model, batch_size=None)
+        hoomd.run(10)
 
     def test_write_empty_tensorboard(self):
         model_dir = build_examples.benchmark_nonlist_graph(self.tmp)

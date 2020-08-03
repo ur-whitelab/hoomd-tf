@@ -24,5 +24,5 @@ if gpus:
 # need to import md to have library available.
 import hoomd.md
 from hoomd.htf.tensorflowcompute import tfcompute
-from hoomd.htf.graphbuilder import SimData
+from hoomd.htf.graphbuilder import *
 from hoomd.htf.version import __version__

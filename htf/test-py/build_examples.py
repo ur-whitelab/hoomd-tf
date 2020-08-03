@@ -95,13 +95,13 @@ def feeddict_graph(directory='/tmp/test-feeddict-model'):
     return directory
 
 
-def benchmark_nonlist_graph(directory='/tmp/benchmark-nonlist-model'):
-    graph = htf.graph_builder(0, output_forces=True)
-    ps = tf.norm(tensor=graph.positions, axis=1)
-    energy = graph.safe_div(1., ps)
-    force = graph.compute_forces(energy, positions=True)
-    graph.save(directory, force_tensor=force, out_nodes=[energy])
-    return directory
+def benchmark_nonlist_graph(data):
+    with htf.ForceComputer(data) as fc:
+        ps = tf.norm(tensor=data.positions, axis=1)
+        energy = tf.math.divide_no_nan(1., ps)
+    forces = fc.get_forces(energy)
+    model = tf.keras.Model(inputs=data.inputs, outputs=forces)
+    return model
 
 
 def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
