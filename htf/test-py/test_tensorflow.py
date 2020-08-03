@@ -45,31 +45,31 @@ class test_access(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_access(self):
-        model_dir = build_examples.simple_potential(self.tmp)
-        with hoomd.htf.tfcompute(model_dir,
-                                 _mock_mode=True) as tfcompute:
-            rcut = 3
-            # create a system with a few types
-            cell = hoomd.lattice.unitcell(
-                N=3,
-                a1=[6, 0, 0],
-                a2=[0, 6, 0],
-                a3=[0, 0, 6],
-                position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
-                type_name=['A', 'B', 'C'])
-            system = hoomd.init.create_lattice(unitcell=cell, n=5)
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1)
-            tfcompute.get_virial_array()
-            tfcompute.get_forces_array()
-            pa = tfcompute.get_positions_array()
-            nl = tfcompute.get_nlist_array()
-            # make sure we get the 3 types
-            self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))), 3)
-            self.assertEqual(len(np.unique(pa[:, 3].astype(np.int))), 3)
+        data = hoomd.htf.SimData(32)
+        model = build_examples.simple_potential(data)
+        tfcompute = hoomd.htf.tfcompute(data)
+        rcut = 3
+        # create a system with a few types
+        cell = hoomd.lattice.unitcell(
+            N=3,
+            a1=[6, 0, 0],
+            a2=[0, 6, 0],
+            a3=[0, 0, 6],
+            position=[[2, 2, 2], [1, 3, 1], [3, 1, 1]],
+            type_name=['A', 'B', 'C'])
+        system = hoomd.init.create_lattice(unitcell=cell, n=5)
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+        tfcompute.attach(model, nlist, r_cut=rcut)
+        hoomd.run(1)
+        tfcompute.get_virial_array()
+        tfcompute.get_forces_array()
+        pa = tfcompute.get_positions_array()
+        nl = tfcompute.get_nlist_array()
+        # make sure we get the 3 types
+        self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))), 3)
+        self.assertEqual(len(np.unique(pa[:, 3].astype(np.int))), 3)
 
 class test_compute(unittest.TestCase):
     def setUp(self):
@@ -95,6 +95,32 @@ class test_compute(unittest.TestCase):
                 )).randomize_velocities(kT=2, seed=2)
 
         tfcompute.attach(model, nlist, r_cut=rcut)
+        # use these to throw off timesteps
+        hoomd.run(1)
+        hoomd.run(1)
+        for i in range(3):
+            py_forces = compute_forces(system, rcut)
+            for j in range(N):
+                np.testing.assert_allclose(system.particles[j].net_force,
+                                            py_forces[j, :], atol=1e-5)
+            hoomd.run(100)
+
+    def test_force_overwrite_batched(self):
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        data = hoomd.htf.SimData(NN)
+        model = build_examples.simple_potential(data)
+        tfcompute = hoomd.htf.tfcompute(data)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+
+        tfcompute.attach(model, nlist, r_cut=rcut, batch_size=4)
         # use these to throw off timesteps
         hoomd.run(1)
         hoomd.run(1)

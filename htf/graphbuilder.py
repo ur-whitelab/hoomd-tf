@@ -41,40 +41,21 @@ class SimData(tf.Module):
         #   [x_tilt, y_tilt, z_tilt] ]
         self.box = tf.keras.Input(dtype=tf.float32, shape=[3, 3], name='box-input')
         self.box_size = self.box[1, :] - self.box[0, :]
+
         self.inputs = [self.nlist, self.positions]
+
         if not output_forces:
             self.forces = tf.keras.Input(dtype=tf.float32, shape=[4], name='forces-input')
             self.inputs.append(self.forces)
-        return
-        self.batch_frac = tf.keras.Input(dtype=tf.float32, shape=[], name='htf-batch-frac')
-        self.batch_index = tf.keras.Input(dtype=tf.int32, shape=[], name='htf-batch-index')
         self.output_forces = output_forces
         self._nlist_rinv = None
         self.mol_indices = None
         self.mol_batched = False
+        self.check_nlist = check_nlist
         self.MN = 0
         self.batch_steps = tf.Variable(name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
         # update batch index and wrap around int32 max to avoid overflow
-        self.update_batch_index_op = \
-            self.batch_steps.assign(tf.math.floormod(
-                self.batch_steps + tf.cond(pred=tf.equal(self.batch_index, tf.constant(0)),
-                                           true_fn=lambda: tf.constant(
-                    1),
-                    false_fn=lambda: tf.constant(0)),
-                2**31 - 1)
-            )
-        self.out_nodes = [self.update_batch_index_op]
 
-        # add check for nlist size
-        if check_nlist:
-            NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
-                                                     tf.dtypes.int32), axis=1),
-                               axis=0)
-            check_op = tf.Assert(tf.less(NN, nneighbor_cutoff), ['Neighbor list is full!'])
-            self.out_nodes.append(check_op)
-
-        #TODO add the rest
-        self.inputs = [self.nlist]
 
     # @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr):
@@ -99,7 +80,14 @@ class SimData(tf.Module):
                 T=dtype,
                 name='pos-input'
             )
-        return tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype)
+
+        if self.check_nlist:
+            NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
+                                                     tf.dtypes.int32), axis=1),
+                               axis=0)
+            check_op = tf.Assert(tf.less(NN, self.nneighbor_cutoff), ['Neighbor list is full!'])
+
+        return [tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype)]
 
     # @tf.function
     def compute_outputs(self, dtype, force_addr, forces):
@@ -112,6 +100,18 @@ class SimData(tf.Module):
         forces = tf_to_hoomd(
                 tf.cast(forces, dtype),
                 address=force_addr)
+
+    @tf.function
+    def update(self, batch_frac, batch_index):
+        # update batch index and wrap around int32 max to avoid overflow
+        self.batch_steps.assign(tf.math.floormod(
+                self.batch_steps + tf.cond(pred=tf.equal(batch_index, tf.constant(0)),
+                                        true_fn=lambda: tf.constant(
+                    1),
+                    false_fn=lambda: tf.constant(0)),
+                2**31 - 1)
+            )
+
 
     ## \var atom_number
     # \internal

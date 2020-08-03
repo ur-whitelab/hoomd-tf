@@ -181,12 +181,12 @@ class tfcompute(hoomd.compute._compute):
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
-        N = len(hoomd.context.current.group_all)
         inputs = self.sim_data.compute_inputs(
             self.dtype,
             self.cpp_force.getNlistBuffer(),
             self.cpp_force.getPositionsBuffer())
         output = self.model(inputs)
+        self.sim_data.update(batch_frac, batch_index)
         self.sim_data.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
 
 
