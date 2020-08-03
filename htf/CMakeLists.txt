@@ -99,10 +99,10 @@ ENDMACRO(copy_file)
 
 set(files
     __init__.py
-    layers.py
     tensorflowcompute.py
     tfarraycomm.py
     version.py
+    graphbuilder.py
     )
 
 install(FILES ${files}

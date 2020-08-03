@@ -13,7 +13,6 @@ import glob
 import numpy as np
 import math
 import tensorflow as tf
-tf.compat.v1.disable_v2_behavior()
 import build_examples
 
 from hoomd.htf.tensorflowcompute import _make_reverse_indices
@@ -81,29 +80,30 @@ class test_compute(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_force_overwrite(self):
-        model_dir = build_examples.simple_potential(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        data = hoomd.htf.SimData(NN)
+        model = build_examples.simple_potential(data)
+        tfcompute = hoomd.htf.tfcompute(data)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
 
-            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
-            # use these to throw off timesteps
-            hoomd.run(1)
-            hoomd.run(1)
-            for i in range(3):
-                py_forces = compute_forces(system, rcut)
-                for j in range(N):
-                    np.testing.assert_allclose(system.particles[j].net_force,
-                                               py_forces[j, :], atol=1e-5)
-                hoomd.run(100)
+        tfcompute.attach(model, nlist, r_cut=rcut)
+        # use these to throw off timesteps
+        hoomd.run(1)
+        hoomd.run(1)
+        for i in range(3):
+            py_forces = compute_forces(system, rcut)
+            for j in range(N):
+                np.testing.assert_allclose(system.particles[j].net_force,
+                                            py_forces[j, :], atol=1e-5)
+            hoomd.run(100)
 
     def test_nonlist(self):
         model_dir = build_examples.benchmark_nonlist_graph(self.tmp)

@@ -2,7 +2,6 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from hoomd.htf import _htf
-from hoomd.htf.tfmanager import main
 import sys
 import math
 import numpy as np
@@ -31,15 +30,12 @@ class tfcompute(hoomd.compute._compute):
     # \details
     # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
     # whether to use a tensorboard, and some execution preferences.
-    def __init__(self, model):
+    def __init__(self, sim_data):
         R""" Initialize a tfcompute class instance
         """
-        self.model = model
-        # make sure we're initialized, so we can have logging
-        if not hoomd.init.is_initialized():
-            raise RuntimeError('Must initialize hoomd first')
+        self.sim_data = sim_data
 
-    def attach(self, nlist=None, r_cut=0, save_period=1000,
+    def attach(self, model, nlist=None, r_cut=0, save_period=1000,
                period=1, mol_indices=None, max_molecule_size=None,
                batch_size=None):
         R""" Attaches the TensorFlow instance to HOOMD.
@@ -62,7 +58,11 @@ class tfcompute(hoomd.compute._compute):
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
         """
+        # make sure we're initialized, so we can have logging
+        if not hoomd.init.is_initialized():
+            raise RuntimeError('Must initialize hoomd first')
 
+        self.model = model
         self.enabled = True
         self.log = True
         self.cpp_force = None
@@ -78,13 +78,10 @@ class tfcompute(hoomd.compute._compute):
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
         if mol_indices is not None:
             #TODO
+            pass
 
         # get neighbor cutoff
-        try:
-            l = model.get_layer('htf-nlist')
-            self.nneighbor_cutoff = l.nneighbor_cutoff
-        except ValueError:
-            self.nneighbor_cutoff = 0
+        self.nneighbor_cutoff = self.sim_data.nneighbor_cutoff
 
         if nlist is not None:
             nlist.subscribe(self.rcut)
@@ -98,10 +95,9 @@ class tfcompute(hoomd.compute._compute):
         hoomd.compute._compute.__init__(self)
 
         # check if we are outputting forces
-        self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
-        for o in model.outputs:
-            if o.op.name == 'htf-forces-output':
-                self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
+        self.force_mode_code = _htf.FORCE_MODE.hoomd2tf
+        if self.sim_data.output_forces:
+            self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
         # initialize the reflected c++ class
@@ -130,7 +126,7 @@ class tfcompute(hoomd.compute._compute):
         self.dtype = tf.float32
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.float64
-        #TODO Check model dtype
+
         # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force,
                                                 self.compute_name)
@@ -177,6 +173,7 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
+    @tf.function
     def finish_update(self, batch_index, batch_frac):
         R""" Allow TF to read output and we wait for it to finish.
 
@@ -184,9 +181,13 @@ class tfcompute(hoomd.compute._compute):
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
-        input = tf.constant([len(hoomd.context.current.group_all)])
-        output = self.model(input)
-        print(output)
+        print('TRACING')
+        N = len(hoomd.context.current.group_all)
+        inputs = self.sim_data.compute_inputs(
+            self.dtype,
+            self.cpp_force.getNlistBuffer())
+        output = self.model(inputs)
+        self.sim_data.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
 
 
     def get_positions_array(self):

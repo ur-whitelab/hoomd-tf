@@ -2,14 +2,12 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 import tensorflow as tf
-tf.compat.v1.disable_v2_behavior()
 import os
 import hoomd.htf as htf
 import pickle
 
 
-def simple_potential():
-    data = htf.SimData(9 - 1)
+def simple_potential(data):
     nlist = data.nlist[:, :, :3]
     neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
     # no need to use netwon's law because nlist should be double counted
@@ -19,7 +17,7 @@ def simple_potential():
     real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
                             name='pairwise-forces')
     forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
-    model = htf.HTFModel(data, forces=forces)
+    model = tf.keras.Model(inputs=data.inputs, outputs=forces)
     return model
 
 

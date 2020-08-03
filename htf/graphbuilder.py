@@ -22,7 +22,7 @@ class SimData(tf.Module):
 
     # \internal
     # \brief Initializes the graphbuilder class
-    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False):
+    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         self.nneighbor_cutoff = nneighbor_cutoff
@@ -30,6 +30,10 @@ class SimData(tf.Module):
         self.nlist = tf.keras.Input(dtype=tf.float32,
                                     shape=[nneighbor_cutoff, 4],
                                     name='nlist-input')
+        self.output_forces = output_forces
+        self.dtype = dtype
+        self.inputs = [self.nlist]
+        return
         self.virial = None
         self.positions = tf.keras.Input(dtype=tf.float32, shape=[4],
                                         name='positions-input')
@@ -71,10 +75,33 @@ class SimData(tf.Module):
         #TODO add the rest
         self.inputs = [self.nlist]
 
-    @tf.function
-    def compute_inputs(nlist_addr, force_addr):
-        # build ops
-        # return values
+    # @tf.function
+    def compute_inputs(self,dtype, nlist_addr):
+        hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
+        hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
+
+        tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
+        tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
+
+        nlist = tf.reshape(hoomd_to_tf(
+                address=nlist_addr,
+                shape = [4 * self.nneighbor_cutoff],
+                T=dtype,
+                name='nlist-input'
+            ), [-1, self.nneighbor_cutoff, 4])
+        return tf.cast(nlist, self.dtype)
+
+    # @tf.function
+    def compute_outputs(self, dtype, force_addr, forces):
+        if forces.shape[1] == 3:
+            forces = tf.concat(
+                [forces, tf.zeros(tf.shape(forces)[0])[:, tf.newaxis]],
+                axis=1, name='forces')
+        tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
+        tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
+        forces = tf_to_hoomd(
+                tf.cast(forces, dtype),
+                address=force_addr)
 
     ## \var atom_number
     # \internal
@@ -403,7 +430,7 @@ def compute_forces(energy, nlist, positions=False, virial=False):
         as the class attribute ``virial`` and will be saved automatically.
     """
     # compute -gradient wrt positions
-    if positions
+    if positions:
         pos_forces = tf.gradients(ys=tf.negative(energy), xs=positions)[0]
     else:
         pos_forces = None
@@ -507,3 +534,21 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
     :return: The safe norm op (TensorFlow operation)
     """
     return tf.norm(tensor=tensor + delta, **kwargs)
+
+def load_htf_op_library(op):
+    import hoomd.htf
+    path = hoomd.htf.__path__[0]
+    try:
+        op_path = os.path.join(path, op, 'lib_{}'.format(op))
+        if os.path.exists(op_path + '.so'):
+            op_path += '.so'
+        elif os.path.exists(op_path + '.dylib'):
+            op_path += '.dylib'
+        else:
+            raise OSError()
+        mod = tf.load_op_library(op_path)
+    except OSError:
+        raise OSError('Unable to load OP {}. '
+                      'Expected to be in {}'.format(op, path))
+    return mod
+
