@@ -5,6 +5,7 @@ import tensorflow as tf
 import os
 import pickle
 
+
 class SimModel(tf.keras.Model):
     def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32, name='htf-model', **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
@@ -15,19 +16,22 @@ class SimModel(tf.keras.Model):
         self.output_forces = output_forces
 
         input_signature = [
-            tf.TensorSpec(shape=[None, max(1,nneighbor_cutoff), 4], dtype=dtype), # nlist
-            tf.TensorSpec(shape=[None, 4], dtype=dtype), # positions
-            tf.TensorSpec(shape=[None,3], dtype=dtype), # box
-            ]
+            tf.TensorSpec(
+                shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
+            tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
+            tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
+        ]
 
         try:
-            self.compute = tf.function(self.compute, input_signature=input_signature)
+            self.compute = tf.function(
+                self.compute, input_signature=input_signature)
         except AttributeError:
-            raise AttributeError('SimModel child class must implement compute method, and should not implement call')
-
+            raise AttributeError(
+                'SimModel child class must implement compute method, and should not implement call')
 
         self.check_nlist = check_nlist
-        self.batch_steps = tf.Variable(name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
+        self.batch_steps = tf.Variable(
+            name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
 
     def call(self, inputs, training):
         return self.compute(*inputs)
@@ -39,41 +43,43 @@ class SimModel(tf.keras.Model):
 
         if self.nneighbor_cutoff > 0:
             nlist = tf.reshape(hoomd_to_tf(
-                    address = nlist_addr,
-                    shape = [4 * self.nneighbor_cutoff],
-                    T = dtype,
-                    name ='nlist-input'
-                ), [-1, self.nneighbor_cutoff, 4])
+                address=nlist_addr,
+                shape=[4 * self.nneighbor_cutoff],
+                T=dtype,
+                name='nlist-input'
+            ), [-1, self.nneighbor_cutoff, 4])
         else:
             nlist = tf.zeros([1, 1, 4], dtype=self.dtype)
         pos = hoomd_to_tf(
-                address = positions_addr,
-                shape = [4],
-                T = dtype,
-                name ='pos-input'
-            )
+            address=positions_addr,
+            shape=[4],
+            T=dtype,
+            name='pos-input'
+        )
 
         box = hoomd_to_tf(
-            address = box_addr,
-            shape = [3],
-            T = dtype,
-            name = 'box-input'
+            address=box_addr,
+            shape=[3],
+            T=dtype,
+            name='box-input'
         )
 
         if self.check_nlist:
             NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
-                                                     tf.dtypes.int32), axis=1),
+                                                                               tf.dtypes.int32), axis=1),
                                axis=0)
-            tf.Assert(tf.less(NN, self.nneighbor_cutoff), ['Neighbor list is full!'])
+            tf.Assert(tf.less(NN, self.nneighbor_cutoff),
+                      ['Neighbor list is full!'])
 
-        result = [tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype), tf.cast(box, self.dtype)]
+        result = [tf.cast(nlist, self.dtype), tf.cast(
+            pos, self.dtype), tf.cast(box, self.dtype)]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
-                address = forces_addr,
-                shape = [4],
-                T = dtype,
-                name = 'forces-input'
+                address=forces_addr,
+                shape=[4],
+                T=dtype,
+                name='forces-input'
             )
             result.append(tf.cast(forces, self.dtype))
 
@@ -88,110 +94,110 @@ class SimModel(tf.keras.Model):
         tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
         forces = tf_to_hoomd(
-                tf.cast(forces, dtype),
-                address=force_addr)
+            tf.cast(forces, dtype),
+            address=force_addr)
 
     @tf.function
     def update(self, nlist, positions, box, batch_frac, batch_index):
         # update batch index and wrap around int32 max to avoid overflow
         self.batch_steps.assign(tf.math.floormod(
-                self.batch_steps + tf.cond(pred=tf.equal(batch_index, tf.constant(0)),
-                                        true_fn=lambda: tf.constant(
-                    1),
-                    false_fn=lambda: tf.constant(0)),
-                2**31 - 1)
-            )
+            self.batch_steps + tf.cond(pred=tf.equal(batch_index, tf.constant(0)),
+                                       true_fn=lambda: tf.constant(
+                1),
+                false_fn=lambda: tf.constant(0)),
+            2**31 - 1)
+        )
         # TODO
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
 
-    ## \var atom_number
+    # \var atom_number
     # \internal
     # \brief Number of atoms
     # \details
     # defines the placeholder first dimension, which will be the size of the system
 
-    ## \var nneighbor_cutoff
+    # \var nneighbor_cutoff
     # \internal
     # \brief Max size of neighbor list
     # \details
     # Cutoff for maximum number of atoms in each neighbor list
 
-    ## \var nlist
+    # \var nlist
     # \internal
     # \brief The neighbor list
     # \details
     # This is the tensor where the neighbor list is held
 
-    ## \var virial
+    # \var virial
     # \internal
     # \brief The virial
     # \details
     # Virial associated with the neighbor list
 
-    ## \var positions
+    # \var positions
     # \internal
     # \brief The particle positions
     # \details
     # Tensor holding the positions of all particles (Euclidean)
 
-    ## \var forces
+    # \var forces
     # \internal
     # \brief The forces tensor
     # \details
     # If output_forces is true, this is where those are stored
 
-    ## \var batch_frac
+    # \var batch_frac
     # \internal
     # \brief portion of tensor to use in each batch
     # \details
     # When batching large tensors, this determines the size of the batches,
     # as a fraction of the total size of the tensor which is to be batched
 
-    ## \var batch_index
+    # \var batch_index
     # \internal
     # \brief Tracks batching index
     # \details
     # Ranging from 0 to 1 / batch_frac, tracks which part of the batch we're on
 
-    ## \var output_forces
+    # \var output_forces
     # \internal
     # \brief Whether to output forces to HOOMD
     # \details
     # If true, forces are calculated and passed to HOOMD
 
-    ## \var _nlist_rinv
+    # \var _nlist_rinv
     # \internal
     # \brief the 1/r values for each neighbor pair
 
-    ## \var mol_indices
+    # \var mol_indices
     # \internal
     # \brief Stores molecule indices for each atom
     # \details
     # Each atom is assigned an index associated with its corresponding molecule
 
-    ## \var mol_batched
+    # \var mol_batched
     # \internal
     # \brief Whether to batch by molecule
     # \details
     # Not yet implemented
 
-    ## \var MN
+    # \var MN
     # \internal
     # \brief Number of molecules
     # \details
     # This is how many molecules we have among the atoms in our neighbor list
 
-    ## \var batch_steps
+    # \var batch_steps
     # \internal
     # \brief How many times we have to run our batch calculations
 
-    ## \var update_batch_index_op
+    # \var update_batch_index_op
     # \internal
     # \brief TensorFlow op for batching
     # \details
     # Custom op that updates the batch index each time we run a batch calculation
 
-    ## \var out_nodes
+    # \var out_nodes
     # \internal
     # \brief List of TensorFlow ops to put into the graph
     # \details
@@ -220,7 +226,8 @@ class SimModel(tf.keras.Model):
         if type_tensor is None:
             type_tensor = self.positions[:, 3]
         if type_i is not None:
-            nlist = tf.boolean_mask(tensor=nlist, mask=tf.equal(type_tensor, type_i))
+            nlist = tf.boolean_mask(
+                tensor=nlist, mask=tf.equal(type_tensor, type_i))
         if type_j is not None:
             # cannot use boolean mask due to size
             mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
@@ -287,12 +294,12 @@ class SimModel(tf.keras.Model):
             raise ValueError('Unable to perform {}'
                              'reduction across batches'.format(batch_reduction))
         store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
-                                validate_shape=False, dtype=tf.float32, trainable=False)
+                            validate_shape=False, dtype=tf.float32, trainable=False)
         with tf.compat.v1.name_scope(name + '-batch'):
             # keep batch avg
             batch_store = tf.Variable(name=name + '-batch',
-                                          initial_value=tf.zeros_like(tensor),
-                                          validate_shape=False, dtype=tf.float32, trainable=False)
+                                      initial_value=tf.zeros_like(tensor),
+                                      validate_shape=False, dtype=tf.float32, trainable=False)
             with tf.control_dependencies([self.update_batch_index_op]):
                 # moving the batch store to normal store after batch is complete
                 move_op = store.assign(tf.cond(
@@ -309,7 +316,8 @@ class SimModel(tf.keras.Model):
                     self.out_nodes.append(reset_op)
                     with tf.control_dependencies([reset_op]):
                         if batch_reduction == 'mean':
-                            batch_op = batch_store.assign_add(tensor * self.batch_frac)
+                            batch_op = batch_store.assign_add(
+                                tensor * self.batch_frac)
                         elif batch_reduction == 'sum':
                             batch_op = batch_store.assign_add(tensor)
                         self.out_nodes.append(batch_op)
@@ -334,7 +342,7 @@ class SimModel(tf.keras.Model):
                              'but given type {}'.format(type(tensor)))
 
         store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
-                                validate_shape=False, dtype=tensor.dtype, trainable=False)
+                            validate_shape=False, dtype=tensor.dtype, trainable=False)
 
         store_op = store.assign(tensor)
         self.out_nodes.append([store_op, save_period])
@@ -360,12 +368,12 @@ class SimModel(tf.keras.Model):
         """
 
         self.mol_indices = tf.compat.v1.placeholder(tf.int32,
-                                          shape=[None, MN],
-                                          name='htf-molecule-index')
+                                                    shape=[None, MN],
+                                                    name='htf-molecule-index')
 
         self.rev_mol_indices = tf.compat.v1.placeholder(tf.int32,
-                                              shape=[None, 2],
-                                              name='htf-reverse-molecule-index')
+                                                        shape=[None, 2],
+                                                        name='htf-reverse-molecule-index')
         self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
         # we add one dummy particle to the positions, nlist, and forces so that
@@ -373,41 +381,49 @@ class SimModel(tf.keras.Model):
         # these dummy particles. Thus we will add one to the mol indices when
         # we do tf compute to prepare.
         ap = tf.concat((
-                tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
-                self.positions),
+            tf.constant([0, 0, 0, 0], dtype=self.positions.dtype,
+                        shape=(1, 4)),
+            self.positions),
             axis=0)
         an = tf.concat(
-            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4), dtype=self.positions.dtype), self.nlist),
+            (tf.zeros(shape=(1, self.nneighbor_cutoff, 4),
+                      dtype=self.positions.dtype), self.nlist),
             axis=0)
-        self.mol_positions = tf.reshape(tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
+        self.mol_positions = tf.reshape(
+            tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
         self.mol_nlist = tf.reshape(
             tf.gather(an, self.mol_flat_idx),
             shape=[-1, MN, self.nneighbor_cutoff, 4])
         if not self.output_forces:
             af = tf.concat((
-                    tf.constant([0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
-                    self.forces),
+                tf.constant(
+                    [0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
+                self.forces),
                 axis=0)
-            self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
+            self.mol_forces = tf.reshape(
+                tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
         self.MN = MN
+
 
 def compute_positions_forces(positions, energy):
     return tf.gradients(energy, positions)[0]
+
 
 def compute_nlist_forces(nlist, energy):
     nlist_grad = tf.gradients(energy, nlist)[0]
     if nlist_grad is None:
         raise ValueError('Could not find dependence between energy and nlist')
     nlist_grad = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_grad),
-                                name='nlist-pairwise-force'
-                                    '-gradient-raw')
+                             name='nlist-pairwise-force'
+                             '-gradient-raw')
     zeros = tf.zeros(tf.shape(input=nlist_grad))
     nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_grad),
-                            nlist_grad, zeros,
-                            name='nlist-pairwise-force-gradient')
+                                      nlist_grad, zeros,
+                                      name='nlist-pairwise-force-gradient')
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
-                                    name='nlist-force-gradient')
+                                 name='nlist-force-gradient')
     return nlist_reduce
+
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):
@@ -424,6 +440,7 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
     """
     return tf.norm(tensor=tensor + delta, **kwargs)
 
+
 @tf.function
 def wrap_vector(r, box):
     R"""Computes the minimum image version of the given vector.
@@ -434,6 +451,7 @@ def wrap_vector(r, box):
     """
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
+
 
 def load_htf_op_library(op):
     import hoomd.htf
@@ -451,4 +469,3 @@ def load_htf_op_library(op):
         raise OSError('Unable to load OP {}. '
                       'Expected to be in {}'.format(op, path))
     return mod
-

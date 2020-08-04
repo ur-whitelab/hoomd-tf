@@ -102,7 +102,7 @@ set(files
     tensorflowcompute.py
     tfarraycomm.py
     version.py
-    graphbuilder.py
+    simmodel.py
     )
 
 install(FILES ${files}

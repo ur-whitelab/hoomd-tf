@@ -228,7 +228,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         There should be one matrix per molecule.
         The ordering of the atoms should follow
         what is defined in the output from find_molecules
-    :param molecule_mapping_index: This is the output from find_molecules. 
+    :param molecule_mapping_index: This is the output from find_molecules.
          A list of length L (number of molecules) whose elements are lists of atom indices
     :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
@@ -567,7 +567,7 @@ def mol_bond_distance(mol_positions, type_i, type_j):
     -------------
     mol_positions
         Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in graphbuilder
+        method in simmodel
     type_i
          Index of the first atom (int type)
     type_j
@@ -596,7 +596,7 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
     -------------
     mol_positions
         Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in graphbuilder
+        method in simmodel
     type_i
          Index of the first atom (int type)
     type_j
@@ -635,7 +635,7 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
     -------------
     mol_positions
         Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in graphbuilder
+        method in simmodel
     type_i
          Index of the first atom (int type)
     type_j

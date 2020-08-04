@@ -13,16 +13,16 @@ class SimplePotential(htf.SimModel):
         neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
         # no need to use netwon's law because nlist should be double counted
         fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
-                            name='nan-pairwise-forces')
+                         name='nan-pairwise-forces')
         zeros = tf.zeros_like(nlist)
         real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
-                                name='pairwise-forces')
+                           name='pairwise-forces')
         forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
         return forces
 
 
 def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
-    graph = htf.graph_builder(1024, 64)
+    graph = htf.SimModel(1024, 64)
     nlist = graph.nlist[:, :, :3]
     # get r
     r = tf.norm(tensor=nlist, axis=2)
@@ -34,7 +34,7 @@ def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-mo
 
 
 def gradient_potential(directory='/tmp/test-gradient-potential-model'):
-    graph = htf.graph_builder(9 - 1)
+    graph = htf.SimModel(9 - 1)
     with tf.compat.v1.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2)
@@ -46,22 +46,25 @@ def gradient_potential(directory='/tmp/test-gradient-potential-model'):
                model_directory=directory,
                out_nodes=[energy])
 
+
 class NoForceModel(htf.SimModel):
     def compute(self, nlist, positions, box):
-        neighs_rs = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        neighs_rs = tf.norm(tensor=nlist[:, :, :3], axis=2)
         energy = tf.math.divide_no_nan(tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype),
             neighs_rs, name='energy')
         pos_norm = tf.norm(tensor=positions, axis=1)
         return energy, pos_norm
 
+
 def saving_graph(directory='/tmp/test-saving-model'):
-    graph = htf.graph_builder(0, output_forces=False)
+    graph = htf.SimModel(0, output_forces=False)
     pos_norm = tf.norm(tensor=graph.positions, axis=1)
     graph.save_tensor(pos_norm, 'v1')
     graph.running_mean(pos_norm, 'v2')
     graph.save(directory)
     return directory
+
 
 class WrapModel(htf.SimModel):
     def compute(self, nlist, positions, box):
@@ -74,7 +77,7 @@ class WrapModel(htf.SimModel):
 
 
 def mol_force(directory='/tmp/test-mol-force-model'):
-    graph = htf.graph_builder(0, output_forces=False)
+    graph = htf.SimModel(0, output_forces=False)
     graph.build_mol_rep(3)
     f = tf.norm(tensor=graph.mol_forces, axis=0)
     graph.save(directory, out_nodes=[f])
@@ -82,7 +85,7 @@ def mol_force(directory='/tmp/test-mol-force-model'):
 
 
 def feeddict_graph(directory='/tmp/test-feeddict-model'):
-    graph = htf.graph_builder(9 - 1, output_forces=False)
+    graph = htf.SimModel(9 - 1, output_forces=False)
     forces = graph.forces[:, :3]
     force_com = tf.reduce_mean(input_tensor=forces, axis=0)
     thing = tf.compat.v1.placeholder(dtype=tf.float32, name='test-tensor')
@@ -98,8 +101,9 @@ class BenchmarkNonlistGraph(htf.SimModel):
         forces = htf.compute_positions_forces(positions, energy)
         return forces
 
+
 def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
-    graph = htf.graph_builder(NN, **kw_args)
+    graph = htf.SimModel(NN, **kw_args)
     nlist = graph.nlist[:, :, :3]
     # get r
     r = tf.norm(tensor=nlist, axis=2)
@@ -117,7 +121,7 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
 
 
 def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
-    graph = htf.graph_builder(NN, output_forces=False)
+    graph = htf.SimModel(NN, output_forces=False)
     # make trainable variables
     epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
     sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
@@ -146,7 +150,7 @@ def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
 
 
 def eds_graph(directory='/tmp/test-lj-eds'):
-    graph = htf.graph_builder(0)
+    graph = htf.SimModel(0)
     # get distance from center
     rvec = graph.wrap_vector(graph.positions[0, :3])
     cv = tf.norm(tensor=rvec)
@@ -169,7 +173,7 @@ def eds_graph(directory='/tmp/test-lj-eds'):
 
 
 def mol_features_graph(directory='/tmp/test-mol-features'):
-    graph = htf.graph_builder(50, output_forces=False)
+    graph = htf.SimModel(50, output_forces=False)
     graph.build_mol_rep(6)
     mol_pos = graph.mol_positions
     r = htf.mol_bond_distance(mol_pos, 2, 1)
@@ -186,7 +190,7 @@ def mol_features_graph(directory='/tmp/test-mol-features'):
 
 
 def run_traj_graph(directory='/tmp/test-run-traj'):
-    graph = htf.graph_builder(128)
+    graph = htf.SimModel(128)
     nlist = graph.nlist[:, :, :3]
     r = tf.norm(tensor=nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
@@ -204,20 +208,20 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
 
 
 def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
-    graph = htf.graph_builder(NN, output_forces=False)
+    graph = htf.SimModel(NN, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     # get r
     box_size = graph.box_size
     r = tf.norm(tensor=nlist, axis=2)
     v = tf.compat.v1.get_variable('hoomd-r', initializer=tf.zeros_like(r),
-                        validate_shape=False)
+                                  validate_shape=False)
     ops = [v.assign(r)]
 
     # compute nlist
     cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, box_size)
     r = tf.norm(tensor=cnlist[:, :, :3], axis=2)
     v = tf.compat.v1.get_variable('htf-r', initializer=tf.zeros_like(r),
-                        validate_shape=False)
+                                  validate_shape=False)
     ops.append(v.assign(r))
 
     graph.save(model_directory=directory, out_nodes=ops)
@@ -225,7 +229,7 @@ def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
 
 
 def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
-    graph = htf.graph_builder(NN)
+    graph = htf.SimModel(NN)
     # pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -241,7 +245,7 @@ def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
 
 def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
     ops = []
-    graph = htf.graph_builder(NN, output_forces=False)
+    graph = htf.SimModel(NN, output_forces=False)
     # pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -257,7 +261,7 @@ def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
 
 
 def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
-    graph = htf.graph_builder(NN)
+    graph = htf.SimModel(NN)
     # pairwise energy. Double count -> divide by 2
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -273,7 +277,7 @@ def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
 
 
 def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
-    graph = htf.graph_builder(NN)
+    graph = htf.SimModel(NN)
     graph.build_mol_rep(MN)
     # assume particle (w) is 0
     r = graph.safe_norm(graph.mol_nlist, axis=3)
@@ -299,6 +303,7 @@ class PrintModel(htf.SimModel):
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
 
+
 class LJLayer(tf.keras.layers.Layer):
     def __init__(self, sig, eps):
         super().__init__(self, name='lj')
@@ -311,21 +316,25 @@ class LJLayer(tf.keras.layers.Layer):
             name='lj-params'
 
         )
+
     def call(self, r):
         r6 = tf.math.divide_no_nan(self.w[1]**6, r**6)
-        energy = self.w[0] * 4.0  * (r6**2 - r6)
+        energy = self.w[0] * 4.0 * (r6**2 - r6)
         # divide by 2 to remove double count
         return energy / 2.
+
     def get_config(self):
         c = {}
         c['sig'] = self.start[0]
         c['eps'] = self.start[1]
         return c
 
+
 class TrainableGraph(htf.SimModel):
     def __init__(self, NN, **kwargs):
         super().__init__(NN, **kwargs)
         self.lj = LJLayer(1.0, 1.0)
+
     def compute(self, nlist, positions, box):
         # get r
         r = htf.safe_norm(tensor=nlist[:, :, :3], axis=2)

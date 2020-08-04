@@ -30,7 +30,7 @@ model_dir = '{}/{}_benchmarking'.format(save_directory, mode_string)
 
 
 def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
-    graph = htf.graph_builder(NN, output_forces=False)
+    graph = htf.SimModel(NN, output_forces=False)
     # make trainable variables
     epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
     sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)

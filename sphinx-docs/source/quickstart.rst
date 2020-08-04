@@ -11,7 +11,7 @@ pairwise potential:
     import tensorflow as tf
 
     ########### Graph Building Code ###########
-    graph = htf.graph_builder(64) # max neighbors = 64
+    graph = htf.SimModel(64) # max neighbors = 64
     pair_energy = graph.nlist_rinv # nlist_rinv is neighbor 1 / r
     particle_energy = tf.reduce_sum(pair_energy, axis=1) # sum over neighbors
     forces = graph.compute_forces(particle_energy) # compute forces

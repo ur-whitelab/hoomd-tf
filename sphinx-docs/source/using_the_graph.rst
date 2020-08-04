@@ -50,7 +50,7 @@ first containing atoms 0 and 1 and the second containing atom 1. Note
 that the molecules can be different size and atoms can exist in multiple
 molecules.
 
-If you do not call :py:meth:`graphbuilder.graph_builder.build_mol_rep`
+If you do not call :py:meth:`simmodel.SimModel.build_mol_rep`
 while building your graph, you can
 optionally split your batches to be smaller than the entire system. This
 is set via the ``batch_size`` integer argument to :py:meth:`tfcompute.tfcompute.attach`.
@@ -125,7 +125,7 @@ then load the variables into a different model:
 
     def make_train_graph(NN, directory):
         # build a model that fits the energy to a linear term
-        graph = htf.graph_builder(NN, output_forces=False)
+        graph = htf.SimModel(NN, output_forces=False)
         # get r
         nlist = graph.nlist[:, :, :3]
         r = graph.safe_norm(nlist, axis=2)
@@ -143,7 +143,7 @@ then load the variables into a different model:
     def make_force_graph(NN, directory):
         # this model applies the variables learned in the example above
         # to compute forces
-        graph = htf.graph_builder(NN)
+        graph = htf.SimModel(NN)
         # get r
         nlist = graph.nlist[:, :, :3]
         r = graph.safe_norm(nlist, axis=2)

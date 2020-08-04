@@ -20,7 +20,7 @@ class test_loading(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         model_dir = self.tmp
         # make model that does assignment
-        g = hoomd.htf.graph_builder(0, False)
+        g = hoomd.htf.SimModel(0, False)
         h = tf.ones([10], dtype=tf.float32)
         v = tf.compat.v1.get_variable('test', shape=[], trainable=False)
         as_op = v.assign(tf.reduce_sum(input_tensor=h))

@@ -11,7 +11,7 @@ potentials and constructing CG mappings.
 RDF
 ---
 
-To compute an RDF, use :py:meth:`graphbuilder.graph_builder.compute_rdf`:
+To compute an RDF, use :py:meth:`simmodel.SimModel.compute_rdf`:
 
 .. code:: python
 
@@ -25,11 +25,11 @@ To compute an RDF, use :py:meth:`graphbuilder.graph_builder.compute_rdf`:
     print(variables)
 
 .. _pairwise_potentials:
-    
+
 Pairwise Potential and Forces
 -----------------------------
 
-To compute a pairwise potential, use 
+To compute a pairwise potential, use
 :py:meth:`utils.compute_pairwise_potential`:
 
 .. code:: python
@@ -40,7 +40,7 @@ To compute a pairwise potential, use
     ...
 
 .. _eds_biasing:
-    
+
 Biasing with EDS
 ----------------
 
@@ -69,13 +69,13 @@ simulation:
     # after simulation
     vars = htf.load_variables('model/directory', ['avg-eds-alpha'])
     print(vars['avg-eds-alpha'])
-    
+
 .. _traj_parsing:
-    
+
 Trajectory Parsing
 ----------------
 
-To process information from a trajectory, use 
+To process information from a trajectory, use
 :py:meth:`utils.run_from_trajectory`:
 
 .. _coarse_graining:
@@ -220,7 +220,7 @@ The last method, which usually works when all others fail, is to have
 all the container's traffic be on the host. You can do this by adding
 the flag ``--net=host`` to the run command of the container. Then you
 can visit ``http://localhost:6006``.
-    
+
 .. _interactive_mode:
 
 Interactive Mode

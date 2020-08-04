@@ -77,7 +77,7 @@ html_static_path = ['_static']
 
 # mock imports so we can generate docs without installing
 autodoc_mock_imports = ['hoomd', 'hoomd.md', 'hoomd.md.nlist', 'hoomd.comm',
-                        'hoomd.htf', 'tensorflow', 'numpy', 'hoomd.htf._htf','hoomd.htf.tfmanager']
+                        'hoomd.htf', 'tensorflow', 'numpy', 'hoomd.htf._htf','hoomd.htf.simmodel']
 
 # define master doc for newer versions of sphinx
 master_doc = 'index'

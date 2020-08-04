@@ -3,12 +3,12 @@
 Building the Graph
 ==================
 
-To construct a graph, create a :py:class:`graphbuilder.graph_builder` instance:
+To construct a graph, create a :py:class:`simmodel.SimModel` instance:
 
 .. code:: python
 
     import hoomd.htf as htf
-    graph = htf.graph_builder(NN, output_forces)
+    graph = htf.SimModel(NN, output_forces)
 
 where ``NN`` is the maximum number of nearest neighbors to consider
 (can be 0). This is an upper-bound, so choose a large number. If you
@@ -28,7 +28,7 @@ TensorFlow graph: ``nlist``, ``positions``, ``box``, ``box_size``, and
   vector originating at the particle and ending at its neighbor.
 
 * ``positions`` is an ``N`` x 4 tensor of particle positions (x,y,z) and type.
-  
+
 * ``forces`` is an ``N`` x 4 tensor that is  *only* available if the graph does
   not output forces (via ``output_forces=False``).
 
@@ -44,7 +44,7 @@ Molecule Batching
 It may be simpler to have positions or neighbor lists or forces arranged
 by molecule. For example, you may want to look at only a particular bond
 or subset of atoms in a molecule. To do this, you can call
-:py:meth:`graphbuilder.graph_builder.build_mol_rep`, whose argument
+:py:meth:`simmodel.SimModel.build_mol_rep`, whose argument
 ``MN`` is the maximum number of atoms
 in a molecule. This will create the following new attributes:
 ``mol_positions``, ``mol_nlist``, and ``mol_forces`` (if your graph has
@@ -59,7 +59,7 @@ are the middle atom:
 .. code:: python
 
     import hoomd.htf as htf
-    graph = graph_builder(0)
+    graph = SimModel(0)
     graph.build_mol_rep(3)
     # want slice for all molecules (:)
     # want h1 (0), o (1), h2(2)
@@ -76,16 +76,16 @@ Computing Forces
 ----------------
 
 If your graph is outputting forces, you may either compute forces and
-pass them to :py:meth:`graphbuilder.graph_builder.save` or have them computed via
+pass them to :py:meth:`simmodel.SimModel.save` or have them computed via
 automatic differentiation of a potential energy. Call
-:py:meth:`graphbuilder.graph_builder.compute_forces` with the argument ``energy``,
+:py:meth:`simmodel.SimModel.compute_forces` with the argument ``energy``,
 which can be either a scalar or a tensor which depends on ``nlist`` and/or ``positions``. A tensor of
 forces will be returned as :math:`\sum_i(\frac{-\partial E} {\partial n_i}) - \frac{dE} {dp}`, where the sum is over
 the neighbor list. For example, to compute a :math:`1 / r` potential:
 
 .. code:: python
 
-    graph = htf.graph_builder(N - 1)
+    graph = htf.SimModel(N - 1)
     #remove w since we don't care about types
     nlist = graph.nlist[:, :, :3]
     #get r
@@ -98,7 +98,7 @@ the neighbor list. For example, to compute a :math:`1 / r` potential:
     forces = graph.compute_forces(energy)
 
 Notice that in the above example that we have used the
-:py:meth:`graphbuilder.graph_builder.safe_div` method, which allows
+:py:meth:`simmodel.SimModel.safe_div` method, which allows
 us to safely treat a :math:`1 / 0`, which can arise because ``nlist``
 contains 0s for when fewer than ``NN``
 nearest neighbors are found.
@@ -112,10 +112,10 @@ pairwise energies.
 Neighbor lists
 --------------
 
-As mentioned above, :py:class:`graphbuilder.graph_builder` contains a member called
+As mentioned above, :py:class:`simmodel.SimModel` contains a member called
 ``nlist``, which is an ``N x NN x 4``
 neighobr list tensor. You can ask for masked versions of this with
-:py:meth:`graphbuilder.graph_builder.masked_nlist`
+:py:meth:`simmodel.SimModel.masked_nlist`
 where ``type_i`` and ``type_j`` are optional integers that specify the type of
 the origin (``type_i``) or neighobr (``type_j``). The ``nlist`` argument
 allows you to pass in your own neighbor list and ``type_tensor`` allows
@@ -129,7 +129,7 @@ Virial
 ------
 
 The virial is computed and added to the graph if you use the
-:py:meth:`graphbuilder.graph_builder.compute_forces` method
+:py:meth:`simmodel.SimModel.compute_forces` method
 and your energy has a non-zero derivative
 with respect to ``nlist``. You may also explicitly pass the virial when
 saving, or pass ``None`` to remove the automatically-calculated virial.
@@ -140,15 +140,15 @@ Finalizing the Graph
 --------------------
 
 To finalize and save your graph, you must call
-:py:meth:`graphbuilder.graph_builder.save` with the following arguments:
+:py:meth:`simmodel.SimModel.save` with the following arguments:
 
 * ``directory``: where to save your TensorFlow model files
 * ``force_tensor`` (optional): your computed forces, either as
-  computed by your graph or output from :py:meth:`graphbuilder.graph_builder.compute_forces`.
+  computed by your graph or output from :py:meth:`simmodel.SimModel.compute_forces`.
   This should be an ``N x 4`` tensor with the 4th column indicating per-particle potential energy.
 * ``virial`` (optional): the virial tensor to save. The virial should be an ``N x 3 x 3`` tensor.
 * ``out_nodes`` (optional): If your graph is not outputting forces, then you must provide a tensor or list of
-  tensors which will be computed at each timestep. 
+  tensors which will be computed at each timestep.
 
 .. _saving_data:
 
@@ -157,15 +157,15 @@ Saving Data
 
 Using variables is the best way to save computed quantities while
 running a compute graph. See the :ref:`loading_variables` section for
-loading them. You can save a tensor value to a variable using 
-:py:meth:`graphbuilder.graph_builder.save_tensor`. Here is an
+loading them. You can save a tensor value to a variable using
+:py:meth:`simmodel.SimModel.save_tensor`. Here is an
 example of computing the LJ potential and saving the system energy at
 each step.
 
 .. code:: python
 
     # set-up graph
-    graph = htf.graph_builder(NN)
+    graph = htf.SimModel(NN)
     # compute LJ potential
     inv_r6 = graph.nlist_rinv**6
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
@@ -177,7 +177,7 @@ each step.
     graph.save(force_tensor=forces, model_directory=directory)
 
 Often you may want a running mean of a variable, for which there is a
-built-in, :py:meth:`graphbuilder.graph_builder.running_mean`:
+built-in, :py:meth:`simmodel.SimModel.running_mean`:
 
 .. code:: python
 
@@ -201,11 +201,11 @@ Note that when a run is started, the latest values of your
 variables are loaded from your model directory. *If you are starting a
 new run but you previously ran your model, the old variable values will
 be loaded.* To prevent this unexpectedly loading old checkpoints, if you
-run :py:meth:`graphbuilder.graph_builder.save`, it will move out all old checkpoints. This
+run :py:meth:`simmodel.SimModel.save`, it will move out all old checkpoints. This
 behavior means that if you want to restart, you should not re-run
-:py:meth:`graphbuilder.graph_builder.save` in your restart script, *nor* should you pass
+:py:meth:`simmodel.SimModel.save` in your restart script, *nor* should you pass
 ``move_previous = False`` as a parameter if you re-run
-:py:meth:`graphbuilder.graph_builder.save`.
+:py:meth:`simmodel.SimModel.save`.
 
 Variables are also how you save data as seen above. If you are doing
 training and also computing other variables, be sure to set your
@@ -287,7 +287,7 @@ shows how to set up a neural network model using Keras layers.
 
     NN = 64
     N_hidden_nodes = 5
-    graph = htf.graph_builder(NN, output_forces=False)
+    graph = htf.SimModel(NN, output_forces=False)
     r_inv = graph.nlist_rinv
     input_tensor = tf.reshape(r_inv, shape=(-1,1), name='r_inv')
     #we don't need to explicitly make a keras.Model object, just layers
@@ -304,7 +304,7 @@ shows how to set up a neural network model using Keras layers.
     #save using graph.save, not Keras Model.compile
     graph.save(model_directory='/tmp/keras_model/', out_nodes=[ optimizer])
 
-The model can then be loaded and trained as normal. Note that 
+The model can then be loaded and trained as normal. Note that
 ``keras.models.Model.fit()`` is not currently supported. You must train
 using :py:class:`tensorflowcompute.tfcompute` as explained in the next section.
 
@@ -322,7 +322,7 @@ Lennard-Jones with 1 Particle Type
 
 .. code:: python
 
-    graph = hoomd.htf.graph_builder(NN)
+    graph = hoomd.htf.SimModel(NN)
     #use convenience rinv
     r_inv = graph.nlist_rinv
     p_energy = 4.0 / 2.0 * (r_inv**12 - r_inv**6)

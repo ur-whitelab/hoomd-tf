@@ -17,7 +17,7 @@ class test_op(unittest.TestCase):
         import hoomd
         import hoomd.htf
         import tensorflow as tf
-        from hoomd.htf.graphbuilder import load_htf_op_library
+        from hoomd.htf.simmodel import load_htf_op_library
 
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
 
@@ -25,7 +25,7 @@ class test_op(unittest.TestCase):
         import hoomd
         import hoomd.htf
         import tensorflow as tf
-        from hoomd.htf.graphbuilder import load_htf_op_library
+        from hoomd.htf.simmodel import load_htf_op_library
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
         # don't want a segfault

@@ -15,21 +15,23 @@ import hoomd.md.nlist
 import hoomd.comm
 import tensorflow as tf
 
-## \internal
+# \internal
 # \brief TensorFlow HOOMD compute class
 # \details
 # Integrates tensorflow into HOOMD-blue
+
 
 class tfcompute(hoomd.compute._compute):
     R""" TensorFlow Computations for HTF.
 
         :param tf_model_directory: Kera Model
     """
-    ## \internal
+    # \internal
     # \brief Constructs the tfcompute class
     # \details
     # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
     # whether to use a tensorboard, and some execution preferences.
+
     def __init__(self, model):
         R""" Initialize a tfcompute class instance
         """
@@ -88,7 +90,7 @@ class tfcompute(hoomd.compute._compute):
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
         if mol_indices is not None:
-            #TODO
+            # TODO
             pass
 
         # get neighbor cutoff
@@ -178,7 +180,7 @@ class tfcompute(hoomd.compute._compute):
         for i in range(0, ntypes):
             sys_def = hoomd.context.current.system_definition
             type_list.append(sys_def.getParticleData(
-                    ).getNameByType(i))
+            ).getNameByType(i))
         # update the rcut by pair type
         r_cut_dict = hoomd.md.nlist.rcut()
         for i in range(0, ntypes):
@@ -206,7 +208,8 @@ class tfcompute(hoomd.compute._compute):
             self.model.update(*inputs, batch_frac, batch_index)
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
-                self.model.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
+                self.model.compute_outputs(
+                    self.dtype, self.cpp_force.getForcesBuffer(), output)
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,
@@ -216,7 +219,6 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getForcesBuffer())
             self.model.update(*inputs[:-1], batch_frac, batch_index)
             self.model.train_on_batch(x=inputs[:-1], y=inputs[-1])
-
 
     def get_positions_array(self):
         R""" Retrieve positions array as numpy array

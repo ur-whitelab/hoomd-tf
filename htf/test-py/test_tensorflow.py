@@ -70,6 +70,7 @@ class test_access(unittest.TestCase):
         self.assertEqual(len(np.unique(nl[:, :, 3].astype(np.int))), 3)
         self.assertEqual(len(np.unique(pa[:, 3].astype(np.int))), 3)
 
+
 class test_compute(unittest.TestCase):
     def setUp(self):
         hoomd.context.initialize()
@@ -90,7 +91,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
 
         tfcompute.attach(nlist, r_cut=rcut)
         # use these to throw off timesteps
@@ -100,7 +101,7 @@ class test_compute(unittest.TestCase):
             py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force,
-                                            py_forces[j, :], atol=1e-5)
+                                           py_forces[j, :], atol=1e-5)
             hoomd.run(100)
 
     def test_force_overwrite_batched(self):
@@ -115,7 +116,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         # use these to throw off timesteps
@@ -125,7 +126,7 @@ class test_compute(unittest.TestCase):
             py_forces = compute_forces(system, rcut)
             for j in range(N):
                 np.testing.assert_allclose(system.particles[j].net_force,
-                                            py_forces[j, :], atol=1e-5)
+                                           py_forces[j, :], atol=1e-5)
             hoomd.run(100)
 
     def test_nonlist(self):
@@ -136,7 +137,7 @@ class test_compute(unittest.TestCase):
             n=[32, 32])
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
         tfcompute.attach()
         hoomd.run(10)
 
@@ -148,10 +149,9 @@ class test_compute(unittest.TestCase):
             n=[32, 32])
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
         tfcompute.attach(batch_size=None)
         hoomd.run(10)
-
 
     def test_trainable(self):
         model = build_examples.TrainableGraph(16, output_forces=False)
@@ -166,7 +166,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.1, sigma=0.9)
@@ -190,11 +190,11 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
         tfcompute.attach(nlist, r_cut=rcut, save_period=1)
         hoomd.run(5)
 
-        model.save(os.path.join(self.tmp,'test-model'))
+        model.save(os.path.join(self.tmp, 'test-model'))
 
     def test_model_load(self):
         ''' Saves model after training and then uses
@@ -213,23 +213,22 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=2, seed=2)
+        )).randomize_velocities(kT=2, seed=2)
         tfcompute.attach(nlist, r_cut=rcut, save_period=1)
         hoomd.run(5)
 
-        model.save(os.path.join(self.tmp,'test-model'))
+        model.save(os.path.join(self.tmp, 'test-model'))
 
-        model = tf.keras.models.load_model(os.path.join(self.tmp,'test-model'))
+        model = tf.keras.models.load_model(
+            os.path.join(self.tmp, 'test-model'))
         infer_model = build_examples.TrainableGraph(16, output_forces=True)
         infer_model.set_weights(model.get_weights())
-
 
         tfcompute.disable()
 
         tfcompute = hoomd.htf.tfcompute(infer_model)
         tfcompute.attach(nlist, r_cut=rcut, save_period=1)
         hoomd.run(5)
-
 
     def test_print(self):
         N = 3 * 3
@@ -243,7 +242,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
-                )).randomize_velocities(kT=4, seed=1)
+        )).randomize_velocities(kT=4, seed=1)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         for i in range(3):
@@ -267,7 +266,6 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(
                     system.particles[j].net_force, [0, 0, 0], rtol=1e-5)
-
 
     def test_wrap(self):
         model = build_examples.WrapModel(0, output_forces=False)
@@ -375,7 +373,7 @@ class test_compute(unittest.TestCase):
             lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
             lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1)
             tfcompute.set_reference_forces(lj)
             hoomd.run(300)
@@ -388,9 +386,9 @@ class test_compute(unittest.TestCase):
             lj_forces = np.array([lj.forces[j].force for j in range(Ne**2)])
             lj_energy = np.array([lj.forces[j].energy for j in range(Ne**2)])
             np.testing.assert_allclose(tfcompute.get_forces_array(
-                    )[:, :3], lj_forces)
+            )[:, :3], lj_forces)
             np.testing.assert_allclose(tfcompute.get_forces_array(
-                    )[:, 3], lj_energy)
+            )[:, 3], lj_energy)
 
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
@@ -402,7 +400,7 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut, save_period=3, batch_size=4)
             hoomd.run(10)
         # now load checkpoint
@@ -423,7 +421,7 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell(check_period=1)
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             log = hoomd.analyze.log(filename=None,
                                     quantities=['potential_energy',
                                                 'kinetic_energy'], period=1)
@@ -452,9 +450,9 @@ class test_compute(unittest.TestCase):
             nlist = hoomd.md.nlist.cell()
             hoomd.md.integrate.mode_standard(dt=0.001)
             hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(seed=1, kT=0.8)
+            )).randomize_velocities(seed=1, kT=0.8)
             tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1) # in lattice, should have 4 neighbors
+            hoomd.run(1)  # in lattice, should have 4 neighbors
             nl = tfcompute.get_nlist_array()
             ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
             self.assertEqual(np.min(ncount), 4)
@@ -479,7 +477,7 @@ class test_compute(unittest.TestCase):
                                    kT=1, tau=0.2).randomize_velocities(seed=1)
             tfcompute.attach(nlist, r_cut=rcut)
             log = hoomd.analyze.log(filename=None, quantities=[
-                    'potential_energy', 'pressure'], period=1)
+                'potential_energy', 'pressure'], period=1)
             thermo_scalars = []
             tf_virial = []
             for i in range(5):
@@ -634,7 +632,7 @@ class test_saving(unittest.TestCase):
         vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
 
     def test_tensor_save_var_fail(self):
-        graph = hoomd.htf.graph_builder(0, output_forces=False)
+        graph = hoomd.htf.SimModel(0, output_forces=False)
         v = tf.Variable(0, name='foo')
         with self.assertRaises(ValueError):
             graph.save_tensor(v, 'v')
@@ -644,7 +642,6 @@ class test_nlist(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         hoomd.context.initialize()
-
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
