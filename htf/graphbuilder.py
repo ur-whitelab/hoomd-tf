@@ -5,91 +5,80 @@ import tensorflow as tf
 import os
 import pickle
 
-
-
-
-class SimData(tf.Module):
-    R""" Build the TensorFlow graph that will be used during the HOOMD run.
-
-        :param nneighbor_cutoff: The maximum number of neigbhors to consider (can be 0)
-        :type nneighbor_cutoff: int
-        :param output_forces: True if your graph will compute forces to be used in TensorFlow
-        :type output_forces: bool
-        :type check_nlist: bool
-        :param check_nlist: True will raise error if neighbor
-                            list overflows (nneighbor_cutoff too low)
-    """
-
-    # \internal
-    # \brief Initializes the graphbuilder class
-    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32):
+class SimModel(tf.keras.Model):
+    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32, **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
+        super(SimModel, self).__init__(dtype=dtype, **kwargs)
         self.nneighbor_cutoff = nneighbor_cutoff
-        # use zeros so that we don't need to feed to start session
-        self.nlist = tf.keras.Input(dtype=tf.float32,
-                                    shape=[nneighbor_cutoff, 4],
-                                    name='nlist-input')
         self.output_forces = output_forces
-        self.dtype = dtype
-        self.virial = None
-        self.positions = tf.keras.Input(dtype=tf.float32, shape=[4],
-                                        name='positions-input')
-        # our box:
-        # [ [x_low,  y_low,  z_low],
-        #   [x_high, y_high, z_high],
-        #   [x_tilt, y_tilt, z_tilt] ]
-        self.box = tf.keras.Input(dtype=tf.float32, shape=[3, 3], name='box-input')
-        self.box_size = self.box[1, :] - self.box[0, :]
 
-        self.inputs = [self.nlist, self.positions]
+        input_signature = [
+            tf.TensorSpec(shape=[None, max(1,nneighbor_cutoff), 4], dtype=dtype), # nlist
+            tf.TensorSpec(shape=[None, 4], dtype=dtype), # positions
+            tf.TensorSpec(shape=[None,3], dtype=dtype), # box
+            ]
 
-        if not output_forces:
-            self.forces = tf.keras.Input(dtype=tf.float32, shape=[4], name='forces-input')
-            self.inputs.append(self.forces)
-        self.output_forces = output_forces
-        self._nlist_rinv = None
-        self.mol_indices = None
-        self.mol_batched = False
+        try:
+            self.compute = tf.function(self.compute, input_signature=input_signature)
+        except AttributeError:
+            raise AttributeError('SimModel child class must implement compute method, and should not implement call')
+
+
         self.check_nlist = check_nlist
-        self.MN = 0
         self.batch_steps = tf.Variable(name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
-        # update batch index and wrap around int32 max to avoid overflow
 
+    def call(self, inputs, training):
+        return self.compute(*inputs)
 
-    # @tf.function
-    def compute_inputs(self, dtype, nlist_addr, positions_addr):
+    @tf.function
+    def compute_inputs(self, dtype, nlist_addr, positions_addr, box_addr, forces_addr=0):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
-        tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
-        tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
-
         if self.nneighbor_cutoff > 0:
             nlist = tf.reshape(hoomd_to_tf(
-                    address=nlist_addr,
+                    address = nlist_addr,
                     shape = [4 * self.nneighbor_cutoff],
-                    T=dtype,
-                    name='nlist-input'
+                    T = dtype,
+                    name ='nlist-input'
                 ), [-1, self.nneighbor_cutoff, 4])
         else:
-            nlist = tf.reshape(tf.constant([0.]), [1,1,1])
+            nlist = tf.zeros([1, 1, 4], dtype=self.dtype)
         pos = hoomd_to_tf(
-                address=positions_addr,
+                address = positions_addr,
                 shape = [4],
-                T=dtype,
-                name='pos-input'
+                T = dtype,
+                name ='pos-input'
             )
+
+        box = hoomd_to_tf(
+            address = box_addr,
+            shape = [3],
+            T = dtype,
+            name = 'box-input'
+        )
 
         if self.check_nlist:
             NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
                                                      tf.dtypes.int32), axis=1),
                                axis=0)
-            check_op = tf.Assert(tf.less(NN, self.nneighbor_cutoff), ['Neighbor list is full!'])
+            tf.Assert(tf.less(NN, self.nneighbor_cutoff), ['Neighbor list is full!'])
 
-        return [tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype)]
+        result = [tf.cast(nlist, self.dtype), tf.cast(pos, self.dtype), tf.cast(box, self.dtype)]
 
-    # @tf.function
+        if forces_addr > 0:
+            forces = hoomd_to_tf(
+                address = forces_addr,
+                shape = [4],
+                T = dtype,
+                name = 'forces-input'
+            )
+            result.append(tf.cast(forces, self.dtype))
+
+        return result
+
+    @tf.function
     def compute_outputs(self, dtype, force_addr, forces):
         if forces.shape[1] == 3:
             forces = tf.concat(
@@ -111,7 +100,6 @@ class SimData(tf.Module):
                     false_fn=lambda: tf.constant(0)),
                 2**31 - 1)
             )
-
 
     ## \var atom_number
     # \internal
@@ -210,10 +198,8 @@ class SimData(tf.Module):
     def nlist_rinv(self):
         R""" Returns an N x NN tensor of 1 / r for each neighbor
         """
-        if self._nlist_rinv is None:
-            r = self.safe_norm(self.nlist[:, :, :3], axis=2)
-            self._nlist_rinv = self.tf.math.divide_no_nan(1.0, r)
-        return self._nlist_rinv
+        r = self.safe_norm(self.nlist[:, :, :3], axis=2)
+        return tf.math.divide_no_nan(1.0, r)
 
     def masked_nlist(self, type_i=None, type_j=None, nlist=None,
                      type_tensor=None):
@@ -414,68 +400,23 @@ class SimData(tf.Module):
             self.mol_forces = tf.reshape(tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
         self.MN = MN
 
+def compute_positions_forces(positions, energy):
+    return tf.gradients(energy, positions)[0]
 
-class ForceComputer(tf.GradientTape):
-    def __init__(self, sim_data):
-        super(ForceComputer, self).__init__(True)
-        self.nlist = sim_data.nlist
-        self.positions = sim_data.positions
-        self.watches = [self.nlist, self.positions]
-    def __enter__(self):
-        r = super(ForceComputer, self).__enter__()
-        [r.watch(w) for w in self.watches]
-        return r
-    def get_forces(self, energy):
-        forces = self.gradient(energy, self.positions)
-        return forces
-
-@tf.function
-def compute_nlist_forces(energy, nlist):
-    nlist_forces = tf.gradients(ys=energy, xs=nlist)[0]
-    if nlist_forces is None:
-        raise ValueError('Found no nlist gradients in compute_nlist_forces')
-    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_forces),
+def compute_nlist_forces(nlist, energy):
+    nlist_grad = tf.gradients(energy, nlist)[0]
+    if nlist_grad is None:
+        raise ValueError('Could not find dependence between energy and nlist')
+    nlist_grad = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_grad),
                                 name='nlist-pairwise-force'
                                     '-gradient-raw')
-    zeros = tf.zeros(tf.shape(input=nlist_forces))
-    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
-                            nlist_forces, zeros,
+    zeros = tf.zeros(tf.shape(input=nlist_grad))
+    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_grad),
+                            nlist_grad, zeros,
                             name='nlist-pairwise-force-gradient')
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                     name='nlist-force-gradient')
-    return _add_energy(energy, nlist_reduce)
-
-
-@tf.function
-def compute_position_forces(energy, positions=None):
-    R""" Computes pairwise or position-dependent forces (field) given
-    a potential energy function that computes per-particle
-    or overall energy
-
-    :param energy: The potential energy
-    :type energy: tensor
-    :param virial: Defaults to ``None``. Virial contribution will be computed
-        if the graph outputs forces. Can be set manually instead. Note
-        that the virial term that depends on positions is not computed.
-    :type virial: bool
-    :param positions: Defaults to ``False``. Particle positions tensor to use
-        for force calculations. If set to ``True``, uses ``self.positions``. If
-        set to ``False`` (default), no position dependent forces will be computed.
-        Only pairwise forces from neighbor list will be applied. If set to a
-        tensor, that tensor will be used instead of ``self.positions``.
-    :type positions: tensor
-    :param nlist: Defaults to ``None``. Particle-wise neighbor list to use
-        for force calculations. If not specified, uses ``self.nlist``.
-    :type nlist: tensor
-
-    :return: The TF force tensor. Note that the virial part will be stored
-        as the class attribute ``virial`` and will be saved automatically.
-    """
-    # compute -gradient wrt positions
-    pos_forces = tf.gradients(ys=tf.negative(energy), xs=positions)[0]
-    if pos_forces is None:
-        raise ValueError('Found no pos gradients in compute_pos_forces')
-    return _add_energy(energy, pos_forces)
+    return nlist_reduce
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):

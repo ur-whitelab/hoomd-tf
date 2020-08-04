@@ -45,9 +45,8 @@ class test_access(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_access(self):
-        data = hoomd.htf.SimData(32)
-        model = build_examples.simple_potential(data)
-        tfcompute = hoomd.htf.tfcompute(data)
+        model = build_examples.SimplePotential(32)
+        tfcompute = hoomd.htf.tfcompute(model)
         rcut = 3
         # create a system with a few types
         cell = hoomd.lattice.unitcell(
@@ -61,7 +60,7 @@ class test_access(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
-        tfcompute.attach(model, nlist, r_cut=rcut)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(1)
         tfcompute.get_virial_array()
         tfcompute.get_forces_array()
@@ -83,9 +82,8 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        data = hoomd.htf.SimData(NN)
-        model = build_examples.simple_potential(data)
-        tfcompute = hoomd.htf.tfcompute(data)
+        model = build_examples.SimplePotential(NN)
+        tfcompute = hoomd.htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -94,7 +92,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=hoomd.group.all(
                 )).randomize_velocities(kT=2, seed=2)
 
-        tfcompute.attach(model, nlist, r_cut=rcut)
+        tfcompute.attach(nlist, r_cut=rcut)
         # use these to throw off timesteps
         hoomd.run(1)
         hoomd.run(1)
@@ -109,9 +107,8 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        data = hoomd.htf.SimData(NN)
-        model = build_examples.simple_potential(data)
-        tfcompute = hoomd.htf.tfcompute(data)
+        model = build_examples.SimplePotential(NN)
+        tfcompute = hoomd.htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -120,7 +117,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=hoomd.group.all(
                 )).randomize_velocities(kT=2, seed=2)
 
-        tfcompute.attach(model, nlist, r_cut=rcut, batch_size=4)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         # use these to throw off timesteps
         hoomd.run(1)
         hoomd.run(1)
@@ -132,57 +129,50 @@ class test_compute(unittest.TestCase):
             hoomd.run(100)
 
     def test_nonlist(self):
-        data = hoomd.htf.SimData(0)
-        model = build_examples.benchmark_nonlist_graph(data)
-        tfcompute = hoomd.htf.tfcompute(data)
+        model = build_examples.BenchmarkNonlistGraph(0)
+        tfcompute = hoomd.htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[32, 32])
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
                 )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(model)
+        tfcompute.attach()
         hoomd.run(10)
 
     def test_full_batch(self):
-        data = hoomd.htf.SimData(0)
-        model = build_examples.benchmark_nonlist_graph(data)
-        tfcompute = hoomd.htf.tfcompute(data)
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                            n=[32, 32])
+        model = build_examples.BenchmarkNonlistGraph(0)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[32, 32])
         hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(model, batch_size=None)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(batch_size=None)
         hoomd.run(10)
-
-    def test_write_empty_tensorboard(self):
-        model_dir = build_examples.benchmark_nonlist_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir, write_tensorboard=True) as tfcompute:
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[32, 32])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all()).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(batch_size=None)
-            hoomd.run(10)
 
 
     def test_trainable(self):
-        model_dir = build_examples.trainable_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir,
-                                 write_tensorboard=True) as tfcompute:
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1, batch_size=4)
-            hoomd.run(5)
-            checkpoints = glob.glob(os.path.join(model_dir, 'model-*.data*'))
-            # 6 because an extra is written at the end
-            self.assertGreater(len(checkpoints), 2,
-                               'Checkpoint files not being created.')
+        model = build_examples.TrainableGraph(16, output_forces=False)
+        model.compile(
+            optimizer=tf.keras.optimizers.Nadam(0.01),
+            loss='MeanSquaredError')
+        start = model.get_layer('lj').trainable_weights[0].numpy()
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
+        lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
+        lj.pair_coeff.set('A', 'A', epsilon=1.1, sigma=0.9)
+        hoomd.run(25)
+        end = model.get_layer('lj').trainable_weights[0].numpy()
+        assert np.sum((start - end)**2) > 0.01**2, 'No training observed'
 
     def test_bootstrap(self):
         model_dir = build_examples.trainable_graph(9 - 1, self.tmp)
@@ -221,22 +211,22 @@ class test_compute(unittest.TestCase):
             hoomd.run(5)
 
     def test_print(self):
-        model_dir = build_examples.print_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=4, seed=1)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        model = build_examples.PrintModel(NN)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=4, seed=1)
 
-            tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
-            for i in range(3):
-                hoomd.run(2)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
+        for i in range(3):
+            hoomd.run(2)
 
     def test_noforce_graph(self):
         model_dir = build_examples.noforce_graph(self.tmp)

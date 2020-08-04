@@ -7,18 +7,18 @@ import hoomd.htf as htf
 import pickle
 
 
-def simple_potential(data):
-    nlist = data.nlist[:, :, :3]
-    neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
-    # no need to use netwon's law because nlist should be double counted
-    fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
-                        name='nan-pairwise-forces')
-    zeros = tf.zeros_like(nlist)
-    real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
-                            name='pairwise-forces')
-    forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
-    model = tf.keras.Model(inputs=data.inputs, outputs=forces)
-    return model
+class SimplePotential(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        nlist = nlist[:, :, :3]
+        neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
+        # no need to use netwon's law because nlist should be double counted
+        fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
+                            name='nan-pairwise-forces')
+        zeros = tf.zeros_like(nlist)
+        real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
+                                name='pairwise-forces')
+        forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
+        return forces
 
 
 def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
@@ -27,7 +27,7 @@ def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-mo
     # get r
     r = tf.norm(tensor=nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
-    energy = tf.reduce_sum(input_tensor=graph.safe_div(1., r), axis=1)
+    energy = tf.reduce_sum(input_tensor=tf.math.divide_no_nan(1., r), axis=1)
     forces = graph.compute_forces(energy)
     graph.save(force_tensor=forces,
                model_directory=directory)
@@ -38,7 +38,7 @@ def gradient_potential(directory='/tmp/test-gradient-potential-model'):
     with tf.compat.v1.name_scope('force-calc') as scope:
         nlist = graph.nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2)
-        energy = 0.5 * graph.safe_div(numerator=tf.ones_like(
+        energy = 0.5 * tf.math.divide_no_nan(numerator=tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
             name='energy')
     forces = graph.compute_forces(energy)
@@ -50,7 +50,7 @@ def noforce_graph(directory='/tmp/test-noforce-model'):
     graph = htf.graph_builder(9 - 1, output_forces=False)
     nlist = graph.nlist[:, :, :3]
     neighs_rs = tf.norm(tensor=nlist, axis=2)
-    energy = graph.safe_div(numerator=tf.ones_like(
+    energy = tf.math.divide_no_nan(numerator=tf.ones_like(
         neighs_rs, dtype=neighs_rs.dtype),
         denominator=neighs_rs, name='energy')
     pos_norm = tf.norm(tensor=graph.positions, axis=1)
@@ -95,14 +95,12 @@ def feeddict_graph(directory='/tmp/test-feeddict-model'):
     return directory
 
 
-def benchmark_nonlist_graph(data):
-    with htf.ForceComputer(data) as fc:
-        ps = tf.norm(tensor=data.positions, axis=1)
+class BenchmarkNonlistGraph(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        ps = tf.norm(tensor=positions, axis=1)
         energy = tf.math.divide_no_nan(1., ps)
-    forces = fc.get_forces(energy)
-    model = tf.keras.Model(inputs=data.inputs, outputs=forces)
-    return model
-
+        forces = htf.compute_positions_forces(positions, energy)
+        return forces
 
 def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
     graph = htf.graph_builder(NN, **kw_args)
@@ -111,7 +109,7 @@ def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
     r = tf.norm(tensor=nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
     # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.safe_div(1., r**6)
+    inv_r6 = tf.math.divide_no_nan(1., r**6)
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     # sum over pairwise energy
     energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
@@ -197,7 +195,7 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
     r = tf.norm(tensor=nlist, axis=2)
     # compute 1 / r while safely treating r = 0.
     # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.safe_div(1., r**6)
+    inv_r6 = tf.math.divide_no_nan(1., r**6)
     p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
     # sum over pairwise energy
     energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
@@ -283,7 +281,7 @@ def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
     graph.build_mol_rep(MN)
     # assume particle (w) is 0
     r = graph.safe_norm(graph.mol_nlist, axis=3)
-    rinv = graph.safe_div(1.0, r)
+    rinv = tf.math.divide_no_nan(1.0, r)
     mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
     total_e = tf.reduce_sum(input_tensor=mol_p_energy)
     forces = graph.compute_forces(total_e)
@@ -291,54 +289,46 @@ def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
     return directory
 
 
-def print_graph(NN, directory='/tmp/test-print-model'):
-    graph = htf.graph_builder(NN)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(tensor=nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.safe_div(1., r**6)
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    prints = tf.compat.v1.Print(energy, [energy], summarize=1000)
-    graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[prints])
-    return directory
+class PrintModel(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        # get r
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
+        # compute 1 / r while safely treating r = 0.
+        # pairwise energy. Double count -> divide by 2
+        inv_r6 = tf.math.divide_no_nan(1., r**6)
+        p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        tf.print(energy)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
 
+class LJLayer(tf.keras.layers.Layer):
+    def __init__(self, sig, eps):
+        super().__init__(self, name='lj')
+        self.w = self.add_weight(
+            shape=[2],
+            initializer=tf.constant_initializer([sig, eps]),
+            constraint=tf.keras.constraints.NonNeg(),
+            trainable=True
+        )
+    def call(self, r):
+        r6 = tf.math.divide_no_nan(self.w[1]**6, r**6)
+        energy = self.w[0] * 4.0  * (r6**2 - r6)
+        # divide by 2 to remove double count
+        return energy / 2.
 
-def trainable_graph(NN, directory='/tmp/test-trainable-model'):
-    graph = htf.graph_builder(NN)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(tensor=nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    epsilon = tf.Variable(1.0, name='lj-epsilon')
-    sigma = tf.Variable(1.0, name='lj-sigma')
-    tf.compat.v1.summary.scalar('lj-epsilon', epsilon)
-    inv_r6 = graph.safe_div(sigma**6, r**6)
-    p_energy = epsilon / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    check = tf.debugging.check_numerics(p_energy, 'Your tensor is invalid')
-    forces = graph.compute_forces(energy)
-    tf.compat.v1.summary.histogram('forces', forces)
-    optimizer = tf.compat.v1.train.AdamOptimizer(1e-4)
-    gvs = optimizer.compute_gradients(energy)
-    print(gvs)
-    # capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var)
-    # for grad, var in gvs]
-    train_op = optimizer.apply_gradients(gvs)
-    # put non-trainable items
-    # need to do reduction so batch size independent
-    avg_energy = graph.running_mean(tf.reduce_sum(input_tensor=energy), 'avg-energy')
-    # check = tf.add_check_numerics_ops()
-    graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[train_op, check, avg_energy])
-    return directory
+class TrainableGraph(htf.SimModel):
+    def __init__(self, NN, **kwargs):
+        super().__init__(NN, **kwargs)
+        self.lj = LJLayer(1.0, 1.0)
+    def compute(self, nlist, positions, box):
+        # get r
+        r = htf.safe_norm(tensor=nlist[:, :, :3], axis=2)
+        p_energy = self.lj(r)
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
 
 
 def bootstrap_graph(NN, directory='/tmp/test-trainable-model'):

@@ -30,14 +30,14 @@ class tfcompute(hoomd.compute._compute):
     # \details
     # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
     # whether to use a tensorboard, and some execution preferences.
-    def __init__(self, sim_data):
+    def __init__(self, model):
         R""" Initialize a tfcompute class instance
         """
-        self.sim_data = sim_data
+        self.model = model
 
-    def attach(self, model, nlist=None, r_cut=0, save_period=1000,
+    def attach(self, nlist=None, r_cut=0, save_period=1000,
                period=1, mol_indices=None, max_molecule_size=None,
-               batch_size=None):
+               batch_size=None,label_data=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
@@ -62,7 +62,6 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.init.is_initialized():
             raise RuntimeError('Must initialize hoomd first')
 
-        self.model = model
         self.enabled = True
         self.log = True
         self.cpp_force = None
@@ -81,7 +80,7 @@ class tfcompute(hoomd.compute._compute):
             pass
 
         # get neighbor cutoff
-        self.nneighbor_cutoff = self.sim_data.nneighbor_cutoff
+        self.nneighbor_cutoff = self.model.nneighbor_cutoff
 
         if nlist is not None:
             nlist.subscribe(self.rcut)
@@ -96,7 +95,7 @@ class tfcompute(hoomd.compute._compute):
 
         # check if we are outputting forces
         self.force_mode_code = _htf.FORCE_MODE.hoomd2tf
-        if self.sim_data.output_forces:
+        if self.model.output_forces:
             self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
@@ -173,7 +172,6 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
-    @tf.function
     def finish_update(self, batch_index, batch_frac):
         R""" Allow TF to read output and we wait for it to finish.
 
@@ -181,13 +179,24 @@ class tfcompute(hoomd.compute._compute):
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
-        inputs = self.sim_data.compute_inputs(
-            self.dtype,
-            self.cpp_force.getNlistBuffer(),
-            self.cpp_force.getPositionsBuffer())
-        output = self.model(inputs)
-        self.sim_data.update(batch_frac, batch_index)
-        self.sim_data.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
+        if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
+            inputs = self.model.compute_inputs(
+                self.dtype,
+                self.cpp_force.getNlistBuffer(),
+                self.cpp_force.getPositionsBuffer(),
+                self.cpp_force.getBoxBuffer())
+
+            output = self.model(inputs)
+            self.model.update(batch_frac, batch_index)
+            self.model.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
+        else:
+            inputs = self.model.compute_inputs(
+                self.dtype,
+                self.cpp_force.getNlistBuffer(),
+                self.cpp_force.getPositionsBuffer(),
+                self.cpp_force.getBoxBuffer(),
+                self.cpp_force.getForcesBuffer())
+            self.model.train_on_batch(x=inputs[:-1], y=inputs[-1])
 
 
     def get_positions_array(self):
