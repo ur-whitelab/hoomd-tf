@@ -250,90 +250,49 @@ class test_compute(unittest.TestCase):
             hoomd.run(2)
 
     def test_noforce_graph(self):
-        model_dir = build_examples.noforce_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach(nlist, r_cut=rcut)
-            for i in range(3):
-                hoomd.run(1)
-                for j in range(N):
-                    np.testing.assert_allclose(
-                        system.particles[j].net_force, [0, 0, 0], rtol=1e-5)
+        model = build_examples.NoForceModel(9, output_forces=False)
+        tfcompute = hoomd.htf.tfcompute(model)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+        tfcompute.attach(nlist, train=False, r_cut=rcut)
+        for i in range(3):
+            hoomd.run(1)
+            for j in range(N):
+                np.testing.assert_allclose(
+                    system.particles[j].net_force, [0, 0, 0], rtol=1e-5)
 
 
     def test_wrap(self):
-        model_dir = build_examples.wrap_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach()
-            hoomd.run(1)
+        model = build_examples.WrapModel(0, output_forces=False)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+        tfcompute.attach(train=False)
+        hoomd.run(1)
 
     def test_skew_fails(self):
-        model_dir = build_examples.wrap_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            # add tilt here
-            hoomd.update.box_resize(xy=0.5)
+        model = build_examples.WrapModel(0, output_forces=False)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        hoomd.update.box_resize(xy=0.5)
+        hoomd.run(1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all())
+        tfcompute.attach(train=False)
+        with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            tfcompute.attach()
-            with self.assertRaises(tf.errors.InvalidArgumentError):
-                hoomd.run(1)
-
-    def test_feeddict_func(self):
-        model_dir = build_examples.feeddict_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            # multiple average force by particle 4 position
-            # just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10,
-                             feed_dict=lambda tfc:
-                             {'test-tensor:0': tfc.get_positions_array()[2, :3]},
-                             batch_size=4)
-            hoomd.run(11)
-            tf_force = tfcompute.get_forces_array()[1, :3]
-
-    def test_feeddict(self):
-        model_dir = build_examples.feeddict_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all())
-            # multiple average force by particle 4 position
-            # just for fun
-            tfcompute.attach(nlist, r_cut=rcut, period=10,
-                             feed_dict={'test-tensor:0': [1, 2, 3]})
-            hoomd.run(11)
-            tf_force = tfcompute.get_forces_array()[1, :3]
 
     def test_lj_forces(self):
         N = 3 * 3

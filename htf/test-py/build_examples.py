@@ -46,17 +46,14 @@ def gradient_potential(directory='/tmp/test-gradient-potential-model'):
                model_directory=directory,
                out_nodes=[energy])
 
-def noforce_graph(directory='/tmp/test-noforce-model'):
-    graph = htf.graph_builder(9 - 1, output_forces=False)
-    nlist = graph.nlist[:, :, :3]
-    neighs_rs = tf.norm(tensor=nlist, axis=2)
-    energy = tf.math.divide_no_nan(numerator=tf.ones_like(
-        neighs_rs, dtype=neighs_rs.dtype),
-        denominator=neighs_rs, name='energy')
-    pos_norm = tf.norm(tensor=graph.positions, axis=1)
-    graph.save(directory, out_nodes=[energy, pos_norm])
-    return directory
-
+class NoForceModel(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        neighs_rs = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        energy = tf.math.divide_no_nan(tf.ones_like(
+            neighs_rs, dtype=neighs_rs.dtype),
+            neighs_rs, name='energy')
+        pos_norm = tf.norm(tensor=positions, axis=1)
+        return energy, pos_norm
 
 def saving_graph(directory='/tmp/test-saving-model'):
     graph = htf.graph_builder(0, output_forces=False)
@@ -66,15 +63,14 @@ def saving_graph(directory='/tmp/test-saving-model'):
     graph.save(directory)
     return directory
 
-def wrap_graph(directory='/tmp/test-wrap-model'):
-    graph = htf.graph_builder(0, output_forces=False)
-    p1 = graph.positions[0, :3]
-    p2 = graph.positions[-1, :3]
-    r = p1 - p2
-    rwrap = graph.wrap_vector(r)
-    # TODO: Smoke test. Think of a better test.
-    graph.save(directory, out_nodes=[rwrap])
-    return directory
+class WrapModel(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        p1 = positions[0, :3]
+        p2 = positions[-1, :3]
+        r = p1 - p2
+        rwrap = htf.wrap_vector(r, box)
+        # TODO: Smoke test. Think of a better test.
+        return rwrap
 
 
 def mol_force(directory='/tmp/test-mol-force-model'):

@@ -37,7 +37,7 @@ class tfcompute(hoomd.compute._compute):
 
     def attach(self, nlist=None, r_cut=0, save_period=1000,
                period=1, mol_indices=None, max_molecule_size=None,
-               batch_size=None,label_data=None):
+               batch_size=None, train=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
@@ -72,6 +72,18 @@ class tfcompute(hoomd.compute._compute):
         self.r_cut = r_cut
         self.batch_size = 0 if batch_size is None else batch_size
         self.mol_indices = None
+
+        # decide if we're training
+        if train is None:
+            train = True
+            if self.model.output_forces:
+                train = False
+
+        self.train = train
+
+        # if we're not training, we can compile finish_update
+        if not self.train:
+            self.finish_update = tf.function(self.finish_update)
 
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
@@ -182,7 +194,8 @@ class tfcompute(hoomd.compute._compute):
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
-        if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
+        if not self.train:
+            # compute model
             inputs = self.model.compute_inputs(
                 self.dtype,
                 self.cpp_force.getNlistBuffer(),
@@ -190,8 +203,10 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getBoxBuffer())
 
             output = self.model(inputs)
-            self.model.update(batch_frac, batch_index)
-            self.model.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
+            self.model.update(*inputs, batch_frac, batch_index)
+            # update forces
+            if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
+                self.model.compute_outputs(self.dtype, self.cpp_force.getForcesBuffer(), output)
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,
@@ -199,6 +214,7 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getPositionsBuffer(),
                 self.cpp_force.getBoxBuffer(),
                 self.cpp_force.getForcesBuffer())
+            self.model.update(*inputs[:-1], batch_frac, batch_index)
             self.model.train_on_batch(x=inputs[:-1], y=inputs[-1])
 
 

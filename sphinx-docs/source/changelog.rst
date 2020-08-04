@@ -1,6 +1,20 @@
 Change Log
 ==========
 
+v2.0.rc1
+-----
+
+*New Features*
+
+- Tensorflow 2.0 now required
+- Keras models replace computation graphs
+- Training is handled by Keras/TF functions now
+
+*Breaking Changes*
+
+- All code must be rewritten following migration guide
+- feeddict is no longer supported
+
 v1.0.1 (7/27/2020)
 ----
 

@@ -92,7 +92,7 @@ class SimModel(tf.keras.Model):
                 address=force_addr)
 
     @tf.function
-    def update(self, batch_frac, batch_index):
+    def update(self, nlist, positions, box, batch_frac, batch_index):
         # update batch index and wrap around int32 max to avoid overflow
         self.batch_steps.assign(tf.math.floormod(
                 self.batch_steps + tf.cond(pred=tf.equal(batch_index, tf.constant(0)),
@@ -101,6 +101,8 @@ class SimModel(tf.keras.Model):
                     false_fn=lambda: tf.constant(0)),
                 2**31 - 1)
             )
+        # TODO
+        tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
 
     ## \var atom_number
     # \internal
@@ -224,18 +226,6 @@ class SimModel(tf.keras.Model):
             mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
             nlist = nlist * mask[:, :, tf.newaxis]
         return nlist
-
-    def wrap_vector(self, r):
-        R"""Computes the minimum image version of the given vector.
-
-            :param r: The vector to wrap around the HOOMD box.
-            :type r: tensor
-            :return: The wrapped vector as a TF tensor
-        """
-        check_op = tf.Assert(tf.less(tf.reduce_sum(input_tensor=self.box[2]), 0.0001), ['box is skewed'])
-        with tf.control_dependencies([check_op]):
-            return r - tf.math.round(r / self.box_size) * self.box_size
-
 
     def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
                     nlist=None, positions=None):
@@ -433,6 +423,17 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
     :return: The safe norm op (TensorFlow operation)
     """
     return tf.norm(tensor=tensor + delta, **kwargs)
+
+@tf.function
+def wrap_vector(r, box):
+    R"""Computes the minimum image version of the given vector.
+
+        :param r: The vector to wrap around the HOOMD box.
+        :type r: tensor
+        :return: The wrapped vector as a TF tensor
+    """
+    box_size = box[1, :] - box[0, :]
+    return r - tf.math.round(r / box_size) * box_size
 
 def load_htf_op_library(op):
     import hoomd.htf
