@@ -174,41 +174,62 @@ class test_compute(unittest.TestCase):
         end = model.get_layer('lj').trainable_weights[0].numpy()
         assert np.sum((start - end)**2) > 0.01**2, 'No training observed'
 
-    def test_bootstrap(self):
-        model_dir = build_examples.trainable_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(
-            model_dir, bootstrap=build_examples.bootstrap_graph(
-                9 - 1, model_dir),
-            bootstrap_map={'epsilon': 'lj-epsilon', 'sigma': 'lj-sigma'
-                           }) as tfcompute:
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
-            hoomd.run(5)
+    def test_model_save(self):
+        '''Saves model after training
+        '''
+        model = build_examples.TrainableGraph(16, output_forces=False)
+        model.compile(
+            optimizer=tf.keras.optimizers.Nadam(0.01),
+            loss='MeanSquaredError')
 
-    def test_incomplete_bootstrap(self):
-        model_dir = build_examples.trainable_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(
-            model_dir, bootstrap=build_examples.bootstrap_graph(
-                9 - 1, model_dir),
-            bootstrap_map={'epsilon': 'lj-epsilon'
-                           }) as tfcompute:
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-                    )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=1)
-            hoomd.run(5)
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        hoomd.run(5)
+
+        model.save(os.path.join(self.tmp,'test-model'))
+
+    def test_model_load(self):
+        ''' Saves model after training and then uses
+        if for inference
+        '''
+        model = build_examples.TrainableGraph(16, output_forces=False)
+        model.compile(
+            optimizer=tf.keras.optimizers.Nadam(0.01),
+            loss='MeanSquaredError')
+
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+                )).randomize_velocities(kT=2, seed=2)
+        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        hoomd.run(5)
+
+        model.save(os.path.join(self.tmp,'test-model'))
+
+        model = tf.keras.models.load_model(os.path.join(self.tmp,'test-model'))
+        infer_model = build_examples.TrainableGraph(16, output_forces=True)
+        infer_model.set_weights(model.get_weights())
+
+
+        tfcompute.disable()
+
+        tfcompute = hoomd.htf.tfcompute(infer_model)
+        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        hoomd.run(5)
+
 
     def test_print(self):
         N = 3 * 3

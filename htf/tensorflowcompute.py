@@ -126,6 +126,9 @@ class tfcompute(hoomd.compute._compute):
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.float64
 
+        # set this so disable works
+        self.cpp_compute = self.cpp_force
+
         # adding to forces causes the computeForces method to be called.
         hoomd.context.current.system.addCompute(self.cpp_force,
                                                 self.compute_name)

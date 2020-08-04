@@ -6,10 +6,11 @@ import os
 import pickle
 
 class SimModel(tf.keras.Model):
-    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32, **kwargs):
+    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32, name='htf-model', **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
-        super(SimModel, self).__init__(dtype=dtype, **kwargs)
+        super(SimModel, self).__init__(dtype=dtype, name=name, **kwargs)
+        print('Building SIM MODEL!!')
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
 

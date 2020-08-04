@@ -306,17 +306,25 @@ class PrintModel(htf.SimModel):
 class LJLayer(tf.keras.layers.Layer):
     def __init__(self, sig, eps):
         super().__init__(self, name='lj')
+        self.start = [sig, eps]
         self.w = self.add_weight(
             shape=[2],
             initializer=tf.constant_initializer([sig, eps]),
             constraint=tf.keras.constraints.NonNeg(),
-            trainable=True
+            trainable=True,
+            name='lj-params'
+
         )
     def call(self, r):
         r6 = tf.math.divide_no_nan(self.w[1]**6, r**6)
         energy = self.w[0] * 4.0  * (r6**2 - r6)
         # divide by 2 to remove double count
         return energy / 2.
+    def get_config(self):
+        c = {}
+        c['sig'] = self.start[0]
+        c['eps'] = self.start[1]
+        return c
 
 class TrainableGraph(htf.SimModel):
     def __init__(self, NN, **kwargs):
