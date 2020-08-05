@@ -115,62 +115,88 @@ class SimModel(tf.keras.Model):
                 tf.cast(virial, dtype),
                 address=virial_addr)
 
-    def build_mol_rep(self, MN):
-        R"""
-        This creates ``mol_forces``, ``mol_positions``, and ``mol_nlist`` which have dimensions
-        mol_number x MN x 4 (``mol_forces``, ``mol_positions``) and
-        ? x MN x NN x 4 (``mol_nlist``) tensors batched by molecule, where MN
-        is the number of molecules. MN is determined at run time. The MN must
-        be chosen to be large enough to encompass all molecules. If your molecule
-        is 6 atoms and you chose MN=18, then the extra entries will be zeros. Note
-        that your input should be 0 based, but subsequent tensorflow data will be 1 based,
-        since 0 means no atom. The specification of what is a molecule
-        will be passed at runtime, so that it can be dynamic if desired.
 
-        To convert a mol_quantity to a per-particle quantity, call
-        ``scatter_mol_quanitity(mol_quantity)``
+class MolSimModel(SimModel):
+    R"""
+    This creates ``mol_forces``, ``mol_positions``, and ``mol_nlist`` which have dimensions
+    mol_number x MN x 4 (``mol_forces``, ``mol_positions``) and
+    ? x MN x NN x 4 (``mol_nlist``) tensors batched by molecule, where MN
+    is the number of molecules. MN is determined at run time. The MN must
+    be chosen to be large enough to encompass all molecules. If your molecule
+    is 6 atoms and you chose MN=18, then the extra entries will be zeros. Note
+    that your input should be 0 based, but subsequent tensorflow data will be 1 based,
+    since 0 means no atom. The specification of what is a molecule
+    will be passed at runtime, so that it can be dynamic if desired.
 
-        :param MN: The number of molecules
-        :type MN: int
-        :return: None
-        """
+    To convert a mol_quantity to a per-particle quantity, call
+    ``scatter_mol_quanitity(mol_quantity)``
 
-        self.mol_indices = tf.compat.v1.placeholder(tf.int32,
-                                                    shape=[None, MN],
-                                                    name='htf-molecule-index')
+    :param MN: The number of molecules
+    :type MN: int
+    :return: None
+    """
 
-        self.rev_mol_indices = tf.compat.v1.placeholder(tf.int32,
-                                                        shape=[None, 2],
-                                                        name='htf-reverse-molecule-index')
-        self.mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
+    def __init__(self, MN, mol_indices, nneighbor_cutoff, output_forces=True, virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-mol-model', **kwargs):
+        super(MolSimModel, self).__init__(nneighbor_cutoff, output_forces=output_forces,
+                                          virial=virial, check_nlist=check_nlist, dtype=dtype, xla=xla, name=name, **kwargs)
+        self.MN = MN
+
+        self.mol_indices = mol_indices
+        print(self.mol_indices, type(self.mol_indices) == list)
+
+        # fill out the indices
+        for mi in self.mol_indices:
+            for i in range(len(mi)):
+                # add 1 so that an index of 0 corresponds to slicing a dummy atom
+                mi[i] += 1
+            if len(mi) > MN:
+                raise ValueError('One of your molecule indices'
+                                 'has more than MN indices.'
+                                 'Increase MN in your graph.')
+            while len(mi) < MN:
+                mi.append(0)
+
+        self.rev_mol_indices = _make_reverse_indices(mol_indices)
+
+        input_signature = [
+            tf.TensorSpec(
+                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
+            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # positions
+            tf.TensorSpec(
+                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # mol_nlist
+            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # mol_positions
+            tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
+            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
+        ]
+        try:
+            self.mol_compute
+        except AttributeError:
+            raise AttributeError(
+                'SimModel child class must implement compute method, and should not implement call')
+
+    def compute(self, nlist, positions, box, batch_frac):
+
+        mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
         # we add one dummy particle to the positions, nlist, and forces so that
         # we can fill the mol indices with 0s which will slice
         # these dummy particles. Thus we will add one to the mol indices when
         # we do tf compute to prepare.
         ap = tf.concat((
-            tf.constant([0, 0, 0, 0], dtype=self.positions.dtype,
+            tf.constant([0, 0, 0, 0], dtype=positions.dtype,
                         shape=(1, 4)),
-            self.positions),
+            positions),
             axis=0)
         an = tf.concat(
             (tf.zeros(shape=(1, self.nneighbor_cutoff, 4),
-                      dtype=self.positions.dtype), self.nlist),
+                      dtype=positions.dtype), nlist),
             axis=0)
-        self.mol_positions = tf.reshape(
-            tf.gather(ap, self.mol_flat_idx), shape=[-1, MN, 4])
-        self.mol_nlist = tf.reshape(
-            tf.gather(an, self.mol_flat_idx),
-            shape=[-1, MN, self.nneighbor_cutoff, 4])
-        if not self.output_forces:
-            af = tf.concat((
-                tf.constant(
-                    [0, 0, 0, 0], dtype=self.positions.dtype, shape=(1, 4)),
-                self.forces),
-                axis=0)
-            self.mol_forces = tf.reshape(
-                tf.gather(af, self.mol_flat_idx), shape=[-1, 4])
-        self.MN = MN
+        mol_positions = tf.reshape(
+            tf.gather(ap, mol_flat_idx), shape=[-1, self.MN, 4])
+        mol_nlist = tf.reshape(
+            tf.gather(an, mol_flat_idx),
+            shape=[-1, self.MN, self.nneighbor_cutoff, 4])
+        return self.mol_compute(nlist, positions, mol_nlist, mol_positions, box, batch_frac)
 
 
 def compute_positions_forces(positions, energy):
@@ -183,9 +209,9 @@ def compute_virial(nlist, nlist_forces):
     nlist3 = nlist[:, :, :3]
     rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
     # F / rs
-    nlist_r_mag = safe_norm(
+    nlist_r_mag = tf.norm(
         nlist3, axis=2, name='nlist-r-mag')
-    nlist_force_mag = safe_norm(
+    nlist_force_mag = tf.norm(
         nlist_forces, axis=2, name='nlist-force-mag')
     F_rs = tf.math.divide_no_nan(nlist_force_mag, 2.0 *
                                  nlist_r_mag)
@@ -198,7 +224,8 @@ def compute_virial(nlist, nlist_forces):
 def compute_nlist_forces(nlist, energy, virial=False):
     nlist_grad = tf.gradients(energy, nlist)[0]
     if nlist_grad is None:
-        raise ValueError('Could not find dependence between energy and nlist')
+        raise ValueError(
+            'Could not find dependence between energy and nlist. Did you put them in wrong order?')
     # remove 0s and *2
     nlist_forces = tf.math.multiply_no_nan(nlist_grad, 2.0)
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
@@ -344,3 +371,27 @@ def load_htf_op_library(op):
         raise OSError('Unable to load OP {}. '
                       'Expected to be in {}'.format(op, path))
     return mod
+
+
+def _make_reverse_indices(mol_indices):
+    num_atoms = 0
+    for m in mol_indices:
+        num_atoms = max(num_atoms, max(m))
+    # you would think add 1, since we found the largest index
+    # but the atoms are 1-indexed to distinguish between
+    # the "no atom" case (hence the - 1 below)
+    rmi = [[] for _ in range(num_atoms)]
+    for i in range(len(mol_indices)):
+        for j in range(len(mol_indices[i])):
+            index = mol_indices[i][j]
+            if index > 0:
+                rmi[index - 1] = [i, j]
+    warned = False
+    for r in rmi:
+        if len(r) != 2 and not warned:
+            warned = True
+            hoomd.context.msg.notice(
+                1,
+                'Not all of your atoms are in a molecule\n')
+            r.extend([-1, -1])
+    return rmi

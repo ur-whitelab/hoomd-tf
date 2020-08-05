@@ -25,6 +25,7 @@ v2.0.rc1
 - You can no longer save tensors, instead output what you would like to save in your model code
 - EDS is now layer (EDSLayer)
 - Running from a trajectory is now done via a generator
+- Mol batching is now a separate class MolSimModel
 
 v1.0.1 (7/27/2020)
 ----

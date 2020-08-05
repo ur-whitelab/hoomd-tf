@@ -15,7 +15,7 @@ import math
 import tensorflow as tf
 import build_examples
 
-from hoomd.htf.tensorflowcompute import _make_reverse_indices
+from hoomd.htf.simmodel import _make_reverse_indices
 
 
 def compute_forces(system, rcut):
@@ -520,18 +520,21 @@ class test_mol_batching(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_single_atom(self):
-        model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(8)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3, 3])
+
+        mol_indices = hoomd.htf.find_molecules(system)
+        model = build_examples.LJMolModel(
+            MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
+        tfcompute = hoomd.htf.tfcompute(model)
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(8)
 
     def test_single_atom_batched(self):
         model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)

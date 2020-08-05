@@ -201,17 +201,15 @@ class LJRDF(htf.SimModel):
         return forces
 
 
-def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
-    graph = htf.SimModel(NN)
-    graph.build_mol_rep(MN)
-    # assume particle (w) is 0
-    r = graph.safe_norm(graph.mol_nlist, axis=3)
-    rinv = tf.math.divide_no_nan(1.0, r)
-    mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
-    total_e = tf.reduce_sum(input_tensor=mol_p_energy)
-    forces = graph.compute_forces(total_e)
-    graph.save(force_tensor=forces, model_directory=directory, out_nodes=[])
-    return directory
+class LJMolModel(htf.MolSimModel):
+    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, sample_weight):
+        # assume particle (w) is 0
+        r = tf.norm(mol_nlist, axis=3)
+        rinv = tf.math.divide_no_nan(1.0, r)
+        mol_p_energy = 4.0 / 2.0 * (rinv**12 - rinv**6)
+        total_e = tf.reduce_sum(input_tensor=mol_p_energy)
+        forces = htf.compute_nlist_forces(nlist, total_e)
+        return forces
 
 
 class PrintModel(htf.SimModel):

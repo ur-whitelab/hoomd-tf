@@ -269,27 +269,3 @@ class tfcompute(hoomd.compute._compute):
             npa[i, 2] = e.z
             npa[i, 3] = e.w
         return npa
-
-
-def _make_reverse_indices(mol_indices):
-    num_atoms = 0
-    for m in mol_indices:
-        num_atoms = max(num_atoms, max(m))
-    # you would think add 1, since we found the largest index
-    # but the atoms are 1-indexed to distinguish between
-    # the "no atom" case (hence the - 1 below)
-    rmi = [[] for _ in range(num_atoms)]
-    for i in range(len(mol_indices)):
-        for j in range(len(mol_indices[i])):
-            index = mol_indices[i][j]
-            if index > 0:
-                rmi[index - 1] = [i, j]
-    warned = False
-    for r in rmi:
-        if len(r) != 2 and not warned:
-            warned = True
-            hoomd.context.msg.notice(
-                1,
-                'Not all of your atoms are in a molecule\n')
-            r.extend([-1, -1])
-    return rmi
