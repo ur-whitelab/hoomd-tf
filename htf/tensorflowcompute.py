@@ -202,10 +202,10 @@ class tfcompute(hoomd.compute._compute):
                 self.dtype,
                 self.cpp_force.getNlistBuffer(),
                 self.cpp_force.getPositionsBuffer(),
-                self.cpp_force.getBoxBuffer())
+                self.cpp_force.getBoxBuffer(),
+                batch_frac)
 
             output = self.model(inputs)
-            self.model.update(*inputs, batch_frac, batch_index)
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
                 self.model.compute_outputs(
@@ -216,8 +216,8 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getNlistBuffer(),
                 self.cpp_force.getPositionsBuffer(),
                 self.cpp_force.getBoxBuffer(),
+                batch_frac,
                 self.cpp_force.getForcesBuffer())
-            self.model.update(*inputs[:-1], batch_frac, batch_index)
             self.model.train_on_batch(x=inputs[:-1], y=inputs[-1])
 
     def get_positions_array(self):

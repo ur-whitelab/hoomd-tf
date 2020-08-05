@@ -293,39 +293,40 @@ class test_compute(unittest.TestCase):
             hoomd.run(1)
 
     def test_lj_forces(self):
-        N = 3 * 3
-        model_dir = build_examples.lj_graph(N - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            T = 10
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(),
-                                   kT=1, tau=0.2
-                                   ).randomize_velocities(seed=1)
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(2)
-            tf_forces = []
-            for i in range(T):
-                hoomd.run(1)
-                snapshot = system.take_snapshot()
-                tf_forces.append([system.particles[j].net_force
-                                  for j in range(N)])
-            tf_forces = np.array(tf_forces)
-        # now run with stock lj
+        model = build_examples.LJModel(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        T = 10
+        N = 5 * 5
+        rcut = 5.0
         system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+            unitcell=hoomd.lattice.sq(a=3.0),
+            n=[5, 5])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+                                kT=1, tau=0.2
+                                ).randomize_velocities(seed=1)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(20)
+        tf_forces = []
+        for i in range(T):
+            hoomd.run(1)
+            snapshot = system.take_snapshot()
+            tf_forces.append([system.particles[j].net_force
+                                for j in range(N)])
+        tf_forces = np.array(tf_forces)
+        # now run with stock lj
+        hoomd.context.initialize()
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=3.0),
+            n=[5, 5])
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-        hoomd.run(2)
+        hoomd.run(20)
         lj_forces = []
         for i in range(T):
             hoomd.run(1)
@@ -336,25 +337,24 @@ class test_compute(unittest.TestCase):
             for j in range(N):
                 np.testing.assert_allclose(tf_forces[i, j],
                                            lj_forces[i, j], atol=1e-5)
+                # make sure we wrote test to have non-zero forces
+                assert np.sum(lj_forces[i,j]**2) > 1e-4**2, 'Forces are too low to assess!'
 
     def test_running_mean(self):
-        model_dir = build_examples.lj_running_mean(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all()
-                                   ).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=4)
-            hoomd.run(10)
-            # now load checkpoint
-        variables = hoomd.htf.load_variables(
-            model_dir, ['average-energy', 'htf-batch-steps:0'])
-        assert not math.isnan(variables['average-energy'])
-        assert variables['htf-batch-steps'] == 11
+        model = build_examples.LJRunningMeanModel(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all()
+                                ).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=4)
+        hoomd.run(10)
+        result = model.avg_energy.result().numpy()
+        assert result < 0
 
     def test_force_output(self):
         Ne = 5

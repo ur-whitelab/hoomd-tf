@@ -20,6 +20,7 @@ class SimModel(tf.keras.Model):
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
             tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
             tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
+            tf.TensorSpec(shape=[]) # batch_frac (sample weight)
         ]
 
         try:
@@ -32,12 +33,17 @@ class SimModel(tf.keras.Model):
         self.check_nlist = check_nlist
         self.batch_steps = tf.Variable(
             name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
+        self._running_means = []
+        self.setup()
+
+    def setup(self):
+        pass
 
     def call(self, inputs, training):
         return self.compute(*inputs)
 
     @tf.function
-    def compute_inputs(self, dtype, nlist_addr, positions_addr, box_addr, forces_addr=0):
+    def compute_inputs(self, dtype, nlist_addr, positions_addr, box_addr, batch_frac, forces_addr=0):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
@@ -64,6 +70,9 @@ class SimModel(tf.keras.Model):
             name='box-input'
         )
 
+        # check box skew
+        tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
+
         if self.check_nlist:
             NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
                                                                                tf.dtypes.int32), axis=1),
@@ -72,7 +81,7 @@ class SimModel(tf.keras.Model):
                       ['Neighbor list is full!'])
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
-            pos, self.dtype), tf.cast(box, self.dtype)]
+            pos, self.dtype), tf.cast(box, self.dtype), batch_frac]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
@@ -96,112 +105,6 @@ class SimModel(tf.keras.Model):
         forces = tf_to_hoomd(
             tf.cast(forces, dtype),
             address=force_addr)
-
-    @tf.function
-    def update(self, nlist, positions, box, batch_frac, batch_index):
-        # update batch index and wrap around int32 max to avoid overflow
-        self.batch_steps.assign(tf.math.floormod(
-            self.batch_steps + tf.cond(pred=tf.equal(batch_index, tf.constant(0)),
-                                       true_fn=lambda: tf.constant(
-                1),
-                false_fn=lambda: tf.constant(0)),
-            2**31 - 1)
-        )
-        # TODO
-        tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
-
-    # \var atom_number
-    # \internal
-    # \brief Number of atoms
-    # \details
-    # defines the placeholder first dimension, which will be the size of the system
-
-    # \var nneighbor_cutoff
-    # \internal
-    # \brief Max size of neighbor list
-    # \details
-    # Cutoff for maximum number of atoms in each neighbor list
-
-    # \var nlist
-    # \internal
-    # \brief The neighbor list
-    # \details
-    # This is the tensor where the neighbor list is held
-
-    # \var virial
-    # \internal
-    # \brief The virial
-    # \details
-    # Virial associated with the neighbor list
-
-    # \var positions
-    # \internal
-    # \brief The particle positions
-    # \details
-    # Tensor holding the positions of all particles (Euclidean)
-
-    # \var forces
-    # \internal
-    # \brief The forces tensor
-    # \details
-    # If output_forces is true, this is where those are stored
-
-    # \var batch_frac
-    # \internal
-    # \brief portion of tensor to use in each batch
-    # \details
-    # When batching large tensors, this determines the size of the batches,
-    # as a fraction of the total size of the tensor which is to be batched
-
-    # \var batch_index
-    # \internal
-    # \brief Tracks batching index
-    # \details
-    # Ranging from 0 to 1 / batch_frac, tracks which part of the batch we're on
-
-    # \var output_forces
-    # \internal
-    # \brief Whether to output forces to HOOMD
-    # \details
-    # If true, forces are calculated and passed to HOOMD
-
-    # \var _nlist_rinv
-    # \internal
-    # \brief the 1/r values for each neighbor pair
-
-    # \var mol_indices
-    # \internal
-    # \brief Stores molecule indices for each atom
-    # \details
-    # Each atom is assigned an index associated with its corresponding molecule
-
-    # \var mol_batched
-    # \internal
-    # \brief Whether to batch by molecule
-    # \details
-    # Not yet implemented
-
-    # \var MN
-    # \internal
-    # \brief Number of molecules
-    # \details
-    # This is how many molecules we have among the atoms in our neighbor list
-
-    # \var batch_steps
-    # \internal
-    # \brief How many times we have to run our batch calculations
-
-    # \var update_batch_index_op
-    # \internal
-    # \brief TensorFlow op for batching
-    # \details
-    # Custom op that updates the batch index each time we run a batch calculation
-
-    # \var out_nodes
-    # \internal
-    # \brief List of TensorFlow ops to put into the graph
-    # \details
-    # This list is combined with the other ops at runtime to form the TF graph
 
     @property
     def nlist_rinv(self):
@@ -272,56 +175,6 @@ class SimModel(tf.keras.Model):
         result = hist[1:-1] / vols
         self.out_nodes.extend([result, vis_rs])
         return result
-
-    def running_mean(self, tensor, name, batch_reduction='mean'):
-        R"""Computes running mean of the given tensor
-
-        :param tensor: The tensor for which you're computing running mean
-        :type tensor: tensor
-        :param name: The name of the variable in which the running mean will be stored
-        :type name: str
-        :param batch_reduction: If the hoomd data is batched by atom index,
-            how should the component tensor values be reduced? Options are
-            'mean' and 'sum'. A sum means that tensor values are summed across
-            the batch and then a mean is taking between batches. This makes sense
-            for looking at a system property like pressure. A mean gives a mean
-            across the batch. This would make sense for a per-particle property.
-        :type batch_reduction: str
-
-        :return: A variable containing the running mean
-        """
-        if batch_reduction not in ['mean', 'sum']:
-            raise ValueError('Unable to perform {}'
-                             'reduction across batches'.format(batch_reduction))
-        store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
-                            validate_shape=False, dtype=tf.float32, trainable=False)
-        with tf.compat.v1.name_scope(name + '-batch'):
-            # keep batch avg
-            batch_store = tf.Variable(name=name + '-batch',
-                                      initial_value=tf.zeros_like(tensor),
-                                      validate_shape=False, dtype=tf.float32, trainable=False)
-            with tf.control_dependencies([self.update_batch_index_op]):
-                # moving the batch store to normal store after batch is complete
-                move_op = store.assign(tf.cond(
-                    pred=tf.equal(self.batch_index, tf.constant(0)),
-                    true_fn=lambda: (batch_store - store) /
-                    tf.cast(self.batch_steps, dtype=tf.float32) + store,
-                    false_fn=lambda: store))
-                self.out_nodes.append(move_op)
-                with tf.control_dependencies([move_op]):
-                    reset_op = batch_store.assign(tf.cond(
-                        pred=tf.equal(self.batch_index, tf.constant(0)),
-                        true_fn=lambda: tf.zeros_like(tensor),
-                        false_fn=lambda: batch_store))
-                    self.out_nodes.append(reset_op)
-                    with tf.control_dependencies([reset_op]):
-                        if batch_reduction == 'mean':
-                            batch_op = batch_store.assign_add(
-                                tensor * self.batch_frac)
-                        elif batch_reduction == 'sum':
-                            batch_op = batch_store.assign_add(tensor)
-                        self.out_nodes.append(batch_op)
-        return store
 
     def save_tensor(self, tensor, name, save_period=1):
         R"""Saves a tensor to a variable
@@ -451,7 +304,6 @@ def wrap_vector(r, box):
     """
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
-
 
 def load_htf_op_library(op):
     import hoomd.htf

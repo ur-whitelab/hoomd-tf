@@ -8,7 +8,7 @@ import pickle
 
 
 class SimplePotential(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         nlist = nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
         # no need to use netwon's law because nlist should be double counted
@@ -48,7 +48,7 @@ def gradient_potential(directory='/tmp/test-gradient-potential-model'):
 
 
 class NoForceModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         neighs_rs = tf.norm(tensor=nlist[:, :, :3], axis=2)
         energy = tf.math.divide_no_nan(tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype),
@@ -67,7 +67,7 @@ def saving_graph(directory='/tmp/test-saving-model'):
 
 
 class WrapModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         p1 = positions[0, :3]
         p2 = positions[-1, :3]
         r = p1 - p2
@@ -95,29 +95,24 @@ def feeddict_graph(directory='/tmp/test-feeddict-model'):
 
 
 class BenchmarkNonlistGraph(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         ps = tf.norm(tensor=positions, axis=1)
         energy = tf.math.divide_no_nan(1., ps)
         forces = htf.compute_positions_forces(positions, energy)
         return forces
 
-
-def lj_graph(NN, directory='/tmp/test-lj-potential-model', **kw_args):
-    graph = htf.SimModel(NN, **kw_args)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(tensor=nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = tf.math.divide_no_nan(1., r**6)
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    # compute energy every 10 steps
-    graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[[energy, 10]])
-    return directory
+class LJModel(htf.SimModel):
+    def compute(self, nlist, positions, box, sample_weight):
+        # get r
+        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        # compute 1 / r while safely treating r = 0.
+        # pairwise energy. Double count -> divide by 2
+        inv_r6 = tf.math.divide_no_nan(1., r**6)
+        p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
 
 
 def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
@@ -228,19 +223,24 @@ def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     return directory
 
 
-def lj_running_mean(NN, directory='/tmp/test-lj-running-mean-model'):
-    graph = htf.SimModel(NN)
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.nlist_rinv**6
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(tf.reduce_sum(input_tensor=energy, axis=0),
-                                    'average-energy')
-    graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[avg_energy])
-    return directory
+
+class LJRunningMeanModel(htf.SimModel):
+    def setup(self):
+        self.avg_energy = tf.keras.metrics.Mean()
+    def compute(self, nlist, positions, box, sample_weight):
+        # get r
+        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        # compute 1 / r while safely treating r = 0.
+        # pairwise energy. Double count -> divide by 2
+        inv_r6 = tf.math.divide_no_nan(1., r**6)
+        p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        # compute running mean
+        self.avg_energy.update_state(energy, sample_weight=sample_weight)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
+
 
 
 def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
@@ -290,7 +290,7 @@ def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
 
 
 class PrintModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         # get r
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
@@ -335,7 +335,7 @@ class TrainableGraph(htf.SimModel):
         super().__init__(NN, **kwargs)
         self.lj = LJLayer(1.0, 1.0)
 
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions, box, sample_weight):
         # get r
         r = htf.safe_norm(tensor=nlist[:, :, :3], axis=2)
         p_energy = self.lj(r)
