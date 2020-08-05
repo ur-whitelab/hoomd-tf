@@ -39,7 +39,7 @@ class tfcompute(hoomd.compute._compute):
 
     def attach(self, nlist=None, r_cut=0, period=1,
                mol_indices=None, max_molecule_size=None,
-               batch_size=None, train=None, xla=False):
+               batch_size=None, train=None, save_output_period=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
@@ -73,6 +73,9 @@ class tfcompute(hoomd.compute._compute):
         self.r_cut = r_cut
         self.batch_size = 0 if batch_size is None else batch_size
         self.mol_indices = None
+        self.save_output_period = save_output_period
+        self.outputs = None
+        self._calls = 0
 
         # decide if we're training
         if train is None:
@@ -81,10 +84,6 @@ class tfcompute(hoomd.compute._compute):
                 train = False
 
         self.train = train
-
-        # if we're not training, we can compile finish_update
-        if not self.train:
-            self.finish_update = tf.function(self.finish_update, experimental_compile=xla)
 
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
@@ -195,6 +194,10 @@ class tfcompute(hoomd.compute._compute):
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
         """
+
+        if batch_index == 0:
+            self._calls += 1
+
         if not self.train:
             # compute model
             inputs = self.model.compute_inputs(
@@ -205,6 +208,12 @@ class tfcompute(hoomd.compute._compute):
                 batch_frac)
 
             output = self.model(inputs)
+            if self.save_output_period and self._calls % self.save_output_period == 0:
+                if self.outputs is None:
+                    self.outputs = output.numpy()[np.newaxis,...]
+                else:
+                    self.outputs = np.append(self.outputs, output.numpy()[np.newaxis,...], axis=0)
+
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
                 if type(output) == list:

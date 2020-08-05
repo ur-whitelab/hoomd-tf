@@ -304,8 +304,8 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
-                                kT=1, tau=0.2
-                                ).randomize_velocities(seed=1)
+                               kT=1, tau=0.2
+                               ).randomize_velocities(seed=1)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(20)
         tf_forces = []
@@ -313,7 +313,7 @@ class test_compute(unittest.TestCase):
             hoomd.run(1)
             snapshot = system.take_snapshot()
             tf_forces.append([system.particles[j].net_force
-                                for j in range(N)])
+                              for j in range(N)])
         tf_forces = np.array(tf_forces)
         # now run with stock lj
         hoomd.context.initialize()
@@ -338,7 +338,8 @@ class test_compute(unittest.TestCase):
                 np.testing.assert_allclose(tf_forces[i, j],
                                            lj_forces[i, j], atol=1e-5)
                 # make sure we wrote test to have non-zero forces
-                assert np.sum(lj_forces[i,j]**2) > 1e-4**2, 'Forces are too low to assess!'
+                assert np.sum(
+                    lj_forces[i, j]**2) > 1e-4**2, 'Forces are too low to assess!'
 
     def test_running_mean(self):
         model = build_examples.LJRunningMeanModel(32)
@@ -350,7 +351,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all()
-                                ).randomize_velocities(seed=1, kT=0.8)
+                               ).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
         result = model.avg_energy.result().numpy()
@@ -430,7 +431,7 @@ class test_compute(unittest.TestCase):
                                     ) + log.query('kinetic_energy'))
             if i > 1:
                 np.testing.assert_allclose(energy[-1],
-                                            energy[-2], atol=1e-3)
+                                           energy[-2], atol=1e-3)
 
     def test_nlist_count(self):
         '''Make sure nlist is full, not half
@@ -471,7 +472,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
-                                kT=1, tau=0.2).randomize_velocities(seed=1)
+                               kT=1, tau=0.2).randomize_velocities(seed=1)
         tfcompute.attach(nlist, r_cut=rcut)
         log = hoomd.analyze.log(filename=None, quantities=[
             'potential_energy', 'pressure'], period=1)
@@ -482,7 +483,7 @@ class test_compute(unittest.TestCase):
             snapshot = system.take_snapshot()
             tf_virial.append(tfcompute.get_virial_array())
             thermo_scalars.append([log.query('potential_energy'
-                                                ), log.query('pressure')])
+                                             ), log.query('pressure')])
         # now run with stock lj
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(
@@ -616,23 +617,18 @@ class test_saving(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_tensor_save(self):
-        model_dir = build_examples.saving_graph(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            tfcompute.attach()
-            hoomd.run(8)
+        model = build_examples.TensorSaveModel(0, output_forces=False)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3, 3])
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        tfcompute.attach(train=False, batch_size=3, save_output_period=2)
+        hoomd.run(8)
 
-        # now load
-        vars = hoomd.htf.load_variables(model_dir, ['v1', 'v2'])
-
-    def test_tensor_save_var_fail(self):
-        graph = hoomd.htf.SimModel(0, output_forces=False)
-        v = tf.Variable(0, name='foo')
-        with self.assertRaises(ValueError):
-            graph.save_tensor(v, 'v')
+        # reshape to remove batch_size effect
+        array = tfcompute.outputs.reshape(-1, 9)
+        assert array.shape == (4, 9)
 
 
 class test_nlist(unittest.TestCase):
@@ -645,24 +641,23 @@ class test_nlist(unittest.TestCase):
 
     def test_overflow(self):
         '''Use too small neighbor list and ensure error is thrown
-        TODO: It works, but the tfmanager thread early exit causes main thread to hang
         '''
         N = 8 * 8
-        model_dir = build_examples.lj_graph(4, self.tmp, check_nlist=True)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            T = 10
-            rcut = 10.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[8, 8])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(),
-                                   kT=1, tau=0.2
-                                   ).randomize_velocities(seed=1)
-            tfcompute.attach(nlist, r_cut=rcut)
-            with self.assertRaises(tf.errors.InvalidArgumentError):
-                hoomd.run(2)
+        model = build_examples.LJModel(4, check_nlist=True)
+        tfcompute = hoomd.htf.tfcompute(model)
+        T = 10
+        rcut = 10.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[8, 8])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+                               kT=1, tau=0.2
+                               ).randomize_velocities(seed=1)
+        tfcompute.attach(nlist, r_cut=rcut)
+        with self.assertRaises(tf.errors.InvalidArgumentError):
+            hoomd.run(2)
 
 
 if __name__ == '__main__':

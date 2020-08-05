@@ -7,7 +7,7 @@ import pickle
 
 
 class SimModel(tf.keras.Model):
-    def __init__(self, nneighbor_cutoff, output_forces=True, modify_virial=False, check_nlist=False, dtype=tf.float32, name='htf-model', **kwargs):
+    def __init__(self, nneighbor_cutoff, output_forces=True, modify_virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-model', **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         super(SimModel, self).__init__(dtype=dtype, name=name, **kwargs)
@@ -20,12 +20,13 @@ class SimModel(tf.keras.Model):
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
             tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
             tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[]) # batch_frac (sample weight)
+            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
         ]
 
         try:
             self.compute = tf.function(
-                self.compute, input_signature=input_signature)
+                self.compute, input_signature=input_signature,
+                experimental_compile=xla)
         except AttributeError:
             raise AttributeError(
                 'SimModel child class must implement compute method, and should not implement call')
@@ -74,11 +75,11 @@ class SimModel(tf.keras.Model):
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
 
         if self.check_nlist:
-            NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(self.nlist[:, :, 0] > 0,
+            NN = tf.reduce_max(input_tensor=tf.reduce_sum(input_tensor=tf.cast(nlist[:, :, 0] > 0,
                                                                                tf.dtypes.int32), axis=1),
                                axis=0)
-            tf.Assert(tf.less(NN, self.nneighbor_cutoff),
-                      ['Neighbor list is full!'])
+            tf.debugging.assert_less(NN, self.nneighbor_cutoff,
+                      message='Neighbor list is full!')
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
             pos, self.dtype), tf.cast(box, self.dtype), batch_frac]
@@ -173,6 +174,7 @@ def compute_positions_forces(positions, energy):
     forces = tf.gradients(energy, positions)[0]
     return add_energy(forces, energy)
 
+
 def compute_virial(nlist, nlist_forces):
     # now treat virial
     nlist3 = nlist[:, :, :3]
@@ -183,11 +185,12 @@ def compute_virial(nlist, nlist_forces):
     nlist_force_mag = safe_norm(
         nlist_forces, axis=2, name='nlist-force-mag')
     F_rs = tf.math.divide_no_nan(nlist_force_mag, 2.0 *
-                            nlist_r_mag)
+                                 nlist_r_mag)
     # sum over neighbors: F / r * (r (outter) r)
     virial = -1.0 * tf.einsum('ij,ijkl->ikl',
-                                    F_rs, rij_outter)
+                              F_rs, rij_outter)
     return virial
+
 
 def compute_nlist_forces(nlist, energy, virial=False):
     nlist_grad = tf.gradients(energy, nlist)[0]
@@ -203,12 +206,11 @@ def compute_nlist_forces(nlist, energy, virial=False):
         return add_energy(nlist_reduce, energy)
 
 
-
 def add_energy(forces, energy):
     if len(energy.shape) > 1:
         # reduce energy to be correct shape
         print('WARNING: Your energy is multidimensional per particle.'
-                'Hopefully that is intentional')
+              'Hopefully that is intentional')
         energy = tf.reshape(
             tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))),
             [tf.shape(forces)[0], 1])
@@ -216,15 +218,16 @@ def add_energy(forces, energy):
     elif len(energy.shape) == 0:
         forces = tf.concat([forces[:, :3],
                             tf.reshape(tf.tile(tf.reshape(energy, [1]),
-                                                tf.shape(forces)[0:1]),
-                                        shape=[-1, 1])],
-                            -1)
+                                               tf.shape(forces)[0:1]),
+                                       shape=[-1, 1])],
+                           -1)
     else:
         forces = tf.concat(
             [forces[:, :3], tf.reshape(
                 energy,
                 [tf.shape(forces)[0], 1])], -1)
     return forces
+
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):
@@ -253,12 +256,14 @@ def wrap_vector(r, box):
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
 
+
 @tf.function
 def nlist_rinv(nlist):
     R""" Returns an N x NN tensor of 1 / r for each neighbor
     """
     r = tf.norm(nlist[:, :, :3], axis=2)
     return tf.math.divide_no_nan(1.0, r)
+
 
 @tf.function
 def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
@@ -282,16 +287,17 @@ def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
     # to prevent type errors later on
     r_range = [float(r) for r in r_range]
     # filter types
-    nlist = masked_nlist(nlist, positions[:,3], type_i, type_j)
+    nlist = masked_nlist(nlist, positions[:, 3], type_i, type_j)
     r = tf.norm(tensor=nlist[:, :, :3], axis=2)
     hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
-                    tf.float32)
+                   tf.float32)
     shell_rs = tf.linspace(r_range[0], r_range[1], nbins + 1)
     vis_rs = tf.multiply((shell_rs[1:] + shell_rs[:-1]), 0.5)
     vols = shell_rs[1:]**3 - shell_rs[:-1]**3
     # remove 0s and Ns
     result = hist[1:-1] / vols
     return result, vis_rs
+
 
 @tf.function
 def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
@@ -312,6 +318,7 @@ def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
         mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
         nlist = nlist * mask[:, :, tf.newaxis]
     return nlist
+
 
 def load_htf_op_library(op):
     import hoomd.htf

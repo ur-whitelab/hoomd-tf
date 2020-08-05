@@ -57,13 +57,10 @@ class NoForceModel(htf.SimModel):
         return energy, pos_norm
 
 
-def saving_graph(directory='/tmp/test-saving-model'):
-    graph = htf.SimModel(0, output_forces=False)
-    pos_norm = tf.norm(tensor=graph.positions, axis=1)
-    graph.save_tensor(pos_norm, 'v1')
-    graph.running_mean(pos_norm, 'v2')
-    graph.save(directory)
-    return directory
+class TensorSaveModel(htf.SimModel):
+    def compute(self, nlist, positions, box, sample_weight):
+        pos_norm = tf.norm(tensor=positions, axis=1)
+        return pos_norm
 
 
 class WrapModel(htf.SimModel):
@@ -84,22 +81,13 @@ def mol_force(directory='/tmp/test-mol-force-model'):
     return directory
 
 
-def feeddict_graph(directory='/tmp/test-feeddict-model'):
-    graph = htf.SimModel(9 - 1, output_forces=False)
-    forces = graph.forces[:, :3]
-    force_com = tf.reduce_mean(input_tensor=forces, axis=0)
-    thing = tf.compat.v1.placeholder(dtype=tf.float32, name='test-tensor')
-    out = force_com * thing
-    graph.save(directory, out_nodes=[out])
-    return directory
-
-
 class BenchmarkNonlistGraph(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         ps = tf.norm(tensor=positions, axis=1)
         energy = tf.math.divide_no_nan(1., ps)
         forces = htf.compute_positions_forces(positions, energy)
         return forces
+
 
 class LJModel(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
@@ -113,6 +101,7 @@ class LJModel(htf.SimModel):
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
 
+
 class LJVirialModel(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         # get r
@@ -124,35 +113,6 @@ class LJVirialModel(htf.SimModel):
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
         forces = htf.compute_nlist_forces(nlist, energy, virial=True)
         return forces
-
-
-def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
-    graph = htf.SimModel(NN, output_forces=False)
-    # make trainable variables
-    epsilon = tf.Variable(0.9, name='lj-epsilon', trainable=True)
-    sigma = tf.Variable(1.1, name='lj-sigma', trainable=True)
-    # get LJ potential using our variables
-    # uses built in nlist_rinv which provides
-    # r^-1 with each neighbor
-    inv_r6 = sigma**6 * graph.nlist_rinv**6
-    # use 2 * epsilon because nlist is double-counted
-    p_energy = 2.0 * epsilon * (inv_r6**2 - inv_r6)
-    # sum over pairs to get total energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1, name='energy')
-    # compute forces
-    computed_forces = graph.compute_forces(energy)
-    # compare hoomd-blue forces (graph.forces) with our
-    # computed forces
-    minimizer, loss = htf.force_matching(graph.forces[:, :3],
-                                         computed_forces[:, :3],
-                                         learning_rate=1e-2)
-    # save loss so we can visualize later
-    graph.save_tensor(loss, 'loss')
-    # Make sure to have minimizer in out_nodes so that
-    # the force matching occurs!
-    graph.save(model_directory=directory,
-               out_nodes=[minimizer])
-    return directory
 
 
 def eds_graph(directory='/tmp/test-lj-eds'):
@@ -234,13 +194,13 @@ def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
     return directory
 
 
-
 class LJRunningMeanModel(htf.SimModel):
     def setup(self):
         self.avg_energy = tf.keras.metrics.Mean()
+
     def compute(self, nlist, positions, box, sample_weight):
         # get r
-        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
         # pairwise energy. Double count -> divide by 2
         inv_r6 = tf.math.divide_no_nan(1., r**6)
@@ -253,36 +213,19 @@ class LJRunningMeanModel(htf.SimModel):
         return forces
 
 
-
-def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
-    ops = []
-    graph = htf.SimModel(NN, output_forces=False)
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.nlist_rinv**6
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    tf_forces = graph.compute_forces(energy)
-    h_forces = graph.forces
-    error = tf.compat.v1.losses.mean_squared_error(tf_forces, h_forces)
-    v = tf.compat.v1.get_variable('error', shape=[])
-    ops.append(v.assign(error))
-    graph.save(model_directory=directory, out_nodes=ops)
-    return directory
-
-
 class LJRDF(htf.SimModel):
     def setup(self):
         self.avg_rdf = tf.keras.metrics.Mean()
+
     def compute(self, nlist, positions, box, sample_weight):
         # get r
-        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
         # pairwise energy. Double count -> divide by 2
         inv_r6 = tf.math.divide_no_nan(1., r**6)
         p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
         # get rdf
-        rdf,rs = htf.compute_rdf(nlist, positions, [3,5])
+        rdf, rs = htf.compute_rdf(nlist, positions, [3, 5])
         # compute running mean
         self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
         forces = htf.compute_nlist_forces(nlist, p_energy)
@@ -355,17 +298,3 @@ class TrainableGraph(htf.SimModel):
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
-
-
-def bootstrap_graph(NN, directory='/tmp/test-trainable-model'):
-    # make bootstrap graph
-    tf.compat.v1.reset_default_graph()
-    v = tf.Variable(8.0, name='epsilon')
-    s = tf.Variable(2.0, name='sigma')
-    # save it
-    bootstrap_dir = os.path.join(directory, 'bootstrap')
-    saver = tf.compat.v1.train.Saver()
-    with tf.compat.v1.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        saver.save(sess, os.path.join(bootstrap_dir, 'model'))
-    return bootstrap_dir
