@@ -9,6 +9,7 @@ v2.0.rc1
 - Tensorflow 2.0 now required
 - Keras models replace computation graphs
 - Training is handled by Keras/TF functions now
+- Getting values now longer requires save/load, instead everything is accessible in Python
 
 *Breaking Changes*
 
@@ -20,9 +21,10 @@ v2.0.rc1
     - checkpoint management, model save/load
     - saving values, computing means, other metrics
     - saving values over time is now done by tensorboard or other TF/Keras approaches
-- How forces are computed must be explicit and virials are no longer implicit
+- How forces are computed must be explicit and virials are no longer implicit (use modify_virial flag)
 - You can no longer save tensors, instead output what you would like to save in your model code
 - EDS is now layer (EDSLayer)
+- Running from a trajectory is now done via a generator
 
 v1.0.1 (7/27/2020)
 ----

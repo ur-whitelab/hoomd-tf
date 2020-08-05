@@ -185,10 +185,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
 
 
-def run_from_trajectory(model_directory, universe,
-                        selection='all', r_cut=10.,
-                        period=10, feed_dict={}):
-    R""" This will process information from a trajectory and
+def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
+    R""" This generator will process information from a trajectory and
     run the user defined model on the nlist computed from the trajectory.
 
     :param model_directory: The model directory
@@ -199,27 +197,13 @@ def run_from_trajectory(model_directory, universe,
     :param r_cut: The cutoff raduis to use in neighbor list
         calculations
     :type r_cut: float
-    :param period: Frequency of reading the trajectory frames
+    :param period: Period of reading the trajectory frames
     :type period: int
-    :param feed_dict: Allows you to add any other placeholder values
-        that need to be added to compute potential in your model
-    :type feed_dict: dict
     """
-    # just in case
-    tf.compat.v1.reset_default_graph()
-    with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
-        model_params = pickle.load(f)
     # read trajectory
     box = universe.dimensions
     # define the system
-    system = type('',
-                  (object, ),
-                  {'box': type('', (object, ),
-                               {'Lx': box[0],
-                                'Ly': box[1],
-                                'Lz': box[2]})})
-    # get box dimensions
-    hoomd_box = [[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]]
+    hoomd_box = np.array([[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]])
     # make type array
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
@@ -228,49 +212,17 @@ def run_from_trajectory(model_directory, universe,
     # associate atoms types with individual atoms
     type_array = np.array([types.index(i)
                            for i in atom_group.atoms.types]).reshape(-1, 1)
-    # get number of atoms/particles in the system
-    N = (np.shape(type_array))[0]
-    NN = model_params['NN']
     # define nlist operation
     # box_size = [box[0], box[1], box[2]]
-    nlist_tensor = compute_nlist(atom_group.positions, r_cut=r_cut,
-                                 NN=NN, box_size=[box[0], box[1], box[2]])
-    # Now insert nlist into the graph
-    # make input map to override nlist
-    input_map = {}
-    input_map[model_params['nlist']] = nlist_tensor
-    graph = tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
-        model_directory), 'model.meta'), input_map=input_map, import_scope='')
-
-    out_nodes = []
-    for name in model_params['out_nodes']:
-        if isinstance(name, list):
-            out_nodes.append(
-                tf.compat.v1.get_default_graph().get_tensor_by_name(name[0]))
-        else:
-            out_nodes.append(
-                tf.compat.v1.get_default_graph().get_tensor_by_name(name))
+    nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
+                          NN=nneighbor_cutoff, box_size=[box[0], box[1], box[2]])
     # Run the model at every nth frame, where n = period
-    with tf.compat.v1.Session() as sess:
-        sess.run(tf.group(tf.compat.v1.global_variables_initializer(),
-                          tf.compat.v1.local_variables_initializer()))
-        saver = tf.compat.v1.train.Saver()
-        for i, ts in enumerate(universe.trajectory):
-            sess.run(out_nodes,
-                     feed_dict={
-                         **feed_dict,
-                         model_params['positions']: np.concatenate(
-                             (atom_group.positions,
-                                 type_array),
-                             axis=1),
-                         model_params['box']: hoomd_box,
-                         'htf-batch-index:0': 0,
-                         'htf-batch-frac:0': 1})
-            if i % period == 0:
-                saver.save(sess,
-                           path.join(model_directory, 'model'),
-                           global_step=i)
-    return
+    for i, ts in enumerate(universe.trajectory):
+        if i % period == 0:
+            yield [nlist, np.concatenate(
+                (atom_group.positions,
+                 type_array),
+                axis=1), hoomd_box, 1.0], ts
 
 
 # \internal
@@ -413,7 +365,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     if sorted:
         # replace these masked elements with really large numbers
         # that will be very negative (therefore not part of "top")
-        dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e10
+        dist_mat_r = dist * mask_cast + (1 - mask_cast) * 1e20
         topk = tf.math.top_k(-dist_mat_r, k=NN, sorted=True)
     else:
         # all the 0s will disappear as we grab topk

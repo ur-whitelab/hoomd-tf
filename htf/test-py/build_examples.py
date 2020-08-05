@@ -152,24 +152,6 @@ def mol_features_graph(directory='/tmp/test-mol-features'):
     return directory
 
 
-def run_traj_graph(directory='/tmp/test-run-traj'):
-    graph = htf.SimModel(128)
-    nlist = graph.nlist[:, :, :3]
-    r = tf.norm(tensor=nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = tf.math.divide_no_nan(1., r**6)
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-    forces = graph.compute_forces(energy)
-    avg_energy = graph.running_mean(tf.reduce_sum(input_tensor=energy, axis=0),
-                                    'average-energy')
-    graph.save(force_tensor=forces, model_directory=directory,
-               out_nodes=[avg_energy])
-    return directory
-
-
 class CustomNlist(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
