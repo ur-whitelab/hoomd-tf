@@ -7,62 +7,8 @@ from os import path
 import pickle
 import hoomd
 
-# \internal
-# \brief load the TensorFlow variables from a checkpoint
 
-
-def load_variables(model_directory, names, checkpoint=-1, feed_dict={}):
-    R""" Adds variables from ``model_directory`` to the TF graph loaded from a checkpoint,
-    optionally other than the most recent one, or setting values with a feed dict.
-
-    :param model_directory: Directory from which to load model variables.
-    :param names: names of TensorFlow variables to load
-    :param checkpoint: checkpoint number of the trained model to load from.
-        Default value is -1 for most recently saved model.
-    :param feed_dict: optionally, use a feed dictionary to populate the model
-    """
-    # just in case
-    tf.compat.v1.reset_default_graph()
-    # load graph
-    tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
-        model_directory), 'model.meta'), import_scope='')
-    # add colons if missing
-    tf_names = [n + ':0' if len(n.split(':')) == 1 else n for n in names]
-    run_dict = {n: tf.compat.v1.get_default_graph(
-    ).get_tensor_by_name(n) for n in tf_names}
-
-    with tf.compat.v1.Session() as sess:
-        saver = tf.compat.v1.train.Saver()
-        if(checkpoint == -1):
-            # get latest
-            checkpoint_str = model_directory
-            checkpoint = tf.train.latest_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint)
-            checkpoint = 'latest'
-        elif type(checkpoint) == int:
-            # get specific checkpoint number
-            checkpoint_str = '{}{}model-{}'.format(model_directory,
-                                                   path.sep, checkpoint)
-            checkpoint = tf.train.load_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint_str)
-        else:
-            checkpoint_str = checkpoint
-            checkpoint = tf.train.load_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint_str)
-        result = sess.run(run_dict, feed_dict=feed_dict)
-    # re add without colon if necessary
-    combined_result = {}
-    for k, v in result.items():
-        combined_result[k] = v
-        combined_result[k.split(':')[0]] = v
-    return combined_result
-
-
-# \internal
-# \brief computes the U(r) for a given TensorFlow model
-def compute_pairwise_potential(model_directory, r,
-                               potential_tensor_name,
-                               checkpoint=-1, feed_dict={}):
+def compute_pairwise(model, r):
     R""" Compute the pairwise potential at r for the given model.
 
     :param model_directory: The model directory
@@ -79,62 +25,22 @@ def compute_pairwise_potential(model_directory, r,
     :return: A tuple of 1D arrays. First is the potentials corresponding to the
         pairwise distances in r, second is the forces.
     """
-    # just in case
-    tf.compat.v1.reset_default_graph()
-    # load graph
-    tf.compat.v1.train.import_meta_graph(path.join('{}/'.format(
-        model_directory), 'model.meta'), import_scope='')
-    with open('{}/graph_info.p'.format(model_directory), 'rb') as f:
-        model_params = pickle.load(f)
-    if ':' not in potential_tensor_name:
-        potential_tensor_name = potential_tensor_name + ':0'
-    potential_tensor = tf.compat.v1.get_default_graph(
-    ).get_tensor_by_name(potential_tensor_name)
-    nlist_tensor = tf.compat.v1.get_default_graph(
-    ).get_tensor_by_name(model_params['nlist'])
+    NN = model.nneighbor_cutoff
+    nlist = np.zeros((2, NN, 4))
+    output = None
+    positions = tf.zeros((2, 4))
+    box = tf.constant([[0., 0, 0], [1e10, 1e10, 1e10], [0, 0, 0]])
 
-    # build nlist
-    NN = model_params['NN']
-    np_nlist = np.zeros((2, NN, 4))
-    potential = np.empty(len(r))
-
-    nlist_forces = tf.gradients(ys=potential_tensor, xs=nlist_tensor)[0]
-    nlist_forces = tf.identity(tf.math.multiply(tf.constant(2.0),
-                                                nlist_forces),
-                               name='nlist-pairwise-force'
-                               '-gradient-raw')
-    zeros = tf.zeros(tf.shape(input=nlist_forces))
-    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_forces),
-                            nlist_forces, zeros,
-                            name='nlist-pairwise-force-gradient')
-    nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
-                                 name='nlist-force-gradient')
-    forces = nlist_reduce
-    with tf.compat.v1.Session() as sess:
-        saver = tf.compat.v1.train.Saver()
-        if(checkpoint == -1):
-            # get latest
-            checkpoint_str = model_directory
-            checkpoint = tf.train.latest_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint)
-            checkpoint = 'latest'
-        elif type(checkpoint) == int:
-            # get specific checkpoint number
-            checkpoint_str = '{}/model-{}'.format(model_directory, checkpoint)
-            checkpoint = tf.train.load_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint_str)
+    for i, ri in enumerate(r):
+        nlist[0, 0, 1] = ri
+        nlist[1, 0, 1] = -ri
+        result = model([nlist, positions, box, 1.0])
+        if output is None:
+            output = [r.numpy()[np.newaxis, ...] for r in result]
         else:
-            checkpoint_str = checkpoint
-            checkpoint = tf.train.load_checkpoint(checkpoint_str)
-            saver.restore(sess, checkpoint_str)
-        for i, ri in enumerate(r):
-            np_nlist[0, 0, 1] = ri
-            np_nlist[1, 0, 1] = -ri
-            # run including passed in feed_dict
-            result = sess.run(potential_tensor, feed_dict={
-                **feed_dict, nlist_tensor: np_nlist})
-            potential[i] = result[0]
-    return potential, forces
+            output = [np.append(o, r[np.newaxis, ...], axis=0)
+                      for o, r in zip(output, result)]
+    return output
 
 
 # \internal
@@ -278,6 +184,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
 
+
 def run_from_trajectory(model_directory, universe,
                         selection='all', r_cut=10.,
                         period=10, feed_dict={}):
@@ -341,7 +248,8 @@ def run_from_trajectory(model_directory, universe,
             out_nodes.append(
                 tf.compat.v1.get_default_graph().get_tensor_by_name(name[0]))
         else:
-            out_nodes.append(tf.compat.v1.get_default_graph().get_tensor_by_name(name))
+            out_nodes.append(
+                tf.compat.v1.get_default_graph().get_tensor_by_name(name))
     # Run the model at every nth frame, where n = period
     with tf.compat.v1.Session() as sess:
         sess.run(tf.group(tf.compat.v1.global_variables_initializer(),
@@ -394,7 +302,8 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
         '{}.ssd'.format(name),
         initializer=0.0,
         trainable=False)
-    n = tf.compat.v1.get_variable('{}.n'.format(name), initializer=0, trainable=False)
+    n = tf.compat.v1.get_variable('{}.n'.format(
+        name), initializer=0, trainable=False)
     alpha = tf.compat.v1.get_variable('{}.a'.format(name), initializer=0.0)
 
     reset_mask = tf.cast((n == 0), tf.float32)
@@ -427,7 +336,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
         optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(pred=tf.equal(n, period - 1),
                                true_fn=lambda: optimizer.apply_gradients([(gradient,
-                                                                   alpha)]),
+                                                                           alpha)]),
                                false_fn=lambda: tf.no_op())
 
     # update n. Should reset at period
