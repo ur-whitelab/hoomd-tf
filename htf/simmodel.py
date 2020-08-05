@@ -195,7 +195,7 @@ class MolSimModel(SimModel):
         mol_nlist = tf.reshape(
             tf.gather(an, mol_flat_idx),
             shape=[-1, self.MN, self.nneighbor_cutoff, 4])
-        return self.mol_compute(nlist, positions, mol_nlist, mol_positions, box, batch_frac)
+        return self.mol_compute(nlist, positions, mol_nlist, mol_positions, box)
 
 
 def compute_positions_forces(positions, energy):

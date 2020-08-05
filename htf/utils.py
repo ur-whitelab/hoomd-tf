@@ -492,7 +492,8 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
         n1_norm = tf.norm(tensor=n1)
         n2_norm = tf.norm(tensor=n2)
         if n1_norm == 0.0 or n2_norm == 0.0:
-            raise GeometryError('Vectors are linear')
+            tf.print(n1_norm, n2_norm)
+            raise ValueError('Vectors are linear')
         n1 = n1 / n1_norm
         n2 = n2 / n2_norm
         cos_d = tf.einsum('ij,ij->i', n1, n2)

@@ -116,7 +116,7 @@ class EDSModel(htf.SimModel):
         # get distance from center
         rvec = htf.wrap_vector(positions[0, :3], box)
         cv = tf.norm(tensor=rvec)
-        self.cv_avg.update_state(cv)
+        self.cv_avg.update_state(cv, sample_weight=sample_weight)
         alpha = self.eds_bias(cv)
         # eds + harmonic bond
         energy = (cv - 5) ** 2 + cv * alpha
@@ -127,21 +127,16 @@ class EDSModel(htf.SimModel):
         return forces, alpha
 
 
-def mol_features_graph(directory='/tmp/test-mol-features'):
-    graph = htf.SimModel(50, output_forces=False)
-    graph.build_mol_rep(6)
-    mol_pos = graph.mol_positions
-    r = htf.mol_bond_distance(mol_pos, 2, 1)
-    a = htf.mol_angle(mol_pos, 1, 2, 3)
-    d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
-    avg_r = tf.reduce_mean(input_tensor=r)
-    avg_a = tf.reduce_mean(input_tensor=a)
-    avg_d = tf.reduce_mean(input_tensor=d)
-    graph.save_tensor(avg_r, 'avg_r')
-    graph.save_tensor(avg_a, 'avg_a')
-    graph.save_tensor(avg_d, 'avg_d')
-    graph.save(model_directory=directory)
-    return directory
+class MolFeatureModel(htf.MolSimModel):
+
+    def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
+        r = htf.mol_bond_distance(mol_pos, 2, 1)
+        a = htf.mol_angle(mol_pos, 1, 2, 3)
+        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+        avg_r = tf.reduce_mean(input_tensor=r)
+        avg_a = tf.reduce_mean(input_tensor=a)
+        avg_d = tf.reduce_mean(input_tensor=d)
+        return avg_r, avg_a, avg_d
 
 
 class CustomNlist(htf.SimModel):
@@ -176,7 +171,7 @@ class LJRunningMeanModel(htf.SimModel):
 
 class LJRDF(htf.SimModel):
     def setup(self):
-        self.avg_rdf = tf.keras.metrics.Mean()
+        self.avg_rdf = tf.keras.metrics.TensorMean()
 
     def compute(self, nlist, positions, box, sample_weight):
         # get r
@@ -194,7 +189,7 @@ class LJRDF(htf.SimModel):
 
 
 class LJMolModel(htf.MolSimModel):
-    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, sample_weight):
+    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box):
         # assume particle (w) is 0
         r = tf.norm(mol_nlist, axis=3)
         rinv = tf.math.divide_no_nan(1.0, r)

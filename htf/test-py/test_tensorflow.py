@@ -404,6 +404,7 @@ class test_compute(unittest.TestCase):
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
         rdf = model.avg_rdf.result().numpy()
+        assert len(rdf) > 5
         assert np.sum(rdf) > 0
 
     def test_lj_energy(self):
@@ -624,7 +625,7 @@ class test_saving(unittest.TestCase):
                                            n=[3, 3])
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-        tfcompute.attach(train=False, batch_size=3, save_output_period=2)
+        tfcompute.attach(batch_size=3, save_output_period=2)
         hoomd.run(8)
 
         # reshape to remove batch_size effect
