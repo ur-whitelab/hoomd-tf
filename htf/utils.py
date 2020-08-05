@@ -461,7 +461,7 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
     with tf.control_dependencies([update_mean, update_ssd]):
         update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
         gradient = update_mask * -  2 * \
-            (cv - set_point) * ssd / period / 2 / cv_scale
+            (mean - set_point) * ssd / period / 2 / cv_scale
         optimizer = tf.train.AdamOptimizer(learning_rate)
         update_alpha = tf.cond(tf.equal(n, period - 1),
                                lambda: optimizer.apply_gradients([(gradient,
