@@ -104,10 +104,9 @@ class BenchmarkNonlistGraph(htf.SimModel):
 class LJModel(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         # get r
-        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
-        # compute 1 / r while safely treating r = 0.
+        rinv = htf.nlist_rinv(nlist)
+        inv_r6 = rinv**6
         # pairwise energy. Double count -> divide by 2
-        inv_r6 = tf.math.divide_no_nan(1., r**6)
         p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
         # sum over pairwise energy
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)

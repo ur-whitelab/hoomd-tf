@@ -37,8 +37,8 @@ class tfcompute(hoomd.compute._compute):
         """
         self.model = model
 
-    def attach(self, nlist=None, r_cut=0, save_period=1000,
-               period=1, mol_indices=None, max_molecule_size=None,
+    def attach(self, nlist=None, r_cut=0, period=1,
+               mol_indices=None, max_molecule_size=None,
                batch_size=None, train=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
@@ -67,7 +67,6 @@ class tfcompute(hoomd.compute._compute):
         self.enabled = True
         self.log = True
         self.cpp_force = None
-        self.save_period = save_period
         self.force_name = 'tfcompute'
         self.compute_name = self.force_name
         r_cut = float(r_cut)
@@ -218,7 +217,10 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getBoxBuffer(),
                 batch_frac,
                 self.cpp_force.getForcesBuffer())
-            self.model.train_on_batch(x=inputs[:-1], y=inputs[-1])
+            self.model.train_on_batch(
+                x=inputs[:-1],
+                y=inputs[-1],
+                reset_metrics=False)
 
     def get_positions_array(self):
         R""" Retrieve positions array as numpy array

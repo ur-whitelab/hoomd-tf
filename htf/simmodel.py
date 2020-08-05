@@ -106,13 +106,6 @@ class SimModel(tf.keras.Model):
             tf.cast(forces, dtype),
             address=force_addr)
 
-    @property
-    def nlist_rinv(self):
-        R""" Returns an N x NN tensor of 1 / r for each neighbor
-        """
-        r = self.safe_norm(self.nlist[:, :, :3], axis=2)
-        return tf.math.divide_no_nan(1.0, r)
-
     def masked_nlist(self, type_i=None, type_j=None, nlist=None,
                      type_tensor=None):
         R"""Returns a neighbor list masked by the given particle type(s).
@@ -259,7 +252,8 @@ class SimModel(tf.keras.Model):
 
 
 def compute_positions_forces(positions, energy):
-    return tf.gradients(energy, positions)[0]
+    forces = tf.gradients(energy, positions)[0]
+    return add_energy(forces, energy)
 
 
 def compute_nlist_forces(nlist, energy):
@@ -275,8 +269,29 @@ def compute_nlist_forces(nlist, energy):
                                       name='nlist-pairwise-force-gradient')
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                  name='nlist-force-gradient')
-    return nlist_reduce
+    return add_energy(nlist_reduce, energy)
 
+def add_energy(forces, energy):
+    if len(energy.shape) > 1:
+        # reduce energy to be correct shape
+        print('WARNING: Your energy is multidimensional per particle.'
+                'Hopefully that is intentional')
+        energy = tf.reshape(
+            tf.reduce_sum(energy, axis=list(range(1, len(energy.shape)))),
+            [tf.shape(forces)[0], 1])
+        forces = tf.concat([forces[:, :3], energy], -1)
+    elif len(energy.shape) == 0:
+        forces = tf.concat([forces[:, :3],
+                            tf.reshape(tf.tile(tf.reshape(energy, [1]),
+                                                tf.shape(forces)[0:1]),
+                                        shape=[-1, 1])],
+                            -1)
+    else:
+        forces = tf.concat(
+            [forces[:, :3], tf.reshape(
+                energy,
+                [tf.shape(forces)[0], 1])], -1)
+    return forces
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):
@@ -304,6 +319,13 @@ def wrap_vector(r, box):
     """
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
+
+@tf.function
+def nlist_rinv(nlist):
+    R""" Returns an N x NN tensor of 1 / r for each neighbor
+    """
+    r = tf.norm(nlist[:, :, :3], axis=2)
+    return tf.math.divide_no_nan(1.0, r)
 
 def load_htf_op_library(op):
     import hoomd.htf

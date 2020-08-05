@@ -359,36 +359,35 @@ class test_compute(unittest.TestCase):
     def test_force_output(self):
         Ne = 5
         c = hoomd.context.initialize()
-        model_dir = build_examples.lj_force_output(Ne ** 2 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            rcut = 3.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=2.0),
-                n=[Ne, Ne])
-            c.sorter.disable()
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.01)
-            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
-            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-            lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
-            lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, period=100, save_period=1)
-            tfcompute.set_reference_forces(lj)
-            hoomd.run(300)
-            # now load checkpoint and check error
-            variables = hoomd.htf.load_variables(
-                model_dir, ['error'])
-            assert abs(variables['error']) < 1e-5
-            # now check difference between particle forces and
-            # forces from htf
-            lj_forces = np.array([lj.forces[j].force for j in range(Ne**2)])
-            lj_energy = np.array([lj.forces[j].energy for j in range(Ne**2)])
-            np.testing.assert_allclose(tfcompute.get_forces_array(
-            )[:, :3], lj_forces)
-            np.testing.assert_allclose(tfcompute.get_forces_array(
-            )[:, 3], lj_energy)
+        model = build_examples.LJModel(32, output_forces=False)
+        model.compile(loss='MeanSquaredError')
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 3.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=2.0),
+            n=[Ne, Ne])
+        c.sorter.disable()
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.01)
+        lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+        lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+        lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+        lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut, period=100)
+        tfcompute.set_reference_forces(lj)
+        hoomd.run(300)
+        error = model.metrics[0].result().numpy()
+        assert abs(error) < 1e-5
+        # now check difference between particle forces and
+        # forces from htf
+        lj_forces = np.array([lj.forces[j].force for j in range(Ne**2)])
+        lj_energy = np.array([lj.forces[j].energy for j in range(Ne**2)])
+        np.testing.assert_allclose(tfcompute.get_forces_array(
+        )[:, :3], lj_forces)
+        np.testing.assert_allclose(tfcompute.get_forces_array(
+        )[:, 3], lj_energy)
 
     def test_rdf(self):
         model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
