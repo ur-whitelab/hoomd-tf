@@ -73,14 +73,6 @@ class WrapModel(htf.SimModel):
         return rwrap
 
 
-def mol_force(directory='/tmp/test-mol-force-model'):
-    graph = htf.SimModel(0, output_forces=False)
-    graph.build_mol_rep(3)
-    f = tf.norm(tensor=graph.mol_forces, axis=0)
-    graph.save(directory, out_nodes=[f])
-    return directory
-
-
 class BenchmarkNonlistGraph(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         ps = tf.norm(tensor=positions, axis=1)

@@ -142,7 +142,6 @@ class MolSimModel(SimModel):
         self.MN = MN
 
         self.mol_indices = mol_indices
-        print(self.mol_indices, type(self.mol_indices) == list)
 
         # fill out the indices
         for mi in self.mol_indices:
@@ -151,7 +150,7 @@ class MolSimModel(SimModel):
                 mi[i] += 1
             if len(mi) > MN:
                 raise ValueError('One of your molecule indices'
-                                 'has more than MN indices.'
+                                 ' has more than MN indices.'
                                  'Increase MN in your graph.')
             while len(mi) < MN:
                 mi.append(0)
@@ -390,8 +389,6 @@ def _make_reverse_indices(mol_indices):
     for r in rmi:
         if len(r) != 2 and not warned:
             warned = True
-            hoomd.context.msg.notice(
-                1,
-                'Not all of your atoms are in a molecule\n')
+            print('Not all of your atoms are in a molecule\n')
             r.extend([-1, -1])
     return rmi

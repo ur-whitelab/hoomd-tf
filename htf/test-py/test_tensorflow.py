@@ -537,60 +537,58 @@ class test_mol_batching(unittest.TestCase):
         hoomd.run(8)
 
     def test_single_atom_batched(self):
-        model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
-        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            with self.assertRaises(ValueError):
-                tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
-            hoomd.run(8)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3, 3])
+
+        mol_indices = hoomd.htf.find_molecules(system)
+        model = build_examples.LJMolModel(
+            MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
+        tfcompute = hoomd.htf.tfcompute(model)
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        with self.assertRaises(ValueError):
+            tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
 
     def test_single_atom_malformed(self):
-        model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
-        with hoomd.htf.tfcompute(model_dir, _mock_mode=True) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            with self.assertRaises(ValueError):
-                tfcompute.attach(nlist, r_cut=rcut, mol_indices=[1, 1, 4, 24])
-            hoomd.run(8)
+        with self.assertRaises(TypeError):
+            build_examples.LJMolModel(
+                MN=1, mol_indices=[1, 1, 4, 24], nneighbor_cutoff=10)
 
     def test_multi_atom(self):
-        model_dir = build_examples.lj_mol(9 - 1, 8, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            tfcompute.attach(nlist,
-                             r_cut=rcut,
-                             mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
-            hoomd.run(8)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        model = build_examples.LJMolModel(
+            MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
+            nneighbor_cutoff=NN)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(8)
 
     def test_mol_force_output(self):
-        model_dir = build_examples.mol_force(self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                               n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-            tfcompute.attach(mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]])
-            hoomd.run(8)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        model = build_examples.LJMolModel(
+            MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
+            nneighbor_cutoff=NN, output_forces=False)
+        tfcompute = hoomd.htf.tfcompute(model)
+        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                           n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(8)
 
     def test_reverse_mol_index(self):
         # each element is the index of atoms in the molecule

@@ -2,6 +2,7 @@
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
 from hoomd.htf import _htf
+from .simmodel import *
 import sys
 import math
 import numpy as np
@@ -38,7 +39,6 @@ class tfcompute(hoomd.compute._compute):
         self.model = model
 
     def attach(self, nlist=None, r_cut=0, period=1,
-               mol_indices=None, max_molecule_size=None,
                batch_size=None, train=False, save_output_period=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
@@ -86,9 +86,14 @@ class tfcompute(hoomd.compute._compute):
 
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
-        if mol_indices is not None:
-            # TODO
-            pass
+
+        if issubclass(type(self.model), MolSimModel):
+            if self.batch_size != 0:
+                raise ValueError(
+                    'Cannot batch by molecule and by batch_number')
+            if hoomd.comm.get_num_ranks() > 1:
+                raise ValueError('Molecular batches are '
+                                 'not supported with spatial decomposition (MPI)')
 
         # get neighbor cutoff
         self.nneighbor_cutoff = self.model.nneighbor_cutoff
