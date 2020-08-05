@@ -103,6 +103,7 @@ set(files
     tfarraycomm.py
     version.py
     simmodel.py
+    utils.py
     )
 
 install(FILES ${files}

@@ -278,44 +278,6 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         total_i += len(masses)
     return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
 
-
-def force_matching(mapped_forces, calculated_cg_forces, learning_rate=1e-3):
-    R""" This will minimize the difference between the mapped forces
-    and calculated CG forces using the Adam oprimizer.
-
-    :param mapped_forces: A tensor with shape M x 3 where M is number
-        of CG beads in the system. These are forces mapped from an all
-        atom system.
-    :type mapped_forces: tensor
-    :param calculated_cg_forces: A tensor with shape M x 3 where M is
-        number of CG beads in the system. These are CG forces estimated
-        using a function or a basis set.
-    :type calculated_cg_forces: tensor
-    :param learning_rate: The learning_rate for optimization
-    :type learning_rate: float
-
-    :return: optimizer, cost
-
-    """
-    # Assert that mapped_forces has the right dimensions
-    if not (len(mapped_forces.shape
-                ) == 2 and mapped_forces.shape[1] == 3):
-        raise ValueError('mapped_forces must have the dimension [M x 3]'
-                         'where M is the number of coarse-grained particles')
-    # shape(calculated_cg_forces) should be equal to shape(mapped_forces)
-    # if not (mapped_forces.shape ==
-    #        calculated_cg_forces.shape):
-    #    tf.reshape(calculated_cg_forces, shape=mapped_forces.shape)
-    # minimize mean squared error
-    cost = tf.compat.v1.losses.mean_squared_error(mapped_forces,
-                                        calculated_cg_forces)
-    # It is assumed here that the user will pass in
-    # calculated_cg_forces that depend on trainable variables.
-    optimizer = tf.compat.v1.train.AdamOptimizer(
-        learning_rate=learning_rate).minimize(cost)
-    return optimizer, cost
-
-
 def run_from_trajectory(model_directory, universe,
                         selection='all', r_cut=10.,
                         period=10, feed_dict={}):

@@ -39,7 +39,7 @@ class tfcompute(hoomd.compute._compute):
 
     def attach(self, nlist=None, r_cut=0, period=1,
                mol_indices=None, max_molecule_size=None,
-               batch_size=None, train=None, save_output_period=None):
+               batch_size=None, train=False, save_output_period=None):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
@@ -76,12 +76,6 @@ class tfcompute(hoomd.compute._compute):
         self.save_output_period = save_output_period
         self.outputs = None
         self._calls = 0
-
-        # decide if we're training
-        if train is None:
-            train = True
-            if self.model.output_forces:
-                train = False
 
         self.train = train
 
@@ -210,18 +204,17 @@ class tfcompute(hoomd.compute._compute):
             output = self.model(inputs)
             if self.save_output_period and self._calls % self.save_output_period == 0:
                 if self.outputs is None:
-                    self.outputs = output.numpy()[np.newaxis,...]
+                    self.outputs = [o.numpy()[np.newaxis, ...]
+                                    for o in output]
                 else:
-                    self.outputs = np.append(self.outputs, output.numpy()[np.newaxis,...], axis=0)
-
+                    self.outputs = [
+                        np.append(o1, o2.numpy()[np.newaxis, ...], axis=0)
+                        for o1, o2 in zip(self.outputs, output)
+                    ]
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
-                if type(output) == list:
-                    self.model.compute_outputs(
-                        self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), output[0], output[1])
-                else:
-                    self.model.compute_outputs(
-                        self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), output, None)
+                self.model.compute_outputs(
+                    self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), *output)
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,

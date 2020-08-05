@@ -1,44 +1,11 @@
+import shutil
+import tempfile
+import build_examples
 import hoomd
 import hoomd.htf
 import unittest
 import numpy as np
 import tensorflow as tf
-tf.compat.v1.disable_v2_behavior()
-import build_examples
-import tempfile
-import shutil
-
-
-class test_loading(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self.tmp)
-
-    def test_load_variables(self):
-        self.tmp = tempfile.mkdtemp()
-        model_dir = self.tmp
-        # make model that does assignment
-        g = hoomd.htf.SimModel(0, False)
-        h = tf.ones([10], dtype=tf.float32)
-        v = tf.compat.v1.get_variable('test', shape=[], trainable=False)
-        as_op = v.assign(tf.reduce_sum(input_tensor=h))
-        g.save(model_dir, out_nodes=[as_op])
-        # run once
-        hoomd.context.initialize()
-        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(save_period=1)
-            hoomd.run(1)
-        # load
-        vars = hoomd.htf.load_variables(model_dir, ['test'])
-        assert np.abs(vars['test'] - 10) < 10e-10
 
 
 class test_mappings(unittest.TestCase):
@@ -102,15 +69,12 @@ class test_mappings(unittest.TestCase):
         m = tf.sparse.sparse_dense_matmul(s, p)
         dense_mapping = tf.sparse.to_dense(s)
         msum = tf.reduce_sum(input_tensor=m)
-        with tf.compat.v1.Session() as sess:
-            msum = sess.run(msum)
-            # here we are doing sum, not center of mass.
-            # So this is like com forces
-            # number of nonzero mappeds = number of molecules
-            # * number of particles in each molecule
-            assert int(msum) == len(mapping) * mapping_matrix.shape[1]
-            # now make sure we see the mapping matrix in first set
-            dense_mapping = sess.run(dense_mapping)
+        # here we are doing sum, not center of mass.
+        # So this is like com forces
+        # number of nonzero mappeds = number of molecules
+        # * number of particles in each molecule
+        assert int(msum) == len(mapping) * mapping_matrix.shape[1]
+        # now make sure we see the mapping matrix in first set
         map_slice = dense_mapping[
             :mapping_matrix.shape[0], :mapping_matrix.shape[1]]
         # make mapping_matrix sum to 1
@@ -144,50 +108,13 @@ class test_mappings(unittest.TestCase):
                                       for _ in mapping], mapping, self.system)
         # see if we can build it
         N = len(self.system.particles)
-        p = tf.compat.v1.placeholder(tf.float32, shape=[N, 3])
+        positions = tf.cast(
+            self.system.take_snapshot().particles.position, tf.float32)
         box_size = [self.system.box.Lx, self.system.box.Ly, self.system.box.Lz]
-        com = hoomd.htf.center_of_mass(p, s, box_size)
-        non_pbc_com = tf.sparse.sparse_dense_matmul(s, p)
-        with tf.compat.v1.Session() as sess:
-            positions = self.system.take_snapshot().particles.position
-            com, non_pbc_com = sess.run([com, non_pbc_com],
-                                        feed_dict={p: positions})
+        com = hoomd.htf.center_of_mass(positions, s, box_size)
+        non_pbc_com = tf.sparse.sparse_dense_matmul(s, positions)
         # TODO: Come up with a real test of this.
         assert True
-
-    def test_force_matching(self):
-        model_dir = build_examples.lj_force_matching(NN=15)
-        # calculate lj forces with a leading coeff
-        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
-            hoomd.context.initialize()
-            N = 16
-            NN = N - 1
-            rcut = 7.5
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[4, 4])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
-            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(kT=2, seed=2)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=10)
-            hoomd.run(1e2)
-            input_nlist = tfcompute.get_nlist_array()
-            variables = hoomd.htf.load_variables(
-                model_dir, checkpoint=10,
-                names=['loss', 'lj-epsilon', 'lj-sigma'],
-                feed_dict=dict({'nlist-input:0': input_nlist}))
-            new_variables = hoomd.htf.load_variables(
-                model_dir, checkpoint=-1,
-                names=['loss', 'lj-epsilon', 'lj-sigma'],
-                feed_dict=dict({'nlist-input:0': input_nlist}))
-            loss = variables['loss']
-            new_loss = new_variables['loss']
-        assert loss != new_loss
-        assert new_variables['lj-epsilon'] != 0.9
-        assert new_variables['lj-sigma'] != 1.1
 
     def test_compute_nlist(self):
         N = 10
@@ -201,13 +128,12 @@ class test_mappings(unittest.TestCase):
             9,
             box_size,
             True)
-        with tf.compat.v1.Session() as sess:
-            nlist = sess.run(nlist)
-            # particle 1 is closest to 0
-            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
-            # particle 0 is -9 away from 9
-            np.testing.assert_array_almost_equal(nlist[-1, -1, :],
-                                                 [-9, -9, -9, 0])
+        nlist = nlist.numpy()
+        # particle 1 is closest to 0
+        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+        # particle 0 is -9 away from 9
+        np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                             [-9, -9, -9, 0])
 
     def test_compute_nlist_cut(self):
         N = 10
@@ -221,14 +147,13 @@ class test_mappings(unittest.TestCase):
             9,
             box_size,
             True)
-        with tf.compat.v1.Session() as sess:
-            nlist = sess.run(nlist)
-            # particle 1 is closest to 0
-            np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
-            # particle later particles on 0 are all 0s because
-            # there were not enough neigbhors
-            np.testing.assert_array_almost_equal(nlist[-1, -1, :],
-                                                 [0, 0, 0, 0])
+        nlist = nlist.numpy()
+        # particle 1 is closest to 0
+        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
+        # particle later particles on 0 are all 0s because
+        # there were not enough neigbhors
+        np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                             [0, 0, 0, 0])
 
     def test_nlist_compare(self):
         rcut = 5.0
@@ -240,23 +165,22 @@ class test_mappings(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
                                            n=[4, 4, 4])
 
-        model_dir = build_examples.custom_nlist(16, rcut, self.tmp)
-        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
-            nlist = hoomd.md.nlist.cell()
-            lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
-            lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
-            hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut,
-                             save_period=10, batch_size=None)
-            # add lj so we can hopefully get particles mixing
-            hoomd.run(100)
-        variables = hoomd.htf.load_variables(
-            model_dir, ['hoomd-r', 'htf-r'])
+        model = build_examples.CustomNlist(32, output_forces=False)
+        model.r_cut = rcut
+        tfcompute = hoomd.htf.tfcompute(model)
+        nlist = hoomd.md.nlist.cell()
+        lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
+        lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut,
+                         save_output_period=100, train=False)
+        # add lj so we can hopefully get particles mixing
+        hoomd.run(101)
         # the two nlists need to be sorted to be compared
-        nlist = variables['hoomd-r']
-        cnlist = variables['htf-r']
+        nlist = tfcompute.outputs[0]
+        cnlist = tfcompute.outputs[1]
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i, :])
             ci = np.sort(cnlist[i, :])
@@ -427,7 +351,8 @@ class test_trajectory(unittest.TestCase):
         try:
             import MDAnalysis as mda
         except ImportError:
-            self.skipTest("MDAnalysis not available; skipping test_run_from_trajectory")
+            self.skipTest(
+                "MDAnalysis not available; skipping test_run_from_trajectory")
         import math
         import os
         test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')

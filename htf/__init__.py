@@ -6,8 +6,13 @@
 Use TensorFlow to do arbitrary collective variable calculations and
 machine learning on-the-fly in HOOMD-blue simulations.
 """
-
+import hoomd.md
+from hoomd.htf.tensorflowcompute import tfcompute
+from hoomd.htf.simmodel import *
+from hoomd.htf.version import __version__
+from hoomd.htf.utils import *
 import tensorflow as tf
+
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -21,7 +26,3 @@ if gpus:
         print(e)
 
 # need to import md to have library available.
-import hoomd.md
-from hoomd.htf.tensorflowcompute import tfcompute
-from hoomd.htf.simmodel import *
-from hoomd.htf.version import __version__

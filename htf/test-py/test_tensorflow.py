@@ -167,7 +167,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4, train=True)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.1, sigma=0.9)
         hoomd.run(25)
@@ -191,7 +191,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(nlist, r_cut=rcut)
+        tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
 
         model.save(os.path.join(self.tmp, 'test-model'))
@@ -214,7 +214,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(nlist, r_cut=rcut)
+        tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
 
         model.save(os.path.join(self.tmp, 'test-model'))
@@ -260,7 +260,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.cell(check_period=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
-        tfcompute.attach(nlist, train=False, r_cut=rcut)
+        tfcompute.attach(nlist, r_cut=rcut)
         for i in range(3):
             hoomd.run(1)
             for j in range(N):
@@ -275,7 +275,7 @@ class test_compute(unittest.TestCase):
             n=[3, 3])
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
-        tfcompute.attach(train=False)
+        tfcompute.attach()
         hoomd.run(1)
 
     def test_skew_fails(self):
@@ -288,7 +288,7 @@ class test_compute(unittest.TestCase):
         hoomd.run(1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
-        tfcompute.attach(train=False)
+        tfcompute.attach()
         with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(1)
 
@@ -376,7 +376,7 @@ class test_compute(unittest.TestCase):
         lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
-        tfcompute.attach(nlist, r_cut=rcut, period=100)
+        tfcompute.attach(nlist, train=True, r_cut=rcut, period=100)
         tfcompute.set_reference_forces(lj)
         hoomd.run(300)
         error = model.metrics[0].result().numpy()
@@ -627,7 +627,7 @@ class test_saving(unittest.TestCase):
         hoomd.run(8)
 
         # reshape to remove batch_size effect
-        array = tfcompute.outputs.reshape(-1, 9)
+        array = tfcompute.outputs[0].reshape(-1, 9)
         assert array.shape == (4, 9)
 
 

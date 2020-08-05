@@ -173,25 +173,15 @@ def run_traj_graph(directory='/tmp/test-run-traj'):
     return directory
 
 
-def custom_nlist(NN, r_cut, system, directory='/tmp/test-custom-nlist'):
-    graph = htf.SimModel(NN, output_forces=False)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    box_size = graph.box_size
-    r = tf.norm(tensor=nlist, axis=2)
-    v = tf.compat.v1.get_variable('hoomd-r', initializer=tf.zeros_like(r),
-                                  validate_shape=False)
-    ops = [v.assign(r)]
+class CustomNlist(htf.SimModel):
+    def compute(self, nlist, positions, box, sample_weight):
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
 
-    # compute nlist
-    cnlist = htf.compute_nlist(graph.positions[:, :3], r_cut, NN, box_size)
-    r = tf.norm(tensor=cnlist[:, :, :3], axis=2)
-    v = tf.compat.v1.get_variable('htf-r', initializer=tf.zeros_like(r),
-                                  validate_shape=False)
-    ops.append(v.assign(r))
-
-    graph.save(model_directory=directory, out_nodes=ops)
-    return directory
+        # compute nlist
+        cnlist = htf.compute_nlist(
+            positions[:, :3], self.r_cut, self.nneighbor_cutoff, htf.box_size(box))
+        cr = tf.norm(tensor=cnlist[:, :, :3], axis=2)
+        return r, cr
 
 
 class LJRunningMeanModel(htf.SimModel):

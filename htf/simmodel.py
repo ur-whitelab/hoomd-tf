@@ -41,7 +41,10 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
-        return self.compute(*inputs)
+        out = self.compute(*inputs)
+        if tf.is_tensor(out):
+            out = (out,)
+        return out
 
     @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr, box_addr, batch_frac, forces_addr=0):
@@ -79,7 +82,7 @@ class SimModel(tf.keras.Model):
                                                                                tf.dtypes.int32), axis=1),
                                axis=0)
             tf.debugging.assert_less(NN, self.nneighbor_cutoff,
-                      message='Neighbor list is full!')
+                                     message='Neighbor list is full!')
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
             pos, self.dtype), tf.cast(box, self.dtype), batch_frac]
@@ -96,7 +99,7 @@ class SimModel(tf.keras.Model):
         return result
 
     @tf.function
-    def compute_outputs(self, dtype, force_addr, virial_addr, forces, virial):
+    def compute_outputs(self, dtype, force_addr, virial_addr, forces, virial=None):
 
         if forces.shape[1] == 3:
             forces = tf.concat(
@@ -255,6 +258,11 @@ def wrap_vector(r, box):
     """
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
+
+
+@tf.function
+def box_size(box):
+    return box[1, :] - box[0, :]
 
 
 @tf.function
