@@ -7,13 +7,13 @@ import pickle
 
 
 class SimModel(tf.keras.Model):
-    def __init__(self, nneighbor_cutoff, output_forces=True, modify_virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-model', **kwargs):
+    def __init__(self, nneighbor_cutoff, output_forces=True, virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-model', **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         super(SimModel, self).__init__(dtype=dtype, name=name, **kwargs)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
-        self.modify_virial = modify_virial
+        self.virial = virial
 
         input_signature = [
             tf.TensorSpec(

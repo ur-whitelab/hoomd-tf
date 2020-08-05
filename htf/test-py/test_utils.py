@@ -204,20 +204,19 @@ class test_bias(unittest.TestCase):
     def test_eds(self):
         T = 1000
         hoomd.context.initialize()
-        model_dir = build_examples.eds_graph(self.tmp)
-        with hoomd.htf.tensorflowcompute.tfcompute(model_dir) as tfcompute:
-            hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            hoomd.md.integrate.mode_standard(dt=0.05)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(kT=0.2, seed=2)
-            tfcompute.attach(save_period=10)
-            hoomd.run(T)
-        variables = hoomd.htf.load_variables(
-            model_dir, ['cv-mean', 'alpha-mean', 'eds.mean', 'eds.ssd', 'eds.n', 'eds.a'])
-        assert np.isfinite(variables['eds.a'])
-        assert (variables['cv-mean'] - 4)**2 < 0.5
+        model = build_examples.EDSModel(0)
+        tfcompute = hoomd.htf.tfcompute(model)
+        hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        hoomd.md.integrate.mode_standard(dt=0.05)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(kT=0.2, seed=2)
+        tfcompute.attach(save_output_period=10)
+        hoomd.run(T)
+        print(model.cv_avg.result().numpy())
+        assert np.isfinite(np.mean(tfcompute.outputs[0]))
+        assert (model.cv_avg.result().numpy() - 4)**2 < 0.5
 
 
 class test_mol_properties(unittest.TestCase):

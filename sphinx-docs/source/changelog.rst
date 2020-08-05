@@ -22,7 +22,7 @@ v2.0.rc1
     - saving values over time is now done by tensorboard or other TF/Keras approaches
 - How forces are computed must be explicit and virials are no longer implicit
 - You can no longer save tensors, instead output what you would like to save in your model code
-
+- EDS is now layer (EDSLayer)
 
 v1.0.1 (7/27/2020)
 ----

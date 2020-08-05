@@ -115,27 +115,24 @@ class LJVirialModel(htf.SimModel):
         return forces
 
 
-def eds_graph(directory='/tmp/test-lj-eds'):
-    graph = htf.SimModel(0)
-    # get distance from center
-    rvec = graph.wrap_vector(graph.positions[0, :3])
-    cv = tf.norm(tensor=rvec)
-    cv_mean = graph.running_mean(cv, name='cv-mean')
-    alpha = htf.eds_bias(cv, 4, 5, cv_scale=1 / 5, name='eds')
-    alpha_mean = graph.running_mean(alpha, name='alpha-mean')
-    # eds + harmonic bond
-    energy = (cv - 5) ** 2 + cv * alpha
-    # energy  = cv^2 - 6cv + cv * alpha + C
-    # energy = (cv - (3 + alpha / 2))^2 + C
-    # alpha needs to be = 4
-    forces = graph.compute_forces(energy, positions=True)
-    graph.save(
-        force_tensor=forces,
-        model_directory=directory,
-        out_nodes=[
-            cv_mean,
-            alpha_mean])
-    return directory
+class EDSModel(htf.SimModel):
+    def setup(self):
+        self.cv_avg = tf.keras.metrics.Mean()
+        self.eds_bias = htf.EDSLayer(4., 5, 1/5)
+
+    def compute(self, nlist, positions, box, sample_weight):
+        # get distance from center
+        rvec = htf.wrap_vector(positions[0, :3], box)
+        cv = tf.norm(tensor=rvec)
+        self.cv_avg.update_state(cv)
+        alpha = self.eds_bias(cv)
+        # eds + harmonic bond
+        energy = (cv - 5) ** 2 + cv * alpha
+        # energy  = cv^2 - 6cv + cv * alpha + C
+        # energy = (cv - (3 + alpha / 2))^2 + C
+        # alpha needs to be = 4
+        forces = htf.compute_positions_forces(positions, energy)
+        return forces, alpha
 
 
 def mol_features_graph(directory='/tmp/test-mol-features'):

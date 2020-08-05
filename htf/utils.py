@@ -275,77 +275,83 @@ def run_from_trajectory(model_directory, universe,
 
 # \internal
 # \Applies EDS bias to a system
-def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
-    R""" This method computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
-    to be used as the EDS bias in the simulation.
 
-    :param cv: The collective variable which is biased in the simulation
-    :param set_point: The set point value of the collective variable.
-        This is a constant value which is pre-determined by the user and unique to each cv.
-    :param period: Time steps over which the coupling constant is updated.
-        HOOMD time units are used. If period=100 alpha will be updated each 100 time steps.
-    :param learninig_rate: Learninig_rate in the EDS method.
-    :param cv_scale: Used to adjust the units of the bias to HOOMD units.
-    :param name: Name used as prefix on variables.
-    :return: Alpha, the EDS coupling constant.
-    """
+class EDSLayer(tf.keras.layers.Layer):
+    def __init__(self, set_point, period, learning_rate=1e-2, cv_scale=1.0, name='eds-layer', **kwargs):
+        if not tf.is_tensor(set_point):
+            set_point = tf.convert_to_tensor(set_point)
+        if set_point.dtype not in (tf.float32, tf.float64):
+            raise ValueError(
+                'EDS only works with floats, not dtype' +
+                str(set_point.dtype))
+        super().__init__(name, dtype=set_point.dtype, **kwargs)
+        self.set_point = set_point
+        self.period = tf.cast(period, tf.int32)
+        self.cv_scale = cv_scale
+        self.learning_rate = learning_rate
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate)
 
-    if name is None:
-        name = 'eds' + cv.name.split(':')[0]
+    def get_config(self):
+        base = super().get_config()
+        c = {
+            'set_point': self.set_point.numpy(),
+            'period': self.period,
+            'cv_scale': self.cv_scale,
+            'learning_rate': self.learning_rate,
+        }
+        c.update(base)
+        return c
 
-    # set-up variables
-    mean = tf.compat.v1.get_variable(
-        '{}.mean'.format(name),
-        initializer=0.0,
-        trainable=False)
-    ssd = tf.compat.v1.get_variable(
-        '{}.ssd'.format(name),
-        initializer=0.0,
-        trainable=False)
-    n = tf.compat.v1.get_variable('{}.n'.format(
-        name), initializer=0, trainable=False)
-    alpha = tf.compat.v1.get_variable('{}.a'.format(name), initializer=0.0)
+    def build(self, input_shape):
+        # set-up variables
+        self.mean = self.add_weight(initializer=tf.zeros_initializer(), dtype=self.dtype, shape=input_shape, name='{}.mean'.format(self.name),
+                                    trainable=False)
+        self.ssd = self.add_weight(initializer=tf.zeros_initializer(), dtype=self.dtype, shape=input_shape, name='{}.ssd'.format(self.name),
+                                   trainable=False)
+        self.n = self.add_weight(initializer=tf.zeros_initializer(), shape=input_shape, dtype=tf.int32, name='{}.n'.format(
+            self.name), trainable=False)
+        self.alpha = self.add_weight(initializer=tf.zeros_initializer(
+        ), shape=input_shape, name='{}.a'.format(self.name), dtype=self.dtype)
 
-    reset_mask = tf.cast((n == 0), tf.float32)
+    @tf.function
+    def call(self, cv):
+        reset_mask = tf.cast((self.n == 0), self.dtype)
 
-    # reset statistics if n is 0
-    reset_mean = mean.assign(mean * reset_mask)
-    reset_ssd = mean.assign(ssd * reset_mask)
+        # reset statistics if n is 0
+        reset_mean = self.mean.assign(self.mean * reset_mask)
+        reset_ssd = self.mean.assign(self.ssd * reset_mask)
 
-    # update statistics
-    # do we update? - masked
-    with tf.control_dependencies([reset_mean, reset_ssd]):
-        update_mask = tf.cast(n > period // 2, tf.float32)
-        delta = (cv - mean) * update_mask
-        update_mean = mean.assign_add(
+        # update statistics
+        # do we update? - masked
+        update_mask = tf.cast(self.n > self.period // 2, self.dtype)
+        delta = (cv - self.mean) * update_mask
+        self.mean.assign_add(
             delta /
             tf.cast(
                 tf.maximum(
                     1,
-                    n -
-                    period //
+                    self.n -
+                    self.period //
                     2),
-                tf.float32))
-        update_ssd = ssd.assign_add(delta * (cv - mean))
+                self.dtype))
+        self.ssd.assign_add(delta * (cv - self.mean))
 
-    # update grad
-    with tf.control_dependencies([update_mean, update_ssd]):
-        update_mask = tf.cast(tf.equal(n, period - 1), tf.float32)
+        # update grad
+        update_mask = tf.cast(
+            tf.equal(self.n, self.period - 1), self.dtype)
         gradient = update_mask * -  2 * \
-            (cv - set_point) * ssd / period / 2 / cv_scale
-        optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate)
-        update_alpha = tf.cond(pred=tf.equal(n, period - 1),
-                               true_fn=lambda: optimizer.apply_gradients([(gradient,
-                                                                           alpha)]),
-                               false_fn=lambda: tf.no_op())
+            (self.mean - self.set_point) * self.ssd / \
+            tf.cast(self.period, self.dtype) / 2 / self.cv_scale
 
-    # update n. Should reset at period
-    update_n = n.assign((n + 1) % period)
+        tf.cond(pred=tf.equal(self.n, self.period - 1),
+                true_fn=lambda: self.optimizer.apply_gradients([(gradient,
+                                                                 self.alpha)]),
+                false_fn=lambda: tf.no_op())
 
-    with tf.control_dependencies([update_alpha, update_n]):
-        alpha_dummy = tf.identity(alpha)
+        # update n. Should reset at period
+        self.n.assign((self.n + 1) % self.period)
 
-    return alpha_dummy
+        return self.alpha
 
 
 # \internal

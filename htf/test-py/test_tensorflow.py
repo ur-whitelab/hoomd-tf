@@ -461,7 +461,7 @@ class test_compute(unittest.TestCase):
         # I can't figure out why, but since PE and forces are
         # matching exactly, I'll leave the tol
         # set that high.
-        model = build_examples.LJVirialModel(32)
+        model = build_examples.LJVirialModel(32, virial=True)
         tfcompute = hoomd.htf.tfcompute(model)
         N = 3 * 3
         NN = N - 1

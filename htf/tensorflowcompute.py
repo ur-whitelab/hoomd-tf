@@ -76,6 +76,11 @@ class tfcompute(hoomd.compute._compute):
         self.save_output_period = save_output_period
         self.outputs = None
         self._calls = 0
+        self._output_offset = 0
+        if self.model.output_forces:
+            self._output_offset = 1
+        if self.model.virial:
+            self._output_offset = 2
 
         self.train = train
 
@@ -205,16 +210,16 @@ class tfcompute(hoomd.compute._compute):
             if self.save_output_period and self._calls % self.save_output_period == 0:
                 if self.outputs is None:
                     self.outputs = [o.numpy()[np.newaxis, ...]
-                                    for o in output]
+                                    for o in output[self._output_offset:]]
                 else:
                     self.outputs = [
                         np.append(o1, o2.numpy()[np.newaxis, ...], axis=0)
-                        for o1, o2 in zip(self.outputs, output)
+                        for o1, o2 in zip(self.outputs, output[self._output_offset:])
                     ]
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
                 self.model.compute_outputs(
-                    self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), *output)
+                    self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), *output[:self._output_offset])
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,
