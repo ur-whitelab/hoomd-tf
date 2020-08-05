@@ -7,13 +7,13 @@ import pickle
 
 
 class SimModel(tf.keras.Model):
-    def __init__(self, nneighbor_cutoff, output_forces=True, check_nlist=False, dtype=tf.float32, name='htf-model', **kwargs):
+    def __init__(self, nneighbor_cutoff, output_forces=True, modify_virial=False, check_nlist=False, dtype=tf.float32, name='htf-model', **kwargs):
         R""" Build the TensorFlow graph that will be used during the HOOMD run.
         """
         super(SimModel, self).__init__(dtype=dtype, name=name, **kwargs)
-        print('Building SIM MODEL!!')
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
+        self.modify_virial = modify_virial
 
         input_signature = [
             tf.TensorSpec(
@@ -95,40 +95,21 @@ class SimModel(tf.keras.Model):
         return result
 
     @tf.function
-    def compute_outputs(self, dtype, force_addr, forces):
+    def compute_outputs(self, dtype, force_addr, virial_addr, forces, virial):
+
         if forces.shape[1] == 3:
             forces = tf.concat(
                 [forces, tf.zeros(tf.shape(forces)[0])[:, tf.newaxis]],
                 axis=1, name='forces')
         tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
         tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
-        forces = tf_to_hoomd(
+        tf_to_hoomd(
             tf.cast(forces, dtype),
             address=force_addr)
-
-    def save_tensor(self, tensor, name, save_period=1):
-        R"""Saves a tensor to a variable
-
-        :param tensor: The tensor to save
-        :type tensor: tensor
-        :param name: The name of the variable which will be saved
-        :type name: str
-        :param save_period: How often to save the variable
-        :type save_period: int
-
-        :return: None
-        """
-
-        # make sure it is a tensor
-        if type(tensor) != tf.Tensor:
-            raise ValueError('save_tensor requires a tf.Tensor '
-                             'but given type {}'.format(type(tensor)))
-
-        store = tf.Variable(name=name, initial_value=tf.zeros_like(tensor),
-                            validate_shape=False, dtype=tensor.dtype, trainable=False)
-
-        store_op = store.assign(tensor)
-        self.out_nodes.append([store_op, save_period])
+        if virial is not None:
+            tf_to_hoomd(
+                tf.cast(virial, dtype),
+                address=virial_addr)
 
     def build_mol_rep(self, MN):
         R"""
@@ -192,21 +173,36 @@ def compute_positions_forces(positions, energy):
     forces = tf.gradients(energy, positions)[0]
     return add_energy(forces, energy)
 
+def compute_virial(nlist, nlist_forces):
+    # now treat virial
+    nlist3 = nlist[:, :, :3]
+    rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
+    # F / rs
+    nlist_r_mag = safe_norm(
+        nlist3, axis=2, name='nlist-r-mag')
+    nlist_force_mag = safe_norm(
+        nlist_forces, axis=2, name='nlist-force-mag')
+    F_rs = tf.math.divide_no_nan(nlist_force_mag, 2.0 *
+                            nlist_r_mag)
+    # sum over neighbors: F / r * (r (outter) r)
+    virial = -1.0 * tf.einsum('ij,ijkl->ikl',
+                                    F_rs, rij_outter)
+    return virial
 
-def compute_nlist_forces(nlist, energy):
+def compute_nlist_forces(nlist, energy, virial=False):
     nlist_grad = tf.gradients(energy, nlist)[0]
     if nlist_grad is None:
         raise ValueError('Could not find dependence between energy and nlist')
-    nlist_grad = tf.identity(tf.math.multiply(tf.constant(2.0), nlist_grad),
-                             name='nlist-pairwise-force'
-                             '-gradient-raw')
-    zeros = tf.zeros(tf.shape(input=nlist_grad))
-    nlist_forces = tf.compat.v1.where(tf.math.is_finite(nlist_grad),
-                                      nlist_grad, zeros,
-                                      name='nlist-pairwise-force-gradient')
+    # remove 0s and *2
+    nlist_forces = tf.math.multiply_no_nan(nlist_grad, 2.0)
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                  name='nlist-force-gradient')
-    return add_energy(nlist_reduce, energy)
+    if virial:
+        return tf.tuple([add_energy(nlist_reduce, energy), compute_virial(nlist, nlist_forces)])
+    else:
+        return add_energy(nlist_reduce, energy)
+
+
 
 def add_energy(forces, energy):
     if len(energy.shape) > 1:

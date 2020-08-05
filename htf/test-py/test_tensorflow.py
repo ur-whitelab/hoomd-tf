@@ -191,7 +191,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(5)
 
         model.save(os.path.join(self.tmp, 'test-model'))
@@ -214,7 +214,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
-        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(5)
 
         model.save(os.path.join(self.tmp, 'test-model'))
@@ -227,7 +227,7 @@ class test_compute(unittest.TestCase):
         tfcompute.disable()
 
         tfcompute = hoomd.htf.tfcompute(infer_model)
-        tfcompute.attach(nlist, r_cut=rcut, save_period=1)
+        tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(5)
 
     def test_print(self):
@@ -351,7 +351,7 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all()
                                 ).randomize_velocities(seed=1, kT=0.8)
-        tfcompute.attach(nlist, r_cut=rcut, save_period=10, batch_size=4)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
         result = model.avg_energy.result().numpy()
         assert result < 0
@@ -406,53 +406,53 @@ class test_compute(unittest.TestCase):
         assert np.sum(rdf) > 0
 
     def test_lj_energy(self):
-        model_dir = build_examples.lj_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            T = 10
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(seed=1, kT=0.8)
-            log = hoomd.analyze.log(filename=None,
-                                    quantities=['potential_energy',
-                                                'kinetic_energy'], period=1)
-            tfcompute.attach(nlist, r_cut=rcut)
-            energy = []
-            for i in range(T):
-                hoomd.run(250)
-                energy.append(log.query('potential_energy'
-                                        ) + log.query('kinetic_energy'))
-                if i > 1:
-                    np.testing.assert_allclose(energy[-1],
-                                               energy[-2], atol=1e-3)
+        model = build_examples.LJModel(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        N = 3 * 3
+        NN = N - 1
+        T = 10
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        log = hoomd.analyze.log(filename=None,
+                                quantities=['potential_energy',
+                                            'kinetic_energy'], period=1)
+        tfcompute.attach(nlist, r_cut=rcut)
+        energy = []
+        for i in range(T):
+            hoomd.run(250)
+            energy.append(log.query('potential_energy'
+                                    ) + log.query('kinetic_energy'))
+            if i > 1:
+                np.testing.assert_allclose(energy[-1],
+                                            energy[-2], atol=1e-3)
 
     def test_nlist_count(self):
         '''Make sure nlist is full, not half
         '''
-        model_dir = build_examples.lj_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            T = 10
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut)
-            hoomd.run(1)  # in lattice, should have 4 neighbors
-            nl = tfcompute.get_nlist_array()
-            ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
-            self.assertEqual(np.min(ncount), 4)
+        model = build_examples.LJModel(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        N = 3 * 3
+        NN = N - 1
+        T = 10
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(1)  # in lattice, should have 4 neighbors
+        nl = tfcompute.get_nlist_array()
+        ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
+        self.assertEqual(np.min(ncount), 4)
 
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to
@@ -460,29 +460,29 @@ class test_compute(unittest.TestCase):
         # I can't figure out why, but since PE and forces are
         # matching exactly, I'll leave the tol
         # set that high.
-        model_dir = build_examples.lj_graph(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            N = 3 * 3
-            NN = N - 1
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell(check_period=1)
-            hoomd.md.integrate.mode_standard(dt=0.005)
-            hoomd.md.integrate.nvt(group=hoomd.group.all(),
-                                   kT=1, tau=0.2).randomize_velocities(seed=1)
-            tfcompute.attach(nlist, r_cut=rcut)
-            log = hoomd.analyze.log(filename=None, quantities=[
-                'potential_energy', 'pressure'], period=1)
-            thermo_scalars = []
-            tf_virial = []
-            for i in range(5):
-                hoomd.run(3)
-                snapshot = system.take_snapshot()
-                tf_virial.append(tfcompute.get_virial_array())
-                thermo_scalars.append([log.query('potential_energy'
-                                                 ), log.query('pressure')])
+        model = build_examples.LJVirialModel(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        N = 3 * 3
+        NN = N - 1
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+                                kT=1, tau=0.2).randomize_velocities(seed=1)
+        tfcompute.attach(nlist, r_cut=rcut)
+        log = hoomd.analyze.log(filename=None, quantities=[
+            'potential_energy', 'pressure'], period=1)
+        thermo_scalars = []
+        tf_virial = []
+        for i in range(5):
+            hoomd.run(3)
+            snapshot = system.take_snapshot()
+            tf_virial.append(tfcompute.get_virial_array())
+            thermo_scalars.append([log.query('potential_energy'
+                                                ), log.query('pressure')])
         # now run with stock lj
         hoomd.context.initialize()
         system = hoomd.init.create_lattice(

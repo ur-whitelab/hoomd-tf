@@ -113,6 +113,18 @@ class LJModel(htf.SimModel):
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
 
+class LJVirialModel(htf.SimModel):
+    def compute(self, nlist, positions, box, sample_weight):
+        # get r
+        rinv = htf.nlist_rinv(nlist)
+        inv_r6 = rinv**6
+        # pairwise energy. Double count -> divide by 2
+        p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        forces = htf.compute_nlist_forces(nlist, energy, virial=True)
+        return forces
+
 
 def lj_force_matching(NN=15, directory='/tmp/test-lj-force-matching'):
     graph = htf.SimModel(NN, output_forces=False)

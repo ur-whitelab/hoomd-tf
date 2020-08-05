@@ -39,7 +39,7 @@ class tfcompute(hoomd.compute._compute):
 
     def attach(self, nlist=None, r_cut=0, period=1,
                mol_indices=None, max_molecule_size=None,
-               batch_size=None, train=None):
+               batch_size=None, train=None, xla=False):
         R""" Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
@@ -84,7 +84,7 @@ class tfcompute(hoomd.compute._compute):
 
         # if we're not training, we can compile finish_update
         if not self.train:
-            self.finish_update = tf.function(self.finish_update)
+            self.finish_update = tf.function(self.finish_update, experimental_compile=xla)
 
         if self.batch_size > 0:
             hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
@@ -207,8 +207,12 @@ class tfcompute(hoomd.compute._compute):
             output = self.model(inputs)
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
-                self.model.compute_outputs(
-                    self.dtype, self.cpp_force.getForcesBuffer(), output)
+                if type(output) == list:
+                    self.model.compute_outputs(
+                        self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), output[0], output[1])
+                else:
+                    self.model.compute_outputs(
+                        self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), output, None)
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,
