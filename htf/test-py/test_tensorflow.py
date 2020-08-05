@@ -390,22 +390,20 @@ class test_compute(unittest.TestCase):
         )[:, 3], lj_energy)
 
     def test_rdf(self):
-        model_dir = build_examples.lj_rdf(9 - 1, self.tmp)
-        with hoomd.htf.tfcompute(model_dir) as tfcompute:
-            rcut = 5.0
-            system = hoomd.init.create_lattice(
-                unitcell=hoomd.lattice.sq(a=4.0),
-                n=[3, 3])
-            nlist = hoomd.md.nlist.cell()
-            hoomd.md.integrate.mode_standard(dt=0.001)
-            hoomd.md.integrate.nve(group=hoomd.group.all(
-            )).randomize_velocities(seed=1, kT=0.8)
-            tfcompute.attach(nlist, r_cut=rcut, save_period=3, batch_size=4)
-            hoomd.run(10)
-        # now load checkpoint
-        variables = hoomd.htf.load_variables(
-            model_dir, ['avg-rdf'])
-        assert np.sum(variables['avg-rdf']) > 0
+        model = build_examples.LJRDF(32)
+        tfcompute = hoomd.htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
+        hoomd.run(10)
+        rdf = model.avg_rdf.result().numpy()
+        assert np.sum(rdf) > 0
 
     def test_lj_energy(self):
         model_dir = build_examples.lj_graph(9 - 1, self.tmp)

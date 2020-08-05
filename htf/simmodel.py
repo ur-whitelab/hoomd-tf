@@ -106,69 +106,6 @@ class SimModel(tf.keras.Model):
             tf.cast(forces, dtype),
             address=force_addr)
 
-    def masked_nlist(self, type_i=None, type_j=None, nlist=None,
-                     type_tensor=None):
-        R"""Returns a neighbor list masked by the given particle type(s).
-
-            :param type_i: Use this to select the first particle type.
-            :param type_j: Use this to select a second particle type (optional).
-            :param nlist: Neighbor list to mask. By default it will use ``self.nlist``.
-            :param type_tensor: An N x 1 tensor containing the type(s) of the nlist origin.
-                If None, particle types from ``self.positions`` will be used.
-            :return: The masked neighbor list tensor.
-        """
-        if nlist is None:
-            nlist = self.nlist
-        if type_tensor is None:
-            type_tensor = self.positions[:, 3]
-        if type_i is not None:
-            nlist = tf.boolean_mask(
-                tensor=nlist, mask=tf.equal(type_tensor, type_i))
-        if type_j is not None:
-            # cannot use boolean mask due to size
-            mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
-            nlist = nlist * mask[:, :, tf.newaxis]
-        return nlist
-
-    def compute_rdf(self, r_range, name, nbins=100, type_i=None, type_j=None,
-                    nlist=None, positions=None):
-        R"""Computes the pairwise radial distribution function, and appends
-            the histogram tensor to the graph's ``out_nodes``.
-
-        :param bins: The bins to use for the RDF
-        :param name: The name of the tensor containing rdf. The name will be
-            concatenated with '-r' to create a tensor containing the
-            r values of the rdf.
-        :param type_i: Use this to select the first particle type.
-        :param type_j: Use this to select the second particle type.
-        :param nlist: Neighbor list to use for RDF calculation. By default
-            it will use ``self.nlist``.
-        :param positions: Defaults to ``self.positions``. This tensor is only used
-            to get the origin particle's type. So if you're making your own,
-            just make sure column 4 has the type index.
-
-        :return: Historgram tensor of the RDF (not normalized).
-        """
-        # to prevent type errors later on
-        r_range = [float(r) for r in r_range]
-        if nlist is None:
-            nlist = self.nlist
-        if positions is None:
-            positions = self.positions
-        # filter types
-        nlist = self.masked_nlist(type_i, type_j, nlist, positions[:, 3])
-        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
-        hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
-                       tf.float32)
-        shell_rs = tf.linspace(r_range[0], r_range[1], nbins + 1)
-        vis_rs = tf.multiply((shell_rs[1:] + shell_rs[:-1]), 0.5,
-                             name=name + '-r')
-        vols = shell_rs[1:]**3 - shell_rs[:-1]**3
-        # remove 0s and Ns
-        result = hist[1:-1] / vols
-        self.out_nodes.extend([result, vis_rs])
-        return result
-
     def save_tensor(self, tensor, name, save_period=1):
         R"""Saves a tensor to a variable
 
@@ -326,6 +263,59 @@ def nlist_rinv(nlist):
     """
     r = tf.norm(nlist[:, :, :3], axis=2)
     return tf.math.divide_no_nan(1.0, r)
+
+@tf.function
+def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
+    R"""Computes the pairwise radial distribution function, and appends
+        the histogram tensor to the graph's ``out_nodes``.
+
+    :param bins: The bins to use for the RDF
+    :param name: The name of the tensor containing rdf. The name will be
+        concatenated with '-r' to create a tensor containing the
+        r values of the rdf.
+    :param type_i: Use this to select the first particle type.
+    :param type_j: Use this to select the second particle type.
+    :param nlist: Neighbor list to use for RDF calculation. By default
+        it will use ``self.nlist``.
+    :param positions: Defaults to ``self.positions``. This tensor is only used
+        to get the origin particle's type. So if you're making your own,
+        just make sure column 4 has the type index.
+
+    :return: Historgram tensor of the RDF (not normalized).
+    """
+    # to prevent type errors later on
+    r_range = [float(r) for r in r_range]
+    # filter types
+    nlist = masked_nlist(nlist, positions[:,3], type_i, type_j)
+    r = tf.norm(tensor=nlist[:, :, :3], axis=2)
+    hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
+                    tf.float32)
+    shell_rs = tf.linspace(r_range[0], r_range[1], nbins + 1)
+    vis_rs = tf.multiply((shell_rs[1:] + shell_rs[:-1]), 0.5)
+    vols = shell_rs[1:]**3 - shell_rs[:-1]**3
+    # remove 0s and Ns
+    result = hist[1:-1] / vols
+    return result, vis_rs
+
+@tf.function
+def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
+    R"""Returns a neighbor list masked by the given particle type(s).
+
+        :param type_i: Use this to select the first particle type.
+        :param type_j: Use this to select a second particle type (optional).
+        :param nlist: Neighbor list to mask. By default it will use ``self.nlist``.
+        :param type_tensor: An N x 1 tensor containing the type(s) of the nlist origin.
+            If None, particle types from ``self.positions`` will be used.
+        :return: The masked neighbor list tensor.
+    """
+    if type_i is not None:
+        nlist = tf.boolean_mask(
+            tensor=nlist, mask=tf.equal(type_tensor, type_i))
+    if type_j is not None:
+        # cannot use boolean mask due to size
+        mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
+        nlist = nlist * mask[:, :, tf.newaxis]
+    return nlist
 
 def load_htf_op_library(op):
     import hoomd.htf

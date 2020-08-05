@@ -14,6 +14,15 @@ v2.0.rc1
 
 - All code must be rewritten following migration guide
 - feeddict is no longer supported
+- graphbuilder is now SimModel, which must be subclassed
+- All graphbuilder methods (e.g., compute_rdf) are now functions
+- Code that duplicates Keras functionality is removed:
+    - checkpoint management, model save/load
+    - saving values, computing means, other metrics
+    - saving values over time is now done by tensorboard or other TF/Keras approaches
+- How forces are computed must be explicit and virials are no longer implicit
+
+
 
 v1.0.1 (7/27/2020)
 ----

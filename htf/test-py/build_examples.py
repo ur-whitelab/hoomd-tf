@@ -259,20 +259,22 @@ def lj_force_output(NN, directory='/tmp/test-lj-rdf-model'):
     return directory
 
 
-def lj_rdf(NN, directory='/tmp/test-lj-rdf-model'):
-    graph = htf.SimModel(NN)
-    # pairwise energy. Double count -> divide by 2
-    inv_r6 = graph.nlist_rinv**6
-    p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
-    # sum over pairwise energy
-    energy = tf.reduce_sum(input_tensor=p_energy, axis=1, name='energy')
-    forces = graph.compute_forces(energy)
-    # compute rdf between type 0 and 0
-    rdf = graph.compute_rdf([3, 5], 'rdf', 10, 0, 0)
-    avg_rdf = graph.running_mean(rdf, 'avg-rdf')
-    # check = tf.add_check_numerics_ops()
-    graph.save(force_tensor=forces, model_directory=directory)
-    return directory
+class LJRDF(htf.SimModel):
+    def setup(self):
+        self.avg_rdf = tf.keras.metrics.Mean()
+    def compute(self, nlist, positions, box, sample_weight):
+        # get r
+        r = tf.norm(tensor=nlist[:,:,:3], axis=2)
+        # compute 1 / r while safely treating r = 0.
+        # pairwise energy. Double count -> divide by 2
+        inv_r6 = tf.math.divide_no_nan(1., r**6)
+        p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+        # get rdf
+        rdf,rs = htf.compute_rdf(nlist, positions, [3,5])
+        # compute running mean
+        self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
+        forces = htf.compute_nlist_forces(nlist, p_energy)
+        return forces
 
 
 def lj_mol(NN, MN, directory='/tmp/test-lj-mol'):
