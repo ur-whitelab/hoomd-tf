@@ -8,14 +8,16 @@ v2.0.rc1
 
 - Tensorflow 2.0 now required
 - Keras models replace computation graphs
+- It is no longer required to save/load models for use
 - Training is handled by Keras/TF functions now
-- Getting values now longer requires save/load, instead everything is accessible in Python
+- Getting values no longer requires save/load, instead everything is accessible in Python
 
 *Breaking Changes*
 
 - All code must be rewritten following migration guide
 - feeddict is no longer supported
 - graphbuilder is now SimModel, which must be subclassed
+- Mol batching is now MolSimModel, which must be subclassed
 - All graphbuilder methods (e.g., compute_rdf) are now functions
 - Code that duplicates Keras functionality is removed:
     - checkpoint management, model save/load
@@ -26,6 +28,11 @@ v2.0.rc1
 - EDS is now layer (EDSLayer)
 - Running from a trajectory is now done via a generator
 - Mol batching is now a separate class MolSimModel
+
+*Enhancements*
+
+- There is no more multiprocessing required
+- Benchmarks are significantly faster
 
 v1.0.1 (7/27/2020)
 ----
