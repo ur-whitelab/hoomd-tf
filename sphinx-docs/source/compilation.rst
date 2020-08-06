@@ -40,11 +40,11 @@ The Cmake script in hoomd-tf will check for this and tell you if they do not mat
 Simple Compiling
 ----------------
 
-Install hoomd-blue and Tensorflow by your preferred method. We recommend install Tensorflow with pip, as ``pip install tensorflow``. Hoomd-blue
-distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA toolkit version between Tensorflow and Hoomd match. *As of August 2020, there are no GPU compatible CUDA/Hoomd/TF combinations on conda-forge.* Due the frequent CUDA version mismatches on conda, it is best to compile hoomd-blue if you intend to use Hoomd-TF in GPU model. You can compile hoomd-blue using `their instructions
+Install hoomd-blue and Tensorflow by your preferred method. We recommend installing Tensorflow with pip, as ``pip install tensorflow``. Hoomd-blue
+distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA toolkit version between Tensorflow and Hoomd match. *As of August 2020, there are no GPU compatible CUDA/Hoomd/TF combinations on conda-forge.* Due to the frequent CUDA version mismatches on conda, it is best to compile Hoomd-blue if you intend to use Hoomd-TF in GPU model. You can compile Hoomd-blue using `their instructions
 <http://hoomd-blue.readthedocs.io>`_.
 
-**Steps after installing Tensorflow and Hoomd**
+**Steps after installing Tensorflow and Hoomd-blue**
 
 .. code:: bash
 
@@ -64,7 +64,7 @@ Compiling with Hoomd-Blue
 
 Use this method if you need to compile with developer flags on or other
 special requirements. Note, these steps are NOT required for GPU support! You can
-simply compile Hoomd-blue and follow simple instructions above.
+simply compile Hoomd-blue and follow simple instructions above for GPU support.
 
 .. code:: bash
 
@@ -129,21 +129,7 @@ conda. The following additional flags can help with this:
     CXX=g++ CC=gcc cmake .. \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
-    -DPYTHON_EXECUTABLE=$(which python) \
-    -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
-    -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
-    -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
-
-.. _updating_compiled_code:
-
-Updating Compiled Code
-----------------------
-
-If you are developing frequently, add the build directory to your
-python path instead of `make install` (only works with hoomd-blue
-compiled). Then if you modify C++ code, only run make (not cmake). If
-you modify python, just copy over py files (``htf/*py`` to
-``build/hoomd/htf``).
+    -DPYTHON_EXECUTABLE=$(which python)
 
 .. _mbuild_environment:
 
@@ -154,8 +140,7 @@ If you are using mbuild, please follow these additional install steps:
 
 .. code:: bash
 
-    conda install numpy cython
-    pip install requests networkx matplotlib scipy pandas plyplus lxml mdtraj oset
+    pip install requests networkx matplotlib scipy pandas plyplus lxml mdtraj oset cython
     conda install -c omnia -y openmm parmed
     conda install -c conda-forge --no-deps -y packmol gsd
     pip install --upgrade git+https://github.com/mosdef-hub/foyer git+https://github.com/mosdef-hub/mbuild
@@ -245,4 +230,4 @@ Following packages are optional:
 
    MDAnalysis
 
- :py:class:`utils.run_from_trajectory` uses `MDAnalysis` for trajectory parsing
+ :py:class:`utils.iter_from_trajectory` uses `MDAnalysis` for trajectory parsing

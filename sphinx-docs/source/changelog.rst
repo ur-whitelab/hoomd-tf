@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v2.0.rc1
+v2.0-rc
 -----
 
 *New Features*
