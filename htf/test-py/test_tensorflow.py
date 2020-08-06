@@ -130,7 +130,7 @@ class test_compute(unittest.TestCase):
             hoomd.run(100)
 
     def test_nonlist(self):
-        model = build_examples.BenchmarkNonlistGraph(0)
+        model = build_examples.BenchmarkNonlistModel(0)
         tfcompute = hoomd.htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
@@ -142,7 +142,7 @@ class test_compute(unittest.TestCase):
         hoomd.run(10)
 
     def test_full_batch(self):
-        model = build_examples.BenchmarkNonlistGraph(0)
+        model = build_examples.BenchmarkNonlistModel(0)
         tfcompute = hoomd.htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),

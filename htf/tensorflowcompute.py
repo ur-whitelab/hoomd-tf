@@ -14,13 +14,13 @@ import time
 import hoomd
 import hoomd.md.nlist
 import hoomd.comm
+import hoomd.htf
 import tensorflow as tf
 
 # \internal
 # \brief TensorFlow HOOMD compute class
 # \details
 # Integrates tensorflow into HOOMD-blue
-
 
 class tfcompute(hoomd.compute._compute):
     R""" TensorFlow Computations for HTF.
@@ -117,6 +117,8 @@ class tfcompute(hoomd.compute._compute):
                                  ' \n'.format(self.force_mode_code))
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
+            if hoomd.htf._tf_on_gpu:
+                raise ValueError('Cannot run GPU/CPU mixed mode between TF and Hoomd')
             self.cpp_force = \
                 _htf.TensorflowCompute(
                     self,
@@ -128,6 +130,8 @@ class tfcompute(hoomd.compute._compute):
                     period,
                     self.batch_size)
         else:
+            if not hoomd.htf._tf_on_gpu:
+                raise ValueError('Cannot run GPU/CPU mixed mode between TF and Hoomd')
             self.cpp_force = \
                 _htf.TensorflowComputeGPU(self,
                                           hoomd.context.current.system_definition,

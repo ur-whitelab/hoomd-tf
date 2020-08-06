@@ -13,6 +13,7 @@ from hoomd.htf.version import __version__
 from hoomd.htf.utils import *
 import tensorflow as tf
 
+_tf_on_gpu = False
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -21,6 +22,7 @@ if gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
         logical_gpus = tf.config.experimental.list_logical_devices('GPU')
         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        _tf_on_gpu = True
     except RuntimeError as e:
         # Memory growth must be set before GPUs have been initialized
         print(e)

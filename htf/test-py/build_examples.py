@@ -20,31 +20,13 @@ class SimplePotential(htf.SimModel):
         forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
         return forces
 
+class BenchmarkPotential(htf.SimModel):
+    def compute(self, nlist, positions, box, sample_weight):
+        rinv = htf.nlist_rinv(nlist)
+        energy = rinv
+        forces = htf.compute_nlist_forces(nlsit, energy)
+        return forces
 
-def benchmark_gradient_potential(directory='/tmp/benchmark-gradient-potential-model'):
-    graph = htf.SimModel(1024, 64)
-    nlist = graph.nlist[:, :, :3]
-    # get r
-    r = tf.norm(tensor=nlist, axis=2)
-    # compute 1 / r while safely treating r = 0.
-    energy = tf.reduce_sum(input_tensor=tf.math.divide_no_nan(1., r), axis=1)
-    forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces,
-               model_directory=directory)
-
-
-def gradient_potential(directory='/tmp/test-gradient-potential-model'):
-    graph = htf.SimModel(9 - 1)
-    with tf.compat.v1.name_scope('force-calc') as scope:
-        nlist = graph.nlist[:, :, :3]
-        neighs_rs = tf.norm(tensor=nlist, axis=2)
-        energy = 0.5 * tf.math.divide_no_nan(numerator=tf.ones_like(
-            neighs_rs, dtype=neighs_rs.dtype), denominator=neighs_rs,
-            name='energy')
-    forces = graph.compute_forces(energy)
-    graph.save(force_tensor=forces,
-               model_directory=directory,
-               out_nodes=[energy])
 
 
 class NoForceModel(htf.SimModel):
@@ -73,7 +55,7 @@ class WrapModel(htf.SimModel):
         return rwrap
 
 
-class BenchmarkNonlistGraph(htf.SimModel):
+class BenchmarkNonlistModel(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         ps = tf.norm(tensor=positions, axis=1)
         energy = tf.math.divide_no_nan(1., ps)
@@ -171,7 +153,7 @@ class LJRunningMeanModel(htf.SimModel):
 
 class LJRDF(htf.SimModel):
     def setup(self):
-        self.avg_rdf = tf.keras.metrics.TensorMean()
+        self.avg_rdf = tf.keras.metrics.MeanTensor()
 
     def compute(self, nlist, positions, box, sample_weight):
         # get r
