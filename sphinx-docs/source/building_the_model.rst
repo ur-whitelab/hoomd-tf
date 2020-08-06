@@ -85,7 +85,7 @@ Molecule Batching
 It may be simpler to have positions or neighbor lists or forces arranged
 by molecule. For example, you may want to look at only a particular bond
 or subset of atoms in a molecule. To do this, you can instead subclass
-:py:class:`simmodel.SimModel`:
+:py:class:`simmodel.MolSimModel`:
 
 .. code:: python
 
@@ -101,6 +101,14 @@ or subset of atoms in a molecule. To do this, you can instead subclass
 ``MN`` is the maximum number of atoms
 in a molecule and ``mol_indices`` describes the molecules in your system as
 a list of atom indices. This can be created directly from a hoomd system via :py:meth: `utils.find_molecules`.
+The ``mol_indices`` are a, possibly ragged, 2D python list where each
+element in the list is a list of atom indices for a molecule. For
+example, ``[[0,1], [1]]`` means that there are two molecules with the
+first containing atoms 0 and 1 and the second containing atom 1. Note
+that the molecules can be different size and atoms can exist in multiple
+molecules.
+
+
 `mol_compute` has the following additional arguments:
 ``mol_positions`` and ``mol_nlist``. These new attributes are dimension
 ``M x MN x ...`` where ``M`` is the number of molecules and ``MN`` is

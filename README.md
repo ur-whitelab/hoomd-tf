@@ -22,20 +22,15 @@ See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoo
 
 The following packages are required to compile:
 
-* `tensorflow < 2.0`
-* `hoomd-blue >= 2.5.2`
-* `numpy`
-* `tbb-devel (only for hoomd-blue 2.8 and above)`
+    tensorflow >= 2.0
+    hoomd-blue >= 2.5.2
+    tbb-devel (only for hoomd-blue 2.8 and above if installed with conda)
 
 tbb-devel is required for hoomd-blue 2.8 or above when using the
 hoomd-blue conda release. It is not automatically installed when
-installing hoomd-blue, so use `conda install -c conda-forge
-tbb-devel` to install. The Tensorflow version should be any
-Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
-lots of warnings about migrating code to Tensorflow 2.0. It is
-recommended you install via pip:
-
-    pip install tensorflow-gpu==1.15.0
+installing hoomd-blue, so use `conda install -c conda-forge tbb-devel`
+to install. The Tensorflow version should be any Tensorflow 2 release.
+It is recommended you install via pip.
 
 # Citation
 

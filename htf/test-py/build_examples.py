@@ -20,13 +20,13 @@ class SimplePotential(htf.SimModel):
         forces = tf.reduce_sum(input_tensor=real_fr, axis=1, name='forces')
         return forces
 
+
 class BenchmarkPotential(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         rinv = htf.nlist_rinv(nlist)
         energy = rinv
-        forces = htf.compute_nlist_forces(nlsit, energy)
+        forces = htf.compute_nlist_forces(nlist, energy)
         return forces
-
 
 
 class NoForceModel(htf.SimModel):
@@ -85,8 +85,9 @@ class LJVirialModel(htf.SimModel):
         p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
         # sum over pairwise energy
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
-        forces = htf.compute_nlist_forces(nlist, energy, virial=True)
-        return forces
+        forces_and_virial = htf.compute_nlist_forces(
+            nlist, energy, virial=True)
+        return forces_and_virial
 
 
 class EDSModel(htf.SimModel):
@@ -130,6 +131,26 @@ class CustomNlist(htf.SimModel):
             positions[:, :3], self.r_cut, self.nneighbor_cutoff, htf.box_size(box))
         cr = tf.norm(tensor=cnlist[:, :, :3], axis=2)
         return r, cr
+
+
+class NlistNN(htf.SimModel):
+    def build_layers(self, dim, top_neighs):
+        self.dense1 = tf.keras.layers.Layer(dim)
+        self.dense2 = tf.keras.layers.Layer(dim)
+        self.last = tf.keras.layers.Layer(1)
+        self.top_neighs = top_neighs
+
+    def compute(self, nlist, positions, box, sample_weight):
+        rinv = htf.nlist_rinv(nlist)
+        # closest neighbors have largest value in 1/r, take top
+        top_n = tf.sort(rinv, axis=1, direction='DESCENDING')[
+            :, :self.top_neighs]
+        # run through NN
+        x = self.dense1(top_n)
+        x = self.dense2(x)
+        energy = self.last(x)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
 
 
 class LJRunningMeanModel(htf.SimModel):

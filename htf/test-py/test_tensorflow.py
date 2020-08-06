@@ -661,6 +661,24 @@ class test_nlist(unittest.TestCase):
         with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(2)
 
+    def test_sorted(self):
+        N = 8 * 8
+        model = build_examples.NlistNN(64)
+        model.build_layers(32, 8)
+        tfcompute = hoomd.htf.tfcompute(model)
+        T = 10
+        rcut = 10.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[8, 8])
+        nlist = hoomd.md.nlist.cell(check_period=1)
+        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+                               kT=1, tau=0.2
+                               ).randomize_velocities(seed=1)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(10)
+
 
 if __name__ == '__main__':
     unittest.main()

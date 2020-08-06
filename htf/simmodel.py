@@ -203,7 +203,7 @@ def compute_positions_forces(positions, energy):
     return add_energy(forces, energy)
 
 
-def compute_virial(nlist, nlist_forces):
+def _compute_virial(nlist, nlist_forces):
     # now treat virial
     nlist3 = nlist[:, :, :3]
     rij_outter = tf.einsum('ijk,ijl->ijkl', nlist3, nlist3)
@@ -230,7 +230,7 @@ def compute_nlist_forces(nlist, energy, virial=False):
     nlist_reduce = tf.reduce_sum(input_tensor=nlist_forces, axis=1,
                                  name='nlist-force-gradient')
     if virial:
-        return tf.tuple([add_energy(nlist_reduce, energy), compute_virial(nlist, nlist_forces)])
+        return tf.tuple([add_energy(nlist_reduce, energy), _compute_virial(nlist, nlist_forces)])
     else:
         return add_energy(nlist_reduce, energy)
 

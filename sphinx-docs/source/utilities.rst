@@ -15,29 +15,38 @@ To compute an RDF, use :py:meth:`simmodel.SimModel.compute_rdf`:
 
 .. code:: python
 
-    # set-up graph to compute energy
-    ...
-    rdf = graph.compute_rdf([1,10], 'rdf', nbins=200)
-    graph.running_mean(rdf, 'avg-rdf')
-    # run the simulation
-    ...
-    variables  = htf.load_variables(model_dir, ['avg-rdf'])
-    print(variables)
+    class LJRDF(htf.SimModel):
+        def setup(self):
+            self.avg_rdf = tf.keras.metrics.MeanTensor()
+
+        def compute(self, nlist, positions, box, sample_weight):
+            # get r
+            r = tf.norm(tensor=nlist[:, :, :3], axis=2)
+            # compute 1 / r while safely treating r = 0.
+            # pairwise energy. Double count -> divide by 2
+            inv_r6 = tf.math.divide_no_nan(1., r**6)
+            p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
+            # rdf from r = 3 to r = 5
+            rdf, rs = htf.compute_rdf(nlist, positions, [3, 5])
+            # compute running mean
+            self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
+            forces = htf.compute_nlist_forces(nlist, p_energy)
+            return forces
 
 .. _pairwise_potentials:
 
 Pairwise Potential and Forces
 -----------------------------
 
-To compute a pairwise potential, use
-:py:meth:`utils.compute_pairwise_potential`:
+To take your model and compute pairwise outputs,
+use :py:meth:`utils.compute_pairwise`, which can
+be convenient for computing pairwise energy or forces.
 
 .. code:: python
 
-    ...
-    r = numpy.arange(1, 10, 1)
-    potential, forces = htf.compute_pairwise_potential('/path/to/model', r, potential_tensor)
-    ...
+    model = build_examples.LJModel(4)
+    r = np.linspace(0.5, 1.5, 5)
+    output = hoomd.htf.compute_pairwise(model, r)
 
 .. _eds_biasing:
 
@@ -46,29 +55,31 @@ Biasing with EDS
 
 To apply `Experiment Directed
 Simulation <https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988>`__
-biasing to a system, use :py:meth:`utils.eds_bias`:
+biasing to a system, use an EDS Layer (:py:class:`utils.EDSLayer`):
 
 .. code:: python
 
-    eds_alpha = htf.eds_bias(cv, set_point=3.0, period=100)
-    eds_energy = eds_alpha * cv
-    eds_forces = graph.compute_forces(eds_energy)
-    graph.save('eds-graph', eds_forces)
+    class EDSModel(htf.SimModel):
+        def setup(self):
+            self.cv_avg = tf.keras.metrics.Mean()
+            self.eds_bias = htf.EDSLayer(4., 5, 1/5)
+
+        def compute(self, nlist, positions, box, sample_weight):
+            # get distance from center
+            rvec = htf.wrap_vector(positions[0, :3], box)
+            # compute CV
+            cv = tf.norm(tensor=rvec)
+            self.cv_avg.update_state(cv, sample_weight=sample_weight)
+            alpha = self.eds_bias(cv)
+            # eds energy
+            energy = cv * alpha
+            forces = htf.compute_positions_forces(positions, energy)
+            return forces, alpha
 
 Here,
-``htf.eds_bias(cv, set_point, period, learning_rate, cv_scale, name)``
+``htf.EDSLayer(set_point, period, learning_rate, cv_scale)``
 computes the lagrange multiplier/eds coupling that
-are used to bias the simulation. It may be useful to also take the
-average of ``eds_alpha`` so that you can use it in a subsequent
-simulation:
-
-.. code:: python
-
-    avg_alpha = graph.running_mean(eds_alpha, name='avg-eds-alpha')
-    .....
-    # after simulation
-    vars = htf.load_variables('model/directory', ['avg-eds-alpha'])
-    print(vars['avg-eds-alpha'])
+are used to bias the simulation.
 
 .. _traj_parsing:
 
@@ -220,16 +231,3 @@ The last method, which usually works when all others fail, is to have
 all the container's traffic be on the host. You can do this by adding
 the flag ``--net=host`` to the run command of the container. Then you
 can visit ``http://localhost:6006``.
-
-.. _interactive_mode:
-
-Interactive Mode
-----------------
-
-Experimental, but you can trace your graph in realtime in a simulation.
-Add both the ``write_tensorboard=True`` to the constructor and the
-``_debug_mode=True`` flag to ``attach`` command. You then open another
-shell and connect by following the `online instructions for interactive
-debugging from Tensorboard
-<https://github.com/tensorflow/tensorboard/tree/
-master/tensorboard/plugins/debugger#the-debugger-dashboard>`__.
