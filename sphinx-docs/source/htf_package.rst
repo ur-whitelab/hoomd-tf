@@ -15,5 +15,4 @@ Supports GPU and CPU execution.
     tfarraycomm
     tfcompute
     tfmanager
-    tfarraycomm
     utils

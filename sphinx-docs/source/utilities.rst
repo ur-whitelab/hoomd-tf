@@ -76,7 +76,7 @@ Trajectory Parsing
 ----------------
 
 To process information from a trajectory, use
-:py:meth:`utils.run_from_trajectory`:
+:py:meth:`utils.iter_from_trajectory`:
 
 .. _coarse_graining:
 

@@ -52,7 +52,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    installation
    unit_tests
    benchmarking
-   building_the_graph
+   building_the_model
    using_the_graph
    utilities
    docker_image

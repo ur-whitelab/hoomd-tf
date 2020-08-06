@@ -38,5 +38,5 @@ The Hoomd-blue code starts a simulation of a 9 particle square lattice
 and simulates it for 1000 timesteps under the potential defined in our
 Hoomd-TF model. The general process of using Hoomd-TF is to build a
 TensorFlow computation graph, load the graph, and then attach the graph.
-See :ref:`building_the_graph` and :ref:`using_the_graph` for a more detailed
+See :ref:`building_the_model` and :ref:`using_the_graph` for a more detailed
 description. Or see a complete set of `Jupyter Notebook tutorials <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_.
