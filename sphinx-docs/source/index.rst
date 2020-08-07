@@ -58,5 +58,3 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    :caption: API
 
    htf_package
-
-* :ref:`search`
