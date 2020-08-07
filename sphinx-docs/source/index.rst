@@ -45,7 +45,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    quickstart
    compilation
    changelog.rst
-   building_the_model
+   building_a_model
    running
    utilities
    benchmarking

@@ -1,6 +1,6 @@
-.. _building_the_model:
+.. _building_a_model:
 
-Building the Model
+Building a Model
 ==================
 
 To modify a simulation, you create a Keras model that will be executed at
@@ -51,7 +51,7 @@ Keras Model
 
 Your models are `Keras Models <https://keras.io/api/models/model/>`_ so that all
 the usual process of building layers, saving, and computing metrics apply. For example,
-here is two hidden layer neural network force-field that uses the 8 nearest neighbors to compute
+here is a two hidden layer neural network force-field that uses the 8 nearest neighbors to compute
 forces.
 
 .. code:: python
@@ -76,6 +76,7 @@ forces.
           return forces
   model = NlistNN(64, dim=16, top_neighs=8)
 
+The ``64`` is the nlist size, ``dim`` is the hidden layer dimension, and ``top_neighs`` is how many neighbors to consider.
 Refer to the Keras documentation to learn more about models.
 
 .. _molecule_batching:
