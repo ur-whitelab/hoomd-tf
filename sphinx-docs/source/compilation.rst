@@ -46,9 +46,9 @@ Simple Compiling
 Install HOOMD-blue and TensorFlow by your preferred method.
 We recommend installing TensorFlow with pip,
 as ``pip install --upgrade tensorflow``. HOOMD-blue
-distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions
-(``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA
-toolkit version between TensorFlow and Hoomd match.
+distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``)
+|ss| and GPU versions (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA
+toolkit version between TensorFlow and Hoomd match. |se|
 *As of August 2020, there are no GPU compatible CUDA/Hoomd/TF combinations on conda-forge.*
 Due to the frequent CUDA version mismatches on conda, it is recommended to compile HOOMD-blue if you
 intend to use HOOMD-TF in GPU mode.
@@ -253,3 +253,12 @@ Following packages are optional:
    MDAnalysis
 
 :py:class:`utils.iter_from_trajectory` uses `MDAnalysis` for trajectory parsing
+
+
+.. |ss| raw:: html
+
+   <strike>
+
+.. |se| raw:: html
+
+   </strike>&nbsp;
