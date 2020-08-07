@@ -48,12 +48,16 @@ class tfcompute(hoomd.compute._compute):
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
         :type batch_size: int
-        :param train: Indicate if ``train_on_batch`` Keras model method should be called at each step
+        :param train: Indicate if ``train_on_batch``
+            Keras model method should be called at each step
             with the labels being Hoomd forces.
         :type train: bool
-        :param save_output_period: How often to save output from ``model``. Each output is accessible after
-            as attributes ``outputs`` as numpy arrays with a new axis at 0, representing each call. Note that
-            if your model outputs forces or forces and virial, then these will not be present.
+        :param save_output_period: How often to save output from ``model``.
+            Each output is accessible after
+            as attributes ``outputs`` as numpy arrays with a new axis at 0,
+            representing each call. Note that
+            if your model outputs forces or forces and virial, then
+            these will not be present.
         :type save_output_period: int
 
 
@@ -231,7 +235,9 @@ class tfcompute(hoomd.compute._compute):
             # update forces
             if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
                 self.model.compute_outputs(
-                    self.dtype, self.cpp_force.getForcesBuffer(), self.cpp_force.getVirialBuffer(), *output[:self._output_offset])
+                    self.dtype, self.cpp_force.getForcesBuffer(),
+                    self.cpp_force.getVirialBuffer(),
+                    *output[:self._output_offset])
         else:
             inputs = self.model.compute_inputs(
                 self.dtype,

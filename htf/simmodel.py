@@ -21,7 +21,8 @@ class SimModel(tf.keras.Model):
 
             :param nneighbor_cutoff: The maximum number of neighbors to consider (can be 0)
             :type nneighbor_cutoff: int
-            :param output_forces: True if your graph will compute forces to be used in the Hoomd simulation
+            :param output_forces: True if your graph will compute
+                forces to be used in the Hoomd simulation
             :type output_forces: bool
             :param check_nlist: True will raise error if neighbor
                                 list overflows (nneighbor_cutoff too low)
@@ -65,8 +66,8 @@ class SimModel(tf.keras.Model):
         Second element is interpreted as virial (if ``virial=True``, not default). Subsequent
         elements of tuple are only accessible if :py:meth:`.tfcompute.attach` is passed
         ``save_output_period``, after which you can obtain from the ``tfcompute`` object
-        as the ``outputs`` attribute. Use :py:func:`compute_nlist_forces` or :py:func:`compute_positions_forces`
-        to compute forces from an energy.
+        as the ``outputs`` attribute. Use :py:func:`compute_nlist_forces` or
+        :py:func:`compute_positions_forces` to compute forces from an energy.
 
         :param nlist: an ``N x NN x 4`` tensor containing the nearest
             neighbors. An entry of all zeros indicates that less than ``NN`` nearest
@@ -203,7 +204,8 @@ class MolSimModel(SimModel):
         :type MN: int
 
         :param mol_indices: ``mol_indices`` describes the molecules in your system as
-            a list of atom indices. This can be created directly from a hoomd system via :py:func:`.find_molecules`.
+            a list of atom indices. This can be created directly from a
+            hoomd system via :py:func:`.find_molecules`.
             The ``mol_indices`` are a, possibly ragged, 2D python list where each
             element in the list is a list of atom indices for a molecule. For
             example, ``[[0,1], [1]]`` means that there are two molecules with the
