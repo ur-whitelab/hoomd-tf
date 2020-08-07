@@ -9,7 +9,7 @@ import hoomd
 
 
 def compute_pairwise(model, r):
-    R""" Compute the pairwise potential at r for the given model.
+    ''' Compute the pairwise potential at r for the given model.
 
     :param model_directory: The model directory
     :param r: A 1D grid of points at which to compute the potential.
@@ -24,7 +24,7 @@ def compute_pairwise(model, r):
 
     :return: A tuple of 1D arrays. First is the potentials corresponding to the
         pairwise distances in r, second is the forces.
-    """
+    '''
     NN = model.nneighbor_cutoff
     nlist = np.zeros((2, NN, 4))
     output = None
@@ -46,13 +46,13 @@ def compute_pairwise(model, r):
 # \internal
 # \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
-    R""" Given a hoomd system, return a mapping from molecule index to particle index.
+    ''' Given a hoomd system, return a mapping from molecule index to particle index.
     This is a slow function and should only be called once.
 
     :param system: The molecular system in HOOMD.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices
-    """
+    '''
     mapping = []
     mapped = set()
     N = len(system.particles)
@@ -99,14 +99,14 @@ def find_molecules(system):
 # \internal
 # \brief Finds mapping operators for coarse-graining
 def matrix_mapping(molecule, beads_distribution):
-    R""" This will create a M x N mass weighted mapping matrix where M is the number
+    ''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
     :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
     :param beads_distribution: This is a list of beads distribution lists, Note that
     each list should contain the atoms as strings just like how they appear in the topology file.
 
     :return: An array of M x N.
-    """
+    '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
     M, N = len(beads_distribution), len(molecule)
     CG_matrix = np.zeros((M, N))
@@ -124,7 +124,7 @@ def matrix_mapping(molecule, beads_distribution):
 
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
-    R""" This will create the necessary indices and values for
+    ''' This will create the necessary indices and values for
     defining a sparse tensor in
     tensorflow that is a mass-weighted M x N mapping operator.
 
@@ -142,7 +142,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 
     :return: A sparse tensorflow tensor of dimension N x N,
         where N is number of atoms
-    """
+    '''
     assert type(molecule_mapping[0]) == np.ndarray
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
@@ -186,7 +186,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 
 
 def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
-    R""" This generator will process information from a trajectory and
+    ''' This generator will process information from a trajectory and
     run the user defined model on the nlist computed from the trajectory.
 
     :param model_directory: The model directory
@@ -199,7 +199,7 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     :type r_cut: float
     :param period: Period of reading the trajectory frames
     :type period: int
-    """
+    '''
     # read trajectory
     box = universe.dimensions
     # define the system
@@ -309,13 +309,13 @@ class EDSLayer(tf.keras.layers.Layer):
 # \internal
 # \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    R"""Comptue mapping of the given positions (N x 3) and mapping (M x N)
+    '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
     considering PBC. Returns mapped particles.
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
     :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param name: The name of the op to add to the TF graph
-    """
+    '''
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
@@ -333,7 +333,7 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
 # \internal
 # \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
-    R""" Compute particle pairwise neighbor lists.
+    ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
     :param r_cut: Cutoff radius (HOOMD units)
@@ -343,7 +343,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
         particles and index
-    """
+    '''
     # Make sure positions is only xyz
     positions = positions[:, :3]
     M = tf.shape(input=positions)[0]
@@ -390,7 +390,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
 
 
 def mol_bond_distance(mol_positions, type_i, type_j):
-    R""" This method calculates the bond distance given two atoms batched by molecule
+    ''' This method calculates the bond distance given two atoms batched by molecule
 
     Parameters
     -------------
@@ -405,7 +405,7 @@ def mol_bond_distance(mol_positions, type_i, type_j):
     -------------
     v_ij
          Tensor containing bond distances
-    """
+    '''
     if mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
@@ -419,7 +419,7 @@ def mol_bond_distance(mol_positions, type_i, type_j):
 
 
 def mol_angle(mol_positions, type_i, type_j, type_k):
-    R""" This method calculates the bond angle given three atoms batched by molecule
+    ''' This method calculates the bond angle given three atoms batched by molecule
 
     Parameters
     -------------
@@ -436,7 +436,7 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
     -------------
     angles
          Tensor containing bond angles
-    """
+    '''
     if mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
     else:
@@ -458,7 +458,7 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
 # \internal
 # \Calculates dihedral angle given four atoms in a molecule
 def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
-    R""" This method calculates the dihedral angle given four atoms batched by molecule
+    ''' This method calculates the dihedral angle given four atoms batched by molecule
 
     Parameters
     -------------
@@ -477,7 +477,7 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
     -------------
     dihedrals
          Tensor containing dihedral angles
-    """
+    '''
     if mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 

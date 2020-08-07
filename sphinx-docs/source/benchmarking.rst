@@ -12,5 +12,5 @@ of warmup each time. In order to run GPU profiling, make sure you have compiled 
 
 .. code:: bash
 
-    python htf/benchmarking/benchmark.py 10000 gpu $(pwd)
+    python htf/benchmarking/benchmark.py 10000 gpu
 

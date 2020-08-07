@@ -21,11 +21,15 @@ Use your model like this:
 
     hoomd.run(...)
 
-where ``MyModel`` is model you created following the steps in :ref: `building_the_model`,
+
+where ``MyModel`` is model you created following the steps in :doc:`building_the_model`,
  ``nlist`` is a hoomd neighbor list object and ``r_cut`` is the
 maximum distance to consider particles as being neighbors. ``nlist``
 is optional and is not required if your graph doesn't use the ``nlist``
 object (you passed ``0`` as the first arg when building your graph).
+
+
+.. _logging:
 
 Logging
 --------
@@ -38,6 +42,8 @@ the amount of logged statements via
     import tensorflow as tf
     tf.get_logger().setLevel('ERROR')
 
+.. _batching:
+
 Batching
 --------
 
@@ -46,6 +52,8 @@ optionally split your batches to be smaller than the entire system. This
 is set via the ``batch_size`` integer argument to :py:meth:`tfcompute.tfcompute.attach`.
 This can help for high-memory simulations where you cannot spare the GPU memory to
 have each tensor be the size of your system.
+
+.. _training:
 
 Training
 --------
@@ -71,6 +79,8 @@ You can also train less than each step (recommended):
 .. code:: python
 
     tfcompute.attach(train=True, period=100)
+
+.. _model_output:
 
 Model Output
 -------------

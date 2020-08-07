@@ -97,6 +97,7 @@ or subset of atoms in a molecule. To do this, you can instead subclass
 
     model = MyModel(MN, NN, mol_indices)
 
+
  whose argument
 ``MN`` is the maximum number of atoms
 in a molecule and ``mol_indices`` describes the molecules in your system as
@@ -163,6 +164,8 @@ the neighbor list. For example, to compute a :math:`1 / r` potential:
         energy = tf.reduce_sum(pairwise_energy, axis = 1)
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
+
+
 Notice that in the above example that we have used the
 ``tf.math.divide_no_nan`` method, which allows
 us to safely treat a :math:`1 / 0`, which can arise because ``nlist``

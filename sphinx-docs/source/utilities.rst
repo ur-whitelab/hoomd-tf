@@ -1,7 +1,7 @@
 .. _utilities:
 
 Utilities
-=========
+=============
 
 There are a few convenience functions for plotting potential energies of pairwise
 potentials and constructing CG mappings.

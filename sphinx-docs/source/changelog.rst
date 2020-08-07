@@ -2,7 +2,7 @@ Change Log
 ==========
 
 v2.0-rc
------
+--------
 
 *New Features*
 
@@ -35,14 +35,14 @@ v2.0-rc
 - Benchmarks are significantly faster
 
 v1.0.1 (7/27/2020)
-----
+------------------------
 
 *Bug fixes*
 - Prevented CPU overflow when nlist is too small (and added unit test)
 - Adding check on mapping validity
 
 v1.0 (7/20/2020)
-----
+------------------------
 
 *JOSS Review*
 

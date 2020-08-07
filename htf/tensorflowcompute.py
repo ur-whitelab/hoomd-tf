@@ -17,16 +17,12 @@ import hoomd.comm
 import hoomd.htf
 import tensorflow as tf
 
-# \internal
-# \brief TensorFlow HOOMD compute class
-# \details
-# Integrates tensorflow into HOOMD-blue
 
 class tfcompute(hoomd.compute._compute):
-    R""" TensorFlow Computations for HTF.
+    ''' TensorFlow Computations for HTF.
 
         :param tf_model_directory: Kera Model
-    """
+    '''
     # \internal
     # \brief Constructs the tfcompute class
     # \details
@@ -34,13 +30,13 @@ class tfcompute(hoomd.compute._compute):
     # whether to use a tensorboard, and some execution preferences.
 
     def __init__(self, model):
-        R""" Initialize a tfcompute class instance
-        """
+        ''' Initialize a tfcompute class instance
+        '''
         self.model = model
 
     def attach(self, nlist=None, r_cut=0, period=1,
                batch_size=None, train=False, save_output_period=None):
-        R""" Attaches the TensorFlow instance to HOOMD.
+        ''' Attaches the TensorFlow instance to HOOMD.
         The main method of this class, this method sets up TensorFlow and
         gets HOOMD ready to interact with it.
 
@@ -59,7 +55,7 @@ class tfcompute(hoomd.compute._compute):
             identifying which molecule each atom belongs to.
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
-        """
+        '''
         # make sure we're initialized, so we can have logging
         if not hoomd.init.is_initialized():
             raise RuntimeError('Must initialize hoomd first')
@@ -118,7 +114,8 @@ class tfcompute(hoomd.compute._compute):
         # initialize the reflected c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             if hoomd.htf._tf_on_gpu:
-                raise ValueError('Cannot run GPU/CPU mixed mode between TF and Hoomd')
+                raise ValueError(
+                    'Cannot run GPU/CPU mixed mode between TF and Hoomd')
             self.cpp_force = \
                 _htf.TensorflowCompute(
                     self,
@@ -131,7 +128,8 @@ class tfcompute(hoomd.compute._compute):
                     self.batch_size)
         else:
             if not hoomd.htf._tf_on_gpu:
-                raise ValueError('Cannot run GPU/CPU mixed mode between TF and Hoomd')
+                raise ValueError(
+                    'Cannot run GPU/CPU mixed mode between TF and Hoomd')
             self.cpp_force = \
                 _htf.TensorflowComputeGPU(self,
                                           hoomd.context.current.system_definition,
@@ -161,9 +159,9 @@ class tfcompute(hoomd.compute._compute):
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
 
     def set_reference_forces(self, *forces):
-        R""" Sets the HOOMD reference forces to be used by TensorFlow.
+        ''' Sets the HOOMD reference forces to be used by TensorFlow.
         See C++ comments in TensorFlowCompute.h
-        """
+        '''
         if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
             raise ValueError('Only valid to set reference'
                              ' forces if mode is hoomd2tf')
@@ -176,9 +174,9 @@ class tfcompute(hoomd.compute._compute):
                                      'TFCompute {} \n'.format(f.name))
 
     def rcut(self):
-        R""" Define the cutoff radius used in the neighbor list.
+        ''' Define the cutoff radius used in the neighbor list.
         Adapted from hoomd/md/pair.py
-        """
+        '''
         # go through the list of only the active particle types in the sim
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
@@ -196,12 +194,12 @@ class tfcompute(hoomd.compute._compute):
         return r_cut_dict
 
     def finish_update(self, batch_index, batch_frac):
-        R""" Allow TF to read output and we wait for it to finish.
+        ''' Allow TF to read output and we wait for it to finish.
 
         :param batch_index: index of batch to be processed
         :param batch_frac: fractional batch index, i.e.
             ``batch_frac`` = ``batch_index / len(input)``
-        """
+        '''
 
         if batch_index == 0:
             self._calls += 1
@@ -243,24 +241,24 @@ class tfcompute(hoomd.compute._compute):
                 reset_metrics=False)
 
     def get_positions_array(self):
-        R""" Retrieve positions array as numpy array
-        """
+        ''' Retrieve positions array as numpy array
+        '''
         return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
-        R""" Retrieve neighbor list array as numpy array
-        """
+        ''' Retrieve neighbor list array as numpy array
+        '''
         nl = self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
         return nl.reshape(-1, self.nneighbor_cutoff, 4)
 
     def get_forces_array(self):
-        R""" Retrieve forces array as numpy array
-        """
+        ''' Retrieve forces array as numpy array
+        '''
         return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
-        R""" Retrieve virial array as numpy array
-        """
+        ''' Retrieve virial array as numpy array
+        '''
         array = np.array(self.cpp_force.getVirialArray())
         return array.reshape((-1, 9))
 
@@ -268,9 +266,9 @@ class tfcompute(hoomd.compute._compute):
         pass
 
     def scalar4_vec_to_np(self, array):
-        R""" Convert from scalar4 dtype to numpy array
+        ''' Convert from scalar4 dtype to numpy array
         :param array: the scalar4 array to be processed
-        """
+        '''
         npa = np.empty((len(array), 4))
         for i, e in enumerate(array):
             npa[i, 0] = e.x

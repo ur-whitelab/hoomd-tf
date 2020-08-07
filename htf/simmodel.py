@@ -8,8 +8,8 @@ import pickle
 
 class SimModel(tf.keras.Model):
     def __init__(self, nneighbor_cutoff, output_forces=True, virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-model', **kwargs):
-        R""" Build the TensorFlow graph that will be used during the HOOMD run.
-        """
+        ''' Build the TensorFlow graph that will be used during the HOOMD run.
+        '''
         super(SimModel, self).__init__(dtype=dtype, name=name, **kwargs)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
@@ -117,7 +117,7 @@ class SimModel(tf.keras.Model):
 
 
 class MolSimModel(SimModel):
-    R"""
+    '''
     This creates ``mol_forces``, ``mol_positions``, and ``mol_nlist`` which have dimensions
     mol_number x MN x 4 (``mol_forces``, ``mol_positions``) and
     ? x MN x NN x 4 (``mol_nlist``) tensors batched by molecule, where MN
@@ -134,7 +134,7 @@ class MolSimModel(SimModel):
     :param MN: The number of molecules
     :type MN: int
     :return: None
-    """
+    '''
 
     def __init__(self, MN, mol_indices, nneighbor_cutoff, output_forces=True, virial=False, check_nlist=False, dtype=tf.float32, xla=None, name='htf-mol-model', **kwargs):
         super(MolSimModel, self).__init__(nneighbor_cutoff, output_forces=output_forces,
@@ -260,7 +260,7 @@ def add_energy(forces, energy):
 
 @tf.function
 def safe_norm(tensor, delta=1e-7, **kwargs):
-    R"""
+    '''
     There are some numerical instabilities that can occur during learning
     when gradients are propagated. The delta is problem specific.
     NOTE: delta of tf.math.divide_no_nan must be > sqrt(3) * (safe_norm delta)
@@ -270,18 +270,18 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
     :param delta: small value to add so near-zero is treated without too much
         accuracy loss.
     :return: The safe norm op (TensorFlow operation)
-    """
+    '''
     return tf.norm(tensor=tensor + delta, **kwargs)
 
 
 @tf.function
 def wrap_vector(r, box):
-    R"""Computes the minimum image version of the given vector.
+    '''Computes the minimum image version of the given vector.
 
         :param r: The vector to wrap around the HOOMD box.
         :type r: tensor
         :return: The wrapped vector as a TF tensor
-    """
+    '''
     box_size = box[1, :] - box[0, :]
     return r - tf.math.round(r / box_size) * box_size
 
@@ -293,15 +293,15 @@ def box_size(box):
 
 @tf.function
 def nlist_rinv(nlist):
-    R""" Returns an N x NN tensor of 1 / r for each neighbor
-    """
+    ''' Returns an N x NN tensor of 1 / r for each neighbor
+    '''
     r = tf.norm(nlist[:, :, :3], axis=2)
     return tf.math.divide_no_nan(1.0, r)
 
 
 @tf.function
 def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
-    R"""Computes the pairwise radial distribution function, and appends
+    '''Computes the pairwise radial distribution function, and appends
         the histogram tensor to the graph's ``out_nodes``.
 
     :param bins: The bins to use for the RDF
@@ -317,7 +317,7 @@ def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
         just make sure column 4 has the type index.
 
     :return: Historgram tensor of the RDF (not normalized).
-    """
+    '''
     # to prevent type errors later on
     r_range = [float(r) for r in r_range]
     # filter types
@@ -335,7 +335,7 @@ def compute_rdf(nlist, positions, r_range, nbins=100, type_i=None, type_j=None):
 
 @tf.function
 def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
-    R"""Returns a neighbor list masked by the given particle type(s).
+    '''Returns a neighbor list masked by the given particle type(s).
 
         :param type_i: Use this to select the first particle type.
         :param type_j: Use this to select a second particle type (optional).
@@ -343,7 +343,7 @@ def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
         :param type_tensor: An N x 1 tensor containing the type(s) of the nlist origin.
             If None, particle types from ``self.positions`` will be used.
         :return: The masked neighbor list tensor.
-    """
+    '''
     if type_i is not None:
         nlist = tf.boolean_mask(
             tensor=nlist, mask=tf.equal(type_tensor, type_i))

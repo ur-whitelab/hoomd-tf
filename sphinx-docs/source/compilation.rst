@@ -25,7 +25,7 @@ Tensorflow 2 release. It is recommended you install via pip:
   pip install tensorflow
 
 Python and GCC requirements
-----------------
+--------------------------------
 
 If you install tensorflow with pip, as recommended, this
 provides a pre-built version of tensorflow which has
@@ -148,7 +148,7 @@ If you are using mbuild, please follow these additional install steps:
 .. _hpc_installation:
 
 HPC Installation
-=====================
+----------------------------
 
 These are instructions for our group's cluster (BlueHive), and not for general users. **Feeling Lucky?** Try this for quick results
 
@@ -224,7 +224,7 @@ different cmake step**
 .. _optional_dependencies:
 
 Optional Dependencies
-=====================
+----------------------------
 Following packages are optional:
 .. code:: bash
 
