@@ -64,6 +64,16 @@ You can compile HOOMD-blue using `their instructions
     CXX=g++ CC=gcc cmake ..
     make install
 
+If you are using a conda environment, you may need
+to add a ``CMAKE_PREFIX_PATH``, like so:
+
+.. code:: bash
+
+    git clone https://github.com/ur-whitelab/hoomd-tf
+    cd hoomd-tf && mkdir build && cd build
+    CXX=g++ CC=gcc CMAKE_PREFIX_PATH=/path/to/environment cmake ..
+    make install
+
 Check your install by running ``python
 htf/test-py/test_sanity.py``.  If you have installed with GPU support, also
 check with ``python htf/test-py/_test_gpu_sanity.py``.
