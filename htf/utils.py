@@ -242,7 +242,8 @@ class EDSLayer(tf.keras.layers.Layer):
     :return: Alpha, the EDS coupling constant.
     '''
 
-    def __init__(self, set_point, period, learning_rate=1e-2, cv_scale=1.0, name='eds-layer', **kwargs):
+    def __init__(self, set_point, period, learning_rate=1e-2,
+                 cv_scale=1.0, name='eds-layer', **kwargs):
         if not tf.is_tensor(set_point):
             set_point = tf.convert_to_tensor(set_point)
         if set_point.dtype not in (tf.float32, tf.float64):
@@ -269,12 +270,18 @@ class EDSLayer(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         # set-up variables
-        self.mean = self.add_weight(initializer=tf.zeros_initializer(), dtype=self.dtype, shape=input_shape, name='{}.mean'.format(self.name),
+        self.mean = self.add_weight(
+            initializer=tf.zeros_initializer(), dtype=self.dtype,
+            shape=input_shape, name='{}.mean'.format(self.name),
                                     trainable=False)
-        self.ssd = self.add_weight(initializer=tf.zeros_initializer(), dtype=self.dtype, shape=input_shape, name='{}.ssd'.format(self.name),
-                                   trainable=False)
-        self.n = self.add_weight(initializer=tf.zeros_initializer(), shape=input_shape, dtype=tf.int32, name='{}.n'.format(
-            self.name), trainable=False)
+        self.ssd = self.add_weight(
+            initializer=tf.zeros_initializer(), dtype=self.dtype,
+            shape=input_shape, name='{}.ssd'.format(self.name),
+            trainable=False)
+        self.n = self.add_weight(
+            initializer=tf.zeros_initializer(),
+            shape=input_shape, dtype=tf.int32, name='{}.n'.format(
+                self.name), trainable=False)
         self.alpha = self.add_weight(initializer=tf.zeros_initializer(
         ), shape=input_shape, name='{}.a'.format(self.name), dtype=self.dtype)
 
