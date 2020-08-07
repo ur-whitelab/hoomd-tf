@@ -28,7 +28,7 @@ class tfcompute(hoomd.compute._compute):
     def __init__(self, model):
         R''' Initialize a tfcompute class instance
 
-        :param model: Hoomd-TF model
+        :param model: HOOMD-TF model
         :type model: :py:class:`.SimModel`
         '''
         self.model = model

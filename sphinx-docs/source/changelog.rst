@@ -6,7 +6,7 @@ v2.0-rc
 
 *New Features*
 
-- Tensorflow 2.0 now required
+- TensorFlow 2.0 now required
 - Keras models replace computation graphs
 - It is no longer required to save/load models for use
 - Training is handled by Keras/TF functions now
@@ -54,7 +54,7 @@ v1.0 (2020-7-20)
 
 *JOSS Review*
 
-Hoomd-TF has been published as a `peer-reviewed article <https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90>`_ in the
+HOOMD-TF has been published as a `peer-reviewed article <https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90>`_ in the
 Journal of Open Source Software (JOSS)
 
 *New Features*
@@ -132,7 +132,7 @@ v0.3 (2019-07-03)
 *Bug Fixes*
 
 - Computing nlist in TF now correctly sorts when requested
-- Fixed Mac OS specific issues for compiling against existing Hoomd-blue install
+- Fixed Mac OS specific issues for compiling against existing HOOMD-blue install
 - Running mean computation variables are now marked as untrainable
 
 v0.2 (2019-06-03)
@@ -143,24 +143,24 @@ v0.2 (2019-06-03)
 - Added attach `batch_size` argument enabling batching of TF calls
 - Can now batch by molecule, enabling selection/exclusion of molecules
 - Added XLA option to improve TF speed
-- Now possible to compile the plugin after hoomd-blue install
+- Now possible to compile the plugin after HOOMD-blue install
 - Changed name of package to htf instead of tensorflow_plugin
 
 *Enhancements*
 
 - Changed output logging to only output TF items to the tf_manager.log and
 - Log-level is now consistent with hoomd
-- Added C++ unit tests skeleton in the same format as Hoomd-blue. Compile with -DBUILD_TESTING=ON to use.
-- Switched to hoomd-blue cuda error codes
+- Added C++ unit tests skeleton in the same format as HOOMD-blue. Compile with -DBUILD_TESTING=ON to use.
+- Switched to HOOMD-blue cuda error codes
 - Added MPI tests with domain decomposition
-- Improved style consistency with hoomd-blue
+- Improved style consistency with HOOMD-blue
 - Cmake now checks for TF and hoomd versions while building hoomd-tf.
 
 v0.1 (2019-04-22)
 -----------------
 
 - Made Python packages actual dependencies.
-- Switched to using hoomd-blue cuda error codes.
+- Switched to using HOOMD-blue cuda error codes.
 - Removed TaskLock from C++ code.
 - Documentation updates
 - Included license.

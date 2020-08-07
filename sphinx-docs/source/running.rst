@@ -34,7 +34,7 @@ object (you passed ``0`` as the first arg when building your graph).
 Logging
 --------
 
-The default logging level of Tensorflow is relatively noisy. You can reduce
+The default logging level of TensorFlow is relatively noisy. You can reduce
 the amount of logged statements via
 
 .. code:: python
@@ -59,7 +59,7 @@ Training
 --------
 
 Training can be done while running your simulation where the labels
-are the Hoomd-blue forces. To do this, you must first compile your model
+are the HOOMD-blue forces. To do this, you must first compile your model
 as described in Keras documentation. For example,
 
 .. code:: python
@@ -86,7 +86,7 @@ Model Output
 -------------
 
 By default, your model output is not saved except
-to send the forces (and possibly virial) to Hoomd-blue.
+to send the forces (and possibly virial) to HOOMD-blue.
 You can have ``tfcompute`` capture your model output
 by adding ``save_output_period=100``. In this case,
 output will be saved every 100 steps. Note that

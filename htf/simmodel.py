@@ -7,7 +7,7 @@ import pickle
 
 class SimModel(tf.keras.Model):
     R'''
-    SimModel is the main way that Hoomd-TF interacts with a simulation.
+    SimModel is the main way that HOOMD-TF interacts with a simulation.
     '''
 
     def __init__(
@@ -16,7 +16,7 @@ class SimModel(tf.keras.Model):
             name='htf-model', **kwargs):
         R'''
 
-            SimModel is the main way that Hoomd-TF interacts with a simulation.
+            SimModel is the main way that HOOMD-TF interacts with a simulation.
             Any ``kwargs`` are passed to :py:meth:`setup`.
 
             :param nneighbor_cutoff: The maximum number of neighbors to consider (can be 0)

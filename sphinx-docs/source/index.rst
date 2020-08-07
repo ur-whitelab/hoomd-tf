@@ -1,22 +1,22 @@
 ========
-Hoomd-TF
+HOOMD-TF
 ========
 
 This plugin enables the use of TensorFlow in a
-Hoomd-blue simulation
+HOOMD-blue simulation
 
-Hoomd-TF can be used for a variety of tasks such as online force-matching, online machine learning in Hoomd-blue simulations,
-and arbitrary collective variable calculations using TensorFlow tensor operations. Because both Hoomd-blue and TensorFlow are GPU-accelerated,
-Hoomd-TF was designed with speed in mind, and minimizes latency with a GPU-GPU communication scheme. Of particular interest,
-Hoomd-TF allows for online machine learning with early termination, rather than the more tradditional batch learning approach for MD+ML.
+HOOMD-TF can be used for a variety of tasks such as online force-matching, online machine learning in HOOMD-blue simulations,
+and arbitrary collective variable calculations using TensorFlow tensor operations. Because both HOOMD-blue and TensorFlow are GPU-accelerated,
+HOOMD-TF was designed with speed in mind, and minimizes latency with a GPU-GPU communication scheme. Of particular interest,
+HOOMD-TF allows for online machine learning with early termination, rather than the more tradditional batch learning approach for MD+ML.
 
-Hoomd-TF includes several utility functions as convenient built-ins, such as:
+HOOMD-TF includes several utility functions as convenient built-ins, such as:
 
 - RDF calculation
 - EDS Biasing (See `this paper <https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988>`_)
 - Coarse-Grained simulation force matching
 
-In addition to all these, the TensorFlow interface of Hoomd-TF makes implementing arbitrary ML models as easy as it is in TensorFlow, by exposing the Hoomd-blue neighbor list and particle positions to TensorFlow. This enables GPU-accelerated tensor calculations, meaning arbitrary collective variables can be treated in the TensorFlow model framework, as long as they can be expressed as tensor operations on particle positions or neighbor lists.
+In addition to all these, the TensorFlow interface of HOOMD-TF makes implementing arbitrary ML models as easy as it is in TensorFlow, by exposing the HOOMD-blue neighbor list and particle positions to TensorFlow. This enables GPU-accelerated tensor calculations, meaning arbitrary collective variables can be treated in the TensorFlow model framework, as long as they can be expressed as tensor operations on particle positions or neighbor lists.
 
 Citation
 ---------
@@ -28,18 +28,18 @@ Citation
 
 Please use the following citation:
 
-   Hoomd-TF: GPU-Accelerated, Online Machine Learning in the Hoomd-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
+   HOOMD-TF: GPU-Accelerated, Online Machine Learning in the HOOMD-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
    HA Gandhi, G Wellawatte, and AD White (2020) *Journal of Open Source Software* doi: 10.21105/joss.02367
 
 
 Tutorial
 --------
 
-See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_ to learn about what Hoomd-TF can do.
+See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_ to learn about what HOOMD-TF can do.
 
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
    :caption: Table of Contents
 
    quickstart
@@ -54,7 +54,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    issues
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API
 
    htf_package

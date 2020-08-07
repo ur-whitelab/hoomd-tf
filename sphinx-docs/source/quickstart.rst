@@ -1,7 +1,7 @@
 Quickstart Tutorial
 ===================
 
-Here's an example of how you use Hoomd-TF. To compute a ``1 / r``
+Here's an example of how you use HOOMD-TF. To compute a ``1 / r``
 pairwise potential:
 
 .. code:: python
@@ -34,10 +34,10 @@ pairwise potential:
 
 This creates a computation graph whose energy function is ``2 / r`` and
 also computes forces and virial for the simulation. The ``2`` is because
-the neighbor lists in Hoomd-TF are *full* neighbor lists (double counted).
-The Hoomd-blue code starts a simulation of a 9 particle square lattice
+the neighbor lists in HOOMD-TF are *full* neighbor lists (double counted).
+The HOOMD-blue code starts a simulation of a 9 particle square lattice
 and simulates it for 1000 timesteps under the potential defined in our
-Hoomd-TF model. The general process of using Hoomd-TF is to build a
-model by defining a compute function and then use the model in Hoomd-blue.
+HOOMD-TF model. The general process of using HOOMD-TF is to build a
+model by defining a compute function and then use the model in HOOMD-blue.
 See :ref:`building_the_model` and :ref:`running` for a more detailed
 description. Or see a complete set of `Jupyter Notebook tutorials <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_.

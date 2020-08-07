@@ -11,14 +11,14 @@ The following packages are required to compile:
 ::
 
     tensorflow >= 2.0
-    hoomd-blue >= 2.5.2
-    tbb-devel (only for hoomd-blue 2.8 and above if installed with conda)
+    hoomd >= 2.5.2
+    tbb-devel (only for hoomd 2.8 and above if installed with conda)
 
-tbb-devel is required for hoomd-blue 2.8 or above when using the
-hoomd-blue conda release. It is not automatically installed when
-installing hoomd-blue, so use ``conda install -c conda-forge
-tbb-devel`` to install. The Tensorflow version should be any
-Tensorflow 2 release. It is recommended you install via pip:
+tbb-devel is required for HOOMD-blue 2.8 or above when using the
+HOOMD-blue conda release. It is not automatically installed when
+installing HOOMD-blue, so use ``conda install -c conda-forge
+tbb-devel`` to install. The TensorFlow version should be any
+TensorFlow 2 release. It is recommended you install via pip:
 
 .. code:: bash
 
@@ -27,12 +27,12 @@ Tensorflow 2 release. It is recommended you install via pip:
 Python and GCC requirements
 --------------------------------
 
-If you install tensorflow with pip, as recommended, this
-provides a pre-built version of tensorflow which has
+If you install TensorFlow with pip, as recommended, this
+provides a pre-built version of TensorFlow which has
 specific GCC and Python versions. When you compile
-hoomd-tf, these must match what is found by cmake. So if your version
-of tensorflow used gcc-7x, then you must have gcc-7x available on your machine.
-The Cmake script in hoomd-tf will check for this and tell you if they do not match.
+Hoomd-tf, these must match what is found by cmake. So if your version
+of TensorFlow used gcc-7x, then you must have gcc-7x available on your machine.
+The cmake script in Hoomd-tf will check for this and tell you if they do not match.
 
 
 .. _simple_compiling:
@@ -40,11 +40,19 @@ The Cmake script in hoomd-tf will check for this and tell you if they do not mat
 Simple Compiling
 ----------------
 
-Install hoomd-blue and Tensorflow by your preferred method. We recommend installing Tensorflow with pip, as ``pip install tensorflow``. Hoomd-blue
-distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA toolkit version between Tensorflow and Hoomd match. *As of August 2020, there are no GPU compatible CUDA/Hoomd/TF combinations on conda-forge.* Due to the frequent CUDA version mismatches on conda, it is best to compile Hoomd-blue if you intend to use Hoomd-TF in GPU model. You can compile Hoomd-blue using `their instructions
+Install HOOMD-blue and TensorFlow by your preferred method.
+We recommend installing TensorFlow with pip,
+as ``pip install tensorflow``. HOOMD-blue
+distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions
+ (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA
+ toolkit version between TensorFlow and Hoomd match.
+ *As of August 2020, there are no GPU compatible CUDA/Hoomd/TF combinations on conda-forge.*
+ Due to the frequent CUDA version mismatches on conda, it is recommended to compile HOOMD-blue if you
+ intend to use HOOMD-TF in GPU mode.
+  You can compile HOOMD-blue using `their instructions
 <http://hoomd-blue.readthedocs.io>`_.
 
-**Steps after installing Tensorflow and Hoomd-blue**
+**Steps after installing TensorFlow and HOOMD-blue**
 
 .. code:: bash
 
@@ -64,13 +72,13 @@ Compiling with Hoomd-Blue
 
 Use this method if you need to compile with developer flags on or other
 special requirements. Note, these steps are NOT required for GPU support! You can
-simply compile Hoomd-blue and follow simple instructions above for GPU support.
+simply compile HOOMD-blue and follow simple instructions above for GPU support.
 
 .. code:: bash
 
     git clone --recursive https://bitbucket.org/glotzer/hoomd-blue hoomd-blue
 
-You can check out a specific version of hoomd-blue now, if desired:
+You can check out a specific version of HOOMD-blue now, if desired:
 
 .. code:: bash
 
