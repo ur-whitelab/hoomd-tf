@@ -1,15 +1,21 @@
 Change Log
 ==========
 
-v1.0.1 (7/27/2020)
-----
+v1.0.2 (2020-7-27)
+-------------------
+
+*Bug fixes*
+- EDS Bias was not using mean for computing offset
+
+v1.0.1 (2020-7-27)
+--------------------
 
 *Bug fixes*
 - Prevented CPU overflow when nlist is too small (and added unit test)
 - Adding check on mapping validity
 
-v1.0 (7/20/2020)
-----
+v1.0 (2020-7-20)
+------------------
 
 *JOSS Review*
 
