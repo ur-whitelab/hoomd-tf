@@ -22,7 +22,10 @@ TensorFlow 2 release. It is recommended you install via pip:
 
 .. code:: bash
 
-  pip install tensorflow
+  pip install --upgrade tensorflow
+
+Checkout the `TensorFlow install guide <https://www.tensorflow.org/install>`_
+to see details.
 
 Python and GCC requirements
 --------------------------------
@@ -42,7 +45,7 @@ Simple Compiling
 
 Install HOOMD-blue and TensorFlow by your preferred method.
 We recommend installing TensorFlow with pip,
-as ``pip install tensorflow``. HOOMD-blue
+as ``pip install --upgrade tensorflow``. HOOMD-blue
 distributes prebuilt binaries via conda for both CPU versions (``conda install -c conda-forge hoomd``) and GPU versions
 (``conda install -c conda-forge hoomd=*=*gpu*``). If using GPU, make sure the CUDA
 toolkit version between TensorFlow and Hoomd match.
