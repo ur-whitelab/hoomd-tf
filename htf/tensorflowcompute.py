@@ -121,7 +121,8 @@ class tfcompute(hoomd.compute._compute):
         if not hoomd.context.exec_conf.isCUDAEnabled():
             if hoomd.htf._tf_on_gpu:
                 raise ValueError(
-                    'Cannot run GPU/CPU mixed mode between TF and Hoomd')
+                    'Cannot run GPU/CPU mixed mode between TF and HOOMD.'
+                    'You are running HOOMD on CPU and TF on GPU')
             self.cpp_force = \
                 _htf.TensorflowCompute(
                     self,
@@ -135,7 +136,8 @@ class tfcompute(hoomd.compute._compute):
         else:
             if not hoomd.htf._tf_on_gpu:
                 raise ValueError(
-                    'Cannot run GPU/CPU mixed mode between TF and Hoomd')
+                    'Cannot run GPU/CPU mixed mode between TF and HOOMD.'
+                    'You are running HOOMD on GPU and TF on CPU')
             self.cpp_force = \
                 _htf.TensorflowComputeGPU(self,
                                           hoomd.context.current.system_definition,
