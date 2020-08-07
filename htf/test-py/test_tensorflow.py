@@ -663,8 +663,7 @@ class test_nlist(unittest.TestCase):
 
     def test_sorted(self):
         N = 8 * 8
-        model = build_examples.NlistNN(64)
-        model.build_layers(32, 8)
+        model = build_examples.NlistNN(64, dim=32, top_neighs=8)
         tfcompute = hoomd.htf.tfcompute(model)
         T = 10
         rcut = 10.0

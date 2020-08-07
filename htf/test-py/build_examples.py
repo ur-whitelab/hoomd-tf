@@ -91,9 +91,9 @@ class LJVirialModel(htf.SimModel):
 
 
 class EDSModel(htf.SimModel):
-    def setup(self):
+    def setup(self, set_point):
         self.cv_avg = tf.keras.metrics.Mean()
-        self.eds_bias = htf.EDSLayer(4., 5, 1/5)
+        self.eds_bias = htf.EDSLayer(set_point, 5, 1/5)
 
     def compute(self, nlist, positions, box, sample_weight):
         # get distance from center
@@ -134,7 +134,7 @@ class CustomNlist(htf.SimModel):
 
 
 class NlistNN(htf.SimModel):
-    def build_layers(self, dim, top_neighs):
+    def setup(self, dim, top_neighs):
         self.dense1 = tf.keras.layers.Layer(dim)
         self.dense2 = tf.keras.layers.Layer(dim)
         self.last = tf.keras.layers.Layer(1)
@@ -184,7 +184,7 @@ class LJRDF(htf.SimModel):
         inv_r6 = tf.math.divide_no_nan(1., r**6)
         p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
         # get rdf
-        rdf, rs = htf.compute_rdf(nlist, positions, [3, 5])
+        rdf, rs = htf.compute_rdf(nlist, positions[:, 3], [3, 5])
         # compute running mean
         self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
         forces = htf.compute_nlist_forces(nlist, p_energy)

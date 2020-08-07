@@ -7,7 +7,7 @@ To modify a simulation, you create a Keras model that will be executed at
 each step (or some multiple of steps) during the simulation. See the :ref:`running`
 to see how to train your model instead, though these instructions still apply.
 
-To begin subclass a :py:class:`simmodel.SimModel` class:
+To begin subclass a :py:class:`.SimModel` class:
 
 .. code:: python
 
@@ -25,7 +25,7 @@ are unsure, you can guess and add ``check_nlist = True`` to your
 constructor. This will cause the program to halt if you choose too low.
 ``output_forces`` indicates if the model will output forces to use in
 the simulation. In the ``compute`` function you will have three
-tensors that can be used: ``nlist``, ``positions``, ``box``:
+tensors that can be used:``nlist``, ``positions``, ``box``:
 
 * ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest
   neighbors. An entry of all zeros indicates that less than ``NN`` nearest
@@ -40,7 +40,7 @@ tensors that can be used: ``nlist``, ``positions``, ``box``:
   coordinate (row 0), high box coordinate (row 1), and then tilt factors (row 2).
 
 ``sample_weight`` is a scalar indicating what fraction of the simulation
-being considered. This accounts for if you broke-up your simulation by batching (see :py:class: `tensorflowcompute.tfcompute`).
+being considered. This accounts for if you broke-up your simulation by batching (see :py:class:`.tfcompute`).
 Typically, this is only used if you want to correct for this when computing
 averages. If you did not break-up your simulation, it will always be 1.0.
 
@@ -57,7 +57,7 @@ forces.
 .. code:: python
 
   class NlistNN(htf.SimModel):
-      def build_layers(self, dim, top_neighs):
+      def setup(self, dim, top_neighs):
           self.dense1 = tf.keras.layers.Layer(dim)
           self.dense2 = tf.keras.layers.Layer(dim)
           self.last = tf.keras.layers.Layer(1)
@@ -74,6 +74,7 @@ forces.
           energy = self.last(x)
           forces = htf.compute_nlist_forces(nlist, energy)
           return forces
+  model = NlistNN(64, dim=16, top_neighs=8)
 
 Refer to the Keras documentation to learn more about models.
 
@@ -85,23 +86,22 @@ Molecule Batching
 It may be simpler to have positions or neighbor lists or forces arranged
 by molecule. For example, you may want to look at only a particular bond
 or subset of atoms in a molecule. To do this, you can instead subclass
-:py:class:`simmodel.MolSimModel`:
+:py:class:`.MolSimModel`:
 
 .. code:: python
 
-    import hoomd.htf as htf
-    class MyModel(htf.SimModel):
-      def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
-        ...
-        return forces, other, important, quantities
+  import hoomd.htf as htf
+  class MyModel(htf.SimModel):
+    def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
+      ...
+      return forces, other, important, quantities
 
-    model = MyModel(MN, NN, mol_indices)
+  model = MyModel(MN, NN, mol_indices)
 
 
- whose argument
-``MN`` is the maximum number of atoms
+whose argument ``MN`` is the maximum number of atoms
 in a molecule and ``mol_indices`` describes the molecules in your system as
-a list of atom indices. This can be created directly from a hoomd system via :py:meth: `utils.find_molecules`.
+a list of atom indices. This can be created directly from a hoomd system via :py:func:`.find_molecules`.
 The ``mol_indices`` are a, possibly ragged, 2D python list where each
 element in the list is a list of atom indices for a molecule. For
 example, ``[[0,1], [1]]`` means that there are two molecules with the
@@ -147,7 +147,7 @@ Computing Forces
 If your graph is outputting forces, they must be the first return value from
 your ``compute`` method. It is easiest to compute forces using
 the automatic differentiation of a potential energy. Call
-:py:meth:`simmodel.compute_nlist_forces` with the argument ``nlist`` and ``energy``. ``energy``
+:py:func:`.compute_nlist_forces` with the argument ``nlist`` and ``energy``. ``energy``
 can be either a scalar or a tensor which depends on ``nlist``. A tensor of
 forces will be returned as :math:`\sum_i(\frac{-\partial E} {\partial n_i})`, where the sum is over
 the neighbor list. For example, to compute a :math:`1 / r` potential:
@@ -171,7 +171,7 @@ Notice that in the above example that we have used the
 us to safely treat a :math:`1 / 0`, which can arise because ``nlist``
 contains 0s for when fewer than ``NN`` nearest neighbors are found.
 
-There is also a method :py:meth:`simmodel.compute_positions_forces` which
+There is also a method :py:func:`.compute_positions_forces` which
 can be used to compute position dependent forces.
 
 **Note:** because ``nlist`` is a *full*
@@ -185,10 +185,10 @@ Neighbor lists
 
 ``nlist``is an ``N x NN x 4``
 neighbor list tensor. You can ask for masked versions of this with
-:py:meth: `simmodel.masked_nlist(nlist, type_tensor, type_i, type_j)`
+:py:func:`.masked_nlist(nlist, type_tensor, type_i, type_j)`
 where ``type_i`` and ``type_j`` are optional integers that specify the type of
 the origin (``type_i``) or neighbor (``type_j``).  ``type_tensor`` is
-``positions[:,3]`` or your own types can be chosen. You can also use :py:meth: `nlist_rinv`(nlist) which gives a
+``positions[:,3]`` or your own types can be chosen. You can also use :py:func:`.nlist_rinv` which gives a
 pre-computed ``1 / r`` (dimension ``N x NN``).
 
 .. _virial:
@@ -198,10 +198,10 @@ Virial
 
 A virial term can be added by doing the following extra steps:
 
-1. Compute virial with your forces :py:meth: `simmodel.compute_nlist_forces` by adding the ``virial=True`` arg.
+1. Compute virial with your forces :py:func:`.compute_nlist_forces` by adding the ``virial=True`` arg.
 2. Add the `modify_virial=True` argument to your model constructor
 
-: _model_loading:
+.. _model_loading:
 
 Model Loading
 -----------------
@@ -221,7 +221,7 @@ load weights into from a file like so:
 Complete Examples
 -----------------
 
-The directory `htf/test-py/build_examples` contains example models
+The directory ``htf/test-py/build_examples`` contains example models
 
 .. _lennard_jones_example:
 

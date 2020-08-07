@@ -11,10 +11,10 @@ import hoomd
 
 
 class tf_array_comm:
-    ''' Set up HOOMD context and interface with C++ memory.
+    ''' Set up Hoomd context and interface with C++ memory.
 
     :param nparray: numpy array to share with the C++ process
-    :param hoomd_context: HOOMD execution configuration
+    :param hoomd_context: Hoomd execution configuration
         (defaults to ``hoomd.context.exec_conf``)
     '''
 

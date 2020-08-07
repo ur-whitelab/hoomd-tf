@@ -204,7 +204,7 @@ class test_bias(unittest.TestCase):
     def test_eds(self):
         T = 1000
         hoomd.context.initialize()
-        model = build_examples.EDSModel(0)
+        model = build_examples.EDSModel(0, set_point=4.0)
         tfcompute = hoomd.htf.tfcompute(model)
         hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),

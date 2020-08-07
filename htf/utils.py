@@ -9,21 +9,17 @@ import hoomd
 
 
 def compute_pairwise(model, r):
-    ''' Compute the pairwise potential at r for the given model.
+    ''' Compute model output for a 2 particle system at distances set by ``r``.
+    If the model outputs two tensors of shape ``L x M`` and ``K``, then
+    the output  will be a tuple of numpy arrays of size ``N x L x M`` and
+    ``N x K``, where ``N`` is number of points in ``r``.
 
-    :param model_directory: The model directory
+    :param model: The model
+    :type model: :py:class:`.SimModel`
     :param r: A 1D grid of points at which to compute the potential.
-    :param potential_tensor_name: The tensor containing potential energy.
-    :param checkpoint: Which checkpoint to load. Default is -1, which loads
-        latest checkpoint.
-        An integer indicates loading
-        from the model directory. If you pass a string, it is interpreted
-        as a path.
-    :param feed_dict: Allows you to add any other placeholder values that need
-        to be added to compute potential in your model
+    :type r: numpy array
 
-    :return: A tuple of 1D arrays. First is the potentials corresponding to the
-        pairwise distances in r, second is the forces.
+    :return: A tuple of numpy arrays as output from ``model``
     '''
     NN = model.nneighbor_cutoff
     nlist = np.zeros((2, NN, 4))
@@ -43,13 +39,11 @@ def compute_pairwise(model, r):
     return output
 
 
-# \internal
-# \brief Maps molecule-wise indices to particle-wise indices
 def find_molecules(system):
     ''' Given a hoomd system, return a mapping from molecule index to particle index.
     This is a slow function and should only be called once.
 
-    :param system: The molecular system in HOOMD.
+    :param system: The molecular system in Hoomd.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices
     '''
@@ -96,11 +90,10 @@ def find_molecules(system):
     return mapping
 
 
-# \internal
-# \brief Finds mapping operators for coarse-graining
 def matrix_mapping(molecule, beads_distribution):
-    ''' This will create a M x N mass weighted mapping matrix where M is the number
+    R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
+
     :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
     :param beads_distribution: This is a list of beads distribution lists, Note that
     each list should contain the atoms as strings just like how they appear in the topology file.
@@ -187,10 +180,19 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 
 def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
     ''' This generator will process information from a trajectory and
-    run the user defined model on the nlist computed from the trajectory.
+    yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
+    The first list can be directly called with a :py:class:`.SimModel` (e.g., ``model(inputs)``).
 
-    :param model_directory: The model directory
-    :type model_directory: string
+    Here's an example:
+
+    .. code:: python
+
+        model = MyModel(16)
+        for input, ts in iter_from_trajectory(16, universe):
+            result = model(input)
+
+    :param nneighbor_cutoff: The maximum size of neighbor list
+    :type nneighbor_cutoff: int
     :param universe: The MDAnalysis universe
     :param selection: The atom groups to extract from universe
     :type selection: string
@@ -225,10 +227,21 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
                 axis=1), hoomd_box, 1.0], ts
 
 
-# \internal
-# \Applies EDS bias to a system
-
 class EDSLayer(tf.keras.layers.Layer):
+    R''' This layer computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
+    to be used as the EDS bias in the simulation. You call the layer on the
+    collective variable at each step to get the current value of alpha.
+
+    :param set_point: The set point value of the collective variable.
+        This is a constant value which is pre-determined by the user and unique to each cv.
+    :param period: Time steps over which the coupling constant is updated.
+        Hoomd time units are used. If period=100 alpha will be updated each 100 time steps.
+    :param learninig_rate: Learninig_rate in the EDS method.
+    :param cv_scale: Used to adjust the units of the bias to Hoomd units.
+    :param name: Name to be used for layer
+    :return: Alpha, the EDS coupling constant.
+    '''
+
     def __init__(self, set_point, period, learning_rate=1e-2, cv_scale=1.0, name='eds-layer', **kwargs):
         if not tf.is_tensor(set_point):
             set_point = tf.convert_to_tensor(set_point)
@@ -306,14 +319,12 @@ class EDSLayer(tf.keras.layers.Layer):
         return self.alpha
 
 
-# \internal
-# \brief Finds the center of mass of a set of particles
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    '''Comptue mapping of the given positions (N x 3) and mapping (M x N)
+    '''Comptue mapping of the given positions ``N x 3` and mapping ``M x N``
     considering PBC. Returns mapped particles.
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
-    :param box_size: A list contain the size of the box [Lx, Ly, Lz]
+    :param box_size: A list contain the size of the box ``[Lx, Ly, Lz]``
     :param name: The name of the op to add to the TF graph
     '''
     # https://en.wikipedia.org/wiki/
@@ -330,13 +341,11 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-# \internal
-# \brief Calculates the neihgbor list given particle positoins
 def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
-    :param r_cut: Cutoff radius (HOOMD units)
+    :param r_cut: Cutoff radius (Hoomd units)
     :param NN: Maximum number of neighbors per particle
     :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :param sorted: Whether to sort neighbor lists by distance
@@ -385,9 +394,6 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
         tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
                 tf.float32)], axis=-1) * nlist_mask
 
-# \internal
-# \Calculates bond distance between two atoms in a molecule
-
 
 def mol_bond_distance(mol_positions, type_i, type_j):
     ''' This method calculates the bond distance given two atoms batched by molecule
@@ -413,9 +419,6 @@ def mol_bond_distance(mol_positions, type_i, type_j):
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_ij = tf.norm(tensor=v_ij, axis=1)
         return v_ij
-
-# \internal
-# \Calculates bond angle given three atoms in a molecule
 
 
 def mol_angle(mol_positions, type_i, type_j, type_k):
@@ -455,8 +458,6 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
         return angles
 
 
-# \internal
-# \Calculates dihedral angle given four atoms in a molecule
 def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
     ''' This method calculates the dihedral angle given four atoms batched by molecule
 

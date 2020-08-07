@@ -1,12 +1,10 @@
-Hoomd-TF API
+API
 ---
-
 .. rubric:: Modules
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 4
 
     simmodel
-    tfarraycomm
     tfcompute
     utils

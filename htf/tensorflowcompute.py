@@ -19,42 +19,44 @@ import tensorflow as tf
 
 
 class tfcompute(hoomd.compute._compute):
-    ''' TensorFlow Computations for HTF.
+    R'''
+    The main class for applying :py:class:`.SimModel`
+    to Hoomd simulation.
 
-        :param tf_model_directory: Kera Model
     '''
-    # \internal
-    # \brief Constructs the tfcompute class
-    # \details
-    # Initializes the tfcompute class with options to manage how and where TensorFlow saves,
-    # whether to use a tensorboard, and some execution preferences.
 
     def __init__(self, model):
-        ''' Initialize a tfcompute class instance
+        R''' Initialize a tfcompute class instance
+
+        :param model: Hoomd-TF model
+        :type model: :py:class:`.SimModel`
         '''
         self.model = model
 
     def attach(self, nlist=None, r_cut=0, period=1,
                batch_size=None, train=False, save_output_period=None):
-        ''' Attaches the TensorFlow instance to HOOMD.
-        The main method of this class, this method sets up TensorFlow and
-        gets HOOMD ready to interact with it.
+        R''' Attaches the TensorFlow instance to Hoomd.
+        This method sets up TensorFlow and
+        gets Hoomd ready to interact with it.
 
-        :param nlist: The HOOMD neighbor list that will be used as the TensorFlow input.
+        :param nlist: The Hoomd neighbor list that will be used as the TensorFlow input.
+        :type nlist: Hoomd nlist
         :param r_cut: Cutoff radius for neighbor listing.
-        :param save_period: How often to save the TensorFlow data. Period here is measured by
-            how many times the TensorFLow model is updated. See period.
-        :param period: How many HOOMD steps should pass before updating the TensorFlow model.
-            In combination with save_period, determines how many timesteps pass before
-            TensorFlow saves its data (slow). For example, with a save_period of 200,
-            a period of 4, TensorFlow will write to the tf_model_directory every 800
-            simulation steps.
-        :param feed_dict: The dictionary keyed by tensor names and filled with corresponding values.
-            See feed_dict in __init__.
-        :param mol_indices: Molecule indices for each atom,
-            identifying which molecule each atom belongs to.
+        :type r_cut: float
+        :param period: How many Hoomd steps should pass before updating the TensorFlow model.
+        :type period: int
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
+        :type batch_size: int
+        :param train: Indicate if ``train_on_batch`` Keras model method should be called at each step
+            with the labels being Hoomd forces.
+        :type train: bool
+        :param save_output_period: How often to save output from ``model``. Each output is accessible after
+            as attributes ``outputs`` as numpy arrays with a new axis at 0, representing each call. Note that
+            if your model outputs forces or forces and virial, then these will not be present.
+        :type save_output_period: int
+
+
         '''
         # make sure we're initialized, so we can have logging
         if not hoomd.init.is_initialized():
@@ -159,8 +161,12 @@ class tfcompute(hoomd.compute._compute):
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
 
     def set_reference_forces(self, *forces):
-        ''' Sets the HOOMD reference forces to be used by TensorFlow.
-        See C++ comments in TensorFlowCompute.h
+        R''' Sets the Hoomd reference forces to be used by TensorFlow.
+
+        This allows you to choose which forces are used as the label
+        for training.
+
+        :param forces: Hoomd force objects
         '''
         if self.force_mode_code == _htf.FORCE_MODE.tf2hoomd:
             raise ValueError('Only valid to set reference'
@@ -174,9 +180,8 @@ class tfcompute(hoomd.compute._compute):
                                      'TFCompute {} \n'.format(f.name))
 
     def rcut(self):
-        ''' Define the cutoff radius used in the neighbor list.
-        Adapted from hoomd/md/pair.py
-        '''
+        # Define the cutoff radius used in the neighbor list.
+        # Adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
@@ -193,7 +198,7 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
-    def finish_update(self, batch_index, batch_frac):
+    def _finish_update(self, batch_index, batch_frac):
         ''' Allow TF to read output and we wait for it to finish.
 
         :param batch_index: index of batch to be processed
@@ -241,23 +246,23 @@ class tfcompute(hoomd.compute._compute):
                 reset_metrics=False)
 
     def get_positions_array(self):
-        ''' Retrieve positions array as numpy array
+        R''' Retrieve positions array as numpy array
         '''
-        return self.scalar4_vec_to_np(self.cpp_force.getPositionsArray())
+        return self._scalar4_vec_to_np(self.cpp_force.getPositionsArray())
 
     def get_nlist_array(self):
-        ''' Retrieve neighbor list array as numpy array
+        R''' Retrieve neighbor list array as numpy array
         '''
-        nl = self.scalar4_vec_to_np(self.cpp_force.getNlistArray())
+        nl = self._scalar4_vec_to_np(self.cpp_force.getNlistArray())
         return nl.reshape(-1, self.nneighbor_cutoff, 4)
 
     def get_forces_array(self):
-        ''' Retrieve forces array as numpy array
+        R''' Retrieve forces array as numpy array
         '''
-        return self.scalar4_vec_to_np(self.cpp_force.getForcesArray())
+        return self._scalar4_vec_to_np(self.cpp_force.getForcesArray())
 
     def get_virial_array(self):
-        ''' Retrieve virial array as numpy array
+        R''' Retrieve virial array as numpy array
         '''
         array = np.array(self.cpp_force.getVirialArray())
         return array.reshape((-1, 9))
@@ -265,7 +270,7 @@ class tfcompute(hoomd.compute._compute):
     def update_coeffs(self):
         pass
 
-    def scalar4_vec_to_np(self, array):
+    def _scalar4_vec_to_np(self, array):
         ''' Convert from scalar4 dtype to numpy array
         :param array: the scalar4 array to be processed
         '''

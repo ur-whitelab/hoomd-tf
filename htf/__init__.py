@@ -1,10 +1,10 @@
 # Copyright (c) 2018 Andrew White at the University of Rochester
 # This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
 
-''' HOOMD-TF
+''' Hoomd-TF
 
 Use TensorFlow to do arbitrary collective variable calculations and
-machine learning on-the-fly in HOOMD-blue simulations.
+machine learning on-the-fly in Hoomd-blue simulations.
 '''
 import hoomd.md
 from hoomd.htf.tensorflowcompute import tfcompute

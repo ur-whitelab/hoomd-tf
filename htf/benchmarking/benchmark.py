@@ -28,6 +28,8 @@ if mode_string != 'cpu' and mode_string != 'gpu':
 
 
 NN = 64
+
+
 class LJModel(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
         # get r
@@ -40,6 +42,7 @@ class LJModel(htf.SimModel):
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
 
+
 model = LJModel(NN)
 tfcompute = htf.tfcompute(model)
 hoomd.context.initialize('--mode={}'.format(mode_string))
@@ -49,7 +52,7 @@ sqrt_N = int(sqrt(N))
 system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                    n=[sqrt_N, sqrt_N])
 nlist = hoomd.md.nlist.cell(check_period=1)
-# basic LJ forces from HOOMD
+# basic LJ forces from Hoomd
 lj = hoomd.md.pair.lj(rcut, nlist)
 lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
 hoomd.md.integrate.mode_standard(dt=0.005)
@@ -70,6 +73,7 @@ benchmark_results = hoomd.benchmark.series(warmup=6000,
 
 # write results
 with open('{}-particles_{}_time.txt'.format(N, mode_string), 'w+') as f:
-    f.write('Elapsed time with {} particles: {}'.format(N, str(benchmark_results)))
+    f.write('Elapsed time with {} particles: {}'.format(
+        N, str(benchmark_results)))
 
 print('Elapsed time with {} particles: {}'.format(N, str(benchmark_results)))

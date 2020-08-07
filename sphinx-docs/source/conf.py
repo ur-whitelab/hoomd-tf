@@ -28,7 +28,7 @@ release = __version__
 
 # -- Project information -----------------------------------------------------
 
-project = 'HOOMD-TF'
+project = 'Hoomd-TF'
 copyright = '2020 University of Rochester'
 author = 'Rainier Barrett, Dilnoza Amirkulova, \
     Maghesree Chakraborty, Heta Gandhi,\

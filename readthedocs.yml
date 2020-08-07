@@ -1,5 +1,5 @@
 # readthedocs.yml
-# Read the Docs configuration file for HOOMD-TF
+# Read the Docs configuration file for Hoomd-TF
 
 sphinx:
     configuration: sphinx-docs/source/conf.py

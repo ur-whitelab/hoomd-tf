@@ -1,5 +1,5 @@
-utils
------
+Utilities
+------------
 
 .. rubric:: Overview
 
@@ -12,4 +12,4 @@ These are imported automatically when ``htf`` is imported.
 
 .. automodule:: utils
     :synopsis: Utility functions.
-    :members:           
+    :members:

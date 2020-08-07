@@ -5,13 +5,13 @@ Introduction
 ------------
 
 All contributors to this project are expected to follow the code of conduct
-detailed in this document at all times when engaging with or discussing the HOOMD-TF project.
+detailed in this document at all times when engaging with or discussing the Hoomd-TF project.
 This includes public/private mailing lists, issue tracker threads,
 blogs, personal websites, social media, and any other forms of communication, in-person or otherwise.
 
 This code of conduct is expected to be followed by any and all participants, whether or not they are affiliated with
-the `White Laboratory <https://github.com/ur-whitelab>`_, whether or not they claim affiliation with HOOMD-TF,
-including when representing HOOMD-TF in any capacity.
+the `White Laboratory <https://github.com/ur-whitelab>`_, whether or not they claim affiliation with Hoomd-TF,
+including when representing Hoomd-TF in any capacity.
 
 This code of conduct is not exhaustive and may be subject to changes and improvements in the future. It is meant
 to foster an environment of collaboration and respect. In order to maintain a respectful community, please
