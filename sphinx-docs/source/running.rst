@@ -22,7 +22,7 @@ Use your model like this:
     hoomd.run(...)
 
 
-where ``MyModel`` is model you created following the steps in :doc:`building_the_model`,
+where ``MyModel`` is model you created following the steps in :doc:`building_a_model`,
 ``nlist`` is a hoomd neighbor list object and ``r_cut`` is the
 maximum distance to consider particles as being neighbors. ``nlist``
 is optional and is not required if your graph doesn't use the ``nlist``

@@ -84,7 +84,7 @@ are used to bias the simulation.
 .. _traj_parsing:
 
 Trajectory Parsing
-----------------
+-------------------
 
 To process information from a trajectory, use
 :py:func:`.iter_from_trajectory`. This generator will process information from a trajectory and

@@ -3,6 +3,26 @@
 Compiling
 =========
 
+Quick Install -- No GPU support
+----------------------------------
+
+Try this to install as quickly as possible,
+assuming you have conda
+
+.. code:: bash
+
+  conda create -n htf2 python=3.7
+  source activate htf2
+  conda install -c conda-forge tbb-devel hoomd
+  pip install --upgrade tensorflow
+  git clone https://github.com/ur-whitelab/hoomd-tf
+  cd hoomd-tf && mkdir build && cd build
+  CXX=g++ CC=gcc CMAKE_PREFIX_PATH=$CONDA_PREFIX cmake ..
+  make install && cd ..
+  python htf/test-py/test_sanity.py
+
+Didn't work? Read below for more detailed instructions
+
 Prerequisites
 ----------------
 
@@ -10,6 +30,7 @@ The following packages are required to compile:
 
 ::
 
+    python >= 3.6
     tensorflow >= 2.0
     hoomd >= 2.5.2
     tbb-devel (only for hoomd 2.8 and above if installed with conda)
