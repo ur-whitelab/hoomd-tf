@@ -515,7 +515,7 @@ class test_mol_batching(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        hoomd.context.initialize()
+        self.c = hoomd.context.initialize()
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -534,7 +534,10 @@ class test_mol_batching(unittest.TestCase):
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        assert self.c.sorter.enabled
         tfcompute.attach(nlist, r_cut=rcut)
+        # make sure tfcompute disabled the sorting
+        assert not self.c.sorter.enabled
         hoomd.run(8)
 
     def test_single_atom_batched(self):

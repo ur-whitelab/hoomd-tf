@@ -27,7 +27,7 @@ To compute an RDF, use :py:func:`.compute_rdf`:
             inv_r6 = tf.math.divide_no_nan(1., r**6)
             p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
             # rdf from r = 3 to r = 5
-            rdf, rs = htf.compute_rdf(nlist, positions, [3, 5])
+            rdf, rs = htf.compute_rdf(nlist, [3, 5])
             # compute running mean
             self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
             forces = htf.compute_nlist_forces(nlist, p_energy)

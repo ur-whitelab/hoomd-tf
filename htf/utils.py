@@ -334,6 +334,17 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     :param box_size: A list contain the size of the box ``[Lx, Ly, Lz]``
     :param name: The name of the op to add to the TF graph
     '''
+
+    try:
+        sorting = hoomd.context.current.sorter.enabled
+        if sorting:
+            raise ValueError(
+                'You must disable hoomd sorting to use center_of_mass!')
+    except AttributeError:
+        pass
+
+    # slice to avoid accidents
+    positions = positions[:, :3]
     # https://en.wikipedia.org/wiki/
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions

@@ -448,16 +448,15 @@ def nlist_rinv(nlist):
     return tf.math.divide_no_nan(1.0, r)
 
 
-@tf.function
-def compute_rdf(nlist, type_tensor, r_range, nbins=100, type_i=None, type_j=None):
+def compute_rdf(nlist, r_range, type_tensor=None, nbins=100, type_i=None, type_j=None):
     '''Computes the pairwise radial distribution function
 
     :param nlist: Neighbor list to use for RDF calculation.
     :type nlist: tensor
-    :param type_tensor: ``N x 1`` tensor containing types. Can use ``positions[:, 3]``
-    :type type_tensor: tensor
     :param r_range: A list containing two elements, begin and end, for r range.
     :type r_range: 2 element list
+    :param type_tensor: ``N x 1`` tensor containing types. Can use ``positions[:, 3]``
+    :type type_tensor: tensor
     :param bins: The bins to use for the RDF
     :type bins: int
     :param type_i: Use this to select the first particle type.
@@ -468,9 +467,10 @@ def compute_rdf(nlist, type_tensor, r_range, nbins=100, type_i=None, type_j=None
     :return: length ``nbins`` tensor of the RDF (not normalized).
     '''
     # to prevent type errors later on
-    r_range = [float(r) for r in r_range]
+    r_range = tf.cast(r_range, tf.float32)
     # filter types
-    nlist = masked_nlist(nlist, type_tensor, type_i, type_j)
+    if type_tensor is not None:
+        nlist = masked_nlist(nlist, type_tensor, type_i, type_j)
     r = tf.norm(tensor=nlist[:, :, :3], axis=2)
     hist = tf.cast(tf.histogram_fixed_width(r, r_range, nbins + 2),
                    tf.float32)
@@ -500,7 +500,7 @@ def masked_nlist(nlist, type_tensor, type_i=None, type_j=None):
         nlist = tf.boolean_mask(
             tensor=nlist, mask=tf.equal(type_tensor, type_i))
     if type_j is not None:
-        # cannot use boolean mask due to size
+        # cannot use boolean mask due to shape
         mask = tf.cast(tf.equal(nlist[:, :, 3], type_j), tf.float32)
         nlist = nlist * mask[:, :, tf.newaxis]
     return nlist

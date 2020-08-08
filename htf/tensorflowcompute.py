@@ -96,6 +96,13 @@ class tfcompute(hoomd.compute._compute):
             if hoomd.comm.get_num_ranks() > 1:
                 raise ValueError('Molecular batches are '
                                  'not supported with spatial decomposition (MPI)')
+            # Now we try to disable sorting
+            c = hoomd.context.current.sorter
+            if c is None:
+                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                         'Make sure you disable it to allow molecular batching')
+            else:
+                c.disable()
 
         # get neighbor cutoff
         self.nneighbor_cutoff = self.model.nneighbor_cutoff

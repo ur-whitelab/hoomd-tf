@@ -184,7 +184,9 @@ class LJRDF(htf.SimModel):
         inv_r6 = tf.math.divide_no_nan(1., r**6)
         p_energy = 4.0 / 2.0 * (inv_r6 * inv_r6 - inv_r6)
         # get rdf
-        rdf, rs = htf.compute_rdf(nlist, positions[:, 3], [3, 5])
+        rdf, rs = htf.compute_rdf(nlist, [3, 5], positions[:, 3])
+        # also compute without types
+        _, _ = htf.compute_rdf(nlist, [3, 5])
         # compute running mean
         self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
         forces = htf.compute_nlist_forces(nlist, p_energy)
