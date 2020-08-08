@@ -188,8 +188,8 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     .. code:: python
 
         model = MyModel(16)
-        for input, ts in iter_from_trajectory(16, universe):
-            result = model(input)
+        for inputs, ts in iter_from_trajectory(16, universe):
+            result = model(inputs)
 
     :param nneighbor_cutoff: The maximum size of neighbor list
     :type nneighbor_cutoff: int

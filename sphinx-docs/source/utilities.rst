@@ -97,8 +97,8 @@ Here's an example:
 .. code:: python
 
     model = MyModel(16)
-    for input, ts in iter_from_trajectory(16, universe):
-        result = model(input)
+    for inputs, ts in iter_from_trajectory(16, universe):
+        result = model(inputs)
 
 and here's an example of you can do training, assuming forces exist
 in your ``MDAnalysisUniverse``:
@@ -107,9 +107,9 @@ in your ``MDAnalysisUniverse``:
 
     model = MyModel(16)
     losses = []
-    for input, ts in iter_from_trajectory(16, universe):
+    for inputs, ts in iter_from_trajectory(16, universe):
         forces = ts.forces
-        l = model.train_on_batch(input, forces)
+        l = model.train_on_batch(inputs, forces)
         losses.append(l)
 
 .. _coarse_graining:
