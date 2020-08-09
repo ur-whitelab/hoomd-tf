@@ -83,6 +83,15 @@ class tfcompute(hoomd.compute._compute):
             self._output_offset = 1
         if self.model.virial:
             self._output_offset = 2
+        if train:
+            # figure out from losses
+            try:
+                for i, l in enumerate(self.model.loss):
+                    if l is None:
+                        break
+                self._output_offset = i
+            except AttributeError:
+                raise ValueError('SimModel has not been compiled')
 
         self.train = train
 
@@ -248,6 +257,7 @@ class tfcompute(hoomd.compute._compute):
                     self.cpp_force.getVirialBuffer(),
                     *output[:self._output_offset])
         else:
+            # get inputs
             inputs = self.model.compute_inputs(
                 self.dtype,
                 self.cpp_force.getNlistBuffer(),
@@ -255,6 +265,19 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getBoxBuffer(),
                 batch_frac,
                 self.cpp_force.getForcesBuffer())
+
+            # do we need to save output?
+            if self.save_output_period and self._calls % self.save_output_period == 0:
+                output = self.model(inputs[:-1])
+                if self.outputs is None:
+                    self.outputs = [o.numpy()[np.newaxis, ...]
+                                    for o in output[self._output_offset:]]
+                else:
+                    self.outputs = [
+                        np.append(o1, o2.numpy()[np.newaxis, ...], axis=0)
+                        for o1, o2 in zip(self.outputs, output[self._output_offset:])
+                    ]
+            # now actually train
             self.model.train_on_batch(
                 x=inputs[:-1],
                 y=inputs[-1],

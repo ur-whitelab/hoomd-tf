@@ -463,7 +463,8 @@ def box_size(box):
 @tf.function
 def nlist_rinv(nlist):
     ''' Returns an ``N x NN`` tensor of 1 / r for each neighbor
-    while correctly treating zeros.
+    while correctly treating zeros. Empty neighbors are
+    still zero.
     '''
     r = tf.norm(nlist[:, :, :3], axis=2)
     return tf.math.divide_no_nan(1.0, r)

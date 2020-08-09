@@ -46,7 +46,7 @@ be convenient for computing pairwise energy or forces.
 
     model = build_examples.LJModel(4)
     r = np.linspace(0.5, 1.5, 5)
-    output = hoomd.htf.compute_pairwise(model, r)
+    output = htf.compute_pairwise(model, r)
 
 .. _eds_biasing:
 
@@ -97,7 +97,7 @@ Here's an example:
 .. code:: python
 
     model = MyModel(16)
-    for inputs, ts in iter_from_trajectory(16, universe):
+    for inputs, ts in htf.iter_from_trajectory(16, universe):
         result = model(inputs)
 
 and here's an example of you can do training, assuming forces exist
@@ -107,7 +107,7 @@ in your ``MDAnalysisUniverse``:
 
     model = MyModel(16)
     losses = []
-    for inputs, ts in iter_from_trajectory(16, universe):
+    for inputs, ts in htf.iter_from_trajectory(16, universe):
         forces = ts.forces
         l = model.train_on_batch(inputs, forces)
         losses.append(l)
@@ -127,7 +127,7 @@ To go from atom index to particle index, use the
 
     # The method takes in a hoomd system as an argument.
     ...
-    molecule_mapping_index = hoomd.htf.find_molecules(system)
+    molecule_mapping_index = htf.find_molecules(system)
     ...
 
 Sparse Mapping
