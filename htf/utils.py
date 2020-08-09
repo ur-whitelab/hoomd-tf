@@ -287,25 +287,23 @@ class EDSLayer(tf.keras.layers.Layer):
 
     @tf.function
     def call(self, cv):
-        reset_mask = tf.cast((self.n == 0), self.dtype)
+        reset_mask = tf.cast((self.n != 0), self.dtype)
 
         # reset statistics if n is 0
-        reset_mean = self.mean.assign(self.mean * reset_mask)
-        reset_ssd = self.mean.assign(self.ssd * reset_mask)
+        self.mean.assign(self.mean * reset_mask)
+        self.ssd.assign(self.ssd * reset_mask)
 
         # update statistics
         # do we update? - masked
         update_mask = tf.cast(self.n > self.period // 2, self.dtype)
         delta = (cv - self.mean) * update_mask
         self.mean.assign_add(
-            delta /
-            tf.cast(
-                tf.maximum(
-                    1,
-                    self.n -
-                    self.period //
-                    2),
-                self.dtype))
+            tf.math.divide_no_nan(
+                delta,
+                tf.cast(self.n - self.period // 2, self.dtype)
+            )
+        )
+
         self.ssd.assign_add(delta * (cv - self.mean))
 
         # update grad
