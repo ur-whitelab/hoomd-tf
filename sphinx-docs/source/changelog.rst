@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v2.0-rc
+v2.0
 --------
 
 *New Features*
@@ -14,7 +14,7 @@ v2.0-rc
 
 *Breaking Changes*
 
-- All code must be rewritten following migration guide
+- All code must be rewritten following new syntax
 - feeddict is no longer supported
 - graphbuilder is now SimModel, which must be subclassed
 - Mol batching is now MolSimModel, which must be subclassed
