@@ -111,6 +111,9 @@ class test_mappings(unittest.TestCase):
         positions = tf.cast(
             self.system.take_snapshot().particles.position, tf.float32)
         box_size = [self.system.box.Lx, self.system.box.Ly, self.system.box.Lz]
+        with self.assertRaises(ValueError):
+            com = hoomd.htf.center_of_mass(positions, s, box_size)
+        hoomd.context.current.sorter.disable()
         com = hoomd.htf.center_of_mass(positions, s, box_size)
         non_pbc_com = tf.sparse.sparse_dense_matmul(s, positions)
         # TODO: Come up with a real test of this.
@@ -184,7 +187,6 @@ class test_mappings(unittest.TestCase):
         for i in range(nlist.shape[0]):
             ni = np.sort(nlist[i, :])
             ci = np.sort(cnlist[i, :])
-            print(ni, ci)
             np.testing.assert_array_almost_equal(ni, ci, decimal=5)
 
     def test_compute_pairwise(self):

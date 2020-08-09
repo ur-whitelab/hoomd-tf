@@ -97,7 +97,7 @@ Here is a complete example:
 .. code:: python
 
     class MyModel(htf.SimModel):
-        def compute(self, nlist, positions, box, sample_weight):
+        def compute(self, nlist):
             rinv = htf.nlist_rinv(nlist)
             energy = rinv
             forces = htf.compute_nlist_forces(nlist, energy)

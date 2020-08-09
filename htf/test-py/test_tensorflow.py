@@ -3,7 +3,7 @@
 
 import hoomd
 import hoomd.md
-import hoomd.htf
+import hoomd.htf as htf
 import unittest
 import os
 import tempfile
@@ -46,7 +46,7 @@ class test_access(unittest.TestCase):
 
     def test_access(self):
         model = build_examples.SimplePotential(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 3
         # create a system with a few types
         cell = hoomd.lattice.unitcell(
@@ -84,7 +84,7 @@ class test_compute(unittest.TestCase):
         NN = N - 1
         rcut = 5.0
         model = build_examples.SimplePotential(NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -109,7 +109,7 @@ class test_compute(unittest.TestCase):
         NN = N - 1
         rcut = 5.0
         model = build_examples.SimplePotential(NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -131,7 +131,7 @@ class test_compute(unittest.TestCase):
 
     def test_nonlist(self):
         model = build_examples.BenchmarkNonlistModel(0)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[32, 32])
@@ -143,7 +143,7 @@ class test_compute(unittest.TestCase):
 
     def test_full_batch(self):
         model = build_examples.BenchmarkNonlistModel(0)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[32, 32])
@@ -159,7 +159,7 @@ class test_compute(unittest.TestCase):
             optimizer=tf.keras.optimizers.Nadam(0.01),
             loss='MeanSquaredError')
         start = model.get_layer('lj').trainable_weights[0].numpy()
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
@@ -182,7 +182,7 @@ class test_compute(unittest.TestCase):
             optimizer=tf.keras.optimizers.Nadam(0.01),
             loss='MeanSquaredError')
 
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
@@ -205,7 +205,7 @@ class test_compute(unittest.TestCase):
             optimizer=tf.keras.optimizers.Nadam(0.01),
             loss='MeanSquaredError')
 
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
@@ -226,7 +226,7 @@ class test_compute(unittest.TestCase):
 
         tfcompute.disable()
 
-        tfcompute = hoomd.htf.tfcompute(infer_model)
+        tfcompute = htf.tfcompute(infer_model)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(5)
 
@@ -235,7 +235,7 @@ class test_compute(unittest.TestCase):
         NN = N - 1
         rcut = 5.0
         model = build_examples.PrintModel(NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -250,7 +250,7 @@ class test_compute(unittest.TestCase):
 
     def test_noforce_graph(self):
         model = build_examples.NoForceModel(9, output_forces=False)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
@@ -269,7 +269,7 @@ class test_compute(unittest.TestCase):
 
     def test_wrap(self):
         model = build_examples.WrapModel(0, output_forces=False)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -280,7 +280,7 @@ class test_compute(unittest.TestCase):
 
     def test_skew_fails(self):
         model = build_examples.WrapModel(0, output_forces=False)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -294,7 +294,7 @@ class test_compute(unittest.TestCase):
 
     def test_lj_forces(self):
         model = build_examples.LJModel(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         T = 10
         N = 5 * 5
         rcut = 5.0
@@ -343,7 +343,7 @@ class test_compute(unittest.TestCase):
 
     def test_running_mean(self):
         model = build_examples.LJRunningMeanModel(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
@@ -362,7 +362,7 @@ class test_compute(unittest.TestCase):
         c = hoomd.context.initialize()
         model = build_examples.LJModel(32, output_forces=False)
         model.compile(loss='MeanSquaredError')
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 3.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=2.0),
@@ -392,7 +392,7 @@ class test_compute(unittest.TestCase):
 
     def test_rdf(self):
         model = build_examples.LJRDF(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
@@ -409,7 +409,7 @@ class test_compute(unittest.TestCase):
 
     def test_lj_energy(self):
         model = build_examples.LJModel(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         N = 3 * 3
         NN = N - 1
         T = 10
@@ -438,7 +438,7 @@ class test_compute(unittest.TestCase):
         '''Make sure nlist is full, not half
         '''
         model = build_examples.LJModel(32)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         N = 3 * 3
         NN = N - 1
         T = 10
@@ -463,7 +463,7 @@ class test_compute(unittest.TestCase):
         # matching exactly, I'll leave the tol
         # set that high.
         model = build_examples.LJVirialModel(32, virial=True)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
@@ -527,10 +527,10 @@ class test_mol_batching(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
 
-        mol_indices = hoomd.htf.find_molecules(system)
+        mol_indices = htf.find_molecules(system)
         model = build_examples.LJMolModel(
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
@@ -547,10 +547,10 @@ class test_mol_batching(unittest.TestCase):
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
 
-        mol_indices = hoomd.htf.find_molecules(system)
+        mol_indices = htf.find_molecules(system)
         model = build_examples.LJMolModel(
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
@@ -569,7 +569,7 @@ class test_mol_batching(unittest.TestCase):
         model = build_examples.LJMolModel(
             MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
             nneighbor_cutoff=NN)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
         nlist = hoomd.md.nlist.cell()
@@ -585,7 +585,7 @@ class test_mol_batching(unittest.TestCase):
         model = build_examples.LJMolModel(
             MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
             nneighbor_cutoff=NN, output_forces=False)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
         nlist = hoomd.md.nlist.cell()
@@ -623,7 +623,7 @@ class test_saving(unittest.TestCase):
 
     def test_tensor_save(self):
         model = build_examples.TensorSaveModel(0, output_forces=False)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
         hoomd.md.integrate.mode_standard(dt=0.005)
@@ -634,6 +634,29 @@ class test_saving(unittest.TestCase):
         # reshape to remove batch_size effect
         array = tfcompute.outputs[0].reshape(-1, 9)
         assert array.shape == (4, 9)
+
+
+class test_bad_models(unittest.TestCase):
+    def test_no_compute(self):
+        class MyModel(htf.SimModel):
+            def call(self, x):
+                return x
+        with self.assertRaises(AttributeError):
+            m = MyModel(0)
+
+    def test_no_molcompute(self):
+        class MyModel(htf.MolSimModel):
+            def compute(self, nlist):
+                return nlist
+        with self.assertRaises(AttributeError):
+            MyModel(1, [[1]], 0)
+
+    def test_bad_molargs(self):
+        class MyModel(htf.MolSimModel):
+            def mol_compute(self, nlist):
+                return nlist
+        with self.assertRaises(AttributeError):
+            MyModel(1, [[1]], 0)
 
 
 class test_nlist(unittest.TestCase):
@@ -649,7 +672,7 @@ class test_nlist(unittest.TestCase):
         '''
         N = 8 * 8
         model = build_examples.LJModel(4, check_nlist=True)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         T = 10
         rcut = 10.0
         system = hoomd.init.create_lattice(
@@ -667,7 +690,7 @@ class test_nlist(unittest.TestCase):
     def test_sorted(self):
         N = 8 * 8
         model = build_examples.NlistNN(64, dim=32, top_neighs=8)
-        tfcompute = hoomd.htf.tfcompute(model)
+        tfcompute = htf.tfcompute(model)
         T = 10
         rcut = 10.0
         system = hoomd.init.create_lattice(

@@ -37,6 +37,11 @@ class SimModel(tf.keras.Model):
         self.output_forces = output_forces
         self.virial = virial
 
+        # check if overridden
+        if SimModel.compute == self.__class__.compute:
+            raise AttributeError(
+                'You must implement compute method in subclass')
+
         input_signature = [
             tf.TensorSpec(
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
@@ -46,8 +51,10 @@ class SimModel(tf.keras.Model):
         ]
 
         try:
+            # only expect the number of argument counts
+            self._arg_count = self.compute.__code__.co_argcount - 1  # - 1 for self
             self.compute = tf.function(
-                self.compute, input_signature=input_signature)
+                self.compute, input_signature=input_signature[:self._arg_count])
         except AttributeError:
             raise AttributeError(
                 'SimModel child class must implement compute method, and should not implement call')
@@ -61,7 +68,8 @@ class SimModel(tf.keras.Model):
     def compute(self, nlist, positions, box, sample_weight):
         R'''
         The main method were computation occurs occurs. This method must be implemented
-        by subclass. It should return one or more values as a tuple.
+        by subclass. You may take less args, e.g. ``(nlist, positions)``.
+        It should return one or more values as a tuple.
         The first element is interpreted as forces (if ``output_forces=True``, default).
         Second element is interpreted as virial (if ``virial=True``, not default). Subsequent
         elements of tuple are only accessible if :py:meth:`.tfcompute.attach` is passed
@@ -105,7 +113,7 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
-        out = self.compute(*inputs)
+        out = self.compute(*inputs[:self._arg_count])
         if tf.is_tensor(out):
             out = (out,)
         return out
@@ -237,6 +245,12 @@ class MolSimModel(SimModel):
 
         self.rev_mol_indices = _make_reverse_indices(mol_indices)
 
+        # check if overridden
+        if MolSimModel.mol_compute == self.__class__.mol_compute:
+            raise AttributeError(
+                'You must implement compute method in subclass')
+
+        # currently not used, because compute, which calls this, will be compiled
         input_signature = [
             tf.TensorSpec(
                 shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
@@ -248,7 +262,11 @@ class MolSimModel(SimModel):
             tf.TensorSpec(shape=[])  # batch_frac (sample weight)
         ]
         try:
-            self.mol_compute
+            self._mol_arg_count = self.mol_compute.__code__.co_argcount - 1
+            if self._mol_arg_count < 3:
+                raise AttributeError('You are creating a molecular batched '
+                                     'model, but are only using per atom  nlist/positions. Either '
+                                     'use only SimModel or increase your argument count to mol_compute')
         except AttributeError:
             raise AttributeError(
                 'SimModel child class must implement compute method, '
@@ -259,6 +277,8 @@ class MolSimModel(SimModel):
         See :py:meth:`.SimModel.compute` for details. ``sample_weight``
         is not passed because simulations cannot currently be batched both by size and molecule.
         Make sure that your forces still use ``nlist`` when computing, instead of ``mol_nlist``.
+        You may take less args in your implementation, like
+        ``mol_compute(self, nlist, positions, mol_nlist)``.
 
         :param nlist: an ``N x NN x 4`` tensor containing the nearest
             neighbors. An entry of all zeros indicates that less than ``NN`` nearest
@@ -314,7 +334,8 @@ class MolSimModel(SimModel):
         mol_nlist = tf.reshape(
             tf.gather(an, mol_flat_idx),
             shape=[-1, self.MN, self.nneighbor_cutoff, 4])
-        return self.mol_compute(nlist, positions, mol_nlist, mol_positions, box)
+        inputs = [nlist, positions, mol_nlist, mol_positions, box]
+        return self.mol_compute(*inputs[:self._mol_arg_count])
 
 
 def compute_positions_forces(positions, energy):

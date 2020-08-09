@@ -44,6 +44,9 @@ being considered. This accounts for if you broke-up your simulation by batching 
 Typically, this is only used if you want to correct for this when computing
 averages. If you did not break-up your simulation, it will always be 1.0.
 
+Your function can use fewer tensors, like ``compute(self, nlist)`` if
+desired.
+
 .. _Keras_Model:
 
 Keras Model
@@ -63,7 +66,7 @@ forces.
           self.last = tf.keras.layers.Layer(1)
           self.top_neighs = top_neighs
 
-      def compute(self, nlist, positions, box, sample_weight):
+      def compute(self, nlist):
           rinv = htf.nlist_rinv(nlist)
           # closest neighbors have largest value in 1/r, take top
           top_n = tf.sort(rinv, axis=1, direction='DESCENDING')[
@@ -125,12 +128,12 @@ are the middle atom:
     import hoomd.htf as htf
 
     class MyModel(htf.SimModel):
-      def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
+      def mol_compute(self, nlist, positions, mol_nlist, mol_pos):
             # want slice for all molecules (:)
             # want h1 (0), o (1), h2(2)
             # positions are x,y,z,w. We only want x,y z (:3)
-            v1 = mol_positions[:, 2, :3] - mol_positions[:, 1, :3]
-            v2 = mol_positions[:, 0, :3] - mol_positions[:, 1, :3]
+            v1 = mol_pos[:, 2, :3] - mol_pos[:, 1, :3]
+            v2 = mol_pos[:, 0, :3] - mol_pos[:, 1, :3]
             # compute per-molecule dot product and divide by per molecule norm
             c = tf.einsum('ij,ij->i', v1, v2) / tf.norm(v1, axis=1) / tf.norm(v2 axis=1)
             angles = tf.math.acos(c)
@@ -157,7 +160,7 @@ the neighbor list. For example, to compute a :math:`1 / r` potential:
 
     import hoomd.htf as htf
     class MyModel(htf.SimModel):
-      def compute(self, nlist, positions, box, sample_weight):
+      def compute(self, nlist, positions):
         #remove w since we don't care about types
         r = tf.norm(nlist[:, :, :3], axis=2)
         pairwise_energy = 0.5 * tf.math.divide_no_nan(1, r)
@@ -232,7 +235,7 @@ Lennard-Jones with 1 Particle Type
 .. code:: python
 
   class LJModel(htf.SimModel):
-      def compute(self, nlist, positions, box, sample_weight):
+      def compute(self, nlist):
           # get r
           rinv = htf.nlist_rinv(nlist)
           inv_r6 = rinv**6

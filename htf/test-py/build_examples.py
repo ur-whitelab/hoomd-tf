@@ -8,7 +8,7 @@ import pickle
 
 
 class SimplePotential(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions):
         nlist = nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
         # no need to use netwon's law because nlist should be double counted
@@ -22,7 +22,7 @@ class SimplePotential(htf.SimModel):
 
 
 class BenchmarkPotential(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist):
         rinv = htf.nlist_rinv(nlist)
         energy = rinv
         forces = htf.compute_nlist_forces(nlist, energy)
@@ -30,7 +30,7 @@ class BenchmarkPotential(htf.SimModel):
 
 
 class NoForceModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         neighs_rs = tf.norm(tensor=nlist[:, :, :3], axis=2)
         energy = tf.math.divide_no_nan(tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype),
