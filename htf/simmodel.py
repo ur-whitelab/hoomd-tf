@@ -351,7 +351,7 @@ def compute_positions_forces(positions, energy):
     :type energy: tensor
     :return: Forces as tensor
     '''
-    forces = tf.gradients(energy, positions)[0]
+    forces = -tf.gradients(energy, positions)[0]
     return _add_energy(forces, energy)
 
 
