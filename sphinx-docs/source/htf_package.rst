@@ -1,19 +1,10 @@
-htf
+API
 ---
-
-.. rubric:: Details
-
-HOOMD-blue plus TensorFlow for online machine learning in MD simulations.
-Supports GPU and CPU execution.
-            
 .. rubric:: Modules
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 4
 
-    graphbuilder
-    tfarraycomm
+    simmodel
     tfcompute
-    tfmanager
-    tfarraycomm
     utils

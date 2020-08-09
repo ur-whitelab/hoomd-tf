@@ -1,8 +1,3 @@
-.. HOOMD-TF documentation master file, created by
-   sphinx-quickstart on Mon Feb 10 14:50:12 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 ========
 HOOMD-TF
 ========
@@ -24,7 +19,7 @@ HOOMD-TF includes several utility functions as convenient built-ins, such as:
 In addition to all these, the TensorFlow interface of HOOMD-TF makes implementing arbitrary ML models as easy as it is in TensorFlow, by exposing the HOOMD-blue neighbor list and particle positions to TensorFlow. This enables GPU-accelerated tensor calculations, meaning arbitrary collective variables can be treated in the TensorFlow model framework, as long as they can be expressed as tensor operations on particle positions or neighbor lists.
 
 Citation
--------
+---------
 
 |status|
 
@@ -33,36 +28,33 @@ Citation
 
 Please use the following citation:
 
-   HOOMD-TF: GPU-Accelerated, Online Machine Learning in the Hoomd-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
+   HOOMD-TF: GPU-Accelerated, Online Machine Learning in the HOOMD-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
    HA Gandhi, G Wellawatte, and AD White (2020) *Journal of Open Source Software* doi: 10.21105/joss.02367
 
 
 Tutorial
 --------
 
-See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_ to learn about what Hoomd-TF can do.
+See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/>`_ to learn about what HOOMD-TF can do.
 
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
    :caption: Table of Contents
 
    quickstart
-   code_of_conduct
-   installation
-   unit_tests
-   benchmarking
-   building_the_graph
-   using_the_graph
-   utilities
-   docker_image
+   compilation
    changelog.rst
+   building_a_model
+   running
+   utilities
+   benchmarking
+   unit_tests
+   code_of_conduct
    issues
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Python Code
+   :maxdepth: 1
+   :caption: API
 
    htf_package
-
-* :ref:`search`

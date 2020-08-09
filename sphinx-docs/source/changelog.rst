@@ -1,10 +1,43 @@
 Change Log
 ==========
 
-v1.0.2 (2020-7-27)
+v2.0
+--------
+
+*New Features*
+
+- TensorFlow 2.0 now required
+- Keras models replace computation graphs
+- It is no longer required to save/load models for use
+- Training is handled by Keras/TF functions now
+- Getting values no longer requires save/load, instead everything is accessible in Python
+
+*Breaking Changes*
+
+- All code must be rewritten following new syntax
+- feeddict is no longer supported
+- graphbuilder is now SimModel, which must be subclassed
+- Mol batching is now MolSimModel, which must be subclassed
+- All graphbuilder methods (e.g., compute_rdf) are now functions
+- Code that duplicates Keras functionality is removed:
+    - checkpoint management, model save/load
+    - saving values, computing means, other metrics
+    - saving values over time is now done by tensorboard or other TF/Keras approaches
+- How forces are computed must be explicit and virials are no longer implicit (use modify_virial flag)
+- You can no longer save tensors, instead output what you would like to save in your model code
+- EDS is now layer (EDSLayer)
+- Running from a trajectory is now done via a generator
+
+*Enhancements*
+
+- There is no more multiprocessing required
+- Benchmarks are significantly faster
+
+v1.0.2 (2020-?)
 -------------------
 
 *Bug fixes*
+
 - EDS Bias was not using mean for computing offset
 - Removed stale test-cc directory that caused cmake errors
 
@@ -12,6 +45,7 @@ v1.0.1 (2020-7-27)
 --------------------
 
 *Bug fixes*
+
 - Prevented CPU overflow when nlist is too small (and added unit test)
 - Adding check on mapping validity
 
@@ -20,7 +54,7 @@ v1.0 (2020-7-20)
 
 *JOSS Review*
 
-Hoomd-TF has been published as a `peer-reviewed article <https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90>`_ in the
+HOOMD-TF has been published as a `peer-reviewed article <https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90>`_ in the
 Journal of Open Source Software (JOSS)
 
 *New Features*
@@ -109,7 +143,7 @@ v0.2 (2019-06-03)
 - Added attach `batch_size` argument enabling batching of TF calls
 - Can now batch by molecule, enabling selection/exclusion of molecules
 - Added XLA option to improve TF speed
-- Now possible to compile the plugin after hoomd-blue install
+- Now possible to compile the plugin after HOOMD-blue install
 - Changed name of package to htf instead of tensorflow_plugin
 
 *Enhancements*
@@ -117,16 +151,16 @@ v0.2 (2019-06-03)
 - Changed output logging to only output TF items to the tf_manager.log and
 - Log-level is now consistent with hoomd
 - Added C++ unit tests skeleton in the same format as HOOMD-blue. Compile with -DBUILD_TESTING=ON to use.
-- Switched to hoomd-blue cuda error codes
+- Switched to HOOMD-blue cuda error codes
 - Added MPI tests with domain decomposition
-- Improved style consistency with hoomd-blue
+- Improved style consistency with HOOMD-blue
 - Cmake now checks for TF and hoomd versions while building hoomd-tf.
 
 v0.1 (2019-04-22)
 -----------------
 
 - Made Python packages actual dependencies.
-- Switched to using hoomd-blue cuda error codes.
+- Switched to using HOOMD-blue cuda error codes.
 - Removed TaskLock from C++ code.
 - Documentation updates
 - Included license.
