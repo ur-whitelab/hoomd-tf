@@ -39,6 +39,7 @@ v1.0.2 (2020-7-27)
 *Bug fixes*
 
 - EDS Bias was not using mean for computing offset
+- Removed stale test-cc directory that caused cmake errors
 
 v1.0.1 (2020-7-27)
 --------------------
