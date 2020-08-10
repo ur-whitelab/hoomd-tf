@@ -23,7 +23,7 @@ See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoo
 The following packages are required to compile:
 
     tensorflow >= 2.0
-    hoomd >= 2.5.2
+    hoomd >= 2.6
     tbb-devel (only for hoomd 2.8 and above if installed with conda)
 
 tbb-devel is required for hoomd 2.8 or above when using the

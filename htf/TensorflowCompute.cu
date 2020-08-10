@@ -75,9 +75,6 @@ cudaError_t htf_gpu_add_virial(Scalar *dest, Scalar *src, unsigned int m_N, unsi
 #include "hoomd/Index1D.h"
 #include <assert.h>
 
-//! Texture for reading particle positions
-scalar4_tex_t pdata_pos_tex;
-
 //! Texture for reading the neighbor list
 texture<unsigned int, 1, cudaReadModeElementType> nlist_tex;
 
@@ -187,7 +184,7 @@ cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
     if (max_block_size == UINT_MAX)
         {
         cudaFuncAttributes attr;
-        cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<0>);
+        cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel);
         max_block_size = attr.maxThreadsPerBlock;
         }
 

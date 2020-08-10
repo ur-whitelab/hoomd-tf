@@ -32,7 +32,7 @@ The following packages are required to compile:
 
     python >= 3.6
     tensorflow >= 2.0
-    hoomd >= 2.5.2
+    hoomd >= 2.6.0
     tbb-devel (only for hoomd 2.8 and above if installed with conda)
 
 tbb-devel is required for HOOMD-blue 2.8 or above when using the
@@ -116,7 +116,7 @@ You can check out a specific version of HOOMD-blue now, if desired:
 
 .. code:: bash
 
-    cd hoomd-blue && git checkout tags/v2.5.2
+    cd hoomd-blue && git checkout tags/v2.9.3
 
 Now we put our plugin in the source directory with a softlink:
 
