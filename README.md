@@ -23,7 +23,8 @@ See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoo
 The following packages are required to compile:
 
 * `tensorflow < 2.0`
-* `hoomd-blue >= 2.5.2`
+* `hoomd-blue == 2.5.2 (if GPU)`
+* `hoomd-blue <= 2.5.2 (if CPU)`
 * `numpy`
 * `tbb-devel (only for hoomd-blue 2.8 and above)`
 
