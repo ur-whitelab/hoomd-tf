@@ -81,7 +81,6 @@ scalar4_tex_t pdata_pos_tex;
 //! Texture for reading the neighbor list
 texture<unsigned int, 1, cudaReadModeElementType> nlist_tex;
 
-template<unsigned char use_gmem_nlist>
 __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int N,
                                          const unsigned int NN,
@@ -106,17 +105,14 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
     const unsigned int head_idx = d_head_list[idx];
 
     // read in the position of our particle. Texture reads of Scalar4's are faster than global reads on compute 1.0 hardware
-    Scalar4 postype = texFetchScalar4(d_pos, pdata_pos_tex, idx);
+    Scalar4 postype = __ldg(d_pos + idx);
     Scalar3 pos = make_scalar3(postype.x, postype.y, postype.z);
     unsigned int typei = __scalar_as_int(postype.w);
 
     // prefetch neighbor index
     unsigned int cur_neigh = 0;
     unsigned int next_neigh(0);
-    if (use_gmem_nlist)
-        next_neigh = d_nlist[head_idx];
-    else
-        next_neigh = texFetchUint(d_nlist, nlist_tex, head_idx);
+    next_neigh =  __ldg(d_nlist + head_idx);
 
     unsigned int dest_idx = 0;
     for (int neigh_idx = 0; neigh_idx < n_neigh; neigh_idx++)
@@ -125,13 +121,10 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
         // read the current neighbor index
         // prefetch the next value and set the current one
         cur_neigh = next_neigh;
-        if (use_gmem_nlist)
-            next_neigh = d_nlist[head_idx + neigh_idx + 1];
-        else
-            next_neigh = texFetchUint(d_nlist, nlist_tex, head_idx + neigh_idx+1);
+        next_neigh = __ldg(d_nlist + head_idx + neigh_idx+1);
 
         // get the neighbor's position
-        Scalar4 neigh_postype = texFetchScalar4(d_pos, pdata_pos_tex, cur_neigh);
+        Scalar4 neigh_postype = __ldg(d_pos + cur_neigh);
         Scalar3 neigh_pos = make_scalar3(neigh_postype.x, neigh_postype.y, neigh_postype.z);
 
         // calculate dr (with periodic boundary conditions)
@@ -154,7 +147,7 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
             dest[(idx - offset) * NN + dest_idx].w = static_cast<Scalar> (typej);
 	    dest_idx += 1;
 	    // prevent overflow. Note this should not happen
-	    // we check for it later, but this prevents 
+	    // we check for it later, but this prevents
 	    // illegeal mem access
 	    dest_idx %= NN;
             }
@@ -190,86 +183,31 @@ cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
     //set neighbors to zeros
     cudaMemset(dest, 1, batch_size * NN * sizeof(Scalar4));
 
-    // texture bind
-    if (compute_capability < 350)
+    static unsigned int max_block_size = UINT_MAX;
+    if (max_block_size == UINT_MAX)
         {
-        // bind the pdata position texture
-        pdata_pos_tex.normalized = false;
-        pdata_pos_tex.filterMode = cudaFilterModePoint;
-        cudaError_t error = cudaBindTexture(0,
-                                            pdata_pos_tex,
-                                            d_pos,
-                                            sizeof(Scalar4) * (N+n_ghost));
-        if (error != cudaSuccess)
-            return error;
-
-        if (size_nlist <= max_tex1d_width)
-            {
-            nlist_tex.normalized = false;
-            nlist_tex.filterMode = cudaFilterModePoint;
-            error = cudaBindTexture(0, nlist_tex, d_nlist, sizeof(unsigned int)*size_nlist);
-            if (error != cudaSuccess)
-                return error;
-            }
+        cudaFuncAttributes attr;
+        cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<0>);
+        max_block_size = attr.maxThreadsPerBlock;
         }
 
-    if (compute_capability < 350 && size_nlist > max_tex1d_width)
-        {
-        // use global memory when the neighbor list must be texture bound,
-        // but exceeds the max size of a texture
-        static unsigned int max_block_size = UINT_MAX;
-        if (max_block_size == UINT_MAX)
-            {
-            cudaFuncAttributes attr;
-            cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<1>);
-            max_block_size = attr.maxThreadsPerBlock;
-            }
+    unsigned int run_block_size = min(block_size, max_block_size);
 
-        unsigned int run_block_size = min(block_size, max_block_size);
+    // setup the grid to run the kernel
+    dim3 grid( batch_size / run_block_size + 1, 1, 1);
+    dim3 threads(run_block_size, 1, 1);
+    htf_gpu_reshape_nlist_kernel<<< grid, threads, 0, stream>>>(dest,
+        N,
+        NN,
+        offset,
+        batch_size,
+        d_pos,
+        box,
+        d_n_neigh,
+        d_nlist,
+        d_head_list,
+        rmax);
 
-        // setup the grid to run the kernel
-        dim3 grid( batch_size / run_block_size + 1, 1, 1);
-        dim3 threads(run_block_size, 1, 1);
-
-        htf_gpu_reshape_nlist_kernel<1><<< grid, threads, 0, stream>>>(dest,
-            N,
-            NN,
-            offset,
-            batch_size,
-            d_pos,
-            box,
-            d_n_neigh,
-            d_nlist,
-            d_head_list,
-            rmax);
-    }
-    else
-    {
-        static unsigned int max_block_size = UINT_MAX;
-        if (max_block_size == UINT_MAX)
-            {
-            cudaFuncAttributes attr;
-            cudaFuncGetAttributes(&attr, htf_gpu_reshape_nlist_kernel<0>);
-            max_block_size = attr.maxThreadsPerBlock;
-            }
-
-        unsigned int run_block_size = min(block_size, max_block_size);
-
-        // setup the grid to run the kernel
-        dim3 grid( batch_size / run_block_size + 1, 1, 1);
-        dim3 threads(run_block_size, 1, 1);
-        htf_gpu_reshape_nlist_kernel<0><<< grid, threads, 0, stream>>>(dest,
-            N,
-            NN,
-            offset,
-            batch_size,
-            d_pos,
-            box,
-            d_n_neigh,
-            d_nlist,
-            d_head_list,
-            rmax);
-    }
 
     return cudaSuccess;
 
