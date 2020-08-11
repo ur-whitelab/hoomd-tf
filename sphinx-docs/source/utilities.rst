@@ -88,7 +88,8 @@ Trajectory Parsing
 
 To process information from a trajectory, use
 :py:func:`.iter_from_trajectory`. This generator will process information from a trajectory and
-yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
+yield a tuple of  ``[nlist, positions, box, sample_weight]`` (see :py:meth:`.SimModel.compute` for details)
+and ``MDAnalysis.TimeStep`` object.
 The first list can be directly called with a :py:class:`.SimModel` (e.g., ``model(inputs)``).
 The ``MDAnalysis.TimeStep`` object can be used to compute other properties with MDAnalysis.
 
@@ -99,6 +100,8 @@ Here's an example:
     model = MyModel(16)
     for inputs, ts in htf.iter_from_trajectory(16, universe):
         result = model(inputs)
+        positions = inputs[1]
+        # compute something with position...
 
 and here's an example of you can do training, assuming forces exist
 in your ``MDAnalysisUniverse``:
