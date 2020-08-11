@@ -10,25 +10,25 @@ import tempfile
 import shutil
 
 
-def run_tf_lj(N, T, directory='/tmp/test-lj-potential-model'):
-    model_dir = build_examples.lj_graph(N - 1, directory)
-    with hoomd.htf.tfcompute(model_dir) as tfcompute:
-        rcut = 5.0
-        system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                     n=[np.sqrt(N).astype(np.int),
-                                        np.sqrt(N).astype(np.int)])
-        nlist = md.nlist.cell()
-        md.integrate.mode_standard(dt=0.005)
-        md.integrate.nvt(group=hoomd.group.all(),
-                         kT=1, tau=0.2).randomize_velocities(seed=1)
-        tfcompute.attach(nlist, r_cut=rcut)
-        hoomd.run(2)
-        tf_forces = []
-        for i in range(T):
-            hoomd.run(1)
-            snapshot = system.take_snapshot()
-            tf_forces.append([system.particles[j].net_force for j in range(N)])
-        tf_forces = np.array(tf_forces)
+def run_tf_lj(N, T):
+    model = build_examples.LJModel(256)
+    tfcompute = hoomd.htf.tfcompute(model)
+    rcut = 5.0
+    system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
+                                 n=[np.sqrt(N).astype(np.int),
+                                    np.sqrt(N).astype(np.int)])
+    nlist = md.nlist.cell()
+    md.integrate.mode_standard(dt=0.005)
+    md.integrate.nvt(group=hoomd.group.all(),
+                     kT=1, tau=0.2).randomize_velocities(seed=1)
+    tfcompute.attach(nlist, r_cut=rcut)
+    hoomd.run(2)
+    tf_forces = []
+    for i in range(T):
+        hoomd.run(1)
+        snapshot = system.take_snapshot()
+        tf_forces.append([system.particles[j].net_force for j in range(N)])
+    tf_forces = np.array(tf_forces)
     return tf_forces
 
 
@@ -54,16 +54,11 @@ def run_hoomd_lj(N, T):
 
 
 class test_mpi(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self.tmp)
 
     def test_lj_forces(self):
         # need to be big enough for MPI testing
         # Needs to be perfect square
-        N = 225
+        N = 1024
         T = 32
         # try normal and then uneven fraction
         params = [{'nx': 2}, {'x': [0.33]}]
@@ -71,7 +66,7 @@ class test_mpi(unittest.TestCase):
             with self.subTest(decomp=p):
                 hoomd.context.initialize()
                 comm.decomposition(**p)
-                tf_forces = run_tf_lj(N, T, self.tmp)
+                tf_forces = run_tf_lj(N, T)
                 hoomd.context.initialize()
                 comm.decomposition(**p)
                 hoomd_forces = run_hoomd_lj(N, T)

@@ -1,12 +1,14 @@
 tfcompute
 ---------
 
-.. rubric:: Overview
+Note ``tfcompute`` is available as ``htf.tfcompute``
 
 .. py:currentmodule:: htf
 
 .. rubric:: Details
 
-.. automodule:: tensorflowcompute
-    :synopsis: TensorFlow computations for HTF
+.. autoclass:: htf.tensorflowcompute.tfcompute
     :members:
+    :inherited-members:
+
+    .. automethod:: htf.tensorflowcompute.tfcompute.__init__

@@ -23,7 +23,7 @@ set(_${COMPONENT_NAME}_cu_sources
   if(NOT IGNORE_HTF_COMPILER)
     set(TF_REQUIRE_COMPILER ${CMAKE_CXX_COMPILER_VERSION})
   endif()
-set(TF_REQUIRE_VERSION "1.12")
+set(TF_REQUIRE_VERSION "2.0")
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -W ignore ${CMAKE_CURRENT_SOURCE_DIR}/check_tf_version.py ${TF_REQUIRE_VERSION} ${TF_REQUIRE_COMPILER}
     RESULT_VARIABLE ret)
 if(ret EQUAL "1")
@@ -100,11 +100,10 @@ ENDMACRO(copy_file)
 set(files
     __init__.py
     tensorflowcompute.py
-    graphbuilder.py
     tfarraycomm.py
-    tfmanager.py
-    utils.py
     version.py
+    simmodel.py
+    utils.py
     )
 
 install(FILES ${files}
@@ -119,6 +118,5 @@ add_custom_target(copy_${COMPONENT_NAME} ALL DEPENDS ${files})
 
 if(BUILD_TESTING)
     add_subdirectory(test-py)
-    add_subdirectory(test-cc)
 endif()
 

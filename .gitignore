@@ -52,3 +52,7 @@ build/*
 __pycache__/
 
 sphinx-docs/docs_out/**
+
+#jupyter notebooks
+
+*.ipynb_checkpoints

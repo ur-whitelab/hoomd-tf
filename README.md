@@ -1,8 +1,8 @@
-# Hoomd-TF
+# HOOMD-TF
 
-Markdown: [![status](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90/status.svg)](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90)
+[![status](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90/status.svg)](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90)
 
-This plugin enables the use of TensorFlow in a [Hoomd-blue](http://glotzerlab.engin.umich.edu/hoomd-blue/) simulation to compute quantities like forces and collective variables and do learning while running a simulation. You may also use it without hoomd-blue to process trajectories via [MDAnalysis](https://www.mdanalysis.org/). Please see [here for documentation](https://hoomd-tf.readthedocs.io/en/latest) for install and usage instructions.
+This plugin enables the use of TensorFlow in a [HOOMD-blue](http://glotzerlab.engin.umich.edu/hoomd-blue/) simulation to compute quantities like forces and collective variables and do learning while running a simulation. You may also use it without hoomd-blue to process trajectories via [MDAnalysis](https://www.mdanalysis.org/). Please see [here for documentation](https://hoomd-tf.readthedocs.io/en/latest) for install and usage instructions.
 
 HOOMD-TF can be used for a variety of tasks such as online force-matching, online machine learning in HOOMD-blue simulations, and arbitrary collective variable calculations using TensorFlow tensor operations. Because both HOOMD-blue and TensorFlow are GPU-accelerated, HOOMD-TF was designed with speed in mind, and minimizes latency with a GPU-GPU communication scheme. Of particular interest, HOOMD-TF allows for online machine learning with early termination, rather than the more tradditional batch learning approach for MD+ML.
 
@@ -15,33 +15,28 @@ In addition to all these, the TensorFlow interface of HOOMD-TF makes implementin
 
 # Tutorials
 
-See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/) to learn about what Hoomd-TF can do.
+See [example notebooks here](https://nbviewer.jupyter.org/github/ur-whitelab/hoomd-tf/tree/master/examples/) to learn about what HOOMD-TF can do.
 
 
 # Prerequisites
 
 The following packages are required to compile:
 
-* `tensorflow < 2.0`
-* `hoomd-blue >= 2.5.2`
-* `numpy`
-* `tbb-devel (only for hoomd-blue 2.8 and above)`
+    tensorflow >= 2.0
+    hoomd >= 2.6
+    tbb-devel (only for hoomd 2.8 and above if installed with conda)
 
-tbb-devel is required for hoomd-blue 2.8 or above when using the
-hoomd-blue conda release. It is not automatically installed when
-installing hoomd-blue, so use `conda install -c conda-forge
-tbb-devel` to install. The Tensorflow version should be any
-Tensorflow 1 release. The higher versions, like 1.14, 1.15, will give
-lots of warnings about migrating code to Tensorflow 2.0. It is
-recommended you install via pip:
-
-    pip install tensorflow-gpu==1.15.0
+tbb-devel is required for hoomd 2.8 or above when using the
+HOOMD-blue conda release. It is not automatically installed when
+installing HOOMD-blue, so use `conda install -c conda-forge tbb-devel`
+to install. The TensorFlow version should be any TensorFlow 2 release.
+It is recommended you install via pip.
 
 # Citation
 
 Please use the following citation:
 
-> HOOMD-TF: GPU-Accelerated, Online Machine Learning in the Hoomd-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
+> HOOMD-TF: GPU-Accelerated, Online Machine Learning in the HOOMD-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
 > HA Gandhi, G Wellawatte, and AD White (2020) *Journal of Open Source Software* doi: 10.21105/joss.02367
 
 &copy; University of Rochester
