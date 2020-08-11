@@ -228,7 +228,7 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         There should be one matrix per molecule.
         The ordering of the atoms should follow
         what is defined in the output from find_molecules
-    :param molecule_mapping_index: This is the output from find_molecules. 
+    :param molecule_mapping_index: This is the output from find_molecules.
          A list of length L (number of molecules) whose elements are lists of atom indices
     :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
@@ -435,11 +435,11 @@ def eds_bias(cv, set_point, period, learning_rate=1, cv_scale=1, name=None):
     n = tf.get_variable('{}.n'.format(name), initializer=0, trainable=False)
     alpha = tf.get_variable('{}.a'.format(name), initializer=0.0)
 
-    reset_mask = tf.cast((n == 0), tf.float32)
+    reset_mask = tf.cast((n != 0), tf.float32)
 
     # reset statistics if n is 0
     reset_mean = mean.assign(mean * reset_mask)
-    reset_ssd = mean.assign(ssd * reset_mask)
+    reset_ssd = ssd.assign(ssd * reset_mask)
 
     # update statistics
     # do we update? - masked
