@@ -133,13 +133,14 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         for the mapping, if you would like to
         weight by mass of the atoms.
 
-    :return: A sparse tensorflow tensor of dimension N x N,
-        where N is number of atoms
+    :return: A sparse tensorflow tensor of dimension M x N,
+        where M is the number of molecules and N is number of atoms
     '''
     assert type(molecule_mapping[0]) == np.ndarray
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
-    M = sum([m.shape[0] for m in molecule_mapping])
+    # get number of molecules
+    M = len(molecule_mapping_index)
     # create indices
     indices = []
     values = []
