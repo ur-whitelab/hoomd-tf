@@ -3,9 +3,12 @@ name: HTF v2
 on:
   push:
     branches: [ master ]
+    tags: 
+      - v2.0.1
   pull_request:
     branches: [ master ]
-    tags: -v2.0.1
+    tags: 
+      - v2.0.1
 
 jobs:
   build:
