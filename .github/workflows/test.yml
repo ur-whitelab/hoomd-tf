@@ -1,4 +1,4 @@
-name: HTF v2
+name: tests
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov
+        pip install pytest-cov pytest-xdist
         
         # Install software dependencies
         pip install tensorflow==2.3.0
@@ -25,9 +25,9 @@ jobs:
     - name: Download and install HTF
       run: |
         mkdir build && cd build
-        CXX=g++ CC=gcc CMAKE_PREFIX_PATH=$CONDA_PREFIX cmake ..
+        CXX=g++ CC=gcc CMAKE_PREFIX_PATH=/usr/share/miniconda cmake ..
         make install
         cd ..
     - name: Run tests
       run: |
-        pytest
+        pytest -v --forked
