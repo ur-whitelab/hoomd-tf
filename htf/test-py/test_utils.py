@@ -42,6 +42,29 @@ class test_mappings(unittest.TestCase):
         assert len(mapping) == 9
         assert len(mapping[0]) == 10
 
+    def test_bad_sparse_mapping(self):
+        mapping_matrix = np.array([
+            [1, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [1, 0, 0],
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1],
+            [1, 0, 0],
+            [0, 1, 0]]).transpose()
+        mapping = hoomd.htf.find_molecules(self.system)
+        # bad length
+        with self.assertRaises(ValueError):
+            s = hoomd.htf.sparse_mapping(
+                mapping_matrix, mapping)
+        # bad shape
+        mapping_matrix = mapping_matrix[:, :-1]
+        with self.assertRaises(ValueError):
+            s = hoomd.htf.sparse_mapping(
+                [mapping_matrix for _ in mapping], mapping)
+
     def test_sparse_mapping(self):
         '''Checks the sparse mapping when used for
         summing forces, not center of mass
