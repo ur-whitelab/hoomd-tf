@@ -24,7 +24,7 @@ where ``NN`` is the maximum number of nearest neighbors to consider
 are unsure, you can guess and add ``check_nlist = True`` to your
 constructor. This will cause the program to halt if you choose too low.
 ``output_forces`` indicates if the model will output forces to use in
-the simulation. In the ``compute`` function you will have three
+the simulation. In the :py:meth:`.SimModel.compute` function you will have three
 tensors that can be used:``nlist``, ``positions``, ``box``:
 
 * ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest

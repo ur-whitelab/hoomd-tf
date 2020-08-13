@@ -1,8 +1,15 @@
 Change Log
-==========
+===========
 
-v2.0
---------
+v2.0.1 (2020-08-11)
+--------------------
+
+*Breaking Changes*
+
+- Hoomd 2.6 or above is now required for GPU
+
+v2.0 (2020-08-08)
+-------------------
 
 *New Features*
 

@@ -248,7 +248,7 @@ class MolSimModel(SimModel):
         # check if overridden
         if MolSimModel.mol_compute == self.__class__.mol_compute:
             raise AttributeError(
-                'You must implement compute method in subclass')
+                'You must implement mol_compute method in subclass of MolSimModel')
 
         # currently not used, because compute, which calls this, will be compiled
         input_signature = [
@@ -269,7 +269,7 @@ class MolSimModel(SimModel):
                                      'use only SimModel or increase your argument count to mol_compute')
         except AttributeError:
             raise AttributeError(
-                'SimModel child class must implement compute method, '
+                'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box):

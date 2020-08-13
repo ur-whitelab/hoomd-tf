@@ -181,7 +181,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
 def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
     ''' This generator will process information from a trajectory and
     yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
-    The first list can be directly called with a :py:class:`.SimModel` (e.g., ``model(inputs)``).
+    The first list can be directly used to call a :py:class:`.SimModel` (e.g., ``model(inputs)``).
+    See :py:meth:`.SimModel.compute` for details of these terms.
 
     Here's an example:
 
