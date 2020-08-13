@@ -5,6 +5,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+    tags: -v2.0.1
 
 jobs:
   build:
@@ -22,7 +23,7 @@ jobs:
         # Install software dependencies
         conda install -c conda-forge tbb-devel
         pip install tensorflow==2.3.0
-        conda install -c conda-forge hoomd==2.9.3
+        conda install -c conda-forge hoomd
     - name: Download and install HTF
       run: |
         cd hoomd-tf && mkdir build && cd build
