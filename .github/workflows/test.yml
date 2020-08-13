@@ -5,8 +5,6 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-    tags: 
-      - v2.0.1
 
 jobs:
   build:
@@ -22,13 +20,12 @@ jobs:
         pip install pytest-cov
         
         # Install software dependencies
-        conda install -c conda-forge tbb-devel
         pip install tensorflow==2.3.0
-        conda install -c conda-forge hoomd
+        conda install -c conda-forge tbb-devel hoomd
     - name: Download and install HTF
       run: |
-        cd hoomd-tf && mkdir build && cd build
-        CXX=g++ CC=gcc cmake ..
+        mkdir build && cd build
+        CXX=g++ CC=gcc CMAKE_PREFIX_PATH=$CONDA_PREFIX cmake ..
         make install
         cd ..
     - name: Run tests
