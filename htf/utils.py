@@ -119,16 +119,20 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     ''' This will create the necessary indices and values for
     defining a sparse tensor in
-    tensorflow that is a mass-weighted M x N mapping operator.
+    tensorflow that is a mass-weighted $B \times N$ mapping operator.
+    where $B$ is the number of coarse-grained beads.
+    This is a slow function and should not be called frequently.
 
     :param molecule_mapping: This is a list of L x M matrices, where M is the number
-        of atoms in the molecule and L is the number of coarse-grain
-        sites that should come out of the mapping.
+        of atoms in the molecule and L is the number of coarse-grained
+        beads. These dimensions can be different for different molecules.
         There should be one matrix per molecule.
-        The ordering of the atoms should follow
-        what is defined in the output from find_molecules
+        The ordering of the atoms should follow what is
+        passed in from ``molecule_mapping_index``
+    :type molecule_mapping: list of numpy arrays
     :param molecule_mapping_index: This is the output from find_molecules.
-         A list of length L (number of molecules) whose elements are lists of atom indices
+         A list of the same length as ``molecule_mapping`` whose elements are lists of atom indices
+    :type molecule_mapping_index: list of lists
     :param system: The hoomd system. This is used to get mass values
         for the mapping, if you would like to
         weight by mass of the atoms.
@@ -136,16 +140,27 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
     :return: A sparse tensorflow tensor of dimension M x N,
         where M is the number of molecules and N is number of atoms
     '''
-    assert type(molecule_mapping[0]) == np.ndarray
+    if type(molecule_mapping[0]) != np.ndarray:
+        raise TypeError('molecule_mapping should be list of numpy arrays')
     # get system size
     N = sum([len(m) for m in molecule_mapping_index])
-    # get number of molecules
-    M = len(molecule_mapping_index)
+    # get number of output CG bead sites
+    B = sum([m.shape[0] for m in molecule_mapping])
     # create indices
     indices = []
     values = []
     total_i = 0
-    for mmi, mm in zip(molecule_mapping_index, molecule_mapping):
+
+    if len(molecule_mapping_index) != len(molecule_mapping):
+        raise ValueError(
+            'Length of molecule_mapping_index and molecule_mapping must match')
+
+    for i, (mmi, mm) in enumerate(zip(molecule_mapping_index, molecule_mapping)):
+        # check dimensions are valid
+        if len(mmi) != mm.shape[1]:
+            raise ValueError(
+                f'Mismatch in shapes of molecule_mapping_index and molecule_mapping at index {i}. '
+                f'shape {len(mmi)} is incompatible with {mm.shape}')
         idx = []
         vs = []
         masses = [0 for _ in range(mm.shape[0])]
@@ -176,7 +191,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         indices.extend(idx)
         values.extend(vs)
         total_i += len(masses)
-    return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[M, N])
+    assert total_i == B, 'Indices failed!'
+    return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[B, N])
 
 
 def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
