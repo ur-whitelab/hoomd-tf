@@ -1,5 +1,12 @@
 Change Log
-===========
+==========
+
+v2.1 (2020-08-11)
+--------------------
+
+*Enhancements*
+
+- Added error checks on mapping shapes
 
 v2.0.1 (2020-08-11)
 --------------------
