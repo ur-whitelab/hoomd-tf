@@ -31,15 +31,15 @@ The following packages are required to compile:
 ::
 
     python >= 3.6
-    tensorflow >= 2.0
+    tensorflow == 2.3.0
     hoomd >= 2.6.0
     tbb-devel (only for hoomd 2.8 and above if installed with conda)
 
 tbb-devel is required for HOOMD-blue 2.8 or above when using the
 HOOMD-blue conda release. It is not automatically installed when
 installing HOOMD-blue, so use ``conda install -c conda-forge
-tbb-devel`` to install. The TensorFlow version should be any
-TensorFlow 2 release. It is recommended you install via pip:
+tbb-devel`` to install. The TensorFlow version should be
+TensorFlow 2.3 release. It is recommended you install via pip:
 
 .. code:: bash
 
