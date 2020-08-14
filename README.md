@@ -1,6 +1,9 @@
 # HOOMD-TF
 
 [![status](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90/status.svg)](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90)
+[![Documentation Status](https://readthedocs.org/projects/hoomd-tf/badge/?version=latest)](https://hoomd-tf.readthedocs.io/en/latest/?badge=latest)
+[![Build Stats](https://github.com/ur-whitelab/hoomd-tf/workflows/tests/badge.svg)](https://github.com/ur-whitelab/hoomd-tf/workflows/tests)
+
 
 This plugin enables the use of TensorFlow in a [HOOMD-blue](http://glotzerlab.engin.umich.edu/hoomd-blue/) simulation to compute quantities like forces and collective variables and do learning while running a simulation. You may also use it without hoomd-blue to process trajectories via [MDAnalysis](https://www.mdanalysis.org/). Please see [here for documentation](https://hoomd-tf.readthedocs.io/en/latest) for install and usage instructions.
 
