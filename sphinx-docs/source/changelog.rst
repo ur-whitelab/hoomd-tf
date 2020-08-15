@@ -6,6 +6,7 @@ v1.0.2 (2020-8-14)
 
 *Bug fixes*
 - EDS Bias was not using mean for computing offset
+- EDS Bias was not resetting statistics correctly
 - Removed stale test-cc directory that caused cmake errors
 
 v1.0.1 (2020-7-27)
