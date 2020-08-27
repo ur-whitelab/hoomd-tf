@@ -220,6 +220,7 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     :param period: Period of reading the trajectory frames
     :type period: int
     '''
+    import MDAnalysis
     # read trajectory
     box = universe.dimensions
     # define the system
@@ -228,10 +229,14 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
     # get unique atom types in the selected atom group
-    types = list(np.unique(atom_group.atoms.types))
-    # associate atoms types with individual atoms
-    type_array = np.array([types.index(i)
-                           for i in atom_group.atoms.types]).reshape(-1, 1)
+    try:
+        types = list(np.unique(atom_group.atoms.types))
+        # associate atoms types with individual atoms
+        type_array = np.array([types.index(i)
+                               for i in atom_group.atoms.types]).reshape(-1, 1)
+    except MDAnalysis.exceptions.NoDataError:
+        type_array = np.zeros(len(atom_group)).reshape(-1, 1)
+
     # define nlist operation
     # box_size = [box[0], box[1], box[2]]
     nlist = compute_nlist(atom_group.positions, r_cut=r_cut,

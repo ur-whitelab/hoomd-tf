@@ -33,6 +33,12 @@ To compute an RDF, use :py:func:`.compute_rdf`:
             forces = htf.compute_nlist_forces(nlist, p_energy)
             return forces
 
+Then after your simulation, access the RDF as a numpy array with:
+
+.. code:: python
+
+    rdf = model.avg_rdf.result().numpy()
+
 .. _pairwise_potentials:
 
 Pairwise Potential and Forces
