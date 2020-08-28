@@ -60,10 +60,10 @@ class SimModel(tf.keras.Model):
             if self._pass_training:
                 self._arg_count -= 1
                 # We cannot trace it, so no use of input_sig
-                self.compute = tf.function(self.compute)
+                self._compute = tf.function(self.compute)
 
             else:
-                self.compute = tf.function(
+                self._compute = tf.function(
                     self.compute, input_signature=input_signature[:self._arg_count])
         except AttributeError:
             raise AttributeError(
@@ -124,12 +124,29 @@ class SimModel(tf.keras.Model):
 
     def call(self, inputs, training):
         if self._pass_training:
-            out = self.compute(*inputs[:self._arg_count], training)
+            out = self._compute(*inputs[:self._arg_count], training)
         else:
-            out = self.compute(*inputs[:self._arg_count])
+            out = self._compute(*inputs[:self._arg_count])
         if tf.is_tensor(out):
             out = (out,)
         return out
+
+    def retrace_compute(self):
+        R'''
+        Force a retrace of the compute function. This is necessary
+        if your compute function depends variables inside ``self``.
+        For  example:
+
+        .. code:: python
+            def compute(self, nlist):
+                if self.flag:
+                    nlist *= 2
+
+        If ``self.flag`` is changed after executing your model,
+        you must call this function to force TF retrace your function.
+
+        '''
+        self._compute = tf.function(self.compute)
 
     @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr,

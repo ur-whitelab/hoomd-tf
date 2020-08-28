@@ -159,6 +159,7 @@ class TrainModel(htf.SimModel):
         self.dense2 = tf.keras.layers.Layer(dim)
         self.last = tf.keras.layers.Layer(1)
         self.top_neighs = top_neighs
+        self.output_zero = False
 
     def compute(self, nlist, positions, training):
         rinv = htf.nlist_rinv(nlist)
@@ -171,8 +172,11 @@ class TrainModel(htf.SimModel):
         energy = self.last(x)
         if training:
             energy *= 2
+
         forces = htf.compute_nlist_forces(nlist, energy)
-        return forces
+        if self.output_zero:
+            energy *= 0.
+        return forces, tf.reduce_sum(energy)
 
 
 class LJRunningMeanModel(htf.SimModel):
