@@ -240,7 +240,7 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getBoxBuffer(),
                 batch_frac)
 
-            output = self.model(inputs)
+            output = self.model(inputs, self.train)
             if self.save_output_period and self._calls % self.save_output_period == 0:
                 if self.outputs is None:
                     self.outputs = [o.numpy()[np.newaxis, ...]
@@ -268,7 +268,7 @@ class tfcompute(hoomd.compute._compute):
 
             # do we need to save output?
             if self.save_output_period and self._calls % self.save_output_period == 0:
-                output = self.model(inputs[:-1])
+                output = self.model(inputs[:-1], self.train)
                 if self.outputs is None:
                     self.outputs = [o.numpy()[np.newaxis, ...]
                                     for o in output[self._output_offset:]]

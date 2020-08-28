@@ -53,8 +53,18 @@ class SimModel(tf.keras.Model):
         try:
             # only expect the number of argument counts
             self._arg_count = self.compute.__code__.co_argcount - 1  # - 1 for self
-            self.compute = tf.function(
-                self.compute, input_signature=input_signature[:self._arg_count])
+            # check if training is needed
+            self._pass_training = 'training' == self.compute.__code__.co_varnames[
+                self._arg_count]
+            # remove one arg for training arg
+            if self._pass_training:
+                self._arg_count -= 1
+                # We cannot trace it, so no use of input_sig
+                self.compute = tf.function(self.compute)
+
+            else:
+                self.compute = tf.function(
+                    self.compute, input_signature=input_signature[:self._arg_count])
         except AttributeError:
             raise AttributeError(
                 'SimModel child class must implement compute method, and should not implement call')
@@ -65,7 +75,7 @@ class SimModel(tf.keras.Model):
         self._running_means = []
         self.setup(**kwargs)
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box, sample_weight, training=True):
         R'''
         The main method were computation occurs occurs. This method must be implemented
         by subclass. You may take less args, e.g. ``(nlist, positions)``.
@@ -113,7 +123,10 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
-        out = self.compute(*inputs[:self._arg_count])
+        if self._pass_training:
+            out = self.compute(*inputs[:self._arg_count], training)
+        else:
+            out = self.compute(*inputs[:self._arg_count])
         if tf.is_tensor(out):
             out = (out,)
         return out

@@ -407,6 +407,26 @@ class test_compute(unittest.TestCase):
         assert len(rdf) > 5
         assert np.sum(rdf) > 0
 
+    def test_training_flag(self):
+        model = build_examples.TrainModel(4, dim=1, top_neighs=2)
+        model.compile(
+            optimizer=tf.keras.optimizers.Nadam(0.01),
+            loss='MeanSquaredError')
+        tfcompute = htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, train=True, r_cut=rcut, batch_size=4)
+        hoomd.run(10)
+
+        tfcompute.attach(nlist, train=False, r_cut=rcut, batch_size=4)
+        hoomd.run(10)
+
     def test_lj_energy(self):
         model = build_examples.LJModel(32)
         tfcompute = htf.tfcompute(model)

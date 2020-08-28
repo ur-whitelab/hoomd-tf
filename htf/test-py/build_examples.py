@@ -153,6 +153,28 @@ class NlistNN(htf.SimModel):
         return forces
 
 
+class TrainModel(htf.SimModel):
+    def setup(self, dim, top_neighs):
+        self.dense1 = tf.keras.layers.Layer(dim)
+        self.dense2 = tf.keras.layers.Layer(dim)
+        self.last = tf.keras.layers.Layer(1)
+        self.top_neighs = top_neighs
+
+    def compute(self, nlist, positions, training):
+        rinv = htf.nlist_rinv(nlist)
+        # closest neighbors have largest value in 1/r, take top
+        top_n = tf.sort(rinv, axis=1, direction='DESCENDING')[
+            :, :self.top_neighs]
+        # run through NN
+        x = self.dense1(top_n)
+        x = self.dense2(x)
+        energy = self.last(x)
+        if training:
+            energy *= 2
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
+
+
 class LJRunningMeanModel(htf.SimModel):
     def setup(self):
         self.avg_energy = tf.keras.metrics.Mean()
