@@ -494,10 +494,20 @@ def box_size(box):
 def nlist_rinv(nlist):
     ''' Returns an ``N x NN`` tensor of 1 / r for each neighbor
     while correctly treating zeros. Empty neighbors are
-    still zero.
+    still zero and it is differentiable.
     '''
-    r = tf.norm(nlist[:, :, :3], axis=2)
-    return tf.math.divide_no_nan(1.0, r)
+    # STOP: DO NOT EDIT THIS
+    # This was built with dark magic and
+    # a complex ritual. It is highly-tuned
+    # and the only way to prevent nans
+    # from ruining your life when differentiated
+    # wrt parameter values.
+    delta = 3e-6
+    r = safe_norm(nlist[:, :, :3], axis=2, delta=delta / 3 / 10)
+    return tf.where(
+        tf.greater(r, delta),
+        tf.truediv(1.0, r + delta),
+        tf.zeros_like(r))
 
 
 def compute_rdf(nlist, r_range, type_tensor=None, nbins=100, type_i=None, type_j=None):
