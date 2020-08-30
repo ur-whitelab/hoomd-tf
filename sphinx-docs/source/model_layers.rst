@@ -3,17 +3,30 @@
 Model Layers
 ==============
 
-These are standard layers useful for creating molecular neural networks.
+These are standard layers useful for creating molecular neural networks. Only
+some are detailed here. See :doc:`layers` for complete list.
 
-RBFExpansion
--------------
-
-A radial basis expansion. TODO
 
 WCARepulsion
 --------------
 
-A repulsive layer
+The :py:class:`.WCARepulsion` layer can be used to add a trainable
+repulsion. Be careful to choose the staring ``sigma`` to be small enough that
+there will not be large gradients at the start of training. A regularization
+term is added to push ``sigma`` to more positive, otherwise it will just
+float away from mattering during training. This can be removed.
+
+
+.. code:: python
+
+    class WCA(htf.SimModel):
+        def setup(self):
+            self.wca = htf.WCARepulsion(0.5)
+
+        def compute(self, nlist):
+            energy = self.wca(nlist)
+            forces = htf.compute_nlist_forces(nlist, energy)
+            return forces
 
 
 .. _eds_biasing:
@@ -23,7 +36,7 @@ Biasing with EDS
 
 To apply `Experiment Directed
 Simulation <https://www.tandfonline.com/doi/full/10.1080/08927022.2019.1608988>`__
-biasing to a system, use an EDS Layer (:py:class:`utils.EDSLayer`):
+biasing to a system, use an EDS Layer (:py:class:`.EDSLayer`):
 
 .. code:: python
 
@@ -45,6 +58,6 @@ biasing to a system, use an EDS Layer (:py:class:`utils.EDSLayer`):
             return forces, alpha
 
 Here,
-:py:class:`utils.EDSLayer.update_state`
+:py:class:`.EDSLayer.update_state`
 returns the lagrange multiplier/eds coupling that
 is used to bias the simulation.

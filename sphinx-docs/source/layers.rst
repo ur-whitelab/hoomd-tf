@@ -18,3 +18,7 @@ This module contains layers to be used for building models.
     :inherited-members:
 
     .. automethod:: layers.WCARepulsion.__init__
+
+.. autoclass:: layers.EDSLayer
+    :members:
+    :inherited-members:
