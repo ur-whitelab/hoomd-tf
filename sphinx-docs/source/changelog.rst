@@ -1,12 +1,18 @@
 Change Log
 ==========
 
-v2.1 (2020-08-11)
+v2.1 (2020-09)
 --------------------
+
+*New Features*
+
+- Added standard layers to code
 
 *Enhancements*
 
 - Added error checks on mapping shapes
+- Added optional training flag to change behavior during training
+- Added ability to retrace compute if self changes
 
 v2.0.1 (2020-08-11)
 --------------------
@@ -47,7 +53,7 @@ v2.0 (2020-08-08)
 - There is no more multiprocessing required
 - Benchmarks are significantly faster
 
-v1.0.2 (2020-?)
+v1.0.2 (2020-8-15)
 -------------------
 
 *Bug fixes*
