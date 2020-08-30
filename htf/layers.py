@@ -3,7 +3,8 @@ import hoomd.htf
 
 
 class RBFExpansion(tf.keras.layers.Layer):
-    R''' A  continuous-filter convolutional radial basis filter input from `SchNet <https://arxiv.org/pdf/1706.08566.pdf>`_.
+    R''' A  continuous-filter convolutional radial basis filter input from
+    `SchNet <https://arxiv.org/pdf/1706.08566.pdf>`_.
     The input should be a rank ``K`` tensor of distances. The output will be rank ``K``
     with the new axis being of dimension ``count``. The distances are converted with
     :math:`\exp\gamma\left(d - \mu\right)^2` where :math:`\mu` is an evenly spaced
@@ -30,12 +31,8 @@ class RBFExpansion(tf.keras.layers.Layer):
         self.gap = self.centers[1] - self.centers[0]
 
     def call(self, inputs):
-        # input shape
-        #x = tf.reshape(inputs, (-1,))
         rbf = tf.math.exp(-(inputs[..., tf.newaxis] -
                             self.centers)**2 / self.gap)
-        # remove 0s
-        #rbf *= tf.cast(x > 1e-5, tf.float32)[:, tf.newaxis]
         return rbf
 
 
