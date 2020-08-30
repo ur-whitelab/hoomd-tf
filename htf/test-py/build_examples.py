@@ -135,9 +135,9 @@ class CustomNlist(htf.SimModel):
 
 class NlistNN(htf.SimModel):
     def setup(self, dim, top_neighs):
-        self.dense1 = tf.keras.layers.Layer(dim)
-        self.dense2 = tf.keras.layers.Layer(dim)
-        self.last = tf.keras.layers.Layer(1)
+        self.dense1 = tf.keras.layers.Dense(dim)
+        self.dense2 = tf.keras.layers.Dense(dim)
+        self.last = tf.keras.layers.Dense(1)
         self.top_neighs = top_neighs
 
     def compute(self, nlist, positions, box, sample_weight):
@@ -146,6 +146,8 @@ class NlistNN(htf.SimModel):
         top_n = tf.sort(rinv, axis=1, direction='DESCENDING')[
             :, :self.top_neighs]
         # run through NN
+        # make sure shape is definite
+        top_n = tf.reshape(top_n, (-1, self.top_neighs))
         x = self.dense1(top_n)
         x = self.dense2(x)
         energy = self.last(x)
@@ -153,11 +155,34 @@ class NlistNN(htf.SimModel):
         return forces
 
 
+class WCA(htf.SimModel):
+    def setup(self):
+        self.wca = htf.WCARepulsion(0.5)
+
+    def compute(self, nlist):
+        energy = self.wca(nlist)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
+
+
+class RBF(htf.SimModel):
+    def setup(self, low, high, count):
+        self.rbf = htf.RBFExpansion(low, high, count)
+        self.dense = tf.keras.layers.Dense(1)
+
+    def compute(self, nlist):
+        r = htf.safe_norm(nlist[:, :3], axis=2)
+        rbf = self.rbf(r)
+        energy = tf.reduce_sum(self.dense(rbf))
+        forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
+
+
 class TrainModel(htf.SimModel):
     def setup(self, dim, top_neighs):
-        self.dense1 = tf.keras.layers.Layer(dim)
-        self.dense2 = tf.keras.layers.Layer(dim)
-        self.last = tf.keras.layers.Layer(1)
+        self.dense1 = tf.keras.layers.Dense(dim)
+        self.dense2 = tf.keras.layers.Dense(dim)
+        self.last = tf.keras.layers.Dense(1)
         self.top_neighs = top_neighs
         self.output_zero = False
 

@@ -107,6 +107,9 @@ class SimModel(tf.keras.Model):
             Is only NOT 1.0 if ``batch_size`` is passed to :py:meth:`.tfcompute.attach`.
         :type sample_weight: tensor
 
+        :param training: a boolean indicating if doing training or inference.
+        :type trainig: bool
+
         :return: Tuple of tensors
 
         '''
@@ -279,18 +282,6 @@ class MolSimModel(SimModel):
         if MolSimModel.mol_compute == self.__class__.mol_compute:
             raise AttributeError(
                 'You must implement mol_compute method in subclass of MolSimModel')
-
-        # currently not used, because compute, which calls this, will be compiled
-        input_signature = [
-            tf.TensorSpec(
-                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
-            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # positions
-            tf.TensorSpec(
-                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # mol_nlist
-            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # mol_positions
-            tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
-        ]
         try:
             self._mol_arg_count = self.mol_compute.__code__.co_argcount - 1
             if self._mol_arg_count < 3:
@@ -302,7 +293,7 @@ class MolSimModel(SimModel):
                 'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
 
-    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box):
+    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''
         See :py:meth:`.SimModel.compute` for details. ``sample_weight``
         is not passed because simulations cannot currently be batched both by size and molecule.
@@ -337,12 +328,15 @@ class MolSimModel(SimModel):
             Call :py:func:`.box_size` to convert to size
         :type box: tensor
 
+        :param training: a boolean indicating if doing training or inference.
+        :type trainig: bool
+
         :return: Tuple of tensors
 
         '''
         raise AttributeError('You must implement mol_compute method')
 
-    def compute(self, nlist, positions, box, batch_frac):
+    def compute(self, nlist, positions, box, batch_frac, training):
 
         mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
@@ -364,7 +358,7 @@ class MolSimModel(SimModel):
         mol_nlist = tf.reshape(
             tf.gather(an, mol_flat_idx),
             shape=[-1, self.MN, self.nneighbor_cutoff, 4])
-        inputs = [nlist, positions, mol_nlist, mol_positions, box]
+        inputs = [nlist, positions, mol_nlist, mol_positions, box, training]
         return self.mol_compute(*inputs[:self._mol_arg_count])
 
 
