@@ -457,6 +457,7 @@ def wrap_vector(r, box):
 
 @tf.function
 def box_size(box):
+    # Note that this function is compatible with HOOMD box and not the one from GROMACS.
     return box[1, :] - box[0, :]
 
 
