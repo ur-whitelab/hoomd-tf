@@ -64,10 +64,10 @@ class test_mpi(unittest.TestCase):
         params = [{'nx': 2}, {'x': [0.33]}]
         for p in params:
             with self.subTest(decomp=p):
-                hoomd.context.initialize()
+                hoomd.context.initialize('')
                 comm.decomposition(**p)
                 tf_forces = run_tf_lj(N, T)
-                hoomd.context.initialize()
+                hoomd.context.initialize('')
                 comm.decomposition(**p)
                 hoomd_forces = run_hoomd_lj(N, T)
                 print(N, T, tf_forces.shape)
