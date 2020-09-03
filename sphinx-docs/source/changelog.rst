@@ -14,6 +14,10 @@ v2.1 (2020-09)
 - Added optional training flag to change behavior during training
 - Added ability to retrace compute if self changes
 
+*Bug Fixes*
+
+- Removed unused cuda events which could cause segfault on destruction
+
 v2.0.1 (2020-08-11)
 --------------------
 

@@ -62,7 +62,6 @@ namespace hoomd_tf
             name = other.name;
             offset = other.offset;
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
-            event_handle = other.event_handle;
             stream = other.stream;
 #endif
 
@@ -101,7 +100,6 @@ namespace hoomd_tf
         const char* name;    //! Name of this communication object
         //TODO Why is ENABLE_CUDA set for compilng tf code? We don't have any hoomd headers...
 #if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
-        cudaEvent_t event_handle; //! This CommStruct's CUDA event handle
         cudaStream_t stream = 0;  //! This CommStruct's CUDA stream
 #endif
         };
