@@ -283,24 +283,39 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
+def compute_nlist(positions, r_cut, NN, box_size, return_types=False, sorted=False):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
+    :type positions: N x 4 or N x 3 tensor
     :param r_cut: Cutoff radius (Hoomd units)
+    :type r_cut: float
     :param NN: Maximum number of neighbors per particle
+    :type NN: int
     :param box_size: A list contain the size of the box [Lx, Ly, Lz]
+    :type box_size: list or shape 3 tensor
+    :param return_types: If true, requires N x 4 positions array and
+        last element of nlist is type. Otherwise last element is index of neighbor
+    :type return_types: bool
     :param sorted: Whether to sort neighbor lists by distance
+    :type sorted: bool
+
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
         particles and index
     '''
+
+    if return_types and positions.shape[1] == 3:
+        raise ValueError(
+            'Cannot return type if positions does not have type. Make sure positions is N x 4')
+
     # Make sure positions is only xyz
-    positions = positions[:, :3]
-    M = tf.shape(input=positions)[0]
+    positions3 = positions[:, :3]
+
+    M = tf.shape(input=positions3)[0]
     # Making 3 dim CG nlist
-    qexpand = tf.expand_dims(positions, 1)  # one column
-    qTexpand = tf.expand_dims(positions, 0)  # one row
+    qexpand = tf.expand_dims(positions3, 1)  # one column
+    qTexpand = tf.expand_dims(positions3, 0)  # one row
     # repeat it to make matrix of all positions
     qtile = tf.tile(qexpand, [1, M, 1])
     qTtile = tf.tile(qTexpand, [M, 1, 1])
@@ -331,10 +346,18 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     nlist_pos = tf.reshape(tf.gather_nd(dist_mat, flat_idx), [-1, NN, 3])
     nlist_mask = tf.reshape(tf.gather_nd(mask_cast, flat_idx), [-1, NN, 1])
 
-    return tf.concat([
-        nlist_pos,
-        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
-                tf.float32)], axis=-1) * nlist_mask
+    if return_types:
+        nlist_type = tf.reshape(
+            tf.gather(positions[:, 3], flat_idx[:, 0]), [-1, NN, 1])
+        return tf.concat([
+            nlist_pos,
+            nlist_type * nlist_mask
+        ], axis=-1)
+    else:
+        return tf.concat([
+            nlist_pos,
+            tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
+                    tf.float32)], axis=-1) * nlist_mask
 
 
 def mol_bond_distance(mol_positions, type_i, type_j):
