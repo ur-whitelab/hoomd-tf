@@ -283,7 +283,7 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-def compute_nlist(positions, r_cut, NN, box_size, return_types=False, sorted=False):
+def compute_nlist(positions, r_cut, NN, box_size, sorted=False, return_types=False):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
@@ -294,11 +294,11 @@ def compute_nlist(positions, r_cut, NN, box_size, return_types=False, sorted=Fal
     :type NN: int
     :param box_size: A list contain the size of the box [Lx, Ly, Lz]
     :type box_size: list or shape 3 tensor
+    :param sorted: Whether to sort neighbor lists by distance
+    :type sorted: bool
     :param return_types: If true, requires N x 4 positions array and
         last element of nlist is type. Otherwise last element is index of neighbor
     :type return_types: bool
-    :param sorted: Whether to sort neighbor lists by distance
-    :type sorted: bool
 
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
