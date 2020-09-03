@@ -58,7 +58,6 @@ namespace hoomd_tf
               m_exec_conf(exec_conf)
                 {
                 checkDevice();
-                allocate();
                 }
 
         //! Copy constructor
@@ -77,12 +76,6 @@ namespace hoomd_tf
             m_comm_struct = std::move(other.m_comm_struct);
             m_exec_conf = other.m_exec_conf;
             return *this;
-            }
-
-        //! destructor
-        ~TFArrayComm()
-            {
-            this->deallocate();
             }
 
         /*! Copy contents of given array to this array
@@ -206,34 +199,6 @@ namespace hoomd_tf
                     throw std::runtime_error(
                         "CUDA compilation not enabled so cannot use GPU CommMode");
             #endif
-            }
-
-        //! Create a CUDA event for our CommStruct, if CUDA exists
-        void allocate()
-            {
-            #ifdef ENABLE_CUDA
-                if (M == TFCommMode::GPU)
-                    {
-                    cudaEvent_t ipc_event;
-                    // flush errors
-                    CHECK_CUDA_ERROR();
-                    cudaEventCreateWithFlags(
-                        &ipc_event, cudaEventInterprocess | cudaEventDisableTiming);
-                    m_comm_struct.event_handle = ipc_event;
-                    CHECK_CUDA_ERROR();
-                    }
-            #endif
-            }
-
-        //! Deallocate the CUDA event for our CommStruct, if CUDA exists
-        void deallocate()
-            {
-            if (M == TFCommMode::GPU)
-                {
-                #ifdef ENABLE_CUDA
-                    cudaEventDestroy(m_comm_struct.event_handle);
-                #endif
-                }
             }
 
         using value_type = T;

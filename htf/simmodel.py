@@ -53,8 +53,18 @@ class SimModel(tf.keras.Model):
         try:
             # only expect the number of argument counts
             self._arg_count = self.compute.__code__.co_argcount - 1  # - 1 for self
-            self.compute = tf.function(
-                self.compute, input_signature=input_signature[:self._arg_count])
+            # check if training is needed
+            self._pass_training = 'training' == self.compute.__code__.co_varnames[
+                self._arg_count]
+            # remove one arg for training arg
+            if self._pass_training:
+                self._arg_count -= 1
+                # We cannot trace it, so no use of input_sig
+                self._compute = tf.function(self.compute)
+
+            else:
+                self._compute = tf.function(
+                    self.compute, input_signature=input_signature[:self._arg_count])
         except AttributeError:
             raise AttributeError(
                 'SimModel child class must implement compute method, and should not implement call')
@@ -65,7 +75,7 @@ class SimModel(tf.keras.Model):
         self._running_means = []
         self.setup(**kwargs)
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box, sample_weight, training=True):
         R'''
         The main method were computation occurs occurs. This method must be implemented
         by subclass. You may take less args, e.g. ``(nlist, positions)``.
@@ -97,6 +107,9 @@ class SimModel(tf.keras.Model):
             Is only NOT 1.0 if ``batch_size`` is passed to :py:meth:`.tfcompute.attach`.
         :type sample_weight: tensor
 
+        :param training: a boolean indicating if doing training or inference.
+        :type trainig: bool
+
         :return: Tuple of tensors
 
         '''
@@ -113,10 +126,30 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
-        out = self.compute(*inputs[:self._arg_count])
+        if self._pass_training:
+            out = self._compute(*inputs[:self._arg_count], training)
+        else:
+            out = self._compute(*inputs[:self._arg_count])
         if tf.is_tensor(out):
             out = (out,)
         return out
+
+    def retrace_compute(self):
+        R'''
+        Force a retrace of the compute function. This is necessary
+        if your compute function depends variables inside ``self``.
+        For  example:
+
+        .. code:: python
+            def compute(self, nlist):
+                if self.flag:
+                    nlist *= 2
+
+        If ``self.flag`` is changed after executing your model,
+        you must call this function to force TF retrace your function.
+
+        '''
+        self._compute = tf.function(self.compute)
 
     @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr,
@@ -249,18 +282,6 @@ class MolSimModel(SimModel):
         if MolSimModel.mol_compute == self.__class__.mol_compute:
             raise AttributeError(
                 'You must implement mol_compute method in subclass of MolSimModel')
-
-        # currently not used, because compute, which calls this, will be compiled
-        input_signature = [
-            tf.TensorSpec(
-                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
-            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # positions
-            tf.TensorSpec(
-                shape=[None, MN, max(1, nneighbor_cutoff), 4], dtype=dtype),  # mol_nlist
-            tf.TensorSpec(shape=[None, MN, 4], dtype=dtype),  # mol_positions
-            tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
-        ]
         try:
             self._mol_arg_count = self.mol_compute.__code__.co_argcount - 1
             if self._mol_arg_count < 3:
@@ -272,7 +293,7 @@ class MolSimModel(SimModel):
                 'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
 
-    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box):
+    def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''
         See :py:meth:`.SimModel.compute` for details. ``sample_weight``
         is not passed because simulations cannot currently be batched both by size and molecule.
@@ -307,12 +328,15 @@ class MolSimModel(SimModel):
             Call :py:func:`.box_size` to convert to size
         :type box: tensor
 
+        :param training: a boolean indicating if doing training or inference.
+        :type trainig: bool
+
         :return: Tuple of tensors
 
         '''
         raise AttributeError('You must implement mol_compute method')
 
-    def compute(self, nlist, positions, box, batch_frac):
+    def compute(self, nlist, positions, box, batch_frac, training):
 
         mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
@@ -334,7 +358,7 @@ class MolSimModel(SimModel):
         mol_nlist = tf.reshape(
             tf.gather(an, mol_flat_idx),
             shape=[-1, self.MN, self.nneighbor_cutoff, 4])
-        inputs = [nlist, positions, mol_nlist, mol_positions, box]
+        inputs = [nlist, positions, mol_nlist, mol_positions, box, training]
         return self.mol_compute(*inputs[:self._mol_arg_count])
 
 
@@ -464,10 +488,20 @@ def box_size(box):
 def nlist_rinv(nlist):
     ''' Returns an ``N x NN`` tensor of 1 / r for each neighbor
     while correctly treating zeros. Empty neighbors are
-    still zero.
+    still zero and it is differentiable.
     '''
-    r = tf.norm(nlist[:, :, :3], axis=2)
-    return tf.math.divide_no_nan(1.0, r)
+    # STOP: DO NOT EDIT THIS
+    # This was built with dark magic and
+    # a complex ritual. It is highly-tuned
+    # and the only way to prevent nans
+    # from ruining your life when differentiated
+    # wrt parameter values.
+    delta = 3e-6
+    r = safe_norm(nlist[:, :, :3], axis=2, delta=delta / 3 / 10)
+    return tf.where(
+        tf.greater(r, delta),
+        tf.truediv(1.0, r + delta),
+        tf.zeros_like(r))
 
 
 def compute_rdf(nlist, r_range, type_tensor=None, nbins=100, type_i=None, type_j=None):
