@@ -13,6 +13,7 @@ v2.1 (2020-09)
 - Added error checks on mapping shapes
 - Added optional training flag to change behavior during training
 - Added ability to retrace compute if self changes
+- Can output type or index when computing nlist
 
 *Bug Fixes*
 
