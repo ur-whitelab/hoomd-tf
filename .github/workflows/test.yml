@@ -18,27 +18,27 @@ jobs:
           - hoomd: 2.9.2
             tensorflow: 2.3.0
             tbb-devel: 2020.1
-            md-analysis: true
+            md-analysis: 'true'
           - hoomd: 2.9.2
             tensorflow: 2.3.0
             tbb-devel: 2020.1
-            md-analysis: false
+            md-analysis: 'false'
           - hoomd: 2.9.0
             tensorflow: 2.3.0
             tbb-devel: 2020.1
-            md-analysis: false
+            md-analysis: 'false'
           - hoomd: 2.8.2
             tensorflow: 2.3.0
             tbb-devel: 2020.1
-            md-analysis: false
+            md-analysis: 'false'
           - hoomd: 2.7.0
             tensorflow: 2.3.0
             tbb-devel: 2019.8
-            md-analysis: false
+            md-analysis: 'false'
           - hoomd: 2.6.0
             tensorflow: 2.3.0
             tbb-devel: 2019.7
-            md-analysis: false
+            md-analysis: 'false'
 
     steps:
     - uses: actions/checkout@v2
