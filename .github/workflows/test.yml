@@ -54,8 +54,9 @@ jobs:
         pip install tensorflow==${{ matrix.tensorflow }}
         conda install -c conda-forge tbb-devel==${{ matrix.tbb-devel }} hoomd==${{ matrix.hoomd }}
     - name: MDAnalysis Install
-      run: pip install MDAnalysis
-      if: ${{ matrix.md-analysis }} == 'true'
+      if: matrix.md-analysis == 'true'
+        run: |
+          pip install MDAnalysis
     - name: Download and install HTF
       run: |
         mkdir build && cd build
