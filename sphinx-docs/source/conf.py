@@ -29,10 +29,10 @@ release = __version__
 # -- Project information -----------------------------------------------------
 
 project = 'HOOMD-TF'
-copyright = '2020 University of Rochester'
-author = 'Rainier Barrett, Dilnoza Amirkulova, \
-    Maghesree Chakraborty, Heta Gandhi,\
-     Geemi Wellawatte, Mehrad Ansari Andrew D. White'
+copyright = '2020 HOOMD-TF Developers'
+author = 'Rainier Barrett, Dilnoza B Amirkulova, \
+    Maghesree Chakraborty, Heta A Gandhi,\
+     Geemi Wellawatte, Mehrad Ansari, Andrew D White'
 
 
 # -- General configuration ---------------------------------------------------

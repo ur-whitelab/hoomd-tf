@@ -1,3 +1,4 @@
+# Copyright (c) 2020 HOOMD-TF Developers
 import unittest
 
 

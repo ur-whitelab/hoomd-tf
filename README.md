@@ -42,4 +42,4 @@ Please use the following citation:
 > HOOMD-TF: GPU-Accelerated, Online Machine Learning in the HOOMD-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
 > HA Gandhi, G Wellawatte, and AD White (2020) *Journal of Open Source Software* doi: 10.21105/joss.02367
 
-&copy; University of Rochester
+&copy; HOOMD-TF Developers
