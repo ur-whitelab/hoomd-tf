@@ -30,9 +30,10 @@ release = __version__
 
 project = 'HOOMD-TF'
 copyright = '2020 HOOMD-TF Developers'
-author = 'Rainier Barrett, Dilnoza B Amirkulova, \
-    Maghesree Chakraborty, Heta A Gandhi,\
-     Geemi Wellawatte, Mehrad Ansari, Andrew D White'
+author = 'Andrew D White, Rainier Barrett, Heta A Gandhi,\
+          Geemi Wellawatte, Maghesree Chakraborty,\
+          Mehrad Ansari, Dilnoza B Amirkulova, \
+          Oion Akif'
 
 
 # -- General configuration ---------------------------------------------------
