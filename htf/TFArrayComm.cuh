@@ -1,5 +1,4 @@
-// Copyright (c) 2018 Andrew White at the University of Rochester
-//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+// Copyright (c) 2020 HOOMD-TF Developers
 
 #ifndef m_TF_ARRAY_COMM_CUH_
 #define m_TF_ARRAY_COMM_CUH_
@@ -12,7 +11,7 @@
 
 /*! \file TFArrayComm.cuh
  *  \brief Declarations of GPU version of some TFArrayComm methods
- */ 
+ */
 
 //! Unstuff integers in gpu array
 extern "C" cudaError_t htf_gpu_unstuff4(Scalar4 *arrray,

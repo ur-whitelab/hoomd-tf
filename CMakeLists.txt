@@ -1,4 +1,4 @@
-# Maintanier: Andrew White
+# Maintanier: HOOMD-TF Developers
 
 project(htf)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.2 FATAL_ERROR)

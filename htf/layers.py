@@ -1,3 +1,5 @@
+# Copyright (c) 2020 HOOMD-TF Developers
+
 import tensorflow as tf
 import hoomd.htf
 
