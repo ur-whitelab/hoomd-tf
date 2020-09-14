@@ -1,5 +1,4 @@
-// Copyright (c) 2018 Andrew White at the University of Rochester
-//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+// Copyright (c) 2020 HOOMD-TF Developers
 
 #ifndef HOOMD2TF_H_
 #define HOOMD2TF_H_

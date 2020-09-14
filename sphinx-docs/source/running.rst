@@ -104,7 +104,7 @@ Here is a complete example:
             avg_coord_number = tf.reduce_mean(tf.cast(rinv > 0, tf.float32))
             return forces, energy, avg_coord_number
 
-    model = MyModel)
+    model = MyModel(16)
     tfcompute = htf.tfcompute(model)
     ...
     ...
@@ -113,3 +113,40 @@ Here is a complete example:
 
     output_energy = tfcompute.outputs[0]
     output_avg_coord_number = tfcompute.outputs[1]
+
+
+.. _changing_model_object:
+
+Changing Model Object
+----------------------
+
+If your :py:class: `.MolSimModel.compute` method depends on attributes of ``self``,
+you have to call an :py:class: `.MolSimModel.retrace_compute` if you updated these attributes.
+See an example
+
+.. code:: python
+
+    class MyModel(htf.SimModel):
+        def setup(self, s):
+            self.s = s
+        def compute(self, nlist):
+            rinv = htf.nlist_rinv(nlist)
+            energy = self.s * rinv
+            forces = htf.compute_nlist_forces(nlist, energy)
+            avg_coord_number = tf.reduce_mean(tf.cast(rinv > 0, tf.float32))
+            return forces, energy, avg_coord_number
+
+    model = MyModel(16)
+    tfcompute = htf.tfcompute(model)
+    ...
+    ...
+    tfcompute.attach(nlist, rcut=5.0, save_output_period=100)
+    hoomd.run(1000)
+
+    # Now I update s
+    model.s = 2.5
+    # I must call retrace_compute
+    model.retrace_compute()
+
+    homod.run(1000)
+

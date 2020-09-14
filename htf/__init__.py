@@ -1,5 +1,4 @@
-# Copyright (c) 2018 Andrew White at the University of Rochester
-# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+# Copyright (c) 2020 HOOMD-TF Developers
 
 ''' HOOMD-TF
 
@@ -11,6 +10,7 @@ from hoomd.htf.tensorflowcompute import tfcompute
 from hoomd.htf.simmodel import *
 from hoomd.htf.version import __version__
 from hoomd.htf.utils import *
+from hoomd.htf.layers import *
 import tensorflow as tf
 
 _tf_on_gpu = False

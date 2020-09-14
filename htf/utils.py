@@ -1,5 +1,4 @@
-# Copyright (c) 2018 Andrew White at the University of Rochester
-# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+# Copyright (c) 2020 HOOMD-TF Developers
 
 import tensorflow as tf
 import numpy as np
@@ -220,6 +219,7 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     :param period: Period of reading the trajectory frames
     :type period: int
     '''
+    import MDAnalysis
     # read trajectory
     box = universe.dimensions
     # define the system
@@ -228,10 +228,14 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
     # get unique atom types in the selected atom group
-    types = list(np.unique(atom_group.atoms.types))
-    # associate atoms types with individual atoms
-    type_array = np.array([types.index(i)
-                           for i in atom_group.atoms.types]).reshape(-1, 1)
+    try:
+        types = list(np.unique(atom_group.atoms.types))
+        # associate atoms types with individual atoms
+        type_array = np.array([types.index(i)
+                               for i in atom_group.atoms.types]).reshape(-1, 1)
+    except MDAnalysis.exceptions.NoDataError:
+        type_array = np.zeros(len(atom_group)).reshape(-1, 1)
+
     # define nlist operation
     # box_size = [box[0], box[1], box[2]]
     nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
@@ -243,103 +247,6 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
                 (atom_group.positions,
                  type_array),
                 axis=1), hoomd_box, 1.0], ts
-
-
-class EDSLayer(tf.keras.layers.Layer):
-    R''' This layer computes and returns the Lagrange multiplier/EDS coupling constant (alpha)
-    to be used as the EDS bias in the simulation. You call the layer on the
-    collective variable at each step to get the current value of alpha.
-
-    :param set_point: The set point value of the collective variable.
-        This is a constant value which is pre-determined by the user and unique to each cv.
-    :param period: Time steps over which the coupling constant is updated.
-        Hoomd time units are used. If period=100 alpha will be updated each 100 time steps.
-    :param learninig_rate: Learninig_rate in the EDS method.
-    :param cv_scale: Used to adjust the units of the bias to Hoomd units.
-    :param name: Name to be used for layer
-    :return: Alpha, the EDS coupling constant.
-    '''
-
-    def __init__(self, set_point, period, learning_rate=1e-2,
-                 cv_scale=1.0, name='eds-layer', **kwargs):
-        if not tf.is_tensor(set_point):
-            set_point = tf.convert_to_tensor(set_point)
-        if set_point.dtype not in (tf.float32, tf.float64):
-            raise ValueError(
-                'EDS only works with floats, not dtype' +
-                str(set_point.dtype))
-        super().__init__(name, dtype=set_point.dtype, **kwargs)
-        self.set_point = set_point
-        self.period = tf.cast(period, tf.int32)
-        self.cv_scale = cv_scale
-        self.learning_rate = learning_rate
-        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate)
-
-    def get_config(self):
-        base = super().get_config()
-        c = {
-            'set_point': self.set_point.numpy(),
-            'period': self.period,
-            'cv_scale': self.cv_scale,
-            'learning_rate': self.learning_rate,
-        }
-        c.update(base)
-        return c
-
-    def build(self, input_shape):
-        # set-up variables
-        self.mean = self.add_weight(
-            initializer=tf.zeros_initializer(), dtype=self.dtype,
-            shape=input_shape, name='{}.mean'.format(self.name),
-                                    trainable=False)
-        self.ssd = self.add_weight(
-            initializer=tf.zeros_initializer(), dtype=self.dtype,
-            shape=input_shape, name='{}.ssd'.format(self.name),
-            trainable=False)
-        self.n = self.add_weight(
-            initializer=tf.zeros_initializer(),
-            shape=input_shape, dtype=tf.int32, name='{}.n'.format(
-                self.name), trainable=False)
-        self.alpha = self.add_weight(initializer=tf.zeros_initializer(
-        ), shape=input_shape, name='{}.a'.format(self.name), dtype=self.dtype)
-
-    @tf.function
-    def call(self, cv):
-        reset_mask = tf.cast((self.n != 0), self.dtype)
-
-        # reset statistics if n is 0
-        self.mean.assign(self.mean * reset_mask)
-        self.ssd.assign(self.ssd * reset_mask)
-
-        # update statistics
-        # do we update? - masked
-        update_mask = tf.cast(self.n > self.period // 2, self.dtype)
-        delta = (cv - self.mean) * update_mask
-        self.mean.assign_add(
-            tf.math.divide_no_nan(
-                delta,
-                tf.cast(self.n - self.period // 2, self.dtype)
-            )
-        )
-
-        self.ssd.assign_add(delta * (cv - self.mean))
-
-        # update grad
-        update_mask = tf.cast(
-            tf.equal(self.n, self.period - 1), self.dtype)
-        gradient = update_mask * -  2 * \
-            (self.mean - self.set_point) * self.ssd / \
-            tf.cast(self.period, self.dtype) / 2 / self.cv_scale
-
-        tf.cond(pred=tf.equal(self.n, self.period - 1),
-                true_fn=lambda: self.optimizer.apply_gradients([(gradient,
-                                                                 self.alpha)]),
-                false_fn=lambda: tf.no_op())
-
-        # update n. Should reset at period
-        self.n.assign((self.n + 1) % self.period)
-
-        return self.alpha
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
@@ -375,24 +282,39 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
+def compute_nlist(positions, r_cut, NN, box_size, sorted=False, return_types=False):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
+    :type positions: N x 4 or N x 3 tensor
     :param r_cut: Cutoff radius (Hoomd units)
+    :type r_cut: float
     :param NN: Maximum number of neighbors per particle
+    :type NN: int
     :param box_size: A list contain the size of the box [Lx, Ly, Lz]
+    :type box_size: list or shape 3 tensor
     :param sorted: Whether to sort neighbor lists by distance
+    :type sorted: bool
+    :param return_types: If true, requires N x 4 positions array and
+        last element of nlist is type. Otherwise last element is index of neighbor
+    :type return_types: bool
+
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
         particles and index
     '''
+
+    if return_types and positions.shape[1] == 3:
+        raise ValueError(
+            'Cannot return type if positions does not have type. Make sure positions is N x 4')
+
     # Make sure positions is only xyz
-    positions = positions[:, :3]
-    M = tf.shape(input=positions)[0]
+    positions3 = positions[:, :3]
+
+    M = tf.shape(input=positions3)[0]
     # Making 3 dim CG nlist
-    qexpand = tf.expand_dims(positions, 1)  # one column
-    qTexpand = tf.expand_dims(positions, 0)  # one row
+    qexpand = tf.expand_dims(positions3, 1)  # one column
+    qTexpand = tf.expand_dims(positions3, 0)  # one row
     # repeat it to make matrix of all positions
     qtile = tf.tile(qexpand, [1, M, 1])
     qTtile = tf.tile(qTexpand, [M, 1, 1])
@@ -423,10 +345,18 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False):
     nlist_pos = tf.reshape(tf.gather_nd(dist_mat, flat_idx), [-1, NN, 3])
     nlist_mask = tf.reshape(tf.gather_nd(mask_cast, flat_idx), [-1, NN, 1])
 
-    return tf.concat([
-        nlist_pos,
-        tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
-                tf.float32)], axis=-1) * nlist_mask
+    if return_types:
+        nlist_type = tf.reshape(
+            tf.gather(positions[:, 3], flat_idx[:, 0]), [-1, NN, 1])
+        return tf.concat([
+            nlist_pos,
+            nlist_type * nlist_mask
+        ], axis=-1)
+    else:
+        return tf.concat([
+            nlist_pos,
+            tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
+                    tf.float32)], axis=-1) * nlist_mask
 
 
 def mol_bond_distance(mol_positions, type_i, type_j):

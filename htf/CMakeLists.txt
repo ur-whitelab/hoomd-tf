@@ -102,6 +102,7 @@ set(files
     tensorflowcompute.py
     tfarraycomm.py
     version.py
+    layers.py
     simmodel.py
     utils.py
     )

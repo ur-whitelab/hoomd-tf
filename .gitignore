@@ -56,3 +56,6 @@ sphinx-docs/docs_out/**
 #jupyter notebooks
 
 *.ipynb_checkpoints
+
+# unwanted trajectories
+*.dcd
