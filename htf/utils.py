@@ -6,7 +6,6 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-import MDAnalysis as mda
 
 
 def compute_pairwise(model, r):
@@ -96,11 +95,22 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
         Depnding on the size of your system, this fuction might be slow to run.
 
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
+    :type universe: MDAnalysis Universe object
     :param selection: The atom groups to extract from universe
     :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type in the system.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
+    
+    Here's an example:
+
+        .. code:: python
+                TPR = 'nvt_prod.tpr'
+                TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
+                u = mda.Universe(TPR, TRAJECTORY)
+                atoms_in_molecule_list = [u.select_atoms("resname PHE and resid 0:1").names]
+                find_molecules_from_topology(u, atoms_in_molecule_list, selection = "resname PHE")
     """
+
     # Getting total number of atoms in selection from topology
     Total_number_of_atoms = universe.select_atoms(selection).n_atoms
 
@@ -118,8 +128,9 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
         if len(molecule_to_be_added) == molecule_length:
             molecule_list_indexed.append(molecule_to_be_added)
             molecule_to_be_added = []
-    assert molecule_list_indexed[-1][-1] == Total_number_of_atoms - \
-        1, 'Mismatch found between the number of atoms in the system and the final index value. Check your atoms_in_molecule_list input.'
+    if molecule_list_indexed[-1][-1] != Total_number_of_atoms - 1:
+        raise Exception(
+            "Mismatch found between the number of atoms in the system and the final index value. Check your atoms_in_molecule_list input.")
     return molecule_list_indexed
 
 def matrix_mapping(molecule, beads_distribution):
