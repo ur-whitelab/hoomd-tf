@@ -1,4 +1,3 @@
-# Copyright (c) 2020 HOOMD-TF Developers
 import shutil
 import tempfile
 import build_examples
@@ -68,8 +67,11 @@ class test_mappings(unittest.TestCase):
             self.skipTest(
                 "MDAnalysis not available; skipping test_matrix_mapping")
         # Loading inputs
-        TPR = 'CG_mapping/test_nvt_prod.tpr'
-        TRAJECTORY = 'CG_mapping/test_traj.trr'
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
         u = mda.Universe(TPR, TRAJECTORY)
         # Generating Mapping Matrix for Water
         water = u.select_atoms("resname SOL and resid 500")
@@ -180,34 +182,22 @@ class test_mappings(unittest.TestCase):
 
     def test_compute_nlist(self):
         N = 10
-        positions = tf.cast(
-            tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3]), tf.float32)
+        positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
         box_size = [100., 100., 100.]
         nlist = hoomd.htf.compute_nlist(
-            positions,
+            tf.cast(
+                positions,
+                tf.float32),
             100.,
             9,
             box_size,
-            return_types=False,
-            sorted=True)
+            True)
         nlist = nlist.numpy()
         # particle 1 is closest to 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
         # particle 0 is -9 away from 9
         np.testing.assert_array_almost_equal(nlist[-1, -1, :],
                                              [-9, -9, -9, 0])
-
-        extended_positions = tf.concat([positions, tf.zeros((N, 1))], axis=1)
-        nlist = hoomd.htf.compute_nlist(
-            extended_positions,
-            100.,
-            9,
-            box_size,
-            return_types=True,
-            sorted=True)
-        nlist = nlist.numpy()
-        # particle 1 is closest to type 0
-        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
 
     def test_compute_nlist_cut(self):
         N = 10
@@ -220,7 +210,7 @@ class test_mappings(unittest.TestCase):
             5.5,
             9,
             box_size,
-            sorted=True)
+            True)
         nlist = nlist.numpy()
         # particle 1 is closest to 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
