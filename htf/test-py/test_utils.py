@@ -49,8 +49,11 @@ class test_mappings(unittest.TestCase):
             self.skipTest(
                 "MDAnalysis not available; skipping test_find_molecules_from_topology")
         # Loading inputs
-        TPR = 'CG_mapping/test_nvt_prod.tpr'
-        TRAJECTORY = 'CG_mapping/test_traj.trr'
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
         selection = "resname PHE"
         u = mda.Universe(TPR, TRAJECTORY)
         protein_FF = u.select_atoms("resname PHE and resid 0:1")
