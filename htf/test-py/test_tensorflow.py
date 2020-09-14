@@ -1,5 +1,4 @@
-# Copyright (c) 2018 Andrew White at the University of Rochester
-# This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+# Copyright (c) 2020 HOOMD-TF Developers
 
 import hoomd
 import hoomd.md
@@ -406,6 +405,51 @@ class test_compute(unittest.TestCase):
         rdf = model.avg_rdf.result().numpy()
         assert len(rdf) > 5
         assert np.sum(rdf) > 0
+
+    def test_training_flag(self):
+        model = build_examples.TrainModel(4, dim=1, top_neighs=2)
+        model.compile(
+            optimizer=tf.keras.optimizers.Nadam(0.01),
+            loss='MeanSquaredError')
+        tfcompute = htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, train=True, r_cut=rcut, batch_size=4)
+        hoomd.run(10)
+
+        tfcompute.attach(nlist, train=False, r_cut=rcut, batch_size=4)
+        hoomd.run(10)
+
+    def test_retrace(self):
+        model = build_examples.TrainModel(4, dim=1, top_neighs=2)
+        tfcompute = htf.tfcompute(model)
+        rcut = 5.0
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut, save_output_period=1)
+        hoomd.run(1)
+        assert tfcompute.outputs[0][-1] != 0
+
+        # without retrace
+        model.output_zero = True
+        hoomd.run(1)
+        assert tfcompute.outputs[0][-1] != 0
+
+        # with retrace
+        model.retrace_compute()
+        hoomd.run(1)
+        assert tfcompute.outputs[0][-1] == 0
 
     def test_lj_energy(self):
         model = build_examples.LJModel(32)
