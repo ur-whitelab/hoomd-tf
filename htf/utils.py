@@ -40,7 +40,13 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
-def compute_nlist(positions, r_cut, NN, box_size, sorted=False, return_types=False):
+def compute_nlist(
+        positions,
+        r_cut,
+        NN,
+        box_size,
+        sorted=False,
+        return_types=False):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
@@ -115,6 +121,7 @@ def compute_nlist(positions, r_cut, NN, box_size, sorted=False, return_types=Fal
             nlist_pos,
             tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
                     tf.float32)], axis=-1) * nlist_mask
+
 
 def compute_pairwise(model, r):
     ''' Compute model output for a 2 particle system at distances set by ``r``.
@@ -197,7 +204,13 @@ def find_molecules(system):
     mapping.sort(key=lambda x: min(x))
     return mapping
 
-def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10., period=1):
+
+def iter_from_trajectory(
+        nneighbor_cutoff,
+        universe,
+        selection='all',
+        r_cut=10.,
+        period=1):
     ''' This generator will process information from a trajectory and
     yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
     The first list can be directly used to call a :py:class:`.SimModel` (e.g., ``model(inputs)``).
@@ -241,8 +254,14 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
 
     # define nlist operation
     # box_size = [box[0], box[1], box[2]]
-    nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
-                          NN=nneighbor_cutoff, box_size=[box[0], box[1], box[2]])
+    nlist = compute_nlist(
+        atom_group.positions,
+        r_cut=r_cut,
+        NN=nneighbor_cutoff,
+        box_size=[
+            box[0],
+            box[1],
+            box[2]])
     # Run the model at every nth frame, where n = period
     for i, ts in enumerate(universe.trajectory):
         if i % period == 0:
@@ -250,6 +269,7 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
                 (atom_group.positions,
                  type_array),
                 axis=1), hoomd_box, 1.0], ts
+
 
 def matrix_mapping(molecule, beads_distribution):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
@@ -267,13 +287,15 @@ def matrix_mapping(molecule, beads_distribution):
     index = 0
     for s in range(M):
         for i, atom in enumerate(beads_distribution[s]):
-            CG_matrix[s, i+index] = [v for k,
-                                     v in Mws_dict.items() if atom in k][0]
+            CG_matrix[s, i + index] = [v for k,
+                                       v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
-        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
-    # Cheking that all atoms in the topology are included in the bead distribution list:
+        CG_matrix[s] = CG_matrix[s] / np.sum(CG_matrix[s])
+    # Cheking that all atoms in the topology are included in the bead
+    # distribution list:
     assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
     return CG_matrix
+
 
 def mol_bond_distance(mol_positions, type_i, type_j):
     ''' This method calculates the bond distance given two atoms batched by molecule
@@ -381,6 +403,7 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
         dihedrals = tf.math.acos(cos_d)
         return dihedrals
 
+
 def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     ''' This will create the necessary indices and values for
@@ -421,7 +444,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         raise ValueError(
             'Length of molecule_mapping_index and molecule_mapping must match')
 
-    for i, (mmi, mm) in enumerate(zip(molecule_mapping_index, molecule_mapping)):
+    for i, (mmi, mm) in enumerate(
+            zip(molecule_mapping_index, molecule_mapping)):
         # check dimensions are valid
         if len(mmi) != mm.shape[1]:
             raise ValueError(
@@ -458,10 +482,11 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
         values.extend(vs)
         total_i += len(masses)
     assert total_i == B, 'Indices failed!'
-    return tf.SparseTensor(indices=indices, values=np.array(values, dtype=np.float32), dense_shape=[B, N])
-
-
-
-
-
-
+    return tf.SparseTensor(
+        indices=indices,
+        values=np.array(
+            values,
+            dtype=np.float32),
+        dense_shape=[
+            B,
+            N])
