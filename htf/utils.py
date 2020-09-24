@@ -205,6 +205,140 @@ def find_molecules(system):
     return mapping
 
 
+class generate_cg_graph():
+    def __init__(self, filelist, group_atoms=False, u2=None, u1=None):
+
+        self.filelist = filelist
+        self.group_atoms = group_atoms
+        self.u2 = u2
+        self.u1 = u1
+
+    def find_cgnode_id(self, atm_id, cg):
+        for num_index, num_val in enumerate(cg):
+            for j_idx, j_value in enumerate(num_val):
+                if j_value == atm_id:
+                    return num_index
+
+    def compute_cg_mat(self):
+        import json
+        import os
+        from numpy import asarray
+        import networkx as nx
+        import MDAnalysis as mda
+
+        for i in range(len(self.filelist)):
+            if self.filelist[i].endswith('.json'):
+                dist_idx = []
+                ang_idx = []
+                dihe_idx = []
+                dist_list = []
+
+                group_atoms = self.group_atoms
+                jpath = self.filelist[i]
+                print(jpath)
+                obj = json.load(open(jpath, 'r'))
+                cg = obj['cgnodes']
+                n = len(cg)
+                adj = np.zeros((n, n))
+
+                for edges in obj['edges']:
+                    s_id = int(edges['source'])
+                    t_id = int(edges['target'])
+                    s_cg = self.find_cgnode_id(s_id, cg)
+                    t_cg = self.find_cgnode_id(t_id, cg)
+                    if s_cg != t_cg:
+                        adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
+
+                D = nx.Graph(adj)
+                length = dict(nx.all_pairs_shortest_path_length(D))
+
+                # find node connectivities from the CG graph
+                for i in range(n):
+                    for j in range(i + 1, n):
+                        l = length[i][j]
+                        if l == 1:
+                            dist_idx.append((i, j))
+                        elif l == 2:
+                            ang_idx.append((i, j))
+                        elif l == 3:
+                            dihe_idx.append((i, j))
+
+                # find indices of bonded pairs
+                for x in range(len(dist_idx)):
+                    r_s = dist_idx[x][0]
+                    r_t = dist_idx[x][1]
+                    dist_list.append(
+                        list(
+                            nx.all_shortest_paths(
+                                D,
+                                source=r_s,
+                                target=r_t)))
+                rs = np.asarray(dist_list).squeeze(axis=(1,))
+
+                # find indices of angles-making nodes
+                ang_list = []
+                for x in range(len(ang_idx)):
+                    a_s = ang_idx[x][0]
+                    a_t = ang_idx[x][1]
+                    ang_list.append(
+                        list(
+                            nx.all_shortest_paths(
+                                D,
+                                source=a_s,
+                                target=a_t)))
+                angs = np.asarray(ang_list).squeeze(axis=(1,))
+
+                # find indices of dihedral-making nodes
+                dih_list = []
+                for x in range(len(dihe_idx)):
+                    d_s = dihe_idx[x][0]
+                    d_t = dihe_idx[x][1]
+                    dih_list.append(
+                        list(
+                            nx.all_shortest_paths(
+                                D,
+                                source=d_s,
+                                target=d_t)))
+                dihs = np.asarray(dih_list).squeeze(axis=(1,))
+
+                length = dict(nx.all_pairs_shortest_path_length(D))
+
+                if group_atoms:
+                    u1 = self.u1
+                    u2 = self.u2
+                    if u2 is None or u1 is None:
+                        print('One or both MDAnalysis universe not specified')
+
+                    else:
+                        atm_groups = []
+                        for i in range(len(cg)):
+                            ag = 0
+                            for j in range(len(cg[i])):
+                                atm_id = cg[i][j]
+                                a = u2.atoms[atm_id]
+                                a_name = str(a.name)
+                                a_resid = str(a.resid)
+                                au = u1.select_atoms(
+                                    'name ' + a_name + ' and resid ' + a_resid)
+                                h = u1.select_atoms(
+                                    'type H and bonded name ' + a_name + ' and resid ' + a_resid)
+                                # print(h)
+                                if len(list(h)) == 0:
+                                    ag += au
+                                else:
+                                    ah = au + h
+                                    ag += ah
+
+                            atm_groups.append(ag)
+
+                        return atm_groups, rs, angs, dihs
+
+                else:
+                    print('Only properties are calculated')
+
+                    return rs, angs, dihs
+
+
 def iter_from_trajectory(
         nneighbor_cutoff,
         universe,
