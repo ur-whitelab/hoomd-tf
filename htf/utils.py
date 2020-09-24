@@ -206,6 +206,9 @@ def find_molecules(system):
 
 
 class generate_cg_graph():
+    import json
+    import networkx as nx
+    import MDAnalysis as mda
     def __init__(self, filelist, group_atoms=False, u2=None, u1=None):
 
         self.filelist = filelist
@@ -220,11 +223,6 @@ class generate_cg_graph():
                     return num_index
 
     def compute_cg_mat(self):
-        import json
-        import os
-        from numpy import asarray
-        import networkx as nx
-        import MDAnalysis as mda
 
         for i in range(len(self.filelist)):
             if self.filelist[i].endswith('.json'):
@@ -250,7 +248,6 @@ class generate_cg_graph():
                         adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
 
                 D = nx.Graph(adj)
-                length = dict(nx.all_pairs_shortest_path_length(D))
 
                 # find node connectivities from the CG graph
                 for i in range(n):
