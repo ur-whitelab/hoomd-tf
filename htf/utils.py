@@ -234,7 +234,7 @@ class generate_cg_graph():
                 group_atoms = self.group_atoms
                 jpath = self.filelist[i]
                 print(jpath)
-                obj = json.load(open(jpath, 'r'))
+                obj = self.json.load(open(jpath, 'r'))
                 cg = obj['cgnodes']
                 n = len(cg)
                 adj = np.zeros((n, n))
@@ -247,7 +247,8 @@ class generate_cg_graph():
                     if s_cg != t_cg:
                         adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
 
-                D = nx.Graph(adj)
+                D = self.nx.Graph(adj)
+                length =dict(self.nx.all_pairs_shortest_path_length(D))
 
                 # find node connectivities from the CG graph
                 for i in range(n):
@@ -266,7 +267,7 @@ class generate_cg_graph():
                     r_t = dist_idx[x][1]
                     dist_list.append(
                         list(
-                            nx.all_shortest_paths(
+                            self.nx.all_shortest_paths(
                                 D,
                                 source=r_s,
                                 target=r_t)))
@@ -279,7 +280,7 @@ class generate_cg_graph():
                     a_t = ang_idx[x][1]
                     ang_list.append(
                         list(
-                            nx.all_shortest_paths(
+                            self.nx.all_shortest_paths(
                                 D,
                                 source=a_s,
                                 target=a_t)))
@@ -292,14 +293,13 @@ class generate_cg_graph():
                     d_t = dihe_idx[x][1]
                     dih_list.append(
                         list(
-                            nx.all_shortest_paths(
+                            self.nx.all_shortest_paths(
                                 D,
                                 source=d_s,
                                 target=d_t)))
                 dihs = np.asarray(dih_list).squeeze(axis=(1,))
 
-                length = dict(nx.all_pairs_shortest_path_length(D))
-
+               
                 if group_atoms:
                     u1 = self.u1
                     u2 = self.u2
