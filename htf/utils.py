@@ -307,7 +307,7 @@ class generate_cg_graph():
                         print('One or both MDAnalysis universe not specified')
 
                     else:
-                        atm_groups = []
+                        cg_positions = []
                         for i in range(len(cg)):
                             ag = 0
                             for j in range(len(cg[i])):
@@ -326,9 +326,10 @@ class generate_cg_graph():
                                     ah = au + h
                                     ag += ah
 
-                            atm_groups.append(ag)
+                            com = ag.center_of_mass()
+                            cg_positions.append(com)
 
-                        return atm_groups, rs, angs, dihs
+                        return  rs, angs, dihs, np.asarray(cg_positions)
 
                 else:
                     print('Only properties are calculated')
