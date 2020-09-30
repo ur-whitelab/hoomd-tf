@@ -272,8 +272,10 @@ Following packages are optional:
 .. code:: bash
 
    MDAnalysis
+   NetworkX
 
-:py:class:`utils.iter_from_trajectory` uses `MDAnalysis` for trajectory parsing
+:py:func:`utils.iter_from_trajectory` and :py:class:`utils.generate_cg_graph`  use `MDAnalysis` for trajectory parsing.
+:py:class:`utils.generate_cg_graph` uses NetworkX for generating the CG graph.
 
 
 .. |ss| raw:: html
