@@ -205,7 +205,7 @@ def find_molecules(system):
     return mapping
 
 
-class CGGraphGenerator():
+class CGGraphGenerator:
     ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads
     to compute CG bond distances,CG angles and CG dihedrals. If group_atoms is given as True
     outputs CG coordinates as well. If group_atoms flag
