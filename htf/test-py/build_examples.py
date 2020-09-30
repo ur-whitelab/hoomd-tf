@@ -120,6 +120,24 @@ class MolFeatureModel(htf.MolSimModel):
         avg_d = tf.reduce_mean(input_tensor=d)
         return avg_r, avg_a, avg_d
 
+class CGModel(htf.SimModel):
+    
+    def compute(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_CGGraphGenerator")
+ 
+        directory = os.path.dirname(__file__)
+        filelist = [os.path.join(directory,f) for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+        
+        u2 = mda.Universe(os.path.join(os.path.dirname(__file__),'test_segA_xH.pdb'))
+        u1 = mda.Universe(os.path.join(os.path.dirname(__file__),'test_segA.pdb'))
+        
+        cg_graph = htf.CGGraphGenerator(filelist,True,u2,u1)
+        cg_feats = cg_graph.compute_cg_mat()
+        return cg_feats
 
 class CustomNlist(htf.SimModel):
     def compute(self, nlist, positions, box, sample_weight):
