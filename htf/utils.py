@@ -280,12 +280,12 @@ class CGGraphGenerator():
                 # find node connectivities from the CG graph
                 for i in range(n):
                     for j in range(i + 1, n):
-                        l = length[i][j]
-                        if l == 1:
+                        cg_l = length[i][j]
+                        if cg_l == 1:
                             dist_idx.append((i, j))
-                        elif l == 2:
+                        elif cg_l == 2:
                             ang_idx.append((i, j))
-                        elif l == 3:
+                        elif cg_l == 3:
                             dihe_idx.append((i, j))
 
                 # find indices of bonded pairs
@@ -357,7 +357,7 @@ class CGGraphGenerator():
 
                         return rs, angs, dihs, np.asarray(cg_positions)
 
-                elif group_atoms == False:
+                else group_atoms == False:
                     print(
                         'CG coordinates are not caculated. Only connectivities are calculated')
 
