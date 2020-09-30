@@ -205,10 +205,12 @@ def find_molecules(system):
     return mapping
 
 
-class generate_cg_graph():
-    ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads to compute CG bond distances,
-    CG angles and CG dihedrals. If group_atoms is given as True outputs CG coordinates as well. If group_atoms flag
-    is set to True, two MDAnalysis universes with Hydrogens and without Hydrogens must be given as arguments.
+class CGGraphGenerator():
+    ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads
+    to compute CG bond distances,CG angles and CG dihedrals. If group_atoms is given as True
+    outputs CG coordinates as well. If group_atoms flag
+    is set to True, two MDAnalysis universes with Hydrogens and without Hydrogens
+    must be given as arguments.
 
     Optional dependencies: MDAnalysis, networkx
 
@@ -221,7 +223,8 @@ class generate_cg_graph():
     :param u1: All atom structure with hydrogens
     :type u1: MDAnalysis universe
 
-    :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles, list of indices of CG beads making dihedrals, CG coordinates
+    :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles,
+             list of indices of CG beads making dihedrals, CG coordinates
 
     '''
 
@@ -458,10 +461,12 @@ def mol_angle(
         b1=None,
         b2=None,
         b3=None):
-    ''' This method calculates the bond angle given three atoms batched by molecule. Or to output CG angles input CG=True and indices of the CG beads making the angles.
+    ''' This method calculates the bond angle given three atoms batched by molecule.
+    Or to output CG angles input CG=True and indices of the CG beads making the angles.
     cg_positions and bead indices can be computed by calling generate_cg_graph()
 
-    :param  mol_positions: Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep() method in simmodel
+    :param  mol_positions: Positions tensor of atoms batched by molecules.
+            Can be created by calling build_mol_rep() method in simmodel
     :type mol_positions: float
     :param type_i: Index of the first atom
     :type type_i: int
@@ -522,10 +527,12 @@ def mol_bond_distance(
         cg_positions=None,
         b1=None,
         b2=None):
-    ''' This method calculates the bond distance given two atoms batched by molecule. Or to output CG bond distances, input CG=True and indices of the CG bead pairs
+    ''' This method calculates the bond distance given two atoms batched by molecule.
+    Or to output CG bond distances, input CG=True and indices of the CG bead pairs
     cg_positions and bead indices can be computed by calling generate_cg_graph()
 
-    :param mol_positions: Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep() method in simmodel
+    :param mol_positions: Positions tensor of atoms batched by molecules.
+           Can be created by calling build_mol_rep() method in simmodel
     :type mol_positions: float
     :param type_i: Index of the first atom
     :type type_i: int
@@ -574,10 +581,12 @@ def mol_dihedral(
         b2=None,
         b3=None,
         b4=None):
-    ''' This method calculates the dihedral angles given three atoms batched by molecule. Or to output CG dihedral angles input CG=True and indices of the CG beads making the angles.
+    ''' This method calculates the dihedral angles given three atoms batched by molecule.
+    Or to output CG dihedral angles input CG=True and indices of the CG beads making the angles.
     cg_positions and bead indices can be computed by calling generate_cg_graph()
 
-    :param  mol_positions: Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep() method in simmodel
+    :param  mol_positions: Positions tensor of atoms batched by molecules.
+            Can be created by calling build_mol_rep() method in simmodel
     :type mol_positions: float
     :param type_i: Index of the first atom
     :type type_i: int
