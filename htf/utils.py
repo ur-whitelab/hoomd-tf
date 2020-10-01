@@ -236,21 +236,21 @@ def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
     import MDAnalysis as mda
     import networkx as nx
     import json
-    
+
     for i in range(len(filelist)):
         if filelist[i].endswith('.json'):
             dist_idx = []
             ang_idx = []
             dihe_idx = []
             dist_list = []
-            
+
             jpath = filelist[i]
             print(jpath)
             obj = json.load(open(jpath, 'r'))
             cg = obj['cgnodes']
             n = len(cg)
             adj = np.zeros((n, n))
-            
+
             for edges in obj['edges']:
                 s_id = int(edges['source'])
                 t_id = int(edges['target'])
@@ -258,7 +258,7 @@ def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
                 t_cg = find_cgnode_id(t_id, cg)
                 if s_cg != t_cg:
                     adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
-                    
+
             D = nx.Graph(adj)
             length = dict(nx.all_pairs_shortest_path_length(D))
 
@@ -270,18 +270,18 @@ def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
                         dist_idx.append((i, j))
                     elif cg_l == 2:
                         ang_idx.append((i, j))
-                        
+
                     elif cg_l == 3:
                         dihe_idx.append((i, j))
-                        
+
             # find indices of bonded pairs
             for x in range(len(dist_idx)):
                 r_s = dist_idx[x][0]
                 r_t = dist_idx[x][1]
-                dist_list.append(list(nx.all_shortest_paths(D,source=r_s, target=r_t)))
-                
+                dist_list.append(list(nx.all_shortest_paths(D, source=r_s, target=r_t)))
+
             rs = np.asarray(dist_list).squeeze(axis=(1,))
-            
+
             # find indices of angles-making nodes
             ang_list = []
             for x in range(len(ang_idx)):
@@ -308,7 +308,7 @@ def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
                             target=d_t)))
             dihs = np.asarray(dih_list).squeeze(axis=(1,))
 
-            if group_atoms == True:
+            if group_atoms:
                 if u2 is None or u1 is None:
                     print('One or both MDAnalysis universe not specified')
 
@@ -337,12 +337,13 @@ def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
 
                     return rs, angs, dihs, np.asarray(cg_positions)
 
-            if group_atoms == False:
+            if not group_atoms:
                 print(
                     'CG coordinates are not caculated. Only connectivities are calculated')
 
-                return rs, angs, dihs     
-         
+                return rs, angs, dihs
+
+
 def iter_from_trajectory(
         nneighbor_cutoff,
         universe,
@@ -475,7 +476,7 @@ def mol_angle(
     '''
     if mol_positions is None and CG == False:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
-    
+
     if mol_positions is not None and CG == False:
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
