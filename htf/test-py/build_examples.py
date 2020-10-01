@@ -139,8 +139,8 @@ class CGModel(htf.SimModel):
         u2 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA_xH.pdb'))
         u1 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA.pdb'))
 
-        cg_graph = htf.CGGraphGenerator(filelist, True, u2, u1)
-        cg_feats = cg_graph.compute_cg_mat()
+        cg_feats = htf.compute_cg_graph(filelist, True, u2, u1)
+       
         return cg_feats
 
 

@@ -364,7 +364,7 @@ class test_mol_properties(unittest.TestCase):
         assert np.isfinite(np.sum(aa))
         assert np.isfinite(np.sum(ad))
 
-'''
+
 class test_cg_features(unittest.TestCase):
     def test_CGGraphGenerator(self):
         try:
@@ -384,7 +384,6 @@ class test_cg_features(unittest.TestCase):
 
         assert np.sum(result[-1]) != 0
 
-'''
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
