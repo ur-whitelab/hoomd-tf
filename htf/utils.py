@@ -228,13 +228,9 @@ class CGGraphGenerator:
 
     '''
 
-    try:
-        import MDAnalysis as mda
-        import networkx as nx
-        import json
-    except ImportError:
-        self.skipTest(
-            "MDAnalysis and NetworkX not available")
+    import MDAnalysis as mda
+    import networkx as nx
+    import json
 
     def __init__(self, filelist, group_atoms=False, u2=None, u1=None):
 
