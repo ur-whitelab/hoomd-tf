@@ -357,7 +357,7 @@ class CGGraphGenerator:
 
                         return rs, angs, dihs, np.asarray(cg_positions)
 
-                else group_atoms == False:
+                elif group_atoms == False:
                     print(
                         'CG coordinates are not caculated. Only connectivities are calculated')
 
