@@ -205,7 +205,14 @@ def find_molecules(system):
     return mapping
 
 
-class CGGraphGenerator:
+def find_cgnode_id(atm_id, cg):
+    for num_index, num_val in enumerate(cg):
+        for j_idx, j_value in enumerate(num_val):
+            if j_value == atm_id:
+                return num_index
+
+
+def compute_cg_graph(filelist, group_atoms=False, u2=None, u1=None):
     ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads
     to compute CG bond distances,CG angles and CG dihedrals. If group_atoms is given as True
     outputs CG coordinates as well. If group_atoms flag
@@ -225,141 +232,117 @@ class CGGraphGenerator:
 
     :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles,
              list of indices of CG beads making dihedrals, CG coordinates
-
-    '''
-
+     '''
     import MDAnalysis as mda
     import networkx as nx
     import json
+    
+    for i in range(len(filelist)):
+        if filelist[i].endswith('.json'):
+            dist_idx = []
+            ang_idx = []
+            dihe_idx = []
+            dist_list = []
+            
+            jpath = filelist[i]
+            print(jpath)
+            obj = json.load(open(jpath, 'r'))
+            cg = obj['cgnodes']
+            n = len(cg)
+            adj = np.zeros((n, n))
+            
+            for edges in obj['edges']:
+                s_id = int(edges['source'])
+                t_id = int(edges['target'])
+                s_cg = find_cgnode_id(s_id, cg)
+                t_cg = find_cgnode_id(t_id, cg)
+                if s_cg != t_cg:
+                    adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
+                    
+            D = nx.Graph(adj)
+            length = dict(nx.all_pairs_shortest_path_length(D))
 
-    def __init__(self, filelist, group_atoms=False, u2=None, u1=None):
+            # find node connectivities from the CG graph
+            for i in range(n):
+                for j in range(i + 1, n):
+                    cg_l = length[i][j]
+                    if cg_l == 1:
+                        dist_idx.append((i, j))
+                    elif cg_l == 2:
+                        ang_idx.append((i, j))
+                        
+                    elif cg_l == 3:
+                        dihe_idx.append((i, j))
+                        
+            # find indices of bonded pairs
+            for x in range(len(dist_idx)):
+                r_s = dist_idx[x][0]
+                r_t = dist_idx[x][1]
+                dist_list.append(list(nx.all_shortest_paths(D,source=r_s, target=r_t)))
+                
+            rs = np.asarray(dist_list).squeeze(axis=(1,))
+            
+            # find indices of angles-making nodes
+            ang_list = []
+            for x in range(len(ang_idx)):
+                a_s = ang_idx[x][0]
+                a_t = ang_idx[x][1]
+                ang_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            D,
+                            source=a_s,
+                            target=a_t)))
+            angs = np.asarray(ang_list).squeeze(axis=(1,))
 
-        self.filelist = filelist
-        self.group_atoms = group_atoms
-        self.u2 = u2
-        self.u1 = u1
+            # find indices of dihedral-making nodes
+            dih_list = []
+            for x in range(len(dihe_idx)):
+                d_s = dihe_idx[x][0]
+                d_t = dihe_idx[x][1]
+                dih_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            D,
+                            source=d_s,
+                            target=d_t)))
+            dihs = np.asarray(dih_list).squeeze(axis=(1,))
 
-    def find_cgnode_id(self, atm_id, cg):
-        for num_index, num_val in enumerate(cg):
-            for j_idx, j_value in enumerate(num_val):
-                if j_value == atm_id:
-                    return num_index
+            if group_atoms == True:
+                if u2 is None or u1 is None:
+                    print('One or both MDAnalysis universe not specified')
 
-    def compute_cg_mat(self):
+                if group_atoms and u1 is not None and u2 is not None:
+                    cg_positions = []
+                    for i in range(len(cg)):
+                        ag = 0
+                        for j in range(len(cg[i])):
+                            atm_id = cg[i][j]
+                            a = u2.atoms[atm_id]
+                            a_name = str(a.name)
+                            a_resid = str(a.resid)
+                            au = u1.select_atoms(
+                                'name ' + a_name + ' and resid ' + a_resid)
+                            h = u1.select_atoms(
+                                'type H and bonded name ' + a_name + ' and resid ' + a_resid)
+                            # print(h)
+                            if len(list(h)) == 0:
+                                ag += au
+                            else:
+                                ah = au + h
+                                ag += ah
 
-        for i in range(len(self.filelist)):
-            if self.filelist[i].endswith('.json'):
-                dist_idx = []
-                ang_idx = []
-                dihe_idx = []
-                dist_list = []
+                        com = ag.center_of_mass()
+                        cg_positions.append(com)
 
-                group_atoms = self.group_atoms
-                jpath = self.filelist[i]
-                print(jpath)
-                obj = self.json.load(open(jpath, 'r'))
-                cg = obj['cgnodes']
-                n = len(cg)
-                adj = np.zeros((n, n))
+                    return rs, angs, dihs, np.asarray(cg_positions)
 
-                for edges in obj['edges']:
-                    s_id = int(edges['source'])
-                    t_id = int(edges['target'])
-                    s_cg = self.find_cgnode_id(s_id, cg)
-                    t_cg = self.find_cgnode_id(t_id, cg)
-                    if s_cg != t_cg:
-                        adj[s_cg, t_cg] = adj[t_cg, s_cg] = 1
+            if group_atoms == False:
+                print(
+                    'CG coordinates are not caculated. Only connectivities are calculated')
 
-                D = self.nx.Graph(adj)
-                length = dict(self.nx.all_pairs_shortest_path_length(D))
-
-                # find node connectivities from the CG graph
-                for i in range(n):
-                    for j in range(i + 1, n):
-                        cg_l = length[i][j]
-                        if cg_l == 1:
-                            dist_idx.append((i, j))
-                        elif cg_l == 2:
-                            ang_idx.append((i, j))
-                        elif cg_l == 3:
-                            dihe_idx.append((i, j))
-
-                # find indices of bonded pairs
-                for x in range(len(dist_idx)):
-                    r_s = dist_idx[x][0]
-                    r_t = dist_idx[x][1]
-                    dist_list.append(
-                        list(
-                            self.nx.all_shortest_paths(
-                                D,
-                                source=r_s,
-                                target=r_t)))
-                rs = np.asarray(dist_list).squeeze(axis=(1,))
-
-                # find indices of angles-making nodes
-                ang_list = []
-                for x in range(len(ang_idx)):
-                    a_s = ang_idx[x][0]
-                    a_t = ang_idx[x][1]
-                    ang_list.append(
-                        list(
-                            self.nx.all_shortest_paths(
-                                D,
-                                source=a_s,
-                                target=a_t)))
-                angs = np.asarray(ang_list).squeeze(axis=(1,))
-
-                # find indices of dihedral-making nodes
-                dih_list = []
-                for x in range(len(dihe_idx)):
-                    d_s = dihe_idx[x][0]
-                    d_t = dihe_idx[x][1]
-                    dih_list.append(
-                        list(
-                            self.nx.all_shortest_paths(
-                                D,
-                                source=d_s,
-                                target=d_t)))
-                dihs = np.asarray(dih_list).squeeze(axis=(1,))
-
-                if group_atoms == True:
-                    u1 = self.u1
-                    u2 = self.u2
-                    if u2 is None or u1 is None:
-                        print('One or both MDAnalysis universe not specified')
-
-                    if group_atoms and u1 is not None and u2 is not None:
-                        cg_positions = []
-                        for i in range(len(cg)):
-                            ag = 0
-                            for j in range(len(cg[i])):
-                                atm_id = cg[i][j]
-                                a = u2.atoms[atm_id]
-                                a_name = str(a.name)
-                                a_resid = str(a.resid)
-                                au = u1.select_atoms(
-                                    'name ' + a_name + ' and resid ' + a_resid)
-                                h = u1.select_atoms(
-                                    'type H and bonded name ' + a_name + ' and resid ' + a_resid)
-                                # print(h)
-                                if len(list(h)) == 0:
-                                    ag += au
-                                else:
-                                    ah = au + h
-                                    ag += ah
-
-                            com = ag.center_of_mass()
-                            cg_positions.append(com)
-
-                        return rs, angs, dihs, np.asarray(cg_positions)
-
-                if group_atoms == False:
-                    print(
-                        'CG coordinates are not caculated. Only connectivities are calculated')
-
-                    return rs, angs, dihs
-
-
+                return rs, angs, dihs     
+         
 def iter_from_trajectory(
         nneighbor_cutoff,
         universe,
