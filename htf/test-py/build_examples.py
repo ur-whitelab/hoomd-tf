@@ -124,11 +124,8 @@ class MolFeatureModel(htf.MolSimModel):
 class CGModel(htf.SimModel):
 
     def compute(self):
-        try:
-            import MDAnalysis as mda
-        except ImportError:
-            self.skipTest(
-                "MDAnalysis not available; skipping test_CGGraphGenerator")
+
+        import MDAnalysis as mda
 
         directory = os.path.dirname(__file__)
         filelist = [
