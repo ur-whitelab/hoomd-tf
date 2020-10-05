@@ -277,7 +277,12 @@ def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
             for x in range(len(dist_idx)):
                 r_source = dist_idx[x][0]
                 r_target = dist_idx[x][1]
-                dist_list.append(list(nx.all_shortest_paths(cg_grph, source=r_source, target=r_target)))
+                dist_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            cg_grph,
+                            source=r_source,
+                            target=r_target)))
 
             rs = np.asarray(dist_list).squeeze(axis=(1,))
 
@@ -307,11 +312,11 @@ def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
                             target=d_target)))
             dihs = np.asarray(dih_list).squeeze(axis=(1,))
 
-            if group_atoms==True:
+            if group_atoms is True:
                 if u_no_H is None or u_H is None:
                     print('One or both MDAnalysis universe not specified')
 
-                if  u_H is not None and u_no_H is not None:
+                if u_H is not None and u_no_H is not None:
                     cg_positions = []
                     for i in range(cg_num):
                         atm_group = 0
@@ -472,10 +477,10 @@ def mol_angle(
               or
               cg_angles: list containing CG angles (CG=True)
     '''
-    if mol_positions is None and CG == False:
+    if mol_positions is None and CG is False:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
-    if mol_positions is not None and CG == False:
+    if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
@@ -537,10 +542,10 @@ def mol_bond_distance(
               u_ij: Array containig CG bond distances(CG=True)
     '''
 
-    if CG == False and mol_positions is None:
+    if CG is False and mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
-    if CG == False and mol_positions is not None:
+    if CG is False and mol_positions is not None:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_ij = tf.norm(tensor=v_ij, axis=1)
         return v_ij
@@ -599,10 +604,10 @@ def mol_dihedral(
               cg_dihedrals: list containing CG dihedral angles (CG=True)
     '''
 
-    if mol_positions is None and CG == False:
+    if mol_positions is None and CG is False:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
-    if mol_positions is not None and CG == False:
+    if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
