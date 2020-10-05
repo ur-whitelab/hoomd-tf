@@ -327,7 +327,7 @@ def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
                             if len(list(h)) == 0:
                                 atm_group += heavy_atom
                             else:
-                                ah = center_atom + h
+                                ah = heavy_atom + h
                                 atm_group += ah
 
                         com = atm_group.center_of_mass()
