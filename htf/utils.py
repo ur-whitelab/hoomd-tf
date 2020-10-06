@@ -205,6 +205,148 @@ def find_molecules(system):
     return mapping
 
 
+def find_cgnode_id(atm_id, cg):
+    for num_index, num_val in enumerate(cg):
+        for j_idx, j_value in enumerate(num_val):
+            if j_value == atm_id:
+                return num_index
+
+
+def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
+    ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads
+    to compute CG bond distances,CG angles and CG dihedrals. If group_atoms is given as True
+    outputs CG coordinates as well. If group_atoms flag
+    is set to True, two MDAnalysis universes with Hydrogens and without Hydrogens
+    must be given as arguments.
+
+    Optional dependencies: MDAnalysis, networkx
+
+    :param filelist: path to the directory containing JSON files
+    :type filelist: string
+    :param group_atoms: flag to output CG coordinates
+    :type group_atoms: bool
+    :param u_no_H: All atom structure without hydrogens
+    :type u_no_H: MDAnalysis universe
+    :param u_H: All atom structure with hydrogens
+    :type u_H: MDAnalysis universe
+
+    :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles,
+             list of indices of CG beads making dihedrals, CG coordinates
+     '''
+    import MDAnalysis as mda
+    import networkx as nx
+    import json
+
+    for i in range(len(filelist)):
+        if filelist[i].endswith('.json'):
+            dist_idx = []
+            ang_idx = []
+            dihe_idx = []
+            dist_list = []
+
+            jpath = filelist[i]
+            print(jpath)
+            obj = json.load(open(jpath, 'r'))
+            cg = obj['cgnodes']
+            cg_num = len(cg)
+            adj = np.zeros((cg_num, cg_num))
+            for edges in obj['edges']:
+                source_id = int(edges['source'])
+                target_id = int(edges['target'])
+                source_cg = find_cgnode_id(source_id, cg)
+                target_cg = find_cgnode_id(target_id, cg)
+                if source_cg != target_cg:
+                    adj[source_cg, target_cg] = adj[target_cg, source_cg] = 1
+
+            cg_grph = nx.Graph(adj)
+            length = dict(nx.all_pairs_shortest_path_length(cg_grph))
+
+            # find node connectivities from the CG graph
+            for i in range(cg_num):
+                for j in range(i + 1, cg_num):
+                    cg_l = length[i][j]
+                    if cg_l == 1:
+                        dist_idx.append((i, j))
+                    elif cg_l == 2:
+                        ang_idx.append((i, j))
+
+                    elif cg_l == 3:
+                        dihe_idx.append((i, j))
+
+            # find indices of bonded pairs
+            for x in range(len(dist_idx)):
+                r_source = dist_idx[x][0]
+                r_target = dist_idx[x][1]
+                dist_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            cg_grph,
+                            source=r_source,
+                            target=r_target)))
+
+            rs = np.asarray(dist_list).squeeze(axis=(1,))
+
+            # find indices of angles-making nodes
+            ang_list = []
+            for x in range(len(ang_idx)):
+                a_source = ang_idx[x][0]
+                a_target = ang_idx[x][1]
+                ang_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            cg_grph,
+                            source=a_source,
+                            target=a_target)))
+            angs = np.asarray(ang_list).squeeze(axis=(1,))
+
+            # find indices of dihedral-making nodes
+            dih_list = []
+            for x in range(len(dihe_idx)):
+                d_source = dihe_idx[x][0]
+                d_target = dihe_idx[x][1]
+                dih_list.append(
+                    list(
+                        nx.all_shortest_paths(
+                            cg_grph,
+                            source=d_source,
+                            target=d_target)))
+            dihs = np.asarray(dih_list).squeeze(axis=(1,))
+
+            if group_atoms is True:
+                if u_no_H is None or u_H is None:
+                    print('One or both MDAnalysis universe not specified')
+
+                if u_H is not None and u_no_H is not None:
+                    cg_positions = []
+                    for i in range(cg_num):
+                        atm_group = 0
+                        for j in range(len(cg[i])):
+                            atm_id = cg[i][j]
+                            atom = u_no_H.atoms[atm_id]
+                            a_name = str(atom.name)
+                            a_resid = str(atom.resid)
+                            heavy_atom = u_H.select_atoms(
+                                'name ' + a_name + ' and resid ' + a_resid)
+                            h = u_H.select_atoms(
+                                'type H and bonded name ' + a_name + ' and resid ' + a_resid)
+                            if len(list(h)) == 0:
+                                atm_group += heavy_atom
+                            else:
+                                ah = heavy_atom + h
+                                atm_group += ah
+
+                        com = atm_group.center_of_mass()
+                        cg_positions.append(com)
+
+                    return rs, angs, dihs, np.asarray(cg_positions)
+
+            else:
+                print(
+                    'CG coordinates are not caculated. Only connectivities are calculated')
+
+                return rs, angs, dihs
+
+
 def iter_from_trajectory(
         nneighbor_cutoff,
         universe,
@@ -297,54 +439,48 @@ def matrix_mapping(molecule, beads_distribution):
     return CG_matrix
 
 
-def mol_bond_distance(mol_positions, type_i, type_j):
-    ''' This method calculates the bond distance given two atoms batched by molecule
+def mol_angle(
+        mol_positions=None,
+        type_i=None,
+        type_j=None,
+        type_k=None,
+        CG=False,
+        cg_positions=None,
+        b1=None,
+        b2=None,
+        b3=None):
+    ''' This method calculates the bond angle given three atoms batched by molecule.
+    Or to output CG angles input CG=True and indices of the CG beads making the angles.
+    cg_positions and bead indices can be computed by calling generate_cg_graph()
 
-    Parameters
-    -------------
-    mol_positions
-        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in simmodel
-    type_i
-         Index of the first atom (int type)
-    type_j
-         Index of the second atom (int type)
-    Returns
-    -------------
-    v_ij
-         Tensor containing bond distances
+    :param  mol_positions: Positions tensor of atoms batched by molecules.
+            Can be created by calling build_mol_rep() method in simmodel
+    :type mol_positions: float
+    :param type_i: Index of the first atom
+    :type type_i: int
+    :param type_j: Index of the second atom
+    :type type_j: int
+    :param type_k: Index of the third atom
+    :type type_k: int
+    :param CG: flag to compute CG angles must be given with b1,b2 and b3
+    :type CG: bool
+    :param cg_positions: array of CG coordinates
+    :type cg_positions: float
+    :param b1: index of first CG bead
+    :type b1: int
+    :param b2: index of second CG bead
+    :type b2: int
+    :param b3: index of third CG bead
+    :type b3: int
+
+    :returns: angles:Tensor containing all atom angles (CG=False)
+              or
+              cg_angles: list containing CG angles (CG=True)
     '''
-    if mol_positions is None:
+    if mol_positions is None and CG is False:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
-    else:
-        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        v_ij = tf.norm(tensor=v_ij, axis=1)
-        return v_ij
-
-
-def mol_angle(mol_positions, type_i, type_j, type_k):
-    ''' This method calculates the bond angle given three atoms batched by molecule
-
-    Parameters
-    -------------
-    mol_positions
-        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in simmodel
-    type_i
-         Index of the first atom (int type)
-    type_j
-         Index of the second atom (int type)
-    type_k
-         Index of the third atom (int type)
-    Returns
-    -------------
-    angles
-         Tensor containing bond angles
-    '''
-    if mol_positions is None:
-        raise ValueError('mol_positions not found. Call build_mol_rep()')
-    else:
+    if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
@@ -359,32 +495,119 @@ def mol_angle(mol_positions, type_i, type_j, type_k):
         angles = tf.math.acos(cos_a)
         return angles
 
+    if CG and cg_positions is None:
+        raise ValueError('cg_positions not found.')
 
-def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
-    ''' This method calculates the dihedral angle given four atoms batched by molecule
+    if CG and cg_positions is not None:
+        v_ij = cg_positions[b2] - cg_positions[b1]
+        v_jk = cg_positions[b3] - cg_positions[b2]
+        cos_a = np.dot(v_ij, v_jk)
+        cos_a = np.divide(cos_a, (np.linalg.norm(v_ij) * np.linalg.norm(v_jk)))
 
-    Parameters
-    -------------
-    mol_positions
-        Positions tensor of atoms batched by molecules. Can be created by calling build_mol_rep()
-        method in simmodel
-    type_i
-         Index of the first atom (int type)
-    type_j
-         Index of the second atom (int type)
-    type_k
-         Index of the third atom (int type)
-    type_l
-         Index of the fourth atom (int type)
-    Returns
-    -------------
-    dihedrals
-         Tensor containing dihedral angles
+        cg_angles = np.arccos(cos_a)
+        return cg_angles
+
+
+def mol_bond_distance(
+        mol_positions=None,
+        type_i=None,
+        type_j=None,
+        CG=False,
+        cg_positions=None,
+        b1=None,
+        b2=None):
+    ''' This method calculates the bond distance given two atoms batched by molecule.
+    Or to output CG bond distances, input CG=True and indices of the CG bead pairs
+    cg_positions and bead indices can be computed by calling generate_cg_graph()
+
+    :param mol_positions: Positions tensor of atoms batched by molecules.
+           Can be created by calling build_mol_rep() method in simmodel
+    :type mol_positions: float
+    :param type_i: Index of the first atom
+    :type type_i: int
+    :param type_j: Index of the second atom
+    :type type_j: int type
+    :param CG: flag to compute CG bond distances (must be given with b1 and b2)
+    :type CG: bool
+    :param cg_positions: array of CG coordinates
+    :type cg_positions: float
+    :param b1: index of first CG bead
+    :type b1: int
+    :param b2: index of second CG bead
+    :type b2: int
+
+
+    :returns: v_ij: Tensor containing bond distances(CG=False)
+              or
+              u_ij: Array containig CG bond distances(CG=True)
     '''
-    if mol_positions is None:
+
+    if CG is False and mol_positions is None:
         raise ValueError('mol_positions not found. Call build_mol_rep()')
 
-    else:
+    if CG is False and mol_positions is not None:
+        v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
+        v_ij = tf.norm(tensor=v_ij, axis=1)
+        return v_ij
+
+    if CG and cg_positions is None:
+        raise ValueError('cg_positions not found')
+
+    if CG and cg_positions is not None:
+        u_ij = cg_positions[b2] - cg_positions[b1]
+        u_ij = np.linalg.norm(u_ij)
+        return u_ij
+
+
+def mol_dihedral(
+        mol_positions=None,
+        type_i=None,
+        type_j=None,
+        type_k=None,
+        type_l=None,
+        CG=False,
+        cg_positions=None,
+        b1=None,
+        b2=None,
+        b3=None,
+        b4=None):
+    ''' This method calculates the dihedral angles given three atoms batched by molecule.
+    Or to output CG dihedral angles input CG=True and indices of the CG beads making the angles.
+    cg_positions and bead indices can be computed by calling generate_cg_graph()
+
+    :param  mol_positions: Positions tensor of atoms batched by molecules.
+            Can be created by calling build_mol_rep() method in simmodel
+    :type mol_positions: float
+    :param type_i: Index of the first atom
+    :type type_i: int
+    :param type_j: Index of the second atom
+    :type type_j: int
+    :param type_k: Index of the third atom
+    :type type_k: int
+    :param type_l: Index of the fourth atom
+    :type type_k: int
+    :param CG: flag to compute CG dihedral angles must be given with b1,b2,b3 and b4
+    :type CG: bool
+    :param cg_positions: array of CG coordinates
+    :type cg_positions: float
+    :param b1: index of first CG bead
+    :type b1: int
+    :param b2: index of second CG bead
+    :type b2: int
+    :param b3: index of third CG bead
+    :type b3: int
+    :param b4: index of fourth CG bead
+    :type b4: int
+
+    :returns: dihedrals:Tensor containing all atom dihedral angles (CG=False)
+              or
+              cg_dihedrals: list containing CG dihedral angles (CG=True)
+    '''
+
+    if mol_positions is None and CG is False:
+        raise ValueError('mol_positions not found. Call build_mol_rep()')
+
+    if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
@@ -402,6 +625,30 @@ def mol_dihedral(mol_positions, type_i, type_j, type_k, type_l):
         cos_d = tf.einsum('ij,ij->i', n1, n2)
         dihedrals = tf.math.acos(cos_d)
         return dihedrals
+
+    if CG and cg_positions is None:
+        raise ValueError('cg_positions not found.')
+
+    if CG and cg_positions is not None:
+        v_ij = cg_positions[b2] - cg_positions[b1]
+        v_jk = cg_positions[b3] - cg_positions[b2]
+        v_kl = cg_positions[b4] - cg_positions[b3]
+
+        n1 = np.cross(v_ij, v_jk)
+        n2 = np.cross(v_jk, v_kl)
+
+        n1_norm = np.linalg.norm(n1)
+        n2_norm = np.linalg.norm(n2)
+
+        if n1_norm == 0.0 or n2_norm == 0.0:
+            print(n1_norm, n2_norm)
+            raise ValueError('Vectors are linear')
+
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        cos_d = np.dot(n1, n2)
+        cg_dihedrals = np.arccos(cos_d)
+        return cg_dihedrals
 
 
 def sparse_mapping(molecule_mapping, molecule_mapping_index,

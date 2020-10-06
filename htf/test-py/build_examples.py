@@ -92,7 +92,7 @@ class LJVirialModel(htf.SimModel):
 class EDSModel(htf.SimModel):
     def setup(self, set_point):
         self.cv_avg = tf.keras.metrics.Mean()
-        self.eds_bias = htf.EDSLayer(set_point, 5, 1/5)
+        self.eds_bias = htf.EDSLayer(set_point, 5, 1 / 5)
 
     def compute(self, nlist, positions, box, sample_weight):
         # get distance from center
@@ -119,6 +119,29 @@ class MolFeatureModel(htf.MolSimModel):
         avg_a = tf.reduce_mean(input_tensor=a)
         avg_d = tf.reduce_mean(input_tensor=d)
         return avg_r, avg_a, avg_d
+
+
+class CGModel(htf.SimModel):
+
+    def compute(self):
+
+        import MDAnalysis as mda
+
+        directory = os.path.dirname(__file__)
+        filelist = [
+            os.path.join(
+                directory,
+                f) for f in os.listdir(directory) if os.path.isfile(
+                os.path.join(
+                    directory,
+                    f))]
+
+        u2 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA_xH.pdb'))
+        u1 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA.pdb'))
+
+        cg_feats = htf.compute_cg_graph(filelist, True, u2, u1)
+
+        return cg_feats
 
 
 class CustomNlist(htf.SimModel):
