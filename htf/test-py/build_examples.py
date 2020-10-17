@@ -127,12 +127,17 @@ class CGModel(htf.SimModel):
 
         import MDAnalysis as mda
 
-        jfile = os.path.join(os.path.dirname(__file__),'test_cgmap.json')
+        jfile = os.path.join(os.path.dirname(__file__), 'test_cgmap.json')
 
         u2 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA_xH.pdb'))
         u1 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA.pdb'))
 
-        cg_feats = htf.compute_cg_graph(DSGPM=True,infile=jfile,group_atoms=True,u_no_H=u2,u_H=u1)
+        cg_feats = htf.compute_cg_graph(
+            DSGPM=True,
+            infile=jfile,
+            group_atoms=True,
+            u_no_H=u2,
+            u_H=u1)
 
         return cg_feats
 
