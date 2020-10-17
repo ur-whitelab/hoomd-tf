@@ -207,17 +207,18 @@ def find_molecules(system):
 
 def find_cgnode_id(atm_id, cg):
     ''' Computes the CG bead index. Supports only
-    outputs formats from DSGPM model. 
+    outputs formats from DSGPM model.
     '''
     for num_index, num_val in enumerate(cg):
         for j_idx, j_value in enumerate(num_val):
             if j_value == atm_id:
                 return num_index
 
+
 def compute_adj_mat(obj):
-    ''' Given a CG mapping in json format, outputs the 
+    ''' Given a CG mapping in json format, outputs the
     adjacency matrix.
-     
+
     :param jsonfile: path to the CG mapping in JSON format
     :type jsonfile: string
 
@@ -236,22 +237,29 @@ def compute_adj_mat(obj):
 
     return adj
 
-def compute_cg_graph(DSGPM= True, infile=None, adj_mat=None,cg_beads = None, group_atoms=False, u_no_H=None, u_H=None):
-    ''' Given a CG mapping in JSON format(from DSGPM model) OR adjacency matrix, 
-    outputs indices of connected CG beads to compute CG bond distances,CG angles 
-    and CG dihedrals. If DSGPM is True, path to jsonfiles must be specified. If DSGPM 
+def compute_cg_graph(
+        DSGPM=True,
+        infile=None,
+        adj_mat=None,
+        cg_beads=None,
+        group_atoms=False,
+        u_no_H=None,
+        u_H=None):
+    ''' Given a CG mapping in JSON format(from DSGPM model) OR adjacency matrix,
+    outputs indices of connected CG beads to compute CG bond distances,CG angles
+    and CG dihedrals. If DSGPM is True, path to jsonfiles must be specified. If DSGPM
     is False, adjacency matrix and the number of CG beads must be specified.
-    If group_atoms is given as True outputs CG coordinates as well. 
-    If group_atoms flag is set to True, two MDAnalysis universes with Hydrogens 
+    If group_atoms is given as True outputs CG coordinates as well.
+    If group_atoms flag is set to True, two MDAnalysis universes with Hydrogens
     and without Hydrogens must be given as arguments.
 
     Optional dependencies: MDAnalysis, networkx
-     
+
     :param DSGPM: flag to identify if mapping in json format is used or not
     :type DSGPM: bool
     :param infile: path to the CG mapping in JSON format
     :type infile: string
-    :param adj_matrix: adjacency matrix (if DSGPM=False) 
+    :param adj_matrix: adjacency matrix (if DSGPM=False)
     :type adj_matrix: numpy array
     :param cg_beads: number of CG beads
     :type cg_beads: int
@@ -268,7 +276,7 @@ def compute_cg_graph(DSGPM= True, infile=None, adj_mat=None,cg_beads = None, gro
     import MDAnalysis as mda
     import networkx as nx
     import json
-    
+
     dist_idx = []
     ang_idx = []
     dihe_idx = []
@@ -278,13 +286,14 @@ def compute_cg_graph(DSGPM= True, infile=None, adj_mat=None,cg_beads = None, gro
         obj = json.load(open(infile, 'r'))
         cg = obj['cgnodes']
         cg_num = len(cg)
-        adj= compute_adj_mat(obj)
+        adj = compute_adj_mat(obj)
 
     elif DSGPM is False and adj_mat is not None:
         adj = adj_mat
         cg_num = cg_beads
 
-    else: print('correct inputs/flags are not given')
+    else:
+        print('correct inputs/flags are not given')
 
     if adj is not None and cg_num is not None:
         cg_grph = nx.Graph(adj)
