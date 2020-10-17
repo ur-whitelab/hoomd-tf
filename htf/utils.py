@@ -237,6 +237,7 @@ def compute_adj_mat(obj):
 
     return adj
 
+
 def compute_cg_graph(
         DSGPM=True,
         infile=None,
