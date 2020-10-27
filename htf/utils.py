@@ -216,11 +216,11 @@ def find_cgnode_id(atm_id, cg):
 
 
 def compute_adj_mat(obj):
-    ''' Given a CG mapping in json format, outputs the
-    adjacency matrix.
+    ''' Given a CG mapping file in json format, outputs the
+    adjacency matrix. See compute_cg_graph.
 
-    :param jsonfile: path to the CG mapping in JSON format
-    :type jsonfile: string
+    :param obj: mapping output from DSGPM
+    :type obj: file
 
     :return: adjacency matrix
     '''
