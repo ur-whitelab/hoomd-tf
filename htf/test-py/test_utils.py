@@ -365,6 +365,25 @@ class test_mol_properties(unittest.TestCase):
         assert np.isfinite(np.sum(ad))
 
 
+class test_cg_features(unittest.TestCase):
+    def test_CGGraphGenerator(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_CGGraphGenerator")
+        import os
+
+        test_pdb = os.path.join(os.path.dirname(__file__), 'test_segA.pdb')
+        test_traj = os.path.join(os.path.dirname(__file__), 'test_segA.trr')
+        universe = mda.Universe(test_pdb, test_traj)
+        # load example graph that computes cg_graph
+        cgmodel = build_examples.CGModel(16, output_forces=False)
+        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
+            result = cgmodel(input)
+
+        assert np.sum(result[-1]) != 0
+
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
