@@ -5,6 +5,7 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
+import MDAnalysis as mda
 
 
 def compute_pairwise(model, r):
@@ -264,7 +265,9 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     :type period: int
     '''
     import MDAnalysis
+    from tqdm import tqdm
     # read trajectory
+    # Modifying the universe for non 'all' atom selections.
     box = universe.dimensions
     # define the system
     hoomd_box = np.array([[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]])
@@ -284,11 +287,11 @@ def iter_from_trajectory(nneighbor_cutoff, universe, selection='all', r_cut=10.,
     # box_size = [box[0], box[1], box[2]]
     nlist = compute_nlist(atom_group.positions, r_cut=r_cut,
                           NN=nneighbor_cutoff, box_size=[box[0], box[1], box[2]])
-    # Modifying the universe for non 'all' atom selections.
-    if selection != 'all':
-        universe = mda.Merge(universe.select_atoms(selection))
+    # if selection != 'all':
+    #     universe = mda.Merge(universe.select_atoms(selection))
+    #     print('universe', universe)
     # Run the model at every nth frame, where n = period
-    for i, ts in enumerate(universe.trajectory):
+    for i, ts in enumerate(tqdm(universe.trajectory)):
         if i % period == 0:
             yield [nlist, np.concatenate(
                 (atom_group.positions,
