@@ -425,7 +425,7 @@ def iter_from_trajectory(
         p = universe.select_atoms(selection)
         dt = universe.trajectory[0].dt
         dimensions = universe.trajectory[0].dimensions
-        if universe.trajectory[0].has_forces == False:
+        if universe.trajectory[0].has_forces is False:
             # Only include positions if traj does not have forces
             x = AnalysisFromFunction(lambda ag: [ag.positions.copy()], p).run().results
             # Construct new_trajectory from the MemoryReader explicitly:
@@ -438,7 +438,6 @@ def iter_from_trajectory(
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
-    
     # read trajectory
     box = universe.dimensions
     # define the system
