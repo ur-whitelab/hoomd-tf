@@ -412,7 +412,7 @@ class test_trajectory(unittest.TestCase):
         box_dimensions = u.trajectory[1].dimensions
         selection = "resname PHE"
         N_atoms = len(u.select_atoms(selection))
-        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection, r_cut=1, period=100):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection, r_cut=1, period=1):
             #     print(ts.forces.shape)
             updated_N_atoms = ts.n_atoms
             updated_box_dimenstions = ts.dimensions
