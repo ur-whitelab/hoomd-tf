@@ -403,6 +403,22 @@ class test_trajectory(unittest.TestCase):
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
 
+        # checking the mda sub-sytem universe based on atom group selection:
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        box_dimensions = u.trajectory[1].dimensions
+        selection = "resname PHE"
+        N_atoms = len(u.select_atoms(selection))
+        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection, r_cut=1, period=100):
+            #     print(ts.forces.shape)
+            updated_N_atoms = ts.n_atoms
+            updated_box_dimenstions = ts.dimensions
+
+        assert updated_N_atoms == N_atoms
+        np.testing.assert_array_equal(updated_box_dimenstions, box_dimensions)
 
 if __name__ == '__main__':
     unittest.main()
