@@ -403,7 +403,7 @@ class test_trajectory(unittest.TestCase):
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
 
-        # checking the mda sub-sytem universe based on atom group selection:
+        # checking the mda sub-system universe based on atom group selection:
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
         TRAJECTORY = os.path.join(os.path.dirname(__file__),
