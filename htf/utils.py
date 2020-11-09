@@ -420,7 +420,6 @@ def iter_from_trajectory(
     import MDAnalysis
     # Modifying the universe for none 'all' atom selections.
     if selection != 'all':
-        print('The universe was redefined based on the atom group selection input.')
         from MDAnalysis.analysis.base import AnalysisFromFunction
         p = universe.select_atoms(selection)
         dt = universe.trajectory[0].dt
@@ -438,6 +437,7 @@ def iter_from_trajectory(
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
+        print('The universe was redefined based on the atom group selection input.')
     # read trajectory
     box = universe.dimensions
     # define the system
