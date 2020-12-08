@@ -33,9 +33,9 @@ The following packages are required to compile:
     python >= 3.6
     tensorflow == 2.3.0
     hoomd >= 2.6.0
-    tbb-devel (only for hoomd 2.8 and above if installed with conda)
+    tbb-devel (only for hoomd if installed with conda)
 
-tbb-devel is required for HOOMD-blue 2.8 or above when using the
+tbb-devel is required for HOOMD-blue when using the
 HOOMD-blue conda release. It is not automatically installed when
 installing HOOMD-blue, so use ``conda install -c conda-forge
 tbb-devel`` to install. The TensorFlow version should be
@@ -272,8 +272,10 @@ Following packages are optional:
 .. code:: bash
 
    MDAnalysis
+   NetworkX
 
-:py:class:`utils.iter_from_trajectory` uses `MDAnalysis` for trajectory parsing
+:py:func:`utils.iter_from_trajectory` and :py:class:`utils.compute_cg_graph`  use `MDAnalysis` for trajectory parsing.
+:py:class:`utils.compute_cg_graph` uses NetworkX for generating the CG graph.
 
 
 .. |ss| raw:: html

@@ -1,5 +1,4 @@
-// Copyright (c) 2018 Andrew White at the University of Rochester
-//  This file is part of the Hoomd-Tensorflow plugin developed by Andrew White
+// Copyright (c) 2020 HOOMD-TF Developers
 
 #ifndef m_TENSORFLOW_COMPUTE_CUH_
 #define m_TENSORFLOW_COMPUTE_CUH_
@@ -11,7 +10,7 @@
 
 /*! \file TensorflowCompute.cuh
  *  \brief Declarations of GPU version of some TensorflowCompute methods
- */ 
+ */
 
 //! Add Scalar4 type arrays in parallel on GPU by invoking the kernel.
 extern "C" cudaError_t htf_gpu_add_scalar4(Scalar4 *dest,

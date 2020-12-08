@@ -1,3 +1,4 @@
+# Copyright (c) 2020 HOOMD-TF Developers
 import shutil
 import tempfile
 import build_examples
@@ -144,22 +145,34 @@ class test_mappings(unittest.TestCase):
 
     def test_compute_nlist(self):
         N = 10
-        positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
+        positions = tf.cast(
+            tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3]), tf.float32)
         box_size = [100., 100., 100.]
         nlist = hoomd.htf.compute_nlist(
-            tf.cast(
-                positions,
-                tf.float32),
+            positions,
             100.,
             9,
             box_size,
-            True)
+            return_types=False,
+            sorted=True)
         nlist = nlist.numpy()
         # particle 1 is closest to 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
         # particle 0 is -9 away from 9
         np.testing.assert_array_almost_equal(nlist[-1, -1, :],
                                              [-9, -9, -9, 0])
+
+        extended_positions = tf.concat([positions, tf.zeros((N, 1))], axis=1)
+        nlist = hoomd.htf.compute_nlist(
+            extended_positions,
+            100.,
+            9,
+            box_size,
+            return_types=True,
+            sorted=True)
+        nlist = nlist.numpy()
+        # particle 1 is closest to type 0
+        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
 
     def test_compute_nlist_cut(self):
         N = 10
@@ -172,7 +185,7 @@ class test_mappings(unittest.TestCase):
             5.5,
             9,
             box_size,
-            True)
+            sorted=True)
         nlist = nlist.numpy()
         # particle 1 is closest to 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 1])
@@ -352,6 +365,25 @@ class test_mol_properties(unittest.TestCase):
         assert np.isfinite(np.sum(ad))
 
 
+class test_cg_features(unittest.TestCase):
+    def test_CGGraphGenerator(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_CGGraphGenerator")
+        import os
+
+        test_pdb = os.path.join(os.path.dirname(__file__), 'test_segA.pdb')
+        test_traj = os.path.join(os.path.dirname(__file__), 'test_segA.trr')
+        universe = mda.Universe(test_pdb, test_traj)
+        # load example graph that computes cg_graph
+        cgmodel = build_examples.CGModel(16, output_forces=False)
+        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
+            result = cgmodel(input)
+
+        assert np.sum(result[-1]) != 0
+
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
@@ -371,6 +403,23 @@ class test_trajectory(unittest.TestCase):
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
 
+        # checking the mda sub-system universe based on atom group selection:
+        tpr = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        traj = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(tpr, traj)
+        box_dimensions = u.trajectory[1].dimensions
+        selection = "resname PHE"
+        N_atoms = len(u.select_atoms(selection))
+        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection,
+                                                         r_cut=1, period=1):
+            #     print(ts.forces.shape)
+            updated_N_atoms = ts.n_atoms
+            updated_box_dimenstions = ts.dimensions
+
+        assert updated_N_atoms == N_atoms
+        np.testing.assert_array_equal(updated_box_dimenstions, box_dimensions)
 
 if __name__ == '__main__':
     unittest.main()

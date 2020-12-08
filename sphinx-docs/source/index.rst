@@ -47,6 +47,7 @@ See `example notebooks here <https://nbviewer.jupyter.org/github/ur-whitelab/hoo
    changelog.rst
    building_a_model
    running
+   model_layers
    utilities
    benchmarking
    unit_tests

@@ -1,6 +1,9 @@
 # HOOMD-TF
 
 [![status](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90/status.svg)](https://joss.theoj.org/papers/5d1323eadec82aabe86c65a403ff8f90)
+[![Documentation Status](https://readthedocs.org/projects/hoomd-tf/badge/?version=latest)](https://hoomd-tf.readthedocs.io/en/latest/?badge=latest)
+[![Build Stats](https://github.com/ur-whitelab/hoomd-tf/workflows/tests/badge.svg)](https://github.com/ur-whitelab/hoomd-tf/actions)
+
 
 This plugin enables the use of TensorFlow in a [HOOMD-blue](http://glotzerlab.engin.umich.edu/hoomd-blue/) simulation to compute quantities like forces and collective variables and do learning while running a simulation. You may also use it without hoomd-blue to process trajectories via [MDAnalysis](https://www.mdanalysis.org/). Please see [here for documentation](https://hoomd-tf.readthedocs.io/en/latest) for install and usage instructions.
 
@@ -24,9 +27,9 @@ The following packages are required to compile:
 
     tensorflow == 2.3.0
     hoomd >= 2.6
-    tbb-devel (only for hoomd 2.8 and above if installed with conda)
+    tbb-devel (only for hoomd if installed with conda)
 
-tbb-devel is required for hoomd 2.8 or above when using the
+tbb-devel is required when using the
 HOOMD-blue conda release. It is not automatically installed when
 installing HOOMD-blue, so use `conda install -c conda-forge tbb-devel`
 to install. The TensorFlow version should be TensorFlow 2.3 release.
@@ -39,4 +42,4 @@ Please use the following citation:
 > HOOMD-TF: GPU-Accelerated, Online Machine Learning in the HOOMD-blue Molecular Dynamics Engine. R Barrett, M Chakraborty, DB Amirkulova,
 > HA Gandhi, G Wellawatte, and AD White (2020) *Journal of Open Source Software* doi: 10.21105/joss.02367
 
-&copy; University of Rochester
+&copy; HOOMD-TF Developers
