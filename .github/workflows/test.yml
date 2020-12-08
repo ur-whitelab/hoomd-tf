@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: s-weigand/setup-conda@v1.0.3
+    - uses: s-weigand/setup-conda@v1.0.5
       with:
         python-version: 3.7
     - name: Install dependencies
