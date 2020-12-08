@@ -279,8 +279,8 @@ class tfcompute(hoomd.compute._compute):
             # now actually train
             self.model.train_on_batch(
                 x=inputs[:-1],
-                y=inputs[-1]) #,
-                # reset_metrics=False)
+                y=inputs[-1],
+                reset_metrics=False)
 
     def get_positions_array(self):
         R''' Retrieve positions array as numpy array
