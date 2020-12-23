@@ -206,23 +206,64 @@ def find_molecules(system):
 
 
 def find_cgnode_id(atm_id, cg):
+    ''' Computes the CG bead index. Supports only
+    outputs formats from DSGPM model.
+    '''
     for num_index, num_val in enumerate(cg):
         for j_idx, j_value in enumerate(num_val):
             if j_value == atm_id:
                 return num_index
 
 
-def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
-    ''' Given a CG mapping in JSON format(from DSGPM model), outputs indices of connected CG beads
-    to compute CG bond distances,CG angles and CG dihedrals. If group_atoms is given as True
-    outputs CG coordinates as well. If group_atoms flag
-    is set to True, two MDAnalysis universes with Hydrogens and without Hydrogens
-    must be given as arguments.
+def compute_adj_mat(obj):
+    ''' Given a CG mapping file in json format, outputs the
+    adjacency matrix. See compute_cg_graph.
+
+    :param obj: mapping output from DSGPM
+    :type obj: file
+
+    :return: adjacency matrix
+    '''
+    cg = obj['cgnodes']
+    cg_num = len(cg)
+    adj = np.zeros((cg_num, cg_num))
+    for edges in obj['edges']:
+        source_id = int(edges['source'])
+        target_id = int(edges['target'])
+        source_cg = find_cgnode_id(source_id, cg)
+        target_cg = find_cgnode_id(target_id, cg)
+        if source_cg != target_cg:
+            adj[source_cg, target_cg] = adj[target_cg, source_cg] = 1
+
+    return adj
+
+
+def compute_cg_graph(
+        DSGPM=True,
+        infile=None,
+        adj_mat=None,
+        cg_beads=None,
+        group_atoms=False,
+        u_no_H=None,
+        u_H=None):
+    ''' Given a CG mapping in JSON format(from DSGPM model) OR adjacency matrix,
+    outputs indices of connected CG beads to compute CG bond distances,CG angles
+    and CG dihedrals. If DSGPM is True, path to jsonfiles must be specified. If DSGPM
+    is False, adjacency matrix and the number of CG beads must be specified.
+    If group_atoms is given as True outputs CG coordinates as well.
+    If group_atoms flag is set to True, two MDAnalysis universes with Hydrogens
+    and without Hydrogens must be given as arguments.
 
     Optional dependencies: MDAnalysis, networkx
 
-    :param filelist: path to the directory containing JSON files
-    :type filelist: string
+    :param DSGPM: flag to identify if mapping in json format is used or not
+    :type DSGPM: bool
+    :param infile: path to the CG mapping in JSON format
+    :type infile: string
+    :param adj_matrix: adjacency matrix (if DSGPM=False)
+    :type adj_matrix: numpy array
+    :param cg_beads: number of CG beads
+    :type cg_beads: int
     :param group_atoms: flag to output CG coordinates
     :type group_atoms: bool
     :param u_no_H: All atom structure without hydrogens
@@ -231,120 +272,119 @@ def compute_cg_graph(filelist, group_atoms=False, u_no_H=None, u_H=None):
     :type u_H: MDAnalysis universe
 
     :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles,
-             list of indices of CG beads making dihedrals, CG coordinates
+             list of indices of CG beads making dihedrals, and/or CG coordinates
      '''
     import MDAnalysis as mda
     import networkx as nx
     import json
 
-    for i in range(len(filelist)):
-        if filelist[i].endswith('.json'):
-            dist_idx = []
-            ang_idx = []
-            dihe_idx = []
-            dist_list = []
+    dist_idx = []
+    ang_idx = []
+    dihe_idx = []
+    dist_list = []
 
-            jpath = filelist[i]
-            print(jpath)
-            obj = json.load(open(jpath, 'r'))
-            cg = obj['cgnodes']
-            cg_num = len(cg)
-            adj = np.zeros((cg_num, cg_num))
-            for edges in obj['edges']:
-                source_id = int(edges['source'])
-                target_id = int(edges['target'])
-                source_cg = find_cgnode_id(source_id, cg)
-                target_cg = find_cgnode_id(target_id, cg)
-                if source_cg != target_cg:
-                    adj[source_cg, target_cg] = adj[target_cg, source_cg] = 1
+    if DSGPM is True and infile is not None:
+        obj = json.load(open(infile, 'r'))
+        cg = obj['cgnodes']
+        cg_num = len(cg)
+        adj = compute_adj_mat(obj)
 
-            cg_grph = nx.Graph(adj)
-            length = dict(nx.all_pairs_shortest_path_length(cg_grph))
+    elif DSGPM is False and adj_mat is not None:
+        adj = adj_mat
+        cg_num = cg_beads
 
-            # find node connectivities from the CG graph
-            for i in range(cg_num):
-                for j in range(i + 1, cg_num):
-                    cg_l = length[i][j]
-                    if cg_l == 1:
-                        dist_idx.append((i, j))
-                    elif cg_l == 2:
-                        ang_idx.append((i, j))
+    else:
+        print('correct inputs/flags are not given')
 
-                    elif cg_l == 3:
-                        dihe_idx.append((i, j))
+    if adj is not None and cg_num is not None:
+        cg_grph = nx.Graph(adj)
 
-            # find indices of bonded pairs
-            for x in range(len(dist_idx)):
-                r_source = dist_idx[x][0]
-                r_target = dist_idx[x][1]
-                dist_list.append(
-                    list(
-                        nx.all_shortest_paths(
-                            cg_grph,
-                            source=r_source,
-                            target=r_target)))
+        length = dict(nx.all_pairs_shortest_path_length(cg_grph))
 
-            rs = np.asarray(dist_list).squeeze(axis=(1,))
+        # find node connectivities from the CG graph
+        for i in range(cg_num):
+            for j in range(i + 1, cg_num):
+                cg_l = length[i][j]
+                if cg_l == 1:
+                    dist_idx.append((i, j))
+                elif cg_l == 2:
+                    ang_idx.append((i, j))
 
-            # find indices of angles-making nodes
-            ang_list = []
-            for x in range(len(ang_idx)):
-                a_source = ang_idx[x][0]
-                a_target = ang_idx[x][1]
-                ang_list.append(
-                    list(
-                        nx.all_shortest_paths(
-                            cg_grph,
-                            source=a_source,
-                            target=a_target)))
-            angs = np.asarray(ang_list).squeeze(axis=(1,))
+                elif cg_l == 3:
+                    dihe_idx.append((i, j))
 
-            # find indices of dihedral-making nodes
-            dih_list = []
-            for x in range(len(dihe_idx)):
-                d_source = dihe_idx[x][0]
-                d_target = dihe_idx[x][1]
-                dih_list.append(
-                    list(
-                        nx.all_shortest_paths(
-                            cg_grph,
-                            source=d_source,
-                            target=d_target)))
-            dihs = np.asarray(dih_list).squeeze(axis=(1,))
+        # find indices of bonded pairs
+        for x in range(len(dist_idx)):
+            r_source = dist_idx[x][0]
+            r_target = dist_idx[x][1]
+            dist_list.append(
+                list(
+                    nx.all_shortest_paths(
+                        cg_grph,
+                        source=r_source,
+                        target=r_target)))
 
-            if group_atoms is True:
-                if u_no_H is None or u_H is None:
-                    print('One or both MDAnalysis universe not specified')
+        rs = np.asarray(dist_list).squeeze(axis=(1,))
 
-                if u_H is not None and u_no_H is not None:
-                    cg_positions = []
-                    for i in range(cg_num):
-                        atm_group = 0
-                        for j in range(len(cg[i])):
-                            atm_id = cg[i][j]
-                            atom = u_no_H.atoms[atm_id]
-                            a_name = str(atom.name)
-                            a_resid = str(atom.resid)
-                            heavy_atom = u_H.select_atoms(
-                                'name ' + a_name + ' and resid ' + a_resid)
-                            h = u_H.select_atoms(
-                                'type H and bonded name ' + a_name + ' and resid ' + a_resid)
-                            if len(list(h)) == 0:
-                                atm_group += heavy_atom
-                            else:
-                                ah = heavy_atom + h
-                                atm_group += ah
+        # find indices of angles-making nodes
+        ang_list = []
+        for x in range(len(ang_idx)):
+            a_source = ang_idx[x][0]
+            a_target = ang_idx[x][1]
+            ang_list.append(
+                list(
+                    nx.all_shortest_paths(
+                        cg_grph,
+                        source=a_source,
+                        target=a_target)))
+        angs = np.asarray(ang_list).squeeze(axis=(1,))
 
-                        com = atm_group.center_of_mass()
-                        cg_positions.append(com)
+        # find indices of dihedral-making nodes
+        dih_list = []
+        for x in range(len(dihe_idx)):
+            d_source = dihe_idx[x][0]
+            d_target = dihe_idx[x][1]
+            dih_list.append(
+                list(
+                    nx.all_shortest_paths(
+                        cg_grph,
+                        source=d_source,
+                        target=d_target)))
+        dihs = np.asarray(dih_list).squeeze(axis=(1,))
 
-                    return rs, angs, dihs, np.asarray(cg_positions)
+        if group_atoms is True:
+            if u_no_H is None or u_H is None:
+                print('One or both MDAnalysis universe not specified')
 
-            else:
-                print(
-                    'CG coordinates are not caculated. Only connectivities are calculated')
+            if u_H is not None and u_no_H is not None:
+                cg_positions = []
+                for i in range(cg_num):
+                    atm_group = 0
+                    for j in range(len(cg[i])):
+                        atm_id = cg[i][j]
+                        atom = u_no_H.atoms[atm_id]
+                        a_name = str(atom.name)
+                        a_resid = str(atom.resid)
+                        heavy_atom = u_H.select_atoms(
+                            'name ' + a_name + ' and resid ' + a_resid)
+                        h = u_H.select_atoms(
+                            'type H and bonded name ' + a_name + ' and resid ' + a_resid)
+                        if len(list(h)) == 0:
+                            atm_group += heavy_atom
+                        else:
+                            ah = heavy_atom + h
+                            atm_group += ah
 
-                return rs, angs, dihs
+                    com = atm_group.center_of_mass()
+                    cg_positions.append(com)
+
+                return rs, angs, dihs, np.asarray(cg_positions)
+
+        else:
+            print(
+                'CG coordinates are not caculated. Only connectivities are calculated')
+
+            return rs, angs, dihs
 
 
 def iter_from_trajectory(
@@ -378,6 +418,26 @@ def iter_from_trajectory(
     :type period: int
     '''
     import MDAnalysis
+    # Modifying the universe for none 'all' atom selections.
+    if selection != 'all':
+        from MDAnalysis.analysis.base import AnalysisFromFunction
+        p = universe.select_atoms(selection)
+        dt = universe.trajectory[0].dt
+        dimensions = universe.trajectory[0].dimensions
+        if universe.trajectory[0].has_forces is False:
+            # Only include positions if traj does not have forces
+            x = AnalysisFromFunction(lambda ag: [ag.positions.copy()], p).run().results
+            # Construct new_trajectory from the MemoryReader explicitly:
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
+                x[:, 0], dimensions=dimensions, dt=dt)
+        else:
+            # Include positions, velocities and forces:
+            xvf = AnalysisFromFunction(lambda ag: [ag.positions.copy(
+            ), ag.velocities.copy(), ag.forces.copy()], p).run().results
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
+                xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
+        universe.trajectory = new_traj
+        print('The universe was redefined based on the atom group selection input.')
     # read trajectory
     box = universe.dimensions
     # define the system
