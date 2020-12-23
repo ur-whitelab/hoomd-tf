@@ -11,7 +11,6 @@ from hoomd.htf.simmodel import *
 from hoomd.htf.version import __version__
 from hoomd.htf.utils import *
 from hoomd.htf.layers import *
-from hoomd.htf.onnxmodel import *
 import tensorflow as tf
 
 _tf_on_gpu = False
