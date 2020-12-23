@@ -16,11 +16,11 @@ jobs:
       matrix:
         include:
           - hoomd: 2.9.2
-            tensorflow: 2.4.0rc0
+            tensorflow: 2.4.0
             tbb-devel: 2020.1
             md-analysis: 'false'
           - hoomd: 2.9.2
-            tensorflow: 2.4.0rc0
+            tensorflow: 2.4.0
             tbb-devel: 2020.1
             md-analysis: 'true'
           - hoomd: 2.9.2
