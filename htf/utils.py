@@ -441,7 +441,7 @@ def iter_from_trajectory(
     # read trajectory
     box = universe.dimensions
     # define the system
-    hoomd_box = np.array([[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]])
+    hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [0, 0, 0]])
     # make type array
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
