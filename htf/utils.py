@@ -448,7 +448,6 @@ def iter_from_trajectory(
     beta = np.deg2rad(box[4])
     gamma = np.deg2rad(box[5])
     lx = a
-    # cos(gamma) = xy / sqrt( 1 + xy^2)
     xy = 1. / np.tan(gamma)
     xz = c * np.cos(beta)
     yz = (b*c*np.cos(alpha) - xy*xz)
@@ -472,10 +471,7 @@ def iter_from_trajectory(
         atom_group.positions,
         r_cut=r_cut,
         NN=nneighbor_cutoff,
-        box_size=[
-            box[0],
-            box[1],
-            box[2]])
+        box_size=htf.box_size(box[:3])
     # Run the model at every nth frame, where n = period
     for i, ts in enumerate(universe.trajectory):
         if i % period == 0:
