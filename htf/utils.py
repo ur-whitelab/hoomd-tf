@@ -442,8 +442,8 @@ def iter_from_trajectory(
     box = universe.dimension
     # convert lattice angles to tilt factors!
     a = box[0]
-    b = 1 # box[1]
-    c = 1 # box[2]
+    b = 1  # box[1]
+    c = 1  # box[2]
     alpha = np.deg2rad(box[3])
     beta = np.deg2rad(box[4])
     gamma = np.deg2rad(box[5])
