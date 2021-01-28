@@ -439,9 +439,21 @@ def iter_from_trajectory(
         universe.trajectory = new_traj
         print('The universe was redefined based on the atom group selection input.')
     # read trajectory
-    box = universe.dimensions
+    box = universe.dimension
+    # convert lattice angles to tilt factors!
+    a = box[0]
+    b = 1 # box[1]
+    c = 1 # box[2]
+    alpha = np.deg2rad(box[3])
+    beta = np.deg2rad(box[4])
+    gamma = np.deg2rad(box[5])
+    lx = a
+    # cos(gamma) = xy / sqrt( 1 + xy^2)
+    xy = 1. / np.tan(gamma)
+    xz = c * np.cos(beta)
+    yz = (b*c*np.cos(alpha) - xy*xz)
     # define the system
-    hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [0, 0, 0]])
+    hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
     # make type array
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
