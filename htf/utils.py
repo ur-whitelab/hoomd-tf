@@ -439,7 +439,7 @@ def iter_from_trajectory(
         universe.trajectory = new_traj
         print('The universe was redefined based on the atom group selection input.')
     # read trajectory
-    box = universe.dimension
+    box = universe.dimensions
     # convert lattice angles to tilt factors!
     a = box[0]
     b = 1  # box[1]
