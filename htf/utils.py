@@ -471,7 +471,7 @@ def iter_from_trajectory(
         atom_group.positions,
         r_cut=r_cut,
         NN=nneighbor_cutoff,
-        box_size=htf.box_size(box[:3]))
+        box_size=box[:3])
     # Run the model at every nth frame, where n = period
     for i, ts in enumerate(universe.trajectory):
         if i % period == 0:
