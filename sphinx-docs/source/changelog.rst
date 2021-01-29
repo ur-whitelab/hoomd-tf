@@ -1,6 +1,10 @@
 Change Log
 ==========
 
+*Bug Fixes*
+
+- Fixed simulation box in `iter_from_trajectory`
+
 v2.1 (2020-09)
 --------------------
 
