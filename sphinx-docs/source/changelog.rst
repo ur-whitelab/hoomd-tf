@@ -11,6 +11,7 @@ v2.1 (2020-09)
 *New Features*
 
 - Added standard layers to code
+- Can compute molecular features for CG models
 
 *Enhancements*
 
