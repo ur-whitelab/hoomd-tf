@@ -288,7 +288,6 @@ def matrix_mapping(molecule, beads_distribution):
      not match the number of atoms in topology.'
     return CG_matrix
 
-
 def compute_adj_mat(obj):
     ''' Given a CG mapping file in json format, outputs the
     adjacency matrix. See compute_cg_graph.
@@ -539,7 +538,7 @@ def iter_from_trajectory(
         # associate atoms types with individual atoms
         type_array = np.array([types.index(i)
                                for i in atom_group.atoms.types]).reshape(-1, 1)
-    except mda.exceptions.NoDataError:
+    except MDAnalysis.exceptions.NoDataError:
         type_array = np.zeros(len(atom_group)).reshape(-1, 1)
 
     # define nlist operation
