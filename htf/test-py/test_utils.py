@@ -79,8 +79,8 @@ class test_mappings(unittest.TestCase):
         u = mda.Universe(TPR, TRAJECTORY)
         # Generating Mapping Matrix for Water
         water = u.select_atoms("resname SOL and resid 500")
-        Beads_distribution = [['OW', 'HW1', 'HW2']]
-        mapping_water = hoomd.htf.matrix_mapping(water, Beads_distribution)
+        beads_mapping = [['OW', 'HW1', 'HW2']]
+        mapping_water = hoomd.htf.matrix_mapping(water, beads_mapping)
         np.testing.assert_array_equal(np.round(mapping_water, 9), np.array([
                                       [0.88809574, 0.05595213, 0.05595213]]))
 
