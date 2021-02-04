@@ -207,16 +207,16 @@ def find_molecules(system):
 
 
 def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='all'):
-    R""" Given a universe from MDAnaylis and list of atoms in every molecule type in the system, return a mapping from molecule index to particle index.
-        Depnding on the size of your system, this fuction might be slow to run.
+    R""" Given a universe from MDAnaylis and list of atoms in every molecule type
+     in the system,return a mapping from molecule index to particle index.
+    Depnding on the size of your system, this fuction might be slow to run.
 
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
     :type universe: MDAnalysis Universe object
     :param selection: The atom groups to extract from universe
     :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type in the system.
-
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
-    
+
     Here's an example:
 
         .. code:: python
@@ -246,8 +246,10 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
             molecule_to_be_added = []
     if molecule_list_indexed[-1][-1] != Total_number_of_atoms - 1:
         raise Exception(
-            "Mismatch found between the number of atoms in the system and the final index value. Check your atoms_in_molecule_list input.")
+            "Mismatch found between the number of atoms in the system and the final index value.\
+             Check your atoms_in_molecule_list input.")
     return molecule_list_indexed
+
 
 def matrix_mapping(molecule, beads_distribution):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
