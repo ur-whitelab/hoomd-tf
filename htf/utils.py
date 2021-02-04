@@ -213,7 +213,8 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
     :type universe: MDAnalysis Universe object
     :param selection: The atom groups to extract from universe
-    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type in the system.
+    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type 
+    in the system.
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
 
     Here's an example:
@@ -283,7 +284,8 @@ def matrix_mapping(molecule, beads_distribution):
         index += np.count_nonzero(CG_matrix[s])
         CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
     # Cheking that all atoms in the topology are included in the bead distribution list:
-    assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
+    assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does \
+     not match the number of atoms in topology.'
     return CG_matrix
 
 
@@ -489,11 +491,11 @@ def iter_from_trajectory(
     :param period: Period of reading the trajectory frames
     :type period: int
     '''
-    import MDAnalysis as mda
+    import MDAnalysis
     from tqdm import tqdm
     # Modifying the universe for none 'all' atom selections.
     if selection != 'all':
-        from mda.analysis.base import AnalysisFromFunction
+        from MDAnalysis.analysis.base import AnalysisFromFunction
         p = universe.select_atoms(selection)
         dt = universe.trajectory[0].dt
         dimensions = universe.trajectory[0].dimensions
@@ -502,13 +504,13 @@ def iter_from_trajectory(
             x = AnalysisFromFunction(
                 lambda ag: [ag.positions.copy()], p).run().results
             # Construct new_trajectory from the MemoryReader explicitly:
-            new_traj = mda.coordinates.memory.MemoryReader(
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 x[:, 0], dimensions=dimensions, dt=dt)
         else:
             # Include positions, velocities and forces:
             xvf = AnalysisFromFunction(lambda ag: [ag.positions.copy(
             ), ag.velocities.copy(), ag.forces.copy()], p).run().results
-            new_traj = mda.coordinates.memory.MemoryReader(
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
         print('The universe was redefined based on the atom group selection input.')

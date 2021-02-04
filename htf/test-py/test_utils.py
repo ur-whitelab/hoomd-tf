@@ -1,3 +1,4 @@
+# Copyright (c) 2020 HOOMD-TF Developers
 import shutil
 import tempfile
 import build_examples
