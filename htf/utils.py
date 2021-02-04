@@ -5,7 +5,6 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-import MDAnalysis as mda
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
@@ -476,7 +475,7 @@ def iter_from_trajectory(
     :param period: Period of reading the trajectory frames
     :type period: int
     '''
-    import MDAnalysis
+    import MDAnalysis as mda
     from tqdm import tqdm
     # read trajectory
     # Modifying the universe for non 'all' atom selections.
@@ -503,7 +502,7 @@ def iter_from_trajectory(
         # associate atoms types with individual atoms
         type_array = np.array([types.index(i)
                                for i in atom_group.atoms.types]).reshape(-1, 1)
-    except MDAnalysis.exceptions.NoDataError:
+    except mda.exceptions.NoDataError:
         type_array = np.zeros(len(atom_group)).reshape(-1, 1)
 
     # define nlist operation
