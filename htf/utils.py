@@ -418,10 +418,41 @@ def iter_from_trajectory(
     :type period: int
     '''
     import MDAnalysis
+    # Modifying the universe for none 'all' atom selections.
+    if selection != 'all':
+        from MDAnalysis.analysis.base import AnalysisFromFunction
+        p = universe.select_atoms(selection)
+        dt = universe.trajectory[0].dt
+        dimensions = universe.trajectory[0].dimensions
+        if universe.trajectory[0].has_forces is False:
+            # Only include positions if traj does not have forces
+            x = AnalysisFromFunction(lambda ag: [ag.positions.copy()], p).run().results
+            # Construct new_trajectory from the MemoryReader explicitly:
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
+                x[:, 0], dimensions=dimensions, dt=dt)
+        else:
+            # Include positions, velocities and forces:
+            xvf = AnalysisFromFunction(lambda ag: [ag.positions.copy(
+            ), ag.velocities.copy(), ag.forces.copy()], p).run().results
+            new_traj = MDAnalysis.coordinates.memory.MemoryReader(
+                xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
+        universe.trajectory = new_traj
+        print('The universe was redefined based on the atom group selection input.')
     # read trajectory
     box = universe.dimensions
+    # convert lattice angles to tilt factors!
+    a = box[0]
+    b = 1  # box[1]
+    c = 1  # box[2]
+    alpha = np.deg2rad(box[3])
+    beta = np.deg2rad(box[4])
+    gamma = np.deg2rad(box[5])
+    lx = a
+    xy = 1. / np.tan(gamma)
+    xz = c * np.cos(beta)
+    yz = (b*c*np.cos(alpha) - xy*xz)
     # define the system
-    hoomd_box = np.array([[box[0], 0, 0], [0, box[1], 0], [0, 0, box[2]]])
+    hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
     # make type array
     # Select atom group to use in the system
     atom_group = universe.select_atoms(selection)
@@ -440,10 +471,7 @@ def iter_from_trajectory(
         atom_group.positions,
         r_cut=r_cut,
         NN=nneighbor_cutoff,
-        box_size=[
-            box[0],
-            box[1],
-            box[2]])
+        box_size=box[:3])
     # Run the model at every nth frame, where n = period
     for i, ts in enumerate(universe.trajectory):
         if i % period == 0:
