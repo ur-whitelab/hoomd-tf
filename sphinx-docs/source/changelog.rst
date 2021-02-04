@@ -1,12 +1,19 @@
 Change Log
 ==========
 
+*Bug Fixes*
+
+- Fixed simulation box in `iter_from_trajectory`
+- Fixed `MDAnalysis` universe based on atom group `selection` option in `iter_from_trajectory`
+
 v2.1 (2020-09)
 --------------------
 
 *New Features*
 
 - Added standard layers to code
+- Can compute molecular features for CG models
+- Can compute CG matrix given a molecule and bead mappings
 
 *Enhancements*
 
