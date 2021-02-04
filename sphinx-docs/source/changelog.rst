@@ -1,12 +1,7 @@
 Change Log
 ==========
 
-*Bug Fixes*
-
-- Fixed simulation box in `iter_from_trajectory`
-- Fixed `MDAnalysis` universe based on atom group `selection` option in `iter_from_trajectory`
-
-v2.1 (2020-09)
+v2.1 (2021-02-04)
 --------------------
 
 *New Features*
@@ -25,6 +20,8 @@ v2.1 (2020-09)
 *Bug Fixes*
 
 - Removed unused cuda events which could cause segfault on destruction
+- Fixed simulation box in `iter_from_trajectory`
+- Fixed `MDAnalysis` universe based on atom group `selection` option in `iter_from_trajectory`
 
 v2.0.1 (2020-08-11)
 --------------------

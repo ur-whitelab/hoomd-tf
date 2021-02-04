@@ -1,5 +1,5 @@
 ''' Check to ensure that we have a compatible version of TensorFlow.
-1;5202;0c'''
+'''
 
 from __future__ import print_function
 import sys
