@@ -254,17 +254,24 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
 def matrix_mapping(molecule, beads_distribution):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
-
     :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
     :param beads_distribution: This is a list of beads distribution lists, Note that
     each list should contain the atoms as strings just like how they appear in the topology file.
-
     :return: An array of M x N.
     '''
-    for num_index, num_val in enumerate(cg):
-        for j_idx, j_value in enumerate(num_val):
-            if j_value == atm_id:
-                return num_index
+    Mws_dict = dict(zip(molecule.names, molecule.masses))
+    M, N = len(beads_distribution), len(molecule)
+    CG_matrix = np.zeros((M, N))
+    index = 0
+    for s in range(M):
+        for i, atom in enumerate(beads_distribution[s]):
+            CG_matrix[s, i+index] = [v for k,
+                                     v in Mws_dict.items() if atom in k][0]
+        index += np.count_nonzero(CG_matrix[s])
+        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
+    # Cheking that all atoms in the topology are included in the bead distribution list:
+    assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
+    return CG_matrix
 
 
 def compute_adj_mat(obj):
