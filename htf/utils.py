@@ -550,7 +550,8 @@ def matrix_mapping(molecule, mapping_operator):
     assert index == molecule.n_atoms, 'Number of atoms in the beads mapping list does \
      not match the number of atoms in topology.'
     return CG_matrix
-    
+
+
 def mol_angle(
         mol_positions=None,
         type_i=None,
