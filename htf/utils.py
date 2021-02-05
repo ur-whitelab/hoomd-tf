@@ -218,7 +218,6 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
 
     Here's an example:
-
         .. code:: python
                 TPR = 'nvt_prod.tpr'
                 TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
@@ -529,20 +528,20 @@ def iter_from_trajectory(
                 axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, beads_mapping):
+def matrix_mapping(molecule, mapping_operator):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
     :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
-    :param beads_mapping: This is a list of beads mapping lists, Note that
+    :param mapping_operator: This is a list of beads mapping lists, Note that
     each list should contain the atoms as strings just like how they appear in the topology file.
     :return: An array of M x N.
     '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
-    M, N = len(beads_mapping), len(molecule)
+    M, N = len(mapping_operator), len(molecule)
     CG_matrix = np.zeros((M, N))
     index = 0
     for s in range(M):
-        for i, atom in enumerate(beads_mapping[s]):
+        for i, atom in enumerate(mapping_operator[s]):
             CG_matrix[s, i+index] = [v for k,
                                      v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
@@ -552,7 +551,6 @@ def matrix_mapping(molecule, beads_mapping):
      not match the number of atoms in topology.'
     return CG_matrix
     
-
 def mol_angle(
         mol_positions=None,
         type_i=None,

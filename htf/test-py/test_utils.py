@@ -79,9 +79,9 @@ class test_mappings(unittest.TestCase):
         u = mda.Universe(TPR, TRAJECTORY)
         # Generating Mapping Matrix for Water
         water = u.select_atoms("resname SOL and resid 500")
-        beads_mapping = [['OW', 'HW1', 'HW2']]
-        mapping_water = hoomd.htf.matrix_mapping(water, beads_mapping)
-        np.testing.assert_array_equal(np.round(mapping_water, 9), np.array([
+        mapping_operator = [['OW', 'HW1', 'HW2']]
+        mapped_water = hoomd.htf.matrix_mapping(water, mapping_operator)
+        np.testing.assert_array_equal(np.round(mapped_water, 9), np.array([
                                       [0.88809574, 0.05595213, 0.05595213]]))
 
     def test_bad_sparse_mapping(self):
