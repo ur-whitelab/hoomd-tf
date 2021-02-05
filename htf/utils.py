@@ -213,7 +213,7 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
     :type universe: MDAnalysis Universe object
     :param selection: The atom groups to extract from universe
-    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type 
+    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type
     in the system.
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
 
