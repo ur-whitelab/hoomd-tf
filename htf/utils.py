@@ -426,7 +426,10 @@ def iter_from_trajectory(
         dimensions = universe.trajectory[0].dimensions
         if universe.trajectory[0].has_forces is False:
             # Only include positions if traj does not have forces
-            x = AnalysisFromFunction(lambda ag: [ag.positions.copy()], p).run().results
+            x = AnalysisFromFunction(
+                lambda ag: [
+                    ag.positions.copy()],
+                p).run().results
             # Construct new_trajectory from the MemoryReader explicitly:
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 x[:, 0], dimensions=dimensions, dt=dt)
@@ -450,7 +453,7 @@ def iter_from_trajectory(
     lx = a
     xy = 1. / np.tan(gamma)
     xz = c * np.cos(beta)
-    yz = (b*c*np.cos(alpha) - xy*xz)
+    yz = (b * c * np.cos(alpha) - xy * xz)
     # define the system
     hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
     # make type array
@@ -481,15 +484,20 @@ def iter_from_trajectory(
                 axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, beads_distribution):
+def matrix_mapping(molecule, beads_distribution, matrices=False):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
 
-    :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
-    :param beads_distribution: This is a list of beads distribution lists, Note that
-    each list should contain the atoms as strings just like how they appear in the topology file.
+    :param molecule: This is atom selection in the molecule.
+    :type molecule: MDAnalysis Atoms object
+    :param beads_distribution: Beads distribution. Note that each list should contain
+                               atoms as strings just like how they appear in the topology file.
+    :type beads_distribution: Array
+    :param matrices: Returns mass weighted mapping matrix(if False)
+                     or both mass weighted and non-mass weighted matrices (if True)
+    :type matrices: Boolean
 
-    :return: An array of M x N.
+    :return: Array/arrays of size M x N.
     '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
     M, N = len(beads_distribution), len(molecule)
@@ -504,7 +512,12 @@ def matrix_mapping(molecule, beads_distribution):
     # Cheking that all atoms in the topology are included in the bead
     # distribution list:
     assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
-    return CG_matrix
+
+    if matrices = False:
+        return CG_matrix
+    else:
+        new_cg_mat = np.where(CG_matrix == 0, CG_matrix, 1)
+        return CG_matrix, new_cg_mat
 
 
 def mol_angle(
