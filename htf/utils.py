@@ -484,7 +484,7 @@ def iter_from_trajectory(
                 axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, beads_distribution, matrices=False):
+def matrix_mapping(molecule, beads_distribution, no_mass_mat=False):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
 
@@ -493,9 +493,9 @@ def matrix_mapping(molecule, beads_distribution, matrices=False):
     :param beads_distribution: Beads distribution. Note that each list should contain
                                atoms as strings just like how they appear in the topology file.
     :type beads_distribution: Array
-    :param matrices: Returns mass weighted mapping matrix(if False)
+    :param no_mass_mat: Returns mass weighted mapping matrix(if False)
                      or both mass weighted and non-mass weighted matrices (if True)
-    :type matrices: Boolean
+    :type no_mass_mat: Boolean
 
     :return: Array/arrays of size M x N.
     '''
@@ -513,7 +513,7 @@ def matrix_mapping(molecule, beads_distribution, matrices=False):
     # distribution list:
     assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
 
-    if matrices is False:
+    if no_mass_mat is False:
         return CG_matrix
     else:
         new_cg_mat = np.where(CG_matrix == 0, CG_matrix, 1)
