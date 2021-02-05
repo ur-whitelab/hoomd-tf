@@ -513,7 +513,7 @@ def matrix_mapping(molecule, beads_distribution, matrices=False):
     # distribution list:
     assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
 
-    if matrices == False:
+    if matrices is False:
         return CG_matrix
     else:
         new_cg_mat = np.where(CG_matrix == 0, CG_matrix, 1)
