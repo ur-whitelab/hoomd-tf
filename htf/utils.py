@@ -205,7 +205,10 @@ def find_molecules(system):
     return mapping
 
 
-def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='all'):
+def find_molecules_from_topology(
+    universe,
+    atoms_in_molecule_list,
+     selection='all'):
     R""" Given a universe from MDAnaylis and list of atoms in every molecule type
      in the system,return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
@@ -222,8 +225,10 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
                 TPR = 'nvt_prod.tpr'
                 TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
                 u = mda.Universe(TPR, TRAJECTORY)
-                atoms_in_molecule_list = [u.select_atoms("resname PHE and resid 0:1").names]
-                find_molecules_from_topology(u, atoms_in_molecule_list, selection = "resname PHE")
+                atoms_in_molecule_list = [
+    u.select_atoms("resname PHE and resid 0:1").names]
+                find_molecules_from_topology(
+    u, atoms_in_molecule_list, selection = "resname PHE")
     """
 
     # Getting total number of atoms in selection from topology
@@ -472,55 +477,57 @@ def iter_from_trajectory(
         if universe.trajectory[0].has_forces is False:
             # Only include positions if traj does not have forces
             x = AnalysisFromFunction(
-<<<<<<< HEAD
+<< << << < HEAD
                 lambda ag: [
                     ag.positions.copy()],
                 p).run().results
-=======
+
+
+== == == =
                 lambda ag: [ag.positions.copy()], p).run().results
->>>>>>> b161f6dcfe760e15191aecb3c96e1fa8c1b165aa
+>> >>>> > b161f6dcfe760e15191aecb3c96e1fa8c1b165aa
             # Construct new_trajectory from the MemoryReader explicitly:
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
-                x[:, 0], dimensions=dimensions, dt=dt)
+                x[:, 0], dimensions = dimensions, dt = dt)
         else:
             # Include positions, velocities and forces:
-            xvf = AnalysisFromFunction(lambda ag: [ag.positions.copy(
+            xvf=AnalysisFromFunction(lambda ag: [ag.positions.copy(
             ), ag.velocities.copy(), ag.forces.copy()], p).run().results
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
-                xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
-        universe.trajectory = new_traj
+                xvf[:, 0], velocities = xvf[:, 1], forces = xvf[:, 2], dimensions = dimensions, dt = dt)
+        universe.trajectory=new_traj
         print('The universe was redefined based on the atom group selection input.')
     # read trajectory
     # Modifying the universe for non 'all' atom selections.
-    box = universe.dimensions
+    box=universe.dimensions
     # convert lattice angles to tilt factors!
-    a = box[0]
-    b = 1  # box[1]
-    c = 1  # box[2]
-    alpha = np.deg2rad(box[3])
-    beta = np.deg2rad(box[4])
-    gamma = np.deg2rad(box[5])
-    lx = a
-    xy = 1. / np.tan(gamma)
-    xz = c * np.cos(beta)
-    yz = (b * c * np.cos(alpha) - xy * xz)
+    a=box[0]
+    b=1  # box[1]
+    c=1  # box[2]
+    alpha=np.deg2rad(box[3])
+    beta=np.deg2rad(box[4])
+    gamma=np.deg2rad(box[5])
+    lx=a
+    xy=1. / np.tan(gamma)
+    xz=c * np.cos(beta)
+    yz=(b * c * np.cos(alpha) - xy * xz)
     # define the system
-    hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
+    hoomd_box=np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
     # make type array
     # Select atom group to use in the system
-    atom_group = universe.select_atoms(selection)
+    atom_group=universe.select_atoms(selection)
     # get unique atom types in the selected atom group
     try:
-        types = list(np.unique(atom_group.atoms.types))
+        types=list(np.unique(atom_group.atoms.types))
         # associate atoms types with individual atoms
-        type_array = np.array([types.index(i)
+        type_array=np.array([types.index(i)
                                for i in atom_group.atoms.types]).reshape(-1, 1)
     except MDAnalysis.exceptions.NoDataError:
-        type_array = np.zeros(len(atom_group)).reshape(-1, 1)
+        type_array=np.zeros(len(atom_group)).reshape(-1, 1)
 
     # define nlist operation
     # box_size = [box[0], box[1], box[2]]
-    nlist = compute_nlist(
+    nlist=compute_nlist(
         atom_group.positions,
         r_cut=r_cut,
         NN=nneighbor_cutoff,
