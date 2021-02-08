@@ -9,6 +9,7 @@ v2.1 (2021-02-04)
 - Added standard layers to code
 - Can compute molecular features for CG models
 - Can compute CG matrix given a molecule and bead mappings
+- Can read molecules from GROAMCS topology
 
 *Enhancements*
 

@@ -205,6 +205,51 @@ def find_molecules(system):
     return mapping
 
 
+def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='all'):
+    R""" Given a universe from MDAnaylis and list of atoms in every molecule type
+     in the system,return a mapping from molecule index to particle index.
+    Depending on the size of your system, this fuction might be slow to run.
+
+    :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
+    :type universe: MDAnalysis Universe object
+    :param selection: The atom groups to extract from universe
+    :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type
+    in the system.
+    :return: A list of length L (number of molecules) whose elements are lists of atom indices.
+
+    Here's an example:
+        .. code:: python
+                TPR = 'nvt_prod.tpr'
+                TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
+                u = mda.Universe(TPR, TRAJECTORY)
+                atoms_in_molecule_list = [u.select_atoms("resname PHE and resid 0:1").names]
+                find_molecules_from_topology(u, atoms_in_molecule_list, selection = "resname PHE")
+    """
+
+    # Getting total number of atoms in selection from topology
+    total_number_of_atoms = universe.select_atoms(selection).n_atoms
+
+    # Getting the list of every redidue type name in topology
+    _, idx = np.unique(universe.atoms.resnames, return_index=True)
+    resname_list = universe.atoms.resnames[np.sort(idx)].tolist()
+
+    molecule_list_indexed = []
+    molecule_to_be_added = []
+    for i in range(total_number_of_atoms):
+        resname_type_index = resname_list.index(universe.atoms.resnames[i])
+        molecule_length = len(atoms_in_molecule_list[resname_type_index])
+        if len(molecule_to_be_added) < molecule_length:
+            molecule_to_be_added.append(i)
+        if len(molecule_to_be_added) == molecule_length:
+            molecule_list_indexed.append(molecule_to_be_added)
+            molecule_to_be_added = []
+    if molecule_list_indexed[-1][-1] != total_number_of_atoms - 1:
+        raise Exception(
+            "Mismatch found between the number of atoms in the system and the final index value.\
+             Check your atoms_in_molecule_list input.")
+    return molecule_list_indexed
+
+
 def find_cgnode_id(atm_id, cg):
     ''' Computes the CG bead index. Supports only
     outputs formats from DSGPM model.
@@ -234,7 +279,6 @@ def compute_adj_mat(obj):
         target_cg = find_cgnode_id(target_id, cg)
         if source_cg != target_cg:
             adj[source_cg, target_cg] = adj[target_cg, source_cg] = 1
-
     return adj
 
 
@@ -418,6 +462,7 @@ def iter_from_trajectory(
     :type period: int
     '''
     import MDAnalysis
+    from tqdm import tqdm
     # Modifying the universe for none 'all' atom selections.
     if selection != 'all':
         from MDAnalysis.analysis.base import AnalysisFromFunction
@@ -427,9 +472,13 @@ def iter_from_trajectory(
         if universe.trajectory[0].has_forces is False:
             # Only include positions if traj does not have forces
             x = AnalysisFromFunction(
+<<<<<<< HEAD
                 lambda ag: [
                     ag.positions.copy()],
                 p).run().results
+=======
+                lambda ag: [ag.positions.copy()], p).run().results
+>>>>>>> b161f6dcfe760e15191aecb3c96e1fa8c1b165aa
             # Construct new_trajectory from the MemoryReader explicitly:
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 x[:, 0], dimensions=dimensions, dt=dt)
@@ -442,6 +491,7 @@ def iter_from_trajectory(
         universe.trajectory = new_traj
         print('The universe was redefined based on the atom group selection input.')
     # read trajectory
+    # Modifying the universe for non 'all' atom selections.
     box = universe.dimensions
     # convert lattice angles to tilt factors!
     a = box[0]
@@ -476,7 +526,7 @@ def iter_from_trajectory(
         NN=nneighbor_cutoff,
         box_size=box[:3])
     # Run the model at every nth frame, where n = period
-    for i, ts in enumerate(universe.trajectory):
+    for i, ts in enumerate(tqdm(universe.trajectory)):
         if i % period == 0:
             yield [nlist, np.concatenate(
                 (atom_group.positions,
@@ -484,7 +534,8 @@ def iter_from_trajectory(
                 axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, beads_distribution, no_mass_mat=False):
+<<<<<<< HEAD
+def matrix_mapping(molecule, beads_distribution, mass_weighted=True):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
 
@@ -493,31 +544,30 @@ def matrix_mapping(molecule, beads_distribution, no_mass_mat=False):
     :param beads_distribution: Beads distribution. Note that each list should contain
                                atoms as strings just like how they appear in the topology file.
     :type beads_distribution: Array
-    :param no_mass_mat: Returns mass weighted mapping matrix(if False)
-                     or both mass weighted and non-mass weighted matrices (if True)
+    :param mass_weighted: Returns mass weighted mapping matrix(if True)
+                     or both mass weighted and non-mass weighted matrices (if False)
     :type no_mass_mat: Boolean
 
     :return: Array/arrays of size M x N.
     '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
-    M, N = len(beads_distribution), len(molecule)
+    M, N = len(mapping_operator), len(molecule)
     CG_matrix = np.zeros((M, N))
     index = 0
     for s in range(M):
-        for i, atom in enumerate(beads_distribution[s]):
-            CG_matrix[s, i + index] = [v for k,
-                                       v in Mws_dict.items() if atom in k][0]
+        for i, atom in enumerate(mapping_operator[s]):
+            CG_matrix[s, i+index] = [v for k,
+                                     v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
-        CG_matrix[s] = CG_matrix[s] / np.sum(CG_matrix[s])
-    # Cheking that all atoms in the topology are included in the bead
-    # distribution list:
-    assert index == molecule.n_atoms, 'Number of atoms in the beads distribution list does not match the number of atoms in topology.'
-
-    if no_mass_mat is False:
-        return CG_matrix
+        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
+    # Cheking that all atoms in the topology are included in the beads mapping list:
+    assert index == molecule.n_atoms, 'Number of atoms in the beads mapping list does \
+     not match the number of atoms in topology.'
+    if mass_weighted is True:
+       return CG_matrix
     else:
-        new_cg_mat = np.where(CG_matrix == 0, CG_matrix, 1)
-        return CG_matrix, new_cg_mat
+        no_mass_mapping = np.where(CG_matrix == 0, CG_matrix, 1)
+        return CG_matrix, no_mass_mapping
 
 
 def mol_angle(

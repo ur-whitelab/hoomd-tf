@@ -43,6 +43,47 @@ class test_mappings(unittest.TestCase):
         assert len(mapping) == 9
         assert len(mapping[0]) == 10
 
+    def test_find_molecules_from_topology(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_find_molecules_from_topology")
+        # Loading inputs
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        selection = "resname PHE"
+        u = mda.Universe(TPR, TRAJECTORY)
+        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        atoms_in_molecule_list = [protein_FF.names]
+        molecule_mapping_index = hoomd.htf.find_molecules_from_topology(
+            u, atoms_in_molecule_list, selection=selection)
+        Total_number_of_atoms = u.select_atoms(selection).n_atoms
+        assert Total_number_of_atoms - 1 == molecule_mapping_index[-1][-1]
+
+    def test_matrix_mapping(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_matrix_mapping")
+        # Loading inputs
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        # Generating Mapping Matrix for Water
+        water = u.select_atoms("resname SOL and resid 500")
+        mapping_operator = [['OW', 'HW1', 'HW2']]
+        mapped_water = hoomd.htf.matrix_mapping(water, mapping_operator)
+        np.testing.assert_array_equal(np.round(mapped_water, 9), np.array([
+                                      [0.88809574, 0.05595213, 0.05595213]]))
+
     def test_bad_sparse_mapping(self):
         mapping_matrix = np.array([
             [1, 0, 0],
