@@ -477,15 +477,7 @@ def iter_from_trajectory(
         if universe.trajectory[0].has_forces is False:
             # Only include positions if traj does not have forces
             x = AnalysisFromFunction(
-<< << << < HEAD
-                lambda ag: [
-                    ag.positions.copy()],
-                p).run().results
-
-
-== == == =
                 lambda ag: [ag.positions.copy()], p).run().results
->> >>>> > b161f6dcfe760e15191aecb3c96e1fa8c1b165aa
             # Construct new_trajectory from the MemoryReader explicitly:
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 x[:, 0], dimensions = dimensions, dt = dt)
@@ -540,8 +532,6 @@ def iter_from_trajectory(
                  type_array),
                 axis=1), hoomd_box, 1.0], ts
 
-
-<<<<<<< HEAD
 def matrix_mapping(molecule, beads_distribution, mass_weighted=True):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
