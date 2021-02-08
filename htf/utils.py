@@ -539,7 +539,7 @@ def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
 
     :param molecule: This is atom selection in the molecule.
     :type molecule: MDAnalysis Atoms object
-    :param mapping_operator: List of lists of beads mapping. Note that each list should 
+    :param mapping_operator: List of lists of beads mapping. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
     :type beads_distribution: Array
     :param mass_weighted: Returns mass weighted mapping matrix(if True)
