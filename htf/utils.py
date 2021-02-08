@@ -306,7 +306,7 @@ def compute_cg_graph(
     :type infile: string
     :param adj_matrix: adjacency matrix (if DSGPM=False)
     :type adj_matrix: numpy array
-    :param cg_beads: number of CG beads
+    :param cg_beads: number of CG beads per molecule
     :type cg_beads: int
     :param group_atoms: flag to output CG coordinates
     :type group_atoms: bool
