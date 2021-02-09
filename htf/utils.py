@@ -205,7 +205,10 @@ def find_molecules(system):
     return mapping
 
 
-def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='all'):
+def find_molecules_from_topology(
+        universe,
+        atoms_in_molecule_list,
+        selection='all'):
     R""" Given a universe from MDAnaylis and list of atoms in every molecule type
      in the system,return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
@@ -222,8 +225,10 @@ def find_molecules_from_topology(universe, atoms_in_molecule_list, selection='al
                 TPR = 'nvt_prod.tpr'
                 TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
                 u = mda.Universe(TPR, TRAJECTORY)
-                atoms_in_molecule_list = [u.select_atoms("resname PHE and resid 0:1").names]
-                find_molecules_from_topology(u, atoms_in_molecule_list, selection = "resname PHE")
+                atoms_in_molecule_list = [
+    u.select_atoms("resname PHE and resid 0:1").names]
+                find_molecules_from_topology(
+    u, atoms_in_molecule_list, selection = "resname PHE")
     """
 
     # Getting total number of atoms in selection from topology
@@ -497,7 +502,7 @@ def iter_from_trajectory(
     lx = a
     xy = 1. / np.tan(gamma)
     xz = c * np.cos(beta)
-    yz = (b*c*np.cos(alpha) - xy*xz)
+    yz = (b * c * np.cos(alpha) - xy * xz)
     # define the system
     hoomd_box = np.array([[0, 0, 0], [box[0], box[1], box[2]], [xy, xz, yz]])
     # make type array
@@ -528,13 +533,20 @@ def iter_from_trajectory(
                 axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, mapping_operator):
+def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
     R''' This will create a M x N mass weighted mapping matrix where M is the number
         of atoms in the molecule and N is the number of mapping beads.
-    :param molecule: This is atom selection in the molecule (MDAnalysis Atoms object).
-    :param mapping_operator: This is a list of beads mapping lists, Note that
-    each list should contain the atoms as strings just like how they appear in the topology file.
-    :return: An array of M x N.
+
+    :param molecule: This is atom selection in the molecule.
+    :type molecule: MDAnalysis Atoms object
+    :param mapping_operator: List of lists of beads mapping. Note that each list should
+                contain atoms as strings just like how they appear in the topology file.
+    :type beads_distribution: Array
+    :param mass_weighted: Returns mass weighted mapping matrix(if True)
+                     or both mass weighted and non-mass weighted matrices (if False)
+    :type no_mass_mat: Boolean
+
+    :return: Array/arrays of size M x N.
     '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
     M, N = len(mapping_operator), len(molecule)
@@ -542,14 +554,19 @@ def matrix_mapping(molecule, mapping_operator):
     index = 0
     for s in range(M):
         for i, atom in enumerate(mapping_operator[s]):
-            CG_matrix[s, i+index] = [v for k,
-                                     v in Mws_dict.items() if atom in k][0]
+            CG_matrix[s, i + index] = [v for k,
+                                       v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
-        CG_matrix[s] = CG_matrix[s]/np.sum(CG_matrix[s])
-    # Cheking that all atoms in the topology are included in the beads mapping list:
+        CG_matrix[s] = CG_matrix[s] / np.sum(CG_matrix[s])
+    # Cheking that all atoms in the topology are included in the beads mapping
+    # list:
     assert index == molecule.n_atoms, 'Number of atoms in the beads mapping list does \
      not match the number of atoms in topology.'
-    return CG_matrix
+    if mass_weighted is True:
+        return CG_matrix
+    else:
+        no_mass_mapping = np.where(CG_matrix == 0, CG_matrix, 1)
+        return CG_matrix, no_mass_mapping
 
 
 def mol_angle(
