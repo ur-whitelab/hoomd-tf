@@ -154,6 +154,7 @@ def compute_pairwise(model, r):
     return output
 
 
+
 def find_molecules(system):
     ''' Given a hoomd system, return a mapping from molecule index to particle index.
     This is a slow function and should only be called once.
