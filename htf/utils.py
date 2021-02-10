@@ -153,6 +153,89 @@ def compute_pairwise(model, r):
                       for o, r in zip(output, result)]
     return output
 
+def create_frame(frame_number, N, types, typeids, positions, masses, box):
+    ''' Create snapshots of a system state.
+
+    :param frame_number: Frame number in a trajectory
+    :type frame_number: int
+    :param N: Number of CG beads
+    :type N: int
+    :param types: Names of particle types
+    :type types: List of strings (len N)
+    :param typeids: CG bead type id
+    :type typeids: Numpy array (N,)
+    :param positions: CG beads positions
+    :type positions: Numpy array (N,3)
+    :param masses: CG beads masses
+    :type masses: Numpy array (N,)
+    :param box: System box dimensions
+    :type box: Numpy array (6,)
+
+    :return: Snapshot of a system state
+    '''
+    s = gsd.hoomd.Snapshot()
+    s.configuration.step = frame_number
+    s.configuration.box = box
+    s.particles.N = len(type_array)
+    s.particles.types = types
+    s.particles.typeid = type_array
+    s.particles.position = positions
+    s.particles.mass = masses
+    return s
+
+
+def CGmap_trajectory(
+        N,
+        CGtypes,
+        CGids,
+        mapped_positions,
+        CGmasses,
+        outfile,
+        mda_universe=None,
+        splice_traj=False,
+        traj_frames=None):
+    ''' Writes a mapped trajectory.
+
+    :param N: Number of CG beads
+    :type N: int
+    :param CGtypes: Names of particle types
+    :type CGtypes: List of strings (len N)
+    :param CGids: CG bead type id
+    :type CGids: Numpy array (N,)
+    :param mapped_positions: CG beads positions
+    :type mapped_positions: Numpy array (N,3)
+    :param CGmasses: CG beads masses
+    :type CGmasses: Numpy array (N,)
+    :param outfile: Name of the output file with .gsd extension
+    :type outfile: str
+    :param mda_universe: Universe with topology and trajectory
+    :type mda_universe: MD ANALYSIS Universe
+    :param splice_traj: Flag to splice a trajectory length
+    :type splice_traj: boolean
+    :param traj_frames: First and last frame numbers for splicing
+    :type traj_frames: Numpy array [2,]
+
+    :return: mapped trajectory in gsd file format
+    '''
+    if mda_universe is None:
+        Print('please specify MDA Univserse')
+
+    else:
+        if splice_traj is False:
+            traj_len = len(mda_universe.trajectory)
+        else:
+            traj_len = len(
+                mda_universe.trajectory[traj_frames[0]:traj_frames[-1]])
+
+        # TODO: not all particles found inside the box
+        box = mda_universe.dimensions
+
+        t = gsd.hoomd.open(name=outfile, mode='wb')
+        for ts, i in zip(mda_universe.trajectory, range(traj_len)):
+            t.append(create_frame(i, N, CGtypes,
+                                  CGids, mapped_positions, CGmasses, box))
+        print('GSD file written')
+
 
 def find_molecules(system):
     ''' Given a hoomd system, return a mapping from molecule index to particle index.
