@@ -78,9 +78,9 @@ class test_mappings(unittest.TestCase):
         u = mda.Universe(TPR, TRAJECTORY)
         # Generating Mapping Matrix for Water
         water = u.select_atoms("resname SOL and resid 500")
-        Beads_distribution = [['OW', 'HW1', 'HW2']]
-        mapping_water = hoomd.htf.matrix_mapping(water, Beads_distribution)
-        np.testing.assert_array_equal(np.round(mapping_water, 9), np.array([
+        mapping_operator = [['OW', 'HW1', 'HW2']]
+        mapped_water = hoomd.htf.matrix_mapping(water, mapping_operator)
+        np.testing.assert_array_equal(np.round(mapped_water, 9), np.array([
                                       [0.88809574, 0.05595213, 0.05595213]]))
 
     def test_bad_sparse_mapping(self):
@@ -393,6 +393,25 @@ class test_mol_properties(unittest.TestCase):
         assert np.isfinite(np.sum(ad))
 
 
+class test_cg_features(unittest.TestCase):
+    def test_CGGraphGenerator(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_CGGraphGenerator")
+        import os
+
+        test_pdb = os.path.join(os.path.dirname(__file__), 'test_segA.pdb')
+        test_traj = os.path.join(os.path.dirname(__file__), 'test_segA.trr')
+        universe = mda.Universe(test_pdb, test_traj)
+        # load example graph that computes cg_graph
+        cgmodel = build_examples.CGModel(16, output_forces=False)
+        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
+            result = cgmodel(input)
+
+        assert np.sum(result[-1]) != 0
+
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
@@ -412,6 +431,23 @@ class test_trajectory(unittest.TestCase):
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
 
+        # checking the mda sub-system universe based on atom group selection:
+        tpr = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        traj = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(tpr, traj)
+        box_dimensions = u.trajectory[1].dimensions
+        selection = "resname PHE"
+        N_atoms = len(u.select_atoms(selection))
+        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection,
+                                                         r_cut=1, period=1):
+            #     print(ts.forces.shape)
+            updated_N_atoms = ts.n_atoms
+            updated_box_dimenstions = ts.dimensions
+
+        assert updated_N_atoms == N_atoms
+        np.testing.assert_array_equal(updated_box_dimenstions, box_dimensions)
 
 if __name__ == '__main__':
     unittest.main()

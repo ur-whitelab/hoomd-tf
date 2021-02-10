@@ -14,7 +14,7 @@ assuming you have conda
   conda create -n htf2 python=3.7
   source activate htf2
   conda install -c conda-forge tbb-devel hoomd
-  pip install --upgrade tensorflow
+  pip install --upgrade tensorflow==2.3
   git clone https://github.com/ur-whitelab/hoomd-tf
   cd hoomd-tf && mkdir build && cd build
   CXX=g++ CC=gcc CMAKE_PREFIX_PATH=$CONDA_PREFIX cmake ..
@@ -272,8 +272,10 @@ Following packages are optional:
 .. code:: bash
 
    MDAnalysis
+   NetworkX
 
-:py:class:`utils.iter_from_trajectory` uses `MDAnalysis` for trajectory parsing
+:py:func:`utils.iter_from_trajectory` and :py:class:`utils.compute_cg_graph`  use `MDAnalysis` for trajectory parsing.
+:py:class:`utils.compute_cg_graph` uses NetworkX for generating the CG graph.
 
 
 .. |ss| raw:: html

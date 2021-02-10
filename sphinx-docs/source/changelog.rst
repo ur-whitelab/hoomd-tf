@@ -1,12 +1,15 @@
 Change Log
 ==========
 
-v2.1 (2020-09)
+v2.1 (2021-02-04)
 --------------------
 
 *New Features*
 
 - Added standard layers to code
+- Can compute molecular features for CG models
+- Can compute CG matrix given a molecule and bead mappings
+- Can read molecules from GROAMCS topology
 
 *Enhancements*
 
@@ -18,6 +21,8 @@ v2.1 (2020-09)
 *Bug Fixes*
 
 - Removed unused cuda events which could cause segfault on destruction
+- Fixed simulation box in `iter_from_trajectory`
+- Fixed `MDAnalysis` universe based on atom group `selection` option in `iter_from_trajectory`
 
 v2.0.1 (2020-08-11)
 --------------------
