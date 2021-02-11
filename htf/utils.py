@@ -5,7 +5,6 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
-import MDAnalysis as mda
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
