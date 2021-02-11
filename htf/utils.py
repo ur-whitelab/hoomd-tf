@@ -174,7 +174,8 @@ def create_frame(frame_number, N, types, typeids, positions, masses, box):
 
     :return: Snapshot of a system state
     '''
-    import gsd, gsd.hoomd, gsd.pygsd
+    import gsd
+    import gsd.hoomd
 
     s = gsd.hoomd.Snapshot()
     s.configuration.step = frame_number
@@ -221,7 +222,9 @@ def CGmap_trajectory(
     :return: mapped trajectory in gsd file format
     '''
     import MDAnalysis
-    import gsd, gsd.hoomd, gsd.pygsd
+    import gsd
+    import gsd.hoomd
+
     if mda_universe is None:
         Print('please specify MDA Univserse')
 
