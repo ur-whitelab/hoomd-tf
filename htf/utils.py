@@ -41,6 +41,40 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
+def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
+    ''' Computes bead type interactions as a one-hot encoding.
+
+    :param pos_btype: type of the beads based on the of mapped positions[...,-1]
+    :type pos_btype:  N tensor
+    :param nlist_btype: type of the beads based on the of mapped neighborlist[...,-1]
+    :type nlist_btype: N x M tensor
+    :param n_btypes: total number of possible interations between two bead types
+    :type n_btypes: int
+
+
+    :return: a [N x M x I] array, where M is the total number of beads in the system,
+    N the size of neighborlist and I is the total number of possible interations between
+    two bead types i and j, given n_btypes.
+    '''
+    def gen_ohe_interaction(pos_index, nlist_index, n_btypes):
+        ohe_bead_interactions = np.zeros((n_btypes, n_btypes))
+        ohe_bead_interactions[pos_index, nlist_index] = 1
+        # Interaction from i to j is equivalent to j to i
+        if pos_index > nlist_index:
+            # Flip around diagonal
+            ohe_bead_interactions = np.rot90(np.fliplr(ohe_bead_interactions))
+        return ohe_bead_interactions[np.triu_indices(n_btypes)]
+    from scipy.special import comb
+    # Finding the number of possible interactions between bead types
+    I = int(comb(n_btypes, 2) + n_btypes)
+    N, M = nlist_btype.shape
+    interactions = np.zeros((N, M, I))
+    for index_i, i_type in enumerate(pos_btype):
+        for index_j, j_type in enumerate(nlist_btype[index_i]):
+            interactions[index_i, index_j] = gen_ohe_interaction(
+                i_type, j_type, n_btypes)
+    return interactions
+
 def compute_nlist(
         positions,
         r_cut,
