@@ -218,6 +218,8 @@ def CGmap_trajectory(
 
     :return: mapped trajectory in gsd file format
     '''
+    import MDAnalysis
+    import gsd, gsd.hoomd, gsd.pygsd
     if mda_universe is None:
         Print('please specify MDA Univserse')
 
