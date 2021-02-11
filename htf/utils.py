@@ -47,7 +47,7 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     :type pos_btype:  N tensor
     :param nlist_btype: type of the beads based on the of mapped neighborlist[...,-1]
     :type nlist_btype: N x M tensor
-    :param n_btypes: total number of possible interations between two bead types
+    :param n_btypes: number of unique bead types in the CG system
     :type n_btypes: int
 
 
