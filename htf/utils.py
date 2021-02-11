@@ -174,12 +174,14 @@ def create_frame(frame_number, N, types, typeids, positions, masses, box):
 
     :return: Snapshot of a system state
     '''
+    import gsd, gsd.hoomd, gsd.pygsd
+
     s = gsd.hoomd.Snapshot()
     s.configuration.step = frame_number
     s.configuration.box = box
-    s.particles.N = len(type_array)
+    s.particles.N = N
     s.particles.types = types
-    s.particles.typeid = type_array
+    s.particles.typeid = typeids
     s.particles.position = positions
     s.particles.mass = masses
     return s
