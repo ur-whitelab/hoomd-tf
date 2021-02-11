@@ -52,8 +52,8 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
 
 
     :return: a [N x M x I] array, where M is the total number of beads in the system,
-    N the size of neighborlist and I is the total number of possible interations between
-    two bead types i and j, given n_btypes.
+    N is the size of CG neighborlist and I is the total number of possible interations between
+    two beads of type i and j
     '''
     def gen_ohe_interaction(pos_index, nlist_index, n_btypes):
         ohe_bead_interactions = np.zeros((n_btypes, n_btypes))
