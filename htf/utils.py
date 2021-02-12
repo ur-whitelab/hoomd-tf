@@ -43,11 +43,11 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
 def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     ''' Computes bead type interactions as a one-hot encoding.
 
-    :param pos_btype: type of the beads based on the of mapped positions[...,-1]
+    :param pos_btype: type of the beads based on the mapped positions[...,-1]
     :type pos_btype:  N tensor with dtype tf.in32
-    :param nlist_btype: type of the beads based on the of mapped neighborlist[...,-1]
+    :param nlist_btype: type of the beads based on the mapped neighborlist[...,-1]
     :type nlist_btype: N x M tensor with dtype tf.in32
-    :param n_btypes: number of unique bead types in the CG system
+    :param n_btypes: number of unique bead types in the CG molecule
     :type n_btypes: int
 
 
