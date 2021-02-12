@@ -154,7 +154,7 @@ def compute_pairwise(model, r):
     return output
 
 
-def create_frame(frame_number, N, types, typeids, positions, masses, box):
+def create_frame(frame_number, N, types, typeids, positions, box):
     ''' Create snapshots of a system state.
 
     :param frame_number: Frame number in a trajectory
@@ -167,8 +167,6 @@ def create_frame(frame_number, N, types, typeids, positions, masses, box):
     :type typeids: Numpy array (N,)
     :param positions: CG beads positions
     :type positions: Numpy array (N,3)
-    :param masses: CG beads masses
-    :type masses: Numpy array (N,)
     :param box: System box dimensions
     :type box: Numpy array (6,)
 
@@ -184,7 +182,7 @@ def create_frame(frame_number, N, types, typeids, positions, masses, box):
     s.particles.types = types
     s.particles.typeid = typeids
     s.particles.position = positions
-    s.particles.mass = masses
+    
     return s
 
 
