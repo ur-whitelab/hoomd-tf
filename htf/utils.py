@@ -44,9 +44,9 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     ''' Computes bead type interactions as a one-hot encoding.
 
     :param pos_btype: type of the beads based on the of mapped positions[...,-1]
-    :type pos_btype:  N tensor
+    :type pos_btype:  N tensor with dtype tf.in32
     :param nlist_btype: type of the beads based on the of mapped neighborlist[...,-1]
-    :type nlist_btype: N x M tensor
+    :type nlist_btype: N x M tensor with dtype tf.in32
     :param n_btypes: number of unique bead types in the CG system
     :type n_btypes: int
 
@@ -55,24 +55,15 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     N is the size of CG neighborlist and I is the total number of possible interations between
     two beads of type i and j
     '''
-    def gen_ohe_interaction(pos_index, nlist_index, n_btypes):
-        ohe_bead_interactions = np.zeros((n_btypes, n_btypes))
-        ohe_bead_interactions[pos_index, nlist_index] = 1
-        # Interaction from i to j is equivalent to j to i
-        if pos_index > nlist_index:
-            # Flip around diagonal
-            ohe_bead_interactions = np.rot90(np.fliplr(ohe_bead_interactions))
-        return ohe_bead_interactions[np.triu_indices(n_btypes)]
+    pos_btype = tf.repeat(
+        pos_btype[..., tf.newaxis], repeats=nlist_btype.shape[1], axis=-1)
+    m, n = tf.math.minimum(pos_btype, nlist_btype), tf.math.maximum(
+        pos_btype, nlist_btype)
+    one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
+    # Finding the total number of possible interactions between different bead types
     from scipy.special import comb
-    # Finding the number of possible interactions between bead types
     I = int(comb(n_btypes, 2) + n_btypes)
-    N, M = nlist_btype.shape
-    interactions = np.zeros((N, M, I))
-    for index_i, i_type in enumerate(pos_btype):
-        for index_j, j_type in enumerate(nlist_btype[index_i]):
-            interactions[index_i, index_j] = gen_ohe_interaction(
-                i_type, j_type, n_btypes)
-    return interactions
+    return tf.one_hot(one_hot_indices, depth=I)
 
 def compute_nlist(
         positions,
@@ -522,7 +513,7 @@ def iter_from_trajectory(
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
-        print('The universe was redefined based on the atom group selection input.')
+        print(f'The universe was redefined based on the atom group {selection}.')
     # read trajectory
     # Modifying the universe for non 'all' atom selections.
     box = universe.dimensions
