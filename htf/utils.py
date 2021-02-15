@@ -182,7 +182,7 @@ def create_frame(frame_number, N, types, typeids, positions, box):
     s.particles.types = types
     s.particles.typeid = typeids
     s.particles.position = positions
-    
+
     return s
 
 
