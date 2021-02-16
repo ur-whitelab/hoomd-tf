@@ -44,26 +44,23 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     ''' Computes bead type interactions as a one-hot encoding.
 
     :param pos_btype: type of the beads based on the mapped positions[...,-1]
-    :type pos_btype:  N tensor with dtype tf.in32
+    :type pos_btype:  N tensor with dtype tf.int32
     :param nlist_btype: type of the beads based on the mapped neighborlist[...,-1]
-    :type nlist_btype: N x M tensor with dtype tf.in32
+    :type nlist_btype: N x M tensor with dtype tf.int32
     :param n_btypes: number of unique bead types in the CG molecule
     :type n_btypes: int
 
 
     :return: a [N x M x I] array, where M is the total number of beads in the system,
     N is the size of CG neighborlist and I is the total number of possible interations between
-    two beads of type i and j
+    two beads
     '''
-    pos_btype = tf.repeat(
-        pos_btype[..., tf.newaxis], repeats=nlist_btype.shape[1], axis=-1)
-    m, n = tf.math.minimum(pos_btype, nlist_btype), tf.math.maximum(
-        pos_btype, nlist_btype)
+    m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
+        pos_btype[..., tf.newaxis], nlist_btype)
     one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
     # Finding the total number of possible interactions between different bead types
-    from scipy.special import comb
-    I = int(comb(n_btypes, 2) + n_btypes)
-    return tf.one_hot(one_hot_indices, depth=I)
+    total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
+    return tf.one_hot(one_hot_indices, depth=total_interactions)
 
 def compute_nlist(
         positions,
