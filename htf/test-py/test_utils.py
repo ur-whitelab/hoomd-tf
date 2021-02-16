@@ -283,15 +283,18 @@ class test_mappings(unittest.TestCase):
         for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
                                                          selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
+            print('positions[30]', positions[30])
             box = inputs[2].astype('float32')
             box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
             mapped_pos = hoomd.htf.center_of_mass(
                 positions[:, :3], cg_mapping, box_size)
+            print('mapped_pos[30]', mapped_pos[30])
             system_bead_types = tf.reshape(system_bead_types, [-1, 1])
             mapped_pos_with_type = tf.concat(
                 [mapped_pos, system_bead_types], axis=1)
             mapped_nlist = hoomd.htf.compute_nlist(
                 mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=False, return_types=True)
+            print('mapped_nlist[30]', mapped_nlist[30])
         pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         print('pos_btype[30]', pos_btype[30])
