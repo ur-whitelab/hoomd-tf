@@ -66,10 +66,11 @@ jobs:
     - name: Run tests
       run: |
         pytest -v --forked
-    - name: Run notebooks
+    - name: Run notebooks with MDAnalysis
       if: matrix.md-analysis == 'true'
       run: |
         jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "examples/*.ipynb" --to notebook --clear-output --stdout
+    - name: Run notebooks without MDAnalysis
       if: matrix.md-analysis == 'false'
       run: | 
         cd examples
