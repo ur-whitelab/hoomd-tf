@@ -48,7 +48,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov pytest-xdist jupyter notebook matplotlib
+        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd
 
         # Install software dependencies
         pip install tensorflow==${{ matrix.tensorflow }}
