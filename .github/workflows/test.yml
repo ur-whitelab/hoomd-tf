@@ -66,5 +66,6 @@ jobs:
     - name: Run tests
       run: |
         pytest -v --forked
-        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "hoomd-tf/examples/*.ipynb" --to notebook --clear-output --stdout
+        pwd
+        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "examples/*.ipynb" --to notebook --clear-output --stdout
         # TODO: if MDAnalysis not installed don't run certain notebooks
