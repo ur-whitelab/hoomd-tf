@@ -294,9 +294,11 @@ class test_mappings(unittest.TestCase):
                 mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=False, return_types=True)
         pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
+        print('pos_btype[30]', pos_btype[30])
+        print('nlist_btype[30]', nlist_btype[30])
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        print('func [30,30]', ohe_beadtype_interactions[30, 10])
+        print('func [30,10]', ohe_beadtype_interactions[30, 10])
         print('func [130,16]', ohe_beadtype_interactions[130, 16])
         n_btypes = 6
         m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
@@ -304,7 +306,7 @@ class test_mappings(unittest.TestCase):
         one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
         total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
         interactions = tf.one_hot(one_hot_indices, depth=total_interactions)
-        print('manual [30,30]', interactions[30, 10])
+        print('manual [30,10]', interactions[30, 10])
         print('manual [130,16]', interactions[130, 16])
         assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
         assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
