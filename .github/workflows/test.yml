@@ -48,7 +48,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov pytest-xdist
+        pip install pytest-cov pytest-xdist matplotlib seaborn
 
         # Install software dependencies
         pip install tensorflow==${{ matrix.tensorflow }}
@@ -66,4 +66,5 @@ jobs:
     - name: Run tests
       run: |
         pytest -v --forked
-
+        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "hoomd-tf/examples/*.ipynb" --to notebook --clear-output --stdout
+        # TODO: if MDAnalysis not installed don't run certain notebooks
