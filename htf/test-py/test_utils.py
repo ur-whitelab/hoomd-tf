@@ -266,6 +266,7 @@ class test_mappings(unittest.TestCase):
                 unique_beads.append(m)
             bead_types.append(unique_beads.index(m))
         n_bead_types = len(unique_beads)
+        print('n_bead_types', n_bead_types)
         molecule_mapping_index = hoomd.htf.find_molecules_from_topology(
             u, [protein_FF.names], selection="resname PHE")
         number_of_molecules = len(molecule_mapping_index)
@@ -291,7 +292,6 @@ class test_mappings(unittest.TestCase):
                 [mapped_pos, system_bead_types], axis=1)
             mapped_nlist = hoomd.htf.compute_nlist(
                 mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=False, return_types=True)
-            break
         pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
