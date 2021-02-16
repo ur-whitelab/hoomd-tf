@@ -296,8 +296,16 @@ class test_mappings(unittest.TestCase):
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        print(ohe_beadtype_interactions[30, 10])
-        print(ohe_beadtype_interactions[130, 16])
+        print('func [30,30]', ohe_beadtype_interactions[30, 10])
+        print('func [130,16]', ohe_beadtype_interactions[130, 16])
+        n_btypes = 6
+        m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
+            pos_btype[..., tf.newaxis], nlist_btype)
+        one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
+        total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
+        interactions = tf.one_hot(one_hot_indices, depth=total_interactions)
+        print('manual [30,30]', interactions[30, 10])
+        print('manual [130,16]', interactions[130, 16])
         assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
         assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
         assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
