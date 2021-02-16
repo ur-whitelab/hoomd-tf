@@ -296,9 +296,11 @@ class test_mappings(unittest.TestCase):
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        tf.debugging.assert_equal(ohe_beadtype_interactions[30, 10, 6], 1.0)
-        tf.debugging.assert_equal(ohe_beadtype_interactions[130, 16, 11], 1.0)
-        tf.debugging.assert_equal(ohe_beadtype_interactions[33, 50, 1], 1.0)
+        print(ohe_beadtype_interactions[30, 10])
+        print(ohe_beadtype_interactions[130, 16])
+        assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
+        assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
+        assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
 
     def test_nlist_compare(self):
         rcut = 5.0
