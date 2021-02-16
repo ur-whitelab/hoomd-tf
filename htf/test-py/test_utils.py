@@ -279,8 +279,8 @@ class test_mappings(unittest.TestCase):
         c = hoomd.context.initialize('')
         if c.sorter is not None:
             c.sorter.disable()
-        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,\
-         selection='resname PHE', r_cut=r_cut):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
+                                                        selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
             box = inputs[2].astype('float32')
             box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
