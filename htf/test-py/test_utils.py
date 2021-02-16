@@ -281,34 +281,19 @@ class test_mappings(unittest.TestCase):
         for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
                                                          selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
-            print('positions[30]', positions[30])
             box = inputs[2].astype('float32')
             box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
             mapped_pos = hoomd.htf.center_of_mass(
                 positions[:, :3], cg_mapping, box_size)
-            print('mapped_pos[30]', mapped_pos[30])
             system_bead_types = tf.reshape(system_bead_types, [-1, 1])
             mapped_pos_with_type = tf.concat(
                 [mapped_pos, system_bead_types], axis=1)
             mapped_nlist = hoomd.htf.compute_nlist(
                 mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=True, return_types=True)
-            print('mapped_nlist[30]', mapped_nlist[30])
         pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
-        print('pos_btype[30]', pos_btype[30])
-        print('nlist_btype[30]', nlist_btype[30])
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        print('func [30,10]', ohe_beadtype_interactions[30, 10])
-        print('func [130,16]', ohe_beadtype_interactions[130, 16])
-        n_btypes = 6
-        m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
-            pos_btype[..., tf.newaxis], nlist_btype)
-        one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
-        total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
-        interactions = tf.one_hot(one_hot_indices, depth=total_interactions)
-        print('manual [30,10]', interactions[30, 10])
-        print('manual [130,16]', interactions[130, 16])
         assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
         assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
         assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
