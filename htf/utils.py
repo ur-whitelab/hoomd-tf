@@ -161,12 +161,12 @@ def compute_pairwise(model, r, type_i=0, type_j=0):
     '''
     NN = model.nneighbor_cutoff
     nlist = np.zeros((2, NN, 4))
-    nlist[0, :, -1] = type_i
-    nlist[1, :, -1] = type_j
+    nlist[0, :, -1] = type_j
+    nlist[1, :, -1] = type_i
     output = None
     positions = np.zeros((2, 4))
-    positions[0, -1] = type_j
-    positions[1, -1] = type_i
+    positions[0, -1] = type_i
+    positions[1, -1] = type_j
     box = tf.constant([[0., 0, 0], [1e10, 1e10, 1e10], [0, 0, 0]])
 
     for i, ri in enumerate(r):
