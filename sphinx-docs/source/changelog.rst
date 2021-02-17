@@ -10,6 +10,7 @@ v2.1 (2021-02-04)
 - Can compute molecular features for CG models
 - Can compute CG matrix given a molecule and bead mappings
 - Can read molecules from GROAMCS topology
+- Can compute one-hot encoding for different bead type interactions in CG systems
 
 *Enhancements*
 
