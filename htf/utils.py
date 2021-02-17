@@ -145,8 +145,9 @@ def compute_nlist(
                     tf.float32)], axis=-1) * nlist_mask
 
 
-def compute_pairwise(model, r):
-    ''' Compute model output for a 2 particle system at distances set by ``r``.
+def compute_pairwise(model, r, type_i=0, type_j=0):
+    ''' Compute model output for a 2 particle system of type_i and type_j at
+    distances set by ``r``.
     If the model outputs two tensors of shape ``L x M`` and ``K``, then
     the output  will be a tuple of numpy arrays of size ``N x L x M`` and
     ``N x K``, where ``N`` is number of points in ``r``.
@@ -160,8 +161,10 @@ def compute_pairwise(model, r):
     '''
     NN = model.nneighbor_cutoff
     nlist = np.zeros((2, NN, 4))
+    nlist[..., -1] = type_j
     output = None
-    positions = tf.zeros((2, 4))
+    positions = np.zeros((2, 4))
+    positions[..., -1] = type_i
     box = tf.constant([[0., 0, 0], [1e10, 1e10, 1e10], [0, 0, 0]])
 
     for i, ri in enumerate(r):
