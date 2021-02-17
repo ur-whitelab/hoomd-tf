@@ -46,7 +46,7 @@ class SimModel(tf.keras.Model):
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
             tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
             tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
+            tf.TensorSpec(shape=[1])  # batch_frac (sample weight)
         ]
 
         try:
@@ -193,7 +193,7 @@ class SimModel(tf.keras.Model):
                                      message='Neighbor list is full!')
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
-            pos, self.dtype), tf.cast(box, self.dtype), batch_frac]
+            pos, self.dtype), tf.cast(box, self.dtype), tf.reshape(batch_frac, (1,))]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
