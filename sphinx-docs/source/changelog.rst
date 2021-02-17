@@ -1,6 +1,20 @@
 Change Log
 ==========
 
+v2.2 (TBD)
+--------------------
+
+*New Features*
+
+- Can read molecules from GROAMCS topology
+- Can compute one-hot encoding for different bead type interactions in CG systems
+
+*Enhancements*
+
+- Added jupyter notebook testing to continuous integration
+
+*Bug Fixes*
+
 v2.1 (2021-02-04)
 --------------------
 
@@ -9,8 +23,6 @@ v2.1 (2021-02-04)
 - Added standard layers to code
 - Can compute molecular features for CG models
 - Can compute CG matrix given a molecule and bead mappings
-- Can read molecules from GROAMCS topology
-- Can compute one-hot encoding for different bead type interactions in CG systems
 
 *Enhancements*
 
@@ -18,7 +30,6 @@ v2.1 (2021-02-04)
 - Added optional training flag to change behavior during training
 - Added ability to retrace compute if self changes
 - Can output type or index when computing nlist
-- Added jupyter notebook testing to continuous integration
 
 *Bug Fixes*
 
