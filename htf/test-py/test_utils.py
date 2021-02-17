@@ -235,6 +235,69 @@ class test_mappings(unittest.TestCase):
         np.testing.assert_array_almost_equal(nlist[-1, -1, :],
                                              [0, 0, 0, 0])
 
+    def test_compute_ohe_bead_type_interactions(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_compute_ohe_bead_type_interactions")
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        mapping_operator = [['N', 'H1', 'H2', 'H3'],
+                            ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                            ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                            ['C', 'O'],
+                            ['N', 'H'],
+                            ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                            ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                            ['C', 'O1', 'O2']]
+        mapping_FF = hoomd.htf.matrix_mapping(protein_FF, mapping_operator)
+        unique_beads = []
+        bead_types = []
+        for m in mapping_operator:
+            if m not in unique_beads:
+                unique_beads.append(m)
+            bead_types.append(unique_beads.index(m))
+        n_bead_types = len(unique_beads)
+        print('n_bead_types', n_bead_types)
+        molecule_mapping_index = hoomd.htf.find_molecules_from_topology(
+            u, [protein_FF.names], selection="resname PHE")
+        number_of_molecules = len(molecule_mapping_index)
+        system_bead_types = tf.cast(
+            tf.repeat(bead_types, number_of_molecules, axis=0), dtype=tf.float32)
+        cg_mapping = hoomd.htf.sparse_mapping([mapping_FF for _ in molecule_mapping_index],
+                                              molecule_mapping_index)
+        CG_NN = 64
+        r_cut = 25
+        # disable sorting
+        hoomd.context.current.sorter.disable()
+        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
+                                                         selection='resname PHE', r_cut=r_cut):
+            positions = inputs[1]
+            box = inputs[2].astype('float32')
+            box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
+            mapped_pos = hoomd.htf.center_of_mass(
+                positions[:, :3], cg_mapping, box_size)
+            system_bead_types = tf.reshape(system_bead_types, [-1, 1])
+            mapped_pos_with_type = tf.concat(
+                [mapped_pos, system_bead_types], axis=1)
+            mapped_nlist = hoomd.htf.compute_nlist(
+                mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=True, return_types=True)
+        pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
+        nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
+        ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
+            pos_btype, nlist_btype, n_bead_types)
+        assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
+        assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
+        assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
+
     def test_nlist_compare(self):
         rcut = 5.0
         c = hoomd.context.initialize('')
@@ -425,6 +488,7 @@ class test_cg_features(unittest.TestCase):
 
         assert np.sum(result[-1]) != 0
 
+
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
@@ -448,7 +512,7 @@ class test_trajectory(unittest.TestCase):
         tpr = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
         traj = os.path.join(os.path.dirname(__file__),
-                                  'CG_mapping/test_traj.trr')
+                            'CG_mapping/test_traj.trr')
         u = mda.Universe(tpr, traj)
         box_dimensions = u.trajectory[1].dimensions
         selection = "resname PHE"
@@ -461,6 +525,7 @@ class test_trajectory(unittest.TestCase):
 
         assert updated_N_atoms == N_atoms
         np.testing.assert_array_equal(updated_box_dimenstions, box_dimensions)
+
 
 if __name__ == '__main__':
     unittest.main()
