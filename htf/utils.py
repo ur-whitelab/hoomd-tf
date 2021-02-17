@@ -156,6 +156,10 @@ def compute_pairwise(model, r, type_i=0, type_j=0):
     :type model: :py:class:`.SimModel`
     :param r: A 1D grid of points at which to compute the potential.
     :type r: numpy array
+    :param type_i: First particle (bead) type
+    :type type_i: int
+    :param type_j: Second particle (bead) type
+    :type type_j: int
 
     :return: A tuple of numpy arrays as output from ``model``
     '''
