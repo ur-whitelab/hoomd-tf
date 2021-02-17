@@ -18,6 +18,7 @@ v2.1 (2021-02-04)
 - Added optional training flag to change behavior during training
 - Added ability to retrace compute if self changes
 - Can output type or index when computing nlist
+- Added jupyter notebook testing to continuous integration
 
 *Bug Fixes*
 
