@@ -358,9 +358,13 @@ def compute_cg_graph(
     import networkx as nx
     import json
 
-    dist_idx = []
-    ang_idx = []
-    dihe_idx = []
+    # sets of pairs of indices, to avoid double-counting pairs
+    # bond distances
+    dist_idx = set({})
+    # angles
+    ang_idx = set({})
+    # dihedrals
+    dihe_idx = set({})
     dist_list = []
 
     if DSGPM is True and infile is not None:
@@ -379,24 +383,26 @@ def compute_cg_graph(
     if adj is not None and cg_num is not None:
         cg_grph = nx.Graph(adj)
 
+        # returns a dict of dicts of path lengths, so length[0][0] == 0, 
+        # length[0][1] == 1 if 0 and 1 are bonded, etc.
         length = dict(nx.all_pairs_shortest_path_length(cg_grph))
 
         # find node connectivities from the CG graph
-        for i in range(cg_num):
-            for j in range(i + 1, cg_num):
-                cg_l = length[i][j]
+        for i in length:
+            for j in length[i]:
+                cg_l1 = length[i]
+                cg_l = cg_l1[j]
                 if cg_l == 1:
-                    dist_idx.append((i, j))
+                    dist_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 2:
-                    ang_idx.append((i, j))
-
+                    ang_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 3:
-                    dihe_idx.append((i, j))
+                    dihe_idx.add(tuple(sorted((i, j))))
 
         # find indices of bonded pairs
-        for x in range(len(dist_idx)):
-            r_source = dist_idx[x][0]
-            r_target = dist_idx[x][1]
+        for pair in dist_idx:
+            r_source = pair[0]
+            r_target = pair[1]
             dist_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -408,9 +414,9 @@ def compute_cg_graph(
 
         # find indices of angles-making nodes
         ang_list = []
-        for x in range(len(ang_idx)):
-            a_source = ang_idx[x][0]
-            a_target = ang_idx[x][1]
+        for pair in ang_idx:
+            a_source = pair[0]
+            a_target = pair[1]
             ang_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -421,9 +427,9 @@ def compute_cg_graph(
 
         # find indices of dihedral-making nodes
         dih_list = []
-        for x in range(len(dihe_idx)):
-            d_source = dihe_idx[x][0]
-            d_target = dihe_idx[x][1]
+        for pair in dihe_idx:
+            d_source = pair[0]
+            d_target = pair[1]
             dih_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -662,10 +668,14 @@ def mol_angle(
     if CG and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
-        cos_a = np.dot(v_ij, v_jk)
-        cos_a = np.divide(cos_a, (np.linalg.norm(v_ij) * np.linalg.norm(v_jk)))
-
-        cg_angles = np.arccos(cos_a)
+        if type(cg_positions) == tf.Tensor:
+            cos_a = tf.reduce_sum(v_ij * tf.transpose(v_jk))
+            cos_a = tf.divide(cos_a, tf.norm(v_ij) * tf.norm(v_jk))
+            cg_angles = tf.math.acos(cos_a)
+        else:
+            cos_a = np.dot(v_ij, v_jk)
+            cos_a = np.divide(cos_a, (np.linalg.norm(v_ij) * np.linalg.norm(v_jk)))
+            cg_angles = np.arccos(cos_a)
         return cg_angles
 
 
@@ -716,7 +726,10 @@ def mol_bond_distance(
 
     if CG and cg_positions is not None:
         u_ij = cg_positions[b2] - cg_positions[b1]
-        u_ij = np.linalg.norm(u_ij)
+        if type(cg_positions) == tf.Tensor:
+            u_ij = tf.norm(u_ij)
+        else:
+            u_ij = np.linalg.norm(u_ij)
         return u_ij
 
 
@@ -795,20 +808,31 @@ def mol_dihedral(
         v_jk = cg_positions[b3] - cg_positions[b2]
         v_kl = cg_positions[b4] - cg_positions[b3]
 
-        n1 = np.cross(v_ij, v_jk)
-        n2 = np.cross(v_jk, v_kl)
+        if type(cg_positions) == tf.Tensor:
+            n1 = tf.linalg.cross(v_ij, v_jk)
+            n2 = tf.linalg.cross(v_jk, v_kl)
+            n1_norm = tf.norm(n1)
+            n2_norm = tf.norm(n2)
+            # TODO: make sure we don't have zeros here too
+            n1 = n1 / n1_norm
+            n2 = n2 / n2_norm
+            cos_d = n1 * tf.transpose(n2)
+            cg_dihedrals = tf.math.acos(cos_d)
+        else:
+            n1 = np.cross(v_ij, v_jk)
+            n2 = np.cross(v_jk, v_kl)
+            n1_norm = np.linalg.norm(n1)
+            n2_norm = np.linalg.norm(n2)
 
-        n1_norm = np.linalg.norm(n1)
-        n2_norm = np.linalg.norm(n2)
+            if n1_norm == 0.0 or n2_norm == 0.0:
+                print(n1_norm, n2_norm)
+                raise ValueError('Vectors are linear')
 
-        if n1_norm == 0.0 or n2_norm == 0.0:
-            print(n1_norm, n2_norm)
-            raise ValueError('Vectors are linear')
+            n1 = n1 / n1_norm
+            n2 = n2 / n2_norm
+            cos_d = np.dot(n1, n2)
+            cg_dihedrals = np.arccos(cos_d)
 
-        n1 = n1 / n1_norm
-        n2 = n2 / n2_norm
-        cos_d = np.dot(n1, n2)
-        cg_dihedrals = np.arccos(cos_d)
         return cg_dihedrals
 
 
