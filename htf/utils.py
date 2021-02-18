@@ -62,6 +62,7 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
     return tf.one_hot(one_hot_indices, depth=total_interactions)
 
+
 def compute_nlist(
         positions,
         r_cut,
@@ -557,7 +558,8 @@ def iter_from_trajectory(
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
-        print(f'The universe was redefined based on the atom group {selection}.')
+        print(
+            f'The universe was redefined based on the atom group {selection}.')
     # read trajectory
     # Modifying the universe for non 'all' atom selections.
     box = universe.dimensions
@@ -601,7 +603,7 @@ def iter_from_trajectory(
             if i % period == 0:
                 yield [nlist, np.concatenate(
                     (atom_group.positions,
-                    type_array),
+                     type_array),
                     axis=1), hoomd_box, 1.0], ts
 
 
