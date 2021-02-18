@@ -16,27 +16,23 @@ jobs:
       matrix:
         include:
           - hoomd: 2.9.2
-            tensorflow: 2.3.0
+            tensorflow: 2.3.2
             tbb-devel: 2020.1
             md-analysis: 'true'
           - hoomd: 2.9.2
-            tensorflow: 2.3.0
-            tbb-devel: 2020.1
-            md-analysis: 'false'
-          - hoomd: 2.9.0
-            tensorflow: 2.3.0
+            tensorflow: 2.3.2
             tbb-devel: 2020.1
             md-analysis: 'false'
           - hoomd: 2.8.2
-            tensorflow: 2.3.0
+            tensorflow: 2.3.2
             tbb-devel: 2020.1
             md-analysis: 'false'
           - hoomd: 2.7.0
-            tensorflow: 2.3.0
+            tensorflow: 2.3.2
             tbb-devel: 2019.8
             md-analysis: 'false'
           - hoomd: 2.6.0
-            tensorflow: 2.3.0
+            tensorflow: 2.3.2
             tbb-devel: 2019.7
             md-analysis: 'false'
 
@@ -48,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov pytest-xdist
+        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd scipy
 
         # Install software dependencies
         pip install tensorflow==${{ matrix.tensorflow }}
@@ -66,4 +62,14 @@ jobs:
     - name: Run tests
       run: |
         pytest -v --forked
-
+    - name: Run notebooks with MDAnalysis
+      if: matrix.md-analysis == 'true'
+      run: |
+        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "examples/*.ipynb" --to notebook --output-dir='temp' --clear-output --Application.log_level='ERROR'
+        rm -rf temp
+    - name: Run notebooks without MDAnalysis
+      if: matrix.md-analysis == 'false'
+      run: | 
+        cd examples
+        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "01. Quickstart.ipynb" "02. Preparing Coarse-grained Mapped Simulation.ipynb" "03. Experiment Directed Simulations.ipynb" "04. Particle Simulations.ipynb" "07. Molecules CG Mapping.ipynb" --to notebook --clear-output --output-dir='temp' --Application.log_level='ERROR'
+        rm -rf temp

@@ -1,6 +1,21 @@
 Change Log
 ==========
 
+v2.2 (TBD)
+--------------------
+
+*New Features*
+
+- Can read molecules from GROAMCS topology
+- Can compute one-hot encoding for different bead type interactions in CG systems
+
+*Enhancements*
+
+- Added jupyter notebook testing to continuous integration
+- `iter_from_trajectory` can run in a user-defined time range
+
+*Bug Fixes*
+
 v2.1 (2021-02-04)
 --------------------
 
@@ -9,8 +24,6 @@ v2.1 (2021-02-04)
 - Added standard layers to code
 - Can compute molecular features for CG models
 - Can compute CG matrix given a molecule and bead mappings
-- Can read molecules from GROAMCS topology
-- Can compute one-hot encoding for different bead type interactions in CG systems
 
 *Enhancements*
 

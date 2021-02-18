@@ -276,10 +276,9 @@ class test_mappings(unittest.TestCase):
         CG_NN = 64
         r_cut = 25
         # disable sorting
-        c = hoomd.context.initialize('')
-        if c.sorter is not None:
-            c.sorter.disable()
-        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u, selection='resname PHE', r_cut=r_cut, period=1):
+        hoomd.context.current.sorter.disable()
+        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
+                                                         selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
             box = inputs[2].astype('float32')
             box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
@@ -289,8 +288,7 @@ class test_mappings(unittest.TestCase):
             mapped_pos_with_type = tf.concat(
                 [mapped_pos, system_bead_types], axis=1)
             mapped_nlist = hoomd.htf.compute_nlist(
-                mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=False, return_types=True)
-            break
+                mapped_pos_with_type, r_cut, CG_NN, box_size, sorted=True, return_types=True)
         pos_btype = tf.cast(mapped_pos_with_type[..., -1], dtype=tf.int32)
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
