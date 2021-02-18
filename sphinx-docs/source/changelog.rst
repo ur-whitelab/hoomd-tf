@@ -12,6 +12,7 @@ v2.2 (TBD)
 *Enhancements*
 
 - Added jupyter notebook testing to continuous integration
+- `iter_from_trajectory` can run in a user-defined time range
 
 *Bug Fixes*
 
