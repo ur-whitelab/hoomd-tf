@@ -40,6 +40,28 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
 
 
+def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
+    ''' Computes bead type interactions as a one-hot encoding.
+
+    :param pos_btype: type of the beads based on the mapped positions[...,-1]
+    :type pos_btype:  N tensor with dtype tf.int32
+    :param nlist_btype: type of the beads based on the mapped neighborlist[...,-1]
+    :type nlist_btype: N x M tensor with dtype tf.int32
+    :param n_btypes: number of unique bead types in the CG molecule
+    :type n_btypes: int
+
+
+    :return: a [N x M x I] array, where M is the total number of beads in the system,
+    N is the size of CG neighborlist and I is the total number of possible interations between
+    two beads
+    '''
+    m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
+        pos_btype[..., tf.newaxis], nlist_btype)
+    one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
+    # Finding the total number of possible interactions between different bead types
+    total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
+    return tf.one_hot(one_hot_indices, depth=total_interactions)
+
 def compute_nlist(
         positions,
         r_cut,
@@ -123,8 +145,9 @@ def compute_nlist(
                     tf.float32)], axis=-1) * nlist_mask
 
 
-def compute_pairwise(model, r):
-    ''' Compute model output for a 2 particle system at distances set by ``r``.
+def compute_pairwise(model, r, type_i=0, type_j=0):
+    ''' Compute model output for a 2 particle system of type_i and type_j at
+    distances set by ``r``.
     If the model outputs two tensors of shape ``L x M`` and ``K``, then
     the output  will be a tuple of numpy arrays of size ``N x L x M`` and
     ``N x K``, where ``N`` is number of points in ``r``.
@@ -133,13 +156,21 @@ def compute_pairwise(model, r):
     :type model: :py:class:`.SimModel`
     :param r: A 1D grid of points at which to compute the potential.
     :type r: numpy array
+    :param type_i: First particle (bead) type
+    :type type_i: int
+    :param type_j: Second particle (bead) type
+    :type type_j: int
 
     :return: A tuple of numpy arrays as output from ``model``
     '''
     NN = model.nneighbor_cutoff
     nlist = np.zeros((2, NN, 4))
+    nlist[0, :, -1] = type_j
+    nlist[1, :, -1] = type_i
     output = None
-    positions = tf.zeros((2, 4))
+    positions = np.zeros((2, 4))
+    positions[0, -1] = type_i
+    positions[1, -1] = type_j
     box = tf.constant([[0., 0, 0], [1e10, 1e10, 1e10], [0, 0, 0]])
 
     for i, ri in enumerate(r):
@@ -520,7 +551,7 @@ def iter_from_trajectory(
             new_traj = MDAnalysis.coordinates.memory.MemoryReader(
                 xvf[:, 0], velocities=xvf[:, 1], forces=xvf[:, 2], dimensions=dimensions, dt=dt)
         universe.trajectory = new_traj
-        print('The universe was redefined based on the atom group selection input.')
+        print(f'The universe was redefined based on the atom group {selection}.')
     # read trajectory
     # Modifying the universe for non 'all' atom selections.
     box = universe.dimensions
