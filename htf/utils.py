@@ -504,7 +504,9 @@ def iter_from_trajectory(
         universe,
         selection='all',
         r_cut=10.,
-        period=1):
+        period=1,
+        start=0.,
+        end=None):
     ''' This generator will process information from a trajectory and
     yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
     The first list can be directly used to call a :py:class:`.SimModel` (e.g., ``model(inputs)``).
@@ -527,6 +529,10 @@ def iter_from_trajectory(
         calculations
     :type r_cut: float
     :param period: Period of reading the trajectory frames
+    :type period: int
+    :param start: Start time (ns) of reading the trajectory frames
+    :type period: int
+    :param period: End time (ns) reading the trajectory frames
     :type period: int
     '''
     import MDAnalysis
@@ -587,13 +593,16 @@ def iter_from_trajectory(
         r_cut=r_cut,
         NN=nneighbor_cutoff,
         box_size=box[:3])
-    # Run the model at every nth frame, where n = period
+    if end is None:
+        end = universe.trajectory.totaltime
+    # Run the model at every nth frame where time is in range [start,end] and n = period
     for i, ts in enumerate(tqdm(universe.trajectory)):
-        if i % period == 0:
-            yield [nlist, np.concatenate(
-                (atom_group.positions,
-                 type_array),
-                axis=1), hoomd_box, 1.0], ts
+        if ts.time >= start and ts.time <= end:
+            if i % period == 0:
+                yield [nlist, np.concatenate(
+                    (atom_group.positions,
+                    type_array),
+                    axis=1), hoomd_box, 1.0], ts
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
