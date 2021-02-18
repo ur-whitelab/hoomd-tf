@@ -474,7 +474,7 @@ def iter_from_trajectory(
         r_cut=10.,
         period=1):
     ''' This generator will process information from a trajectory and
-    yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
+    yield a tuple of  ``[nlist, positions, box]`` and ``MDAnalysis.TimeStep`` object.
     The first list can be directly used to call a :py:class:`.SimModel` (e.g., ``model(inputs)``).
     See :py:meth:`.SimModel.compute` for details of these terms.
 

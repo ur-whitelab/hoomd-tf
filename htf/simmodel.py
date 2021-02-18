@@ -46,7 +46,6 @@ class SimModel(tf.keras.Model):
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
             tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
             tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[1])  # batch_frac (sample weight)
         ]
 
         try:
@@ -74,7 +73,7 @@ class SimModel(tf.keras.Model):
         self._running_means = []
         self.setup(**kwargs)
 
-    def compute(self, nlist, positions, box, sample_weight, training=True):
+    def compute(self, nlist, positions, box, training=True):
         R'''
         The main method were computation occurs occurs. This method must be implemented
         by subclass. You may take less args, e.g. ``(nlist, positions)``.
@@ -100,11 +99,6 @@ class SimModel(tf.keras.Model):
             high box coordinate (row 1), and then tilt factors (row 2).
             Call :py:func:`.box_size` to convert to size
         :type box: tensor
-
-        :param sample_weight: a floating point fraction indicating
-            what amount of the total system is being passed in this call.
-            Is only NOT 1.0 if ``batch_size`` is passed to :py:meth:`.tfcompute.attach`.
-        :type sample_weight: tensor
 
         :param training: a boolean indicating if doing training or inference.
         :type trainig: bool
@@ -152,7 +146,7 @@ class SimModel(tf.keras.Model):
 
     @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr,
-                       box_addr, batch_frac, forces_addr=0):
+                       box_addr, forces_addr=0):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
@@ -193,7 +187,7 @@ class SimModel(tf.keras.Model):
                                      message='Neighbor list is full!')
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
-            pos, self.dtype), tf.cast(box, self.dtype), tf.reshape(batch_frac, (1,))]
+            pos, self.dtype), tf.cast(box, self.dtype)]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
@@ -294,8 +288,7 @@ class MolSimModel(SimModel):
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''
-        See :py:meth:`.SimModel.compute` for details. ``sample_weight``
-        is not passed because simulations cannot currently be batched both by size and molecule.
+        See :py:meth:`.SimModel.compute` for details.
         Make sure that your forces still use ``nlist`` when computing, instead of ``mol_nlist``.
         You may take less args in your implementation, like
         ``mol_compute(self, nlist, positions, mol_nlist)``.
@@ -335,7 +328,7 @@ class MolSimModel(SimModel):
         '''
         raise AttributeError('You must implement mol_compute method')
 
-    def compute(self, nlist, positions, box, batch_frac, training):
+    def compute(self, nlist, positions, box, training):
 
         mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
