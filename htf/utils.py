@@ -604,7 +604,7 @@ def iter_from_trajectory(
                 yield [nlist, np.concatenate(
                     (atom_group.positions,
                      type_array),
-                    axis=1), hoomd_box, 1.0], ts
+                    axis=1), hoomd_box], ts
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
