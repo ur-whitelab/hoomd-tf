@@ -189,6 +189,38 @@ def compute_pairwise(model, r, type_i=0, type_j=0):
     return output
 
 
+def create_frame(frame_number, N, types, typeids, positions, box):
+    ''' Create snapshots of a system state.
+
+    :param frame_number: Frame number in a trajectory
+    :type frame_number: int
+    :param N: Number of CG beads
+    :type N: int
+    :param types: Names of particle types
+    :type types: List of strings (len N)
+    :param typeids: CG bead type id
+    :type typeids: Numpy array (N,)
+    :param positions: CG beads positions
+    :type positions: Numpy array (N,3)
+    :param box: System box dimensions
+    :type box: Numpy array (6,)
+
+    :return: Snapshot of a system state
+    '''
+    import gsd
+    import gsd.hoomd
+
+    s = gsd.hoomd.Snapshot()
+    s.configuration.step = frame_number
+    s.configuration.box = box
+    s.particles.N = N
+    s.particles.types = types
+    s.particles.typeid = typeids
+    s.particles.position = positions
+
+    return s
+
+
 def find_molecules(system):
     ''' Given a hoomd system, return a mapping from molecule index to particle index.
     This is a slow function and should only be called once.
@@ -476,7 +508,9 @@ def iter_from_trajectory(
         universe,
         selection='all',
         r_cut=10.,
-        period=1):
+        period=1,
+        start=0.,
+        end=None):
     ''' This generator will process information from a trajectory and
     yield a tuple of  ``[nlist, positions, box, sample_weight]`` and ``MDAnalysis.TimeStep`` object.
     The first list can be directly used to call a :py:class:`.SimModel` (e.g., ``model(inputs)``).
@@ -499,6 +533,10 @@ def iter_from_trajectory(
         calculations
     :type r_cut: float
     :param period: Period of reading the trajectory frames
+    :type period: int
+    :param start: Start time (ns) of reading the trajectory frames
+    :type period: int
+    :param period: End time (ns) reading the trajectory frames
     :type period: int
     '''
     import MDAnalysis
@@ -560,13 +598,16 @@ def iter_from_trajectory(
         r_cut=r_cut,
         NN=nneighbor_cutoff,
         box_size=box[:3])
-    # Run the model at every nth frame, where n = period
+    if end is None:
+        end = universe.trajectory.totaltime
+    # Run the model at every nth frame where time is in range [start,end] and n = period
     for i, ts in enumerate(tqdm(universe.trajectory)):
-        if i % period == 0:
-            yield [nlist, np.concatenate(
-                (atom_group.positions,
-                 type_array),
-                axis=1), hoomd_box, 1.0], ts
+        if ts.time >= start and ts.time <= end:
+            if i % period == 0:
+                yield [nlist, np.concatenate(
+                    (atom_group.positions,
+                     type_array),
+                    axis=1), hoomd_box, 1.0], ts
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
