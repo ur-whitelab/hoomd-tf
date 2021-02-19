@@ -86,7 +86,8 @@ def compute_nlist(
     :param return_types: If true, requires N x 4 positions array and
         last element of nlist is type. Otherwise last element is index of neighbor
     :type return_types: bool
-    :param exclusion_matrix: Matrix (True = exclude) indicating which pairs should be excluded from nlist
+    :param exclusion_matrix: Matrix (True = exclude) indicating which pairs
+        should be excluded from nlist
     :type exclusion_matrix: Tensor of dtype bools
 
 

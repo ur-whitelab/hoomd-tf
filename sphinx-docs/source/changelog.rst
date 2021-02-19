@@ -13,6 +13,7 @@ v2.2 (TBD)
 
 - Added jupyter notebook testing to continuous integration
 - `iter_from_trajectory` can run in a user-defined time range
+- Can add exclusion lists when computing nlists using htf
 
 *Bug Fixes*
 
