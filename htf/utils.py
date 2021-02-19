@@ -816,7 +816,7 @@ def mol_dihedral(
             # TODO: make sure we don't have zeros here too
             n1 = n1 / n1_norm
             n2 = n2 / n2_norm
-            cos_d = n1 * tf.transpose(n2)
+            cos_d = tf.tensordot(n1, n2, axes=1)
             cg_dihedrals = tf.math.acos(cos_d)
         else:
             n1 = np.cross(v_ij, v_jk)
