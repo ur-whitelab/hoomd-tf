@@ -72,7 +72,8 @@ def compute_nlist(
         NN,
         box_size,
         sorted=False,
-        return_types=False):
+        return_types=False,
+        exclusion_matrix=None):
     ''' Compute particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
@@ -88,6 +89,9 @@ def compute_nlist(
     :param return_types: If true, requires N x 4 positions array and
         last element of nlist is type. Otherwise last element is index of neighbor
     :type return_types: bool
+    :param exclusion_matrix: Matrix (True = exclude) indicating which pairs
+        should be excluded from nlist
+    :type exclusion_matrix: Tensor of dtype bools
 
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
@@ -97,25 +101,25 @@ def compute_nlist(
     if return_types and positions.shape[1] == 3:
         raise ValueError(
             'Cannot return type if positions does not have type. Make sure positions is N x 4')
+    # get number of input positions
+    M = tf.shape(positions)[0]
 
     # Make sure positions is only xyz
     positions3 = positions[:, :3]
-
-    M = tf.shape(input=positions3)[0]
-    # Making 3 dim CG nlist
-    qexpand = tf.expand_dims(positions3, 1)  # one column
-    qTexpand = tf.expand_dims(positions3, 0)  # one row
-    # repeat it to make matrix of all positions
-    qtile = tf.tile(qexpand, [1, M, 1])
-    qTtile = tf.tile(qTexpand, [M, 1, 1])
-    # subtract them to get distance matrix
-    dist_mat = qTtile - qtile
+    # subtract them to get distance vector matrix
+    dist_mat = positions3[tf.newaxis, ...] - positions3[:, tf.newaxis, :]
     # apply minimum image
     box = tf.reshape(tf.convert_to_tensor(value=box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
-    # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(tensor=dist_mat, axis=2)
+    # mask distance matrix to remove things beyond cutoff and zeros
+    # mask value = 1: valid
     mask = (dist <= r_cut) & (dist >= 5e-4)
+    if exclusion_matrix is not None:
+        # negate it since mask = 1 is valid
+        # also make sure it's symmetric
+        nem = tf.logical_not(exclusion_matrix)
+        mask &= nem & tf.transpose(nem)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
     if sorted:
         # replace these masked elements with really large numbers

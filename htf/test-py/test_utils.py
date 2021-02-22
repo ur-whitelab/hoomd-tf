@@ -215,6 +215,40 @@ class test_mappings(unittest.TestCase):
         # particle 1 is closest to type 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
 
+    def test_compute_nlist_exclusion_matrix(self):
+        N = 10
+        em = np.zeros((N, N), dtype=np.bool)
+        em[0, 1] = True
+        em[0, 2] = True
+        positions = tf.cast(
+            tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3]), tf.float32)
+        box_size = [100., 100., 100.]
+        nlist = hoomd.htf.compute_nlist(
+            positions,
+            100.,
+            9,
+            box_size,
+            return_types=False,
+            sorted=True, exclusion_matrix=em)
+        nlist = nlist.numpy()
+        # particle 0 is closest to 3
+        np.testing.assert_array_almost_equal(nlist[0, 0, 3], 3)
+        # particle 0 is -9 away from 9
+        np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                             [-9, -9, -9, 0])
+
+        extended_positions = tf.concat([positions, tf.zeros((N, 1))], axis=1)
+        nlist = hoomd.htf.compute_nlist(
+            extended_positions,
+            100.,
+            9,
+            box_size,
+            return_types=True,
+            sorted=True)
+        nlist = nlist.numpy()
+        # particle 1 is closest to type 0
+        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
+
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
