@@ -18,7 +18,7 @@ jobs:
           - hoomd: 2.9.2
             tensorflow: 2.4.1
             tbb-devel: 2020.1
-            md-analysis: 'false'
+            md-analysis: 'true'
           - hoomd: 2.9.2
             tensorflow: 2.3.2
             tbb-devel: 2020.1
