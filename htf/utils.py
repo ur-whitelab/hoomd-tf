@@ -62,10 +62,7 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
     return tf.one_hot(one_hot_indices, depth=total_interactions)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> master
 def compute_nlist(
         positions,
         r_cut,
@@ -89,7 +86,8 @@ def compute_nlist(
     :param return_types: If true, requires N x 4 positions array and
         last element of nlist is type. Otherwise last element is index of neighbor
     :type return_types: bool
-    :param exclusion_matrix: Matrix (True = exclude) indicating which pairs
+    :param exclusion_matrix: Matrix (True = exclude) with size B x B (where B is the total number
+        of bead particles in the system) indicating which pairs
         should be excluded from nlist
     :type exclusion_matrix: Tensor of dtype bools
 
@@ -334,6 +332,43 @@ def find_cgnode_id(atm_id, cg):
         for j_idx, j_value in enumerate(num_val):
             if j_value == atm_id:
                 return num_index
+
+
+def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, selection='all'):
+    ''' Generate mapped exclusion list to compute mapped_nlist for non-bonded bead-type interactions.
+
+    :param universe: MDAnalysis Universe that contains bond information
+    :type universe: MDAnalysis Universe object
+    :param atoms_in_molecule: Selection of atoms in the molecule from MDAnalysis universe
+    :type atoms_in_molecule: MDAnalysis.core.groups.AtomGroup
+    :param mapping_operator: List of lists of beads mapping. Note that each list should
+                contain atoms as strings just like how they appear in the topology file.
+    :type mapping_operator: Array
+    :param selection: The atom groups to extract from universe
+    :type selection: string
+
+
+    :return: A [B X B] array of dtype bools indicating which pairs
+        should be excluded from nlist (True = exclude).
+    '''
+    # Get the number of atoms
+    N = len(universe.select_atoms(selection))
+    bonds = universe.select_atoms(selection).bonds.to_indices()
+    aa_exclusion_list = np.zeros((N, N), dtype=bool)
+    for b in bonds:
+        aa_exclusion_list[tuple(b)] = 1
+        aa_exclusion_list[tuple(np.roll(b, 1))] = 1
+    matrix_mapping_molecule = hoomd.htf.matrix_mapping(
+        atoms_in_molecule, mapping_operator, mass_weighted=False)[1]
+    # Get the number of molecules
+    M = N//matrix_mapping_molecule.shape[1]
+    # repeat matrix_mapping_molecule along diag
+    matrix_mapping_system = np.kron(
+        np.eye(M, dtype=int), matrix_mapping_molecule).astype(bool)
+    mapped_exclusion = matrix_mapping_system @ aa_exclusion_list @ (
+        matrix_mapping_system.T)
+    np.fill_diagonal(mapped_exclusion, False)
+    return mapped_exclusion
 
 
 def compute_adj_mat(obj):
@@ -622,8 +657,8 @@ def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
     :type molecule: MDAnalysis Atoms object
     :param mapping_operator: List of lists of beads mapping. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
-    :type beads_distribution: Array
-    :param mass_weighted: Returns mass weighted mapping matrix(if True)
+    :type mapping_operator: Array
+    :param mass_weighted: Returns mass weighted mapping matrix (if True)
                      or both mass weighted and non-mass weighted matrices (if False)
     :type no_mass_mat: Boolean
 

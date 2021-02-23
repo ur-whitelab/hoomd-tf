@@ -331,6 +331,35 @@ class test_mappings(unittest.TestCase):
         assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
         assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
 
+    def test_gen_mapped_exclusion_list(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_gen_mapped_exclusion_list")
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        mapping_operator_FF = [['N', 'H1', 'H2', 'H3'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O'],
+                               ['N', 'H'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O1', 'O2']]
+        mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
+            u, protein_FF, mapping_operator_FF, selection="resname PHE")
+        assert mapped_exclusion_list[50, 50] == False
+        assert mapped_exclusion_list[22, 21] == True
+        assert mapped_exclusion_list[4, 5] == True
+
     def test_nlist_compare(self):
         rcut = 5.0
         c = hoomd.context.initialize('')
