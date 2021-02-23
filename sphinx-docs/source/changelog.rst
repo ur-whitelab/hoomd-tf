@@ -8,11 +8,13 @@ v2.2 (TBD)
 
 - Can read molecules from GROAMCS topology
 - Can compute one-hot encoding for different bead type interactions in CG systems
+- Can generate mapped exclusion lists in CG systems
 
 *Enhancements*
 
 - Added jupyter notebook testing to continuous integration
 - `iter_from_trajectory` can run in a user-defined time range
+- Can add exclusion lists when computing nlists using htf
 
 *Bug Fixes*
 
