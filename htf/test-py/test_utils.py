@@ -274,7 +274,8 @@ class test_mappings(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_compute_ohe_bead_type_interactions")
+                "MDAnalysis not available; \
+                 skipping test_compute_ohe_bead_type_interactions")
         import os
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
@@ -356,9 +357,9 @@ class test_mappings(unittest.TestCase):
                                ['C', 'O1', 'O2']]
         mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
             u, protein_FF, mapping_operator_FF, selection="resname PHE")
-        assert mapped_exclusion_list[50, 50] == False
-        assert mapped_exclusion_list[22, 21] == True
-        assert mapped_exclusion_list[4, 5] == True
+        self.assertFalse(mapped_exclusion_list[50, 50])
+        self.assertTrue(mapped_exclusion_list[22, 21])
+        self.assertTrue(mapped_exclusion_list[4, 5])
 
     def test_nlist_compare(self):
         rcut = 5.0

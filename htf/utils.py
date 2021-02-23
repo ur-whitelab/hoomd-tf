@@ -278,7 +278,7 @@ def find_molecules_from_topology(
         universe,
         atoms_in_molecule_list,
         selection='all'):
-    R""" Given a universe from MDAnaylis and list of atoms in every molecule type
+    ''' Given a universe from MDAnaylis and list of atoms in every molecule type
      in the system,return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
 
@@ -298,7 +298,7 @@ def find_molecules_from_topology(
     u.select_atoms("resname PHE and resid 0:1").names]
                 find_molecules_from_topology(
     u, atoms_in_molecule_list, selection = "resname PHE")
-    """
+    '''
 
     # Getting total number of atoms in selection from topology
     total_number_of_atoms = universe.select_atoms(selection).n_atoms
@@ -335,12 +335,13 @@ def find_cgnode_id(atm_id, cg):
 
 
 def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, selection='all'):
-    ''' Generate mapped exclusion list to compute mapped_nlist for non-bonded bead-type interactions.
+    ''' Generate mapped exclusion list to compute mapped_nlist for non-bonded bead-type
+     interactions.
 
     :param universe: MDAnalysis Universe that contains bond information
     :type universe: MDAnalysis Universe object
     :param atoms_in_molecule: Selection of atoms in the molecule from MDAnalysis universe
-    :type atoms_in_molecule: MDAnalysis.core.groups.AtomGroup
+    :type atoms_in_molecule: ``MDAnalysis.core.groups.AtomGroup``
     :param mapping_operator: List of lists of beads mapping. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
     :type mapping_operator: Array
@@ -650,8 +651,8 @@ def iter_from_trajectory(
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
-    R''' This will create a M x N mass weighted mapping matrix where M is the number
-        of atoms in the molecule and N is the number of mapping beads.
+    ''' Create a ``M x N`` mass weighted mapping matrix where ``M`` is the number
+        of atoms in the molecule and ``N`` is the number of mapping beads.
 
     :param molecule: This is atom selection in the molecule.
     :type molecule: MDAnalysis Atoms object
@@ -901,8 +902,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     ''' This will create the necessary indices and values for
     defining a sparse tensor in
-    tensorflow that is a mass-weighted $B \times N$ mapping operator.
-    where $B$ is the number of coarse-grained beads.
+    tensorflow that is a mass-weighted ``B x N`` mapping operator.
+    where ``B`` is the number of coarse-grained beads.
     This is a slow function and should not be called frequently.
 
     :param molecule_mapping: This is a list of L x M matrices, where M is the number
