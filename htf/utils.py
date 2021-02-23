@@ -8,7 +8,7 @@ import hoomd
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    '''Comptue mapping of the given positions ``N x 3` and mapping ``M x N``
+    ''' Computes mapping of the given positions ``N x 3` and mapping ``M x N``
     considering PBC. Returns mapped particles.
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
@@ -71,7 +71,7 @@ def compute_nlist(
         sorted=False,
         return_types=False,
         exclusion_matrix=None):
-    ''' Compute particle pairwise neighbor lists.
+    ''' Computes particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
     :type positions: N x 4 or N x 3 tensor
@@ -152,7 +152,7 @@ def compute_nlist(
 
 
 def compute_pairwise(model, r, type_i=0, type_j=0):
-    ''' Compute model output for a 2 particle system of type_i and type_j at
+    ''' Computes model output for a 2 particle system of type_i and type_j at
     distances set by ``r``.
     If the model outputs two tensors of shape ``L x M`` and ``K``, then
     the output  will be a tuple of numpy arrays of size ``N x L x M`` and
@@ -192,7 +192,7 @@ def compute_pairwise(model, r, type_i=0, type_j=0):
 
 
 def create_frame(frame_number, N, types, typeids, positions, box):
-    ''' Create snapshots of a system state.
+    ''' Creates snapshots of a system state.
 
     :param frame_number: Frame number in a trajectory
     :type frame_number: int
@@ -279,7 +279,7 @@ def find_molecules_from_topology(
         atoms_in_molecule_list,
         selection='all'):
     ''' Given a universe from MDAnaylis and list of atoms in every molecule type
-     in the system,return a mapping from molecule index to particle index.
+     in the system, return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
 
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
@@ -335,7 +335,7 @@ def find_cgnode_id(atm_id, cg):
 
 
 def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, selection='all'):
-    ''' Generate mapped exclusion list to compute mapped_nlist for non-bonded bead-type
+    ''' Generates mapped exclusion list to compute mapped_nlist for non-bonded bead-type
      interactions.
 
     :param universe: MDAnalysis Universe that contains bond information
@@ -651,7 +651,7 @@ def iter_from_trajectory(
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
-    ''' Create a ``M x N`` mass weighted mapping matrix where ``M`` is the number
+    ''' Creates a ``M x N`` mass weighted mapping matrix where ``M`` is the number
         of atoms in the molecule and ``N`` is the number of mapping beads.
 
     :param molecule: This is atom selection in the molecule.
