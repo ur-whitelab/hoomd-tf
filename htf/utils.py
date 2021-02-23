@@ -8,7 +8,7 @@ import hoomd
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    '''Comptue mapping of the given positions ``N x 3` and mapping ``M x N``
+    ''' Computes mapping of the given positions ``N x 3` and mapping ``M x N``
     considering PBC. Returns mapped particles.
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
@@ -69,8 +69,9 @@ def compute_nlist(
         NN,
         box_size,
         sorted=False,
-        return_types=False):
-    ''' Compute particle pairwise neighbor lists.
+        return_types=False,
+        exclusion_matrix=None):
+    ''' Computes particle pairwise neighbor lists.
 
     :param positions: Positions of the particles
     :type positions: N x 4 or N x 3 tensor
@@ -85,6 +86,10 @@ def compute_nlist(
     :param return_types: If true, requires N x 4 positions array and
         last element of nlist is type. Otherwise last element is index of neighbor
     :type return_types: bool
+    :param exclusion_matrix: Matrix (True = exclude) with size B x B (where B is the total number
+        of bead particles in the system) indicating which pairs
+        should be excluded from nlist
+    :type exclusion_matrix: Tensor of dtype bools
 
 
     :return: An [N X NN X 4] tensor containing neighbor lists of all
@@ -94,25 +99,25 @@ def compute_nlist(
     if return_types and positions.shape[1] == 3:
         raise ValueError(
             'Cannot return type if positions does not have type. Make sure positions is N x 4')
+    # get number of input positions
+    M = tf.shape(positions)[0]
 
     # Make sure positions is only xyz
     positions3 = positions[:, :3]
-
-    M = tf.shape(input=positions3)[0]
-    # Making 3 dim CG nlist
-    qexpand = tf.expand_dims(positions3, 1)  # one column
-    qTexpand = tf.expand_dims(positions3, 0)  # one row
-    # repeat it to make matrix of all positions
-    qtile = tf.tile(qexpand, [1, M, 1])
-    qTtile = tf.tile(qTexpand, [M, 1, 1])
-    # subtract them to get distance matrix
-    dist_mat = qTtile - qtile
+    # subtract them to get distance vector matrix
+    dist_mat = positions3[tf.newaxis, ...] - positions3[:, tf.newaxis, :]
     # apply minimum image
     box = tf.reshape(tf.convert_to_tensor(value=box_size), [1, 1, 3])
     dist_mat -= tf.math.round(dist_mat / box) * box
-    # mask distance matrix to remove things beyond cutoff and zeros
     dist = tf.norm(tensor=dist_mat, axis=2)
+    # mask distance matrix to remove things beyond cutoff and zeros
+    # mask value = 1: valid
     mask = (dist <= r_cut) & (dist >= 5e-4)
+    if exclusion_matrix is not None:
+        # negate it since mask = 1 is valid
+        # also make sure it's symmetric
+        nem = tf.logical_not(exclusion_matrix)
+        mask &= nem & tf.transpose(nem)
     mask_cast = tf.cast(mask, dtype=dist.dtype)
     if sorted:
         # replace these masked elements with really large numbers
@@ -147,7 +152,7 @@ def compute_nlist(
 
 
 def compute_pairwise(model, r, type_i=0, type_j=0):
-    ''' Compute model output for a 2 particle system of type_i and type_j at
+    ''' Computes model output for a 2 particle system of type_i and type_j at
     distances set by ``r``.
     If the model outputs two tensors of shape ``L x M`` and ``K``, then
     the output  will be a tuple of numpy arrays of size ``N x L x M`` and
@@ -187,7 +192,7 @@ def compute_pairwise(model, r, type_i=0, type_j=0):
 
 
 def create_frame(frame_number, N, types, typeids, positions, box):
-    ''' Create snapshots of a system state.
+    ''' Creates snapshots of a system state.
 
     :param frame_number: Frame number in a trajectory
     :type frame_number: int
@@ -273,8 +278,8 @@ def find_molecules_from_topology(
         universe,
         atoms_in_molecule_list,
         selection='all'):
-    R""" Given a universe from MDAnaylis and list of atoms in every molecule type
-     in the system,return a mapping from molecule index to particle index.
+    ''' Given a universe from MDAnaylis and list of atoms in every molecule type
+     in the system, return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
 
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
@@ -293,7 +298,7 @@ def find_molecules_from_topology(
     u.select_atoms("resname PHE and resid 0:1").names]
                 find_molecules_from_topology(
     u, atoms_in_molecule_list, selection = "resname PHE")
-    """
+    '''
 
     # Getting total number of atoms in selection from topology
     total_number_of_atoms = universe.select_atoms(selection).n_atoms
@@ -327,6 +332,44 @@ def find_cgnode_id(atm_id, cg):
         for j_idx, j_value in enumerate(num_val):
             if j_value == atm_id:
                 return num_index
+
+
+def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, selection='all'):
+    ''' Generates mapped exclusion list to compute mapped_nlist for non-bonded bead-type
+     interactions.
+
+    :param universe: MDAnalysis Universe that contains bond information
+    :type universe: MDAnalysis Universe object
+    :param atoms_in_molecule: Selection of atoms in the molecule from MDAnalysis universe
+    :type atoms_in_molecule: ``MDAnalysis.core.groups.AtomGroup``
+    :param mapping_operator: List of lists of beads mapping. Note that each list should
+                contain atoms as strings just like how they appear in the topology file.
+    :type mapping_operator: Array
+    :param selection: The atom groups to extract from universe
+    :type selection: string
+
+
+    :return: A [B X B] array of dtype bools indicating which pairs
+        should be excluded from nlist (True = exclude).
+    '''
+    # Get the number of atoms
+    N = len(universe.select_atoms(selection))
+    bonds = universe.select_atoms(selection).bonds.to_indices()
+    aa_exclusion_list = np.zeros((N, N), dtype=bool)
+    for b in bonds:
+        aa_exclusion_list[tuple(b)] = 1
+        aa_exclusion_list[tuple(np.roll(b, 1))] = 1
+    matrix_mapping_molecule = hoomd.htf.matrix_mapping(
+        atoms_in_molecule, mapping_operator, mass_weighted=False)[1]
+    # Get the number of molecules
+    M = N//matrix_mapping_molecule.shape[1]
+    # repeat matrix_mapping_molecule along diag
+    matrix_mapping_system = np.kron(
+        np.eye(M, dtype=int), matrix_mapping_molecule).astype(bool)
+    mapped_exclusion = matrix_mapping_system @ aa_exclusion_list @ (
+        matrix_mapping_system.T)
+    np.fill_diagonal(mapped_exclusion, False)
+    return mapped_exclusion
 
 
 def compute_adj_mat(obj):
@@ -608,15 +651,15 @@ def iter_from_trajectory(
 
 
 def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
-    R''' This will create a M x N mass weighted mapping matrix where M is the number
-        of atoms in the molecule and N is the number of mapping beads.
+    ''' Creates a ``M x N`` mass weighted mapping matrix where ``M`` is the number
+        of atoms in the molecule and ``N`` is the number of mapping beads.
 
     :param molecule: This is atom selection in the molecule.
     :type molecule: MDAnalysis Atoms object
     :param mapping_operator: List of lists of beads mapping. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
-    :type beads_distribution: Array
-    :param mass_weighted: Returns mass weighted mapping matrix(if True)
+    :type mapping_operator: Array
+    :param mass_weighted: Returns mass weighted mapping matrix (if True)
                      or both mass weighted and non-mass weighted matrices (if False)
     :type no_mass_mat: Boolean
 
@@ -859,8 +902,8 @@ def sparse_mapping(molecule_mapping, molecule_mapping_index,
                    system=None):
     ''' This will create the necessary indices and values for
     defining a sparse tensor in
-    tensorflow that is a mass-weighted $B \times N$ mapping operator.
-    where $B$ is the number of coarse-grained beads.
+    tensorflow that is a mass-weighted ``B x N`` mapping operator.
+    where ``B`` is the number of coarse-grained beads.
     This is a slow function and should not be called frequently.
 
     :param molecule_mapping: This is a list of L x M matrices, where M is the number
