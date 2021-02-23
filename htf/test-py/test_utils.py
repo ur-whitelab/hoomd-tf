@@ -357,7 +357,7 @@ class test_mappings(unittest.TestCase):
                                ['C', 'O1', 'O2']]
         mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
             u, protein_FF, mapping_operator_FF, selection="resname PHE")
-        self.assertFalse(mapped_exclusion_list[50, 50])
+        self.assertTrue(mapped_exclusion_list[109, 111])
         self.assertTrue(mapped_exclusion_list[22, 21])
         self.assertTrue(mapped_exclusion_list[4, 5])
 
