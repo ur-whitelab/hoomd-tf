@@ -360,6 +360,7 @@ class test_mappings(unittest.TestCase):
         self.assertTrue(mapped_exclusion_list[109, 111])
         self.assertTrue(mapped_exclusion_list[22, 21])
         self.assertTrue(mapped_exclusion_list[4, 5])
+        self.assertFalse(mapped_exclusion_list[150, 15])
 
     def test_nlist_compare(self):
         rcut = 5.0
