@@ -328,7 +328,12 @@ def find_molecules_from_topology(
 
 def find_cgnode_id(atm_id, cg):
     ''' Computes the CG bead index. Supports only
-    outputs formats from DSGPM model.
+    outputs formats from DSGPM model. Called by compute_adj_mat function. 
+
+    :param atm_id: index of the atom to find its CG node id
+    :type atm_id: int
+    :param cg: array of cg beads
+    :type cg: numpy array
     '''
     for num_index, num_val in enumerate(cg):
         for j_idx, j_value in enumerate(num_val):
@@ -378,7 +383,7 @@ def compute_adj_mat(obj):
     adjacency matrix. See :py:meth:`.utils.compute_cg_graph`.
 
     :param obj: mapping output from DSGPM
-    :type obj: file
+    :type obj: dict
 
     :return: adjacency matrix
     '''
