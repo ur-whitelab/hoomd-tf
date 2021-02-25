@@ -8,7 +8,7 @@ import hoomd
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    ''' Computes mapping of the given positions ``N x 3` and mapping ``M x N``
+    ''' Computes mapping of the given positions ``N x 3`` and mapping ``M x N``
     considering PBC. Returns mapped particles.
     :param positions: The tensor of particle positions
     :param mapping: The coarse-grain mapping used to produce the particles in system
@@ -50,10 +50,9 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     :param n_btypes: number of unique bead types in the CG molecule
     :type n_btypes: int
 
-
     :return: a [N x M x I] array, where M is the total number of beads in the system,
-    N is the size of CG neighborlist and I is the total number of possible interations between
-    two beads
+        N is the size of CG neighborlist and I is the total number of possible interactions 
+        between two beads
     '''
     m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
         pos_btype[..., tf.newaxis], nlist_btype)
@@ -92,7 +91,7 @@ def compute_nlist(
     :type exclusion_matrix: Tensor of dtype bools
 
 
-    :return: An [N X NN X 4] tensor containing neighbor lists of all
+    :return: An [N x NN x 4] tensor containing neighbor lists of all
         particles and index
     '''
 
@@ -279,25 +278,28 @@ def find_molecules_from_topology(
         atoms_in_molecule_list,
         selection='all'):
     ''' Given a universe from MDAnaylis and list of atoms in every molecule type
-     in the system, return a mapping from molecule index to particle index.
+    in the system, return a mapping from molecule index to particle index.
     Depending on the size of your system, this fuction might be slow to run.
 
     :param universe: Use MDAnalysis universe to read the tpr topology file from GROMACS.
     :type universe: MDAnalysis Universe object
     :param selection: The atom groups to extract from universe
     :param atoms_in_molecule_list: This is a list of atoms lists in every molecule type
-    in the system.
+        in the system.
+
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
 
     Here's an example:
-        .. code:: python
+
+    .. code:: python
+
                 TPR = 'nvt_prod.tpr'
                 TRAJECTORY = 'Molecules_CG_Mapping/traj.trr'
                 u = mda.Universe(TPR, TRAJECTORY)
                 atoms_in_molecule_list = [
-    u.select_atoms("resname PHE and resid 0:1").names]
+                    u.select_atoms("resname PHE and resid 0:1").names]
                 find_molecules_from_topology(
-    u, atoms_in_molecule_list, selection = "resname PHE")
+                    u, atoms_in_molecule_list, selection = "resname PHE")
     '''
 
     # Getting total number of atoms in selection from topology
@@ -334,23 +336,22 @@ def find_cgnode_id(atm_id, cg):
                 return num_index
 
 
-def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, selection='all'):
+def gen_mapped_exclusion_list(universe, atoms_in_molecule, beads_mappings, selection='all'):
     ''' Generates mapped exclusion list to compute mapped_nlist for non-bonded bead-type
-     interactions.
+    interactions.
 
     :param universe: MDAnalysis Universe that contains bond information
     :type universe: MDAnalysis Universe object
     :param atoms_in_molecule: Selection of atoms in the molecule from MDAnalysis universe
     :type atoms_in_molecule: ``MDAnalysis.core.groups.AtomGroup``
-    :param mapping_operator: List of lists of beads mapping. Note that each list should
+    :param beads_mappings: List of lists of beads mappings. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
-    :type mapping_operator: Array
+    :type beads_mappings: Array
     :param selection: The atom groups to extract from universe
     :type selection: string
 
-
-    :return: A [B X B] array of dtype bools indicating which pairs
-        should be excluded from nlist (True = exclude).
+    :return: A [B x B] array of dtype bools, indicating which pairs
+        should be excluded from nlist (True = exclude)
     '''
     # Get the number of atoms
     N = len(universe.select_atoms(selection))
@@ -360,7 +361,7 @@ def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, sel
         aa_exclusion_list[tuple(b)] = 1
         aa_exclusion_list[tuple(np.roll(b, 1))] = 1
     matrix_mapping_molecule = hoomd.htf.matrix_mapping(
-        atoms_in_molecule, mapping_operator, mass_weighted=False)[1]
+        atoms_in_molecule, beads_mappings, mass_weighted=False)[1]
     # Get the number of molecules
     M = N//matrix_mapping_molecule.shape[1]
     # repeat matrix_mapping_molecule along diag
@@ -374,7 +375,7 @@ def gen_mapped_exclusion_list(universe, atoms_in_molecule, mapping_operator, sel
 
 def compute_adj_mat(obj):
     ''' Given a CG mapping file in json format, outputs the
-    adjacency matrix. See compute_cg_graph.
+    adjacency matrix. See :py:meth:`.utils.compute_cg_graph`.
 
     :param obj: mapping output from DSGPM
     :type obj: file
@@ -403,11 +404,11 @@ def compute_cg_graph(
         u_no_H=None,
         u_H=None):
     ''' Given a CG mapping in JSON format(from DSGPM model) OR adjacency matrix,
-    outputs indices of connected CG beads to compute CG bond distances,CG angles
+    outputs indices of connected CG beads to compute CG bond distances, CG angles
     and CG dihedrals. If DSGPM is True, path to jsonfiles must be specified. If DSGPM
     is False, adjacency matrix and the number of CG beads must be specified.
-    If group_atoms is given as True outputs CG coordinates as well.
-    If group_atoms flag is set to True, two MDAnalysis universes with Hydrogens
+    If ``group_atoms`` is given as True outputs CG coordinates as well.
+    If ``group_atoms`` flag is set to True, two MDAnalysis universes with Hydrogens
     and without Hydrogens must be given as arguments.
 
     Optional dependencies: MDAnalysis, networkx
@@ -650,27 +651,28 @@ def iter_from_trajectory(
                     axis=1), hoomd_box, 1.0], ts
 
 
-def matrix_mapping(molecule, mapping_operator, mass_weighted=True):
-    ''' Creates a ``M x N`` mass weighted mapping matrix where ``M`` is the number
-        of atoms in the molecule and ``N`` is the number of mapping beads.
+def matrix_mapping(molecule, beads_mappings, mass_weighted=True):
+    '''Creates a ``M x N`` mass weighted mapping matrix where ``M`` is the number
+    of atoms in the molecule and ``N`` is the number of mapping beads.
 
     :param molecule: This is atom selection in the molecule.
     :type molecule: MDAnalysis Atoms object
-    :param mapping_operator: List of lists of beads mapping. Note that each list should
+    :param beads_mappings: List of lists of beads mapping. Note that each list should
                 contain atoms as strings just like how they appear in the topology file.
-    :type mapping_operator: Array
-    :param mass_weighted: Returns mass weighted mapping matrix (if True)
-                     or both mass weighted and non-mass weighted matrices (if False)
+    :type beads_mappings: Array
+    :param mass_weighted: Returns mass weighted mapping matrix (if `True`)
+                     or both mass weighted and non-mass weighted matrices (if `False`)
     :type no_mass_mat: Boolean
 
-    :return: Array/arrays of size M x N.
+    :return: Mappying operator at the molecule level. (Array/arrays) of shape M x N.
+        Use :py:meth:`.utils.sparse_mapping` to get mapping operator at the system level
     '''
     Mws_dict = dict(zip(molecule.names, molecule.masses))
-    M, N = len(mapping_operator), len(molecule)
+    M, N = len(beads_mappings), len(molecule)
     CG_matrix = np.zeros((M, N))
     index = 0
     for s in range(M):
-        for i, atom in enumerate(mapping_operator[s]):
+        for i, atom in enumerate(beads_mappings[s]):
             CG_matrix[s, i + index] = [v for k,
                                        v in Mws_dict.items() if atom in k][0]
         index += np.count_nonzero(CG_matrix[s])
@@ -698,10 +700,10 @@ def mol_angle(
         b3=None):
     ''' This method calculates the bond angle given three atoms batched by molecule.
     Or to output CG angles input CG=True and indices of the CG beads making the angles.
-    cg_positions and bead indices can be computed by calling generate_cg_graph()
+    cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
 
     :param  mol_positions: Positions tensor of atoms batched by molecules.
-            Can be created by calling build_mol_rep() method in simmodel
+            Can be created by calling :py:meth:`.build_mol_rep()` method in simmodel
     :type mol_positions: float
     :param type_i: Index of the first atom
     :type type_i: int
@@ -709,7 +711,7 @@ def mol_angle(
     :type type_j: int
     :param type_k: Index of the third atom
     :type type_k: int
-    :param CG: flag to compute CG angles must be given with b1,b2 and b3
+    :param CG: flag to compute CG angles must be given with b1, b2 and b3
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
@@ -765,7 +767,7 @@ def mol_bond_distance(
         b2=None):
     ''' This method calculates the bond distance given two atoms batched by molecule.
     Or to output CG bond distances, input CG=True and indices of the CG bead pairs
-    cg_positions and bead indices can be computed by calling generate_cg_graph()
+    cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
 
     :param mol_positions: Positions tensor of atoms batched by molecules.
            Can be created by calling build_mol_rep() method in simmodel
@@ -820,7 +822,7 @@ def mol_dihedral(
         b4=None):
     ''' This method calculates the dihedral angles given three atoms batched by molecule.
     Or to output CG dihedral angles input CG=True and indices of the CG beads making the angles.
-    cg_positions and bead indices can be computed by calling generate_cg_graph()
+    cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
 
     :param  mol_positions: Positions tensor of atoms batched by molecules.
             Can be created by calling build_mol_rep() method in simmodel
