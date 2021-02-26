@@ -198,7 +198,7 @@ def create_frame(frame_number, N, types, typeids, positions, box):
     :param N: Number of CG beads
     :type N: int
     :param types: Names of particle types
-    :type types: List of strings (len N)
+    :type types: List of strings (N,)
     :param typeids: CG bead type id
     :type typeids: Numpy array (N,)
     :param positions: CG beads positions
@@ -334,6 +334,8 @@ def find_cgnode_id(atm_id, cg):
     :type atm_id: int
     :param cg: array of cg beads
     :type cg: numpy array
+
+    :return: CG bead index of the given atom
     '''
     for num_index, num_val in enumerate(cg):
         for j_idx, j_value in enumerate(num_val):
@@ -385,7 +387,7 @@ def compute_adj_mat(obj):
     :param obj: mapping output from DSGPM
     :type obj: dict
 
-    :return: adjacency matrix
+    :return: Adjacency matrix of the mapping
     '''
     cg = obj['cgnodes']
     cg_num = len(cg)
@@ -421,7 +423,7 @@ def compute_cg_graph(
     :param DSGPM: flag to identify if mapping in json format is used or not
     :type DSGPM: bool
     :param infile: path to the CG mapping in JSON format
-    :type infile: string
+    :type infile: str
     :param adj_matrix: adjacency matrix (if DSGPM=False)
     :type adj_matrix: numpy array
     :param cg_beads: number of CG beads per molecule
@@ -433,7 +435,7 @@ def compute_cg_graph(
     :param u_H: All atom structure with hydrogens
     :type u_H: MDAnalysis universe
 
-    :return: list of indices bonded CG bead pairs, list of indices of CG beads making angles,
+    :return: List of indices bonded CG bead pairs, list of indices of CG beads making angles,
              list of indices of CG beads making dihedrals, and/or CG coordinates
      '''
     import MDAnalysis as mda
