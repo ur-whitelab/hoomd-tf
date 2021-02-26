@@ -235,7 +235,7 @@ class test_mappings(unittest.TestCase):
         np.testing.assert_array_almost_equal(nlist[-1, -1, :],
                                              [0, 0, 0, 0])
 
-    def test_compute_ohe_bead_type_interactions(self):
+    def disabled_test_compute_ohe_bead_type_interactions(self):
         try:
             import MDAnalysis as mda
         except ImportError:
