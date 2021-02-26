@@ -288,6 +288,7 @@ def find_molecules_from_topology(
         in the system.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
+
     Here's an example:
 
     .. code:: python
