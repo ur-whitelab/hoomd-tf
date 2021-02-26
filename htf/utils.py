@@ -5,6 +5,7 @@ import numpy as np
 from os import path
 import pickle
 import hoomd
+from pkg_resources import parse_version
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
@@ -336,7 +337,7 @@ def find_molecules_from_topology(
 
 def find_cgnode_id(atm_id, cg):
     ''' Computes the CG bead index. Supports only
-    outputs formats from DSGPM model. Called by compute_adj_mat function. 
+    outputs formats from DSGPM model. Called by compute_adj_mat function.
 
     :param atm_id: index of the atom to find its CG node id
     :type atm_id: int
@@ -656,20 +657,23 @@ def iter_from_trajectory(
         box_size=box[:3])
     if end is None:
         end = universe.trajectory.totaltime
-    # Need this for silly TF 2.4.1
-    sparse_box = tf.SparseTensor(
-        indices=[[0, 0, 0],
-                 [0, 0, 1],
-                 [0, 0, 2],
-                 [0, 1, 0],
-                 [0, 1, 1],
-                 [0, 1, 2],
-                 [0, 2, 0],
-                 [0, 2, 1],
-                 [0, 2, 2]],
-        values=tf.reshape(hoomd_box, (-1,)),
-        dense_shape=(len(atom_group), 3, 3)
-    )
+    # Need this for silly TF 2.4
+    box = hoomd_box
+    vtf = parse_version(tf.__version__)
+    if vtf >= parse_version('2.4'):
+        box = tf.SparseTensor(
+            indices=[[0, 0, 0],
+                     [0, 0, 1],
+                     [0, 0, 2],
+                     [0, 1, 0],
+                     [0, 1, 1],
+                     [0, 1, 2],
+                     [0, 2, 0],
+                     [0, 2, 1],
+                     [0, 2, 2]],
+            values=tf.reshape(box, (-1,)),
+            dense_shape=(len(atom_group), 3, 3)
+        )
     # Run the model at every nth frame where time is in range [start,end] and n = period
     for i, ts in enumerate(tqdm(universe.trajectory)):
         if ts.time >= start and ts.time <= end:
@@ -677,7 +681,7 @@ def iter_from_trajectory(
                 yield [nlist, np.concatenate(
                     (atom_group.positions,
                      type_array),
-                    axis=1), sparse_box], ts
+                    axis=1), box], ts
 
 
 def matrix_mapping(molecule, beads_mappings, mass_weighted=True):
