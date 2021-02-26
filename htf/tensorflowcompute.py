@@ -273,12 +273,10 @@ class tfcompute(hoomd.compute._compute):
                         for o1, o2 in zip(self.outputs, output[self._output_offset:])
                     ]
             # now actually train
-            train_step = self.model.make_train_function()
-            # stole this code from keras implementation.
-            # somehow makes it into iterable with correct properties
-            dataset = tf.data.Dataset.from_tensors(
-                (tuple(inputs[:-1]), inputs[-1]))
-            train_step(iter(dataset))
+            self.model.train_on_batch(
+                x=inputs[:-1],
+                y=inputs[-1],
+                reset_metrics=False)
 
     def get_positions_array(self):
         R''' Retrieve positions array as numpy array

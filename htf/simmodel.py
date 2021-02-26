@@ -119,6 +119,12 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
+        # can't do the beautiful simple way as before. Need to slice out the stupid box
+        if self._arg_count >= 2 and tf.rank(inputs[2]) == 3:
+            # this is so stupid.
+            inputs = list(inputs)
+            bs = tf.sparse.slice(inputs[2], start=[0, 0, 0], size=[1, 3, 3])
+            inputs[2] = tf.reshape(tf.sparse.to_dense(bs), (3, 3))
         if self._pass_training:
             out = self._compute(*inputs[:self._arg_count], training)
         else:
@@ -175,6 +181,22 @@ class SimModel(tf.keras.Model):
 
         # check box skew
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
+
+        # for TF2.4.1 we hack the box to have leading batch dimension
+        # because TF has 4k backlogged issues
+        box = tf.SparseTensor(
+            indices=[[0, 0, 0],
+                     [0, 0, 1],
+                     [0, 0, 2],
+                     [0, 1, 0],
+                     [0, 1, 1],
+                     [0, 1, 2],
+                     [0, 2, 0],
+                     [0, 2, 1],
+                     [0, 2, 2]],
+            values=tf.reshape(box, (-1,)),
+            dense_shape=(tf.shape(pos)[0], 3, 3)
+        )
 
         if self.check_nlist:
             NN = tf.reduce_max(
