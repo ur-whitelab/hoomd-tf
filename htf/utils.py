@@ -8,12 +8,20 @@ import hoomd
 
 
 def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
-    ''' Computes mapping of the given positions ``N x 3`` and mapping ``M x N``
-    considering PBC. Returns mapped particles.
+    ''' Computes mapped positions given positions and system-level mapping
+    by considering PBC.
+
     :param positions: The tensor of particle positions
-    :param mapping: The coarse-grain mapping used to produce the particles in system
-    :param box_size: A list contain the size of the box ``[Lx, Ly, Lz]``
+    :type positions: N x 3 tensor
+    :param mapping: The coarse-grain system-level mapping used to produce
+        the particles in system
+    :type mapping: M x N tensor
+    :param box_size: A list that contains the size of the box ``[Lx, Ly, Lz]``
+    :type box_size:  list
     :param name: The name of the op to add to the TF graph
+    :type name: string
+
+    :return: An [M x 3] mapped particles
     '''
 
     try:
@@ -50,7 +58,7 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     :param n_btypes: number of unique bead types in the CG molecule
     :type n_btypes: int
 
-    :return: a [N x M x I] array, where M is the total number of beads in the system,
+    :return: An [N x M x I] array, where M is the total number of beads in the system,
         N is the size of CG neighborlist and I is the total number of possible interactions
         between two beads
     '''
