@@ -51,7 +51,7 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     :type n_btypes: int
 
     :return: a [N x M x I] array, where M is the total number of beads in the system,
-        N is the size of CG neighborlist and I is the total number of possible interactions 
+        N is the size of CG neighborlist and I is the total number of possible interactions
         between two beads
     '''
     m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
@@ -288,7 +288,6 @@ def find_molecules_from_topology(
         in the system.
 
     :return: A list of length L (number of molecules) whose elements are lists of atom indices.
-
     Here's an example:
 
     .. code:: python
