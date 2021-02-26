@@ -1,4 +1,5 @@
 autodocs
 sphinx
 sphinx-rtd-style
+sphinx_rtd_theme
 mock
