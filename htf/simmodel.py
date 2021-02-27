@@ -486,6 +486,15 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
 
 
 @tf.function
+def box_size(box):
+    # stupid trick to treat 2.4 TF
+    if box.shape.rank == 3:
+        bs = tf.sparse.slice(box, start=[0, 0, 0], size=[1, 3, 3])
+        box = tf.reshape(tf.sparse.to_dense(bs), (3, 3))
+    return box[1, :] - box[0, :]
+
+
+@tf.function
 def wrap_vector(r, box):
     '''Computes the minimum image version of the given vector.
 
@@ -493,13 +502,8 @@ def wrap_vector(r, box):
         :type r: tensor
         :return: The wrapped vector as a TF tensor
     '''
-    box_size = box[1, :] - box[0, :]
-    return r - tf.math.round(r / box_size) * box_size
-
-
-@tf.function
-def box_size(box):
-    return box[1, :] - box[0, :]
+    bs = box_size(box)
+    return r - tf.math.round(r / bs) * bs
 
 
 @tf.function
