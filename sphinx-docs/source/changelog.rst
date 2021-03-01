@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v2.2 (TBD)
+v2.2 3/2/2021
 --------------------
 
 *New Features*
@@ -17,8 +17,6 @@ v2.2 (TBD)
 - Revised to work for TF 2.4
 - Can add exclusion lists when computing nlists using htf
 
-
-*Bug Fixes*
 
 v2.1 (2021-02-04)
 --------------------
