@@ -31,7 +31,7 @@ NN = 64
 
 
 class LJModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         rinv = htf.nlist_rinv(nlist)
         inv_r6 = rinv**6

@@ -16,6 +16,10 @@ jobs:
       matrix:
         include:
           - hoomd: 2.9.2
+            tensorflow: 2.4.1
+            tbb-devel: 2020.1
+            md-analysis: 'true'
+          - hoomd: 2.9.2
             tensorflow: 2.3.2
             tbb-devel: 2020.1
             md-analysis: 'true'
@@ -30,10 +34,6 @@ jobs:
           - hoomd: 2.7.0
             tensorflow: 2.3.2
             tbb-devel: 2019.8
-            md-analysis: 'false'
-          - hoomd: 2.6.0
-            tensorflow: 2.3.2
-            tbb-devel: 2019.7
             md-analysis: 'false'
 
     steps:
@@ -69,7 +69,7 @@ jobs:
         rm -rf temp
     - name: Run notebooks without MDAnalysis
       if: matrix.md-analysis == 'false'
-      run: | 
+      run: |
         cd examples
         jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "01. Quickstart.ipynb" "02. Preparing Coarse-grained Mapped Simulation.ipynb" "03. Experiment Directed Simulations.ipynb" "04. Particle Simulations.ipynb" "07. Molecules CG Mapping.ipynb" --to notebook --clear-output --output-dir='temp' --Application.log_level='ERROR'
         rm -rf temp

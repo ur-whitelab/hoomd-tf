@@ -315,8 +315,7 @@ class test_mappings(unittest.TestCase):
         for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
                                                          selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
-            box = inputs[2].astype('float32')
-            box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
+            box_size = tf.cast(hoomd.htf.box_size(inputs[2]), tf.float32)
             mapped_pos = hoomd.htf.center_of_mass(
                 positions[:, :3], cg_mapping, box_size)
             system_bead_types = tf.reshape(system_bead_types, [-1, 1])

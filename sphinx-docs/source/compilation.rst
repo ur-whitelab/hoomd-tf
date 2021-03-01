@@ -14,7 +14,7 @@ assuming you have conda
   conda create -n htf2 python=3.7
   source activate htf2
   conda install -c conda-forge tbb-devel hoomd
-  pip install --upgrade tensorflow==2.3
+  pip install --upgrade tensorflow
   git clone https://github.com/ur-whitelab/hoomd-tf
   cd hoomd-tf && mkdir build && cd build
   CXX=g++ CC=gcc CMAKE_PREFIX_PATH=$CONDA_PREFIX cmake ..
@@ -31,7 +31,7 @@ The following packages are required to compile:
 ::
 
     python >= 3.6
-    tensorflow == 2.3.0
+    tensorflow
     hoomd >= 2.6.0
     tbb-devel (only for hoomd if installed with conda)
 
@@ -39,7 +39,7 @@ tbb-devel is required for HOOMD-blue when using the
 HOOMD-blue conda release. It is not automatically installed when
 installing HOOMD-blue, so use ``conda install -c conda-forge
 tbb-devel`` to install. The TensorFlow version should be
-TensorFlow 2.3 release. It is recommended you install via pip:
+TensorFlow 2.3 or 2.4 release. It is recommended you install via pip:
 
 .. code:: bash
 

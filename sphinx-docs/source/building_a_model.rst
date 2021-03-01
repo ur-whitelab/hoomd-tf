@@ -13,7 +13,7 @@ To begin subclass a :py:class:`.SimModel` class:
 
     import hoomd.htf as htf
     class MyModel(htf.SimModel):
-      def compute(self, nlist, positions, box, sample_weight):
+      def compute(self, nlist, positions, box):
         ...
         return forces, other, important, quantities
 
@@ -38,11 +38,6 @@ tensors that can be used:``nlist``, ``positions``, ``box``:
 
 * ``box`` is a 3x3 tensor containing the low box
   coordinate (row 0), high box coordinate (row 1), and then tilt factors (row 2).
-
-``sample_weight`` is a scalar indicating what fraction of the simulation
-being considered. This accounts for if you broke-up your simulation by batching (see :py:class:`.tfcompute`).
-Typically, this is only used if you want to correct for this when computing
-averages. If you did not break-up your simulation, it will always be 1.0.
 
 Your function can use fewer tensors, like ``compute(self, nlist)`` if
 desired.
