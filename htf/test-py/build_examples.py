@@ -39,13 +39,13 @@ class NoForceModel(htf.SimModel):
 
 
 class TensorSaveModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         pos_norm = tf.norm(tensor=positions, axis=1)
         return pos_norm
 
 
 class WrapModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         p1 = positions[0, :3]
         p2 = positions[-1, :3]
         r = p1 - p2
@@ -55,7 +55,7 @@ class WrapModel(htf.SimModel):
 
 
 class BenchmarkNonlistModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         ps = tf.norm(tensor=positions, axis=1)
         energy = tf.math.divide_no_nan(1., ps)
         forces = htf.compute_positions_forces(positions, energy)
@@ -63,7 +63,7 @@ class BenchmarkNonlistModel(htf.SimModel):
 
 
 class LJModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         rinv = htf.nlist_rinv(nlist)
         inv_r6 = rinv**6
@@ -76,7 +76,7 @@ class LJModel(htf.SimModel):
 
 
 class LJVirialModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         rinv = htf.nlist_rinv(nlist)
         inv_r6 = rinv**6
@@ -94,11 +94,11 @@ class EDSModel(htf.SimModel):
         self.cv_avg = tf.keras.metrics.Mean()
         self.eds_bias = htf.EDSLayer(set_point, 5, 1 / 5)
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get distance from center
         rvec = htf.wrap_vector(positions[0, :3], box)
         cv = tf.norm(tensor=rvec)
-        self.cv_avg.update_state(cv, sample_weight=sample_weight)
+        self.cv_avg.update_state(cv)
         alpha = self.eds_bias(cv)
         # eds + harmonic bond
         energy = (cv - 5) ** 2 + cv * alpha
@@ -143,7 +143,7 @@ class CGModel(htf.SimModel):
 
 
 class CustomNlist(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
 
         # compute nlist
@@ -160,7 +160,7 @@ class NlistNN(htf.SimModel):
         self.last = tf.keras.layers.Dense(1)
         self.top_neighs = top_neighs
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         rinv = htf.nlist_rinv(nlist)
         # closest neighbors have largest value in 1/r, take top
         top_n = tf.sort(rinv, axis=1, direction='DESCENDING')[
@@ -228,7 +228,7 @@ class LJRunningMeanModel(htf.SimModel):
     def setup(self):
         self.avg_energy = tf.keras.metrics.Mean()
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
@@ -238,7 +238,7 @@ class LJRunningMeanModel(htf.SimModel):
         # sum over pairwise energy
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
         # compute running mean
-        self.avg_energy.update_state(energy, sample_weight=sample_weight)
+        self.avg_energy.update_state(energy)
         forces = htf.compute_nlist_forces(nlist, energy)
         return forces
 
@@ -247,7 +247,7 @@ class LJRDF(htf.SimModel):
     def setup(self):
         self.avg_rdf = tf.keras.metrics.MeanTensor()
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
@@ -259,7 +259,7 @@ class LJRDF(htf.SimModel):
         # also compute without types
         _, _ = htf.compute_rdf(nlist, [3, 5])
         # compute running mean
-        self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
+        self.avg_rdf.update_state(rdf)
         forces = htf.compute_nlist_forces(nlist, p_energy)
         return forces
 
@@ -276,7 +276,7 @@ class LJMolModel(htf.MolSimModel):
 
 
 class PrintModel(htf.SimModel):
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
         # compute 1 / r while safely treating r = 0.
@@ -321,7 +321,7 @@ class TrainableGraph(htf.SimModel):
         super().__init__(NN, **kwargs)
         self.lj = LJLayer(1.0, 1.0)
 
-    def compute(self, nlist, positions, box, sample_weight):
+    def compute(self, nlist, positions, box):
         # get r
         r = htf.safe_norm(tensor=nlist[:, :, :3], axis=2)
         p_energy = self.lj(r)

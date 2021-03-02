@@ -19,7 +19,7 @@ To compute an RDF, use :py:func:`.compute_rdf`:
         def setup(self):
             self.avg_rdf = tf.keras.metrics.MeanTensor()
 
-        def compute(self, nlist, positions, box, sample_weight):
+        def compute(self, nlist, positions, box):
             # get r
             r = tf.norm(tensor=nlist[:, :, :3], axis=2)
             # compute 1 / r while safely treating r = 0.
@@ -29,7 +29,7 @@ To compute an RDF, use :py:func:`.compute_rdf`:
             # rdf from r = 3 to r = 5
             rdf, rs = htf.compute_rdf(nlist, [3, 5])
             # compute running mean
-            self.avg_rdf.update_state(rdf, sample_weight=sample_weight)
+            self.avg_rdf.update_state(rdf)
             forces = htf.compute_nlist_forces(nlist, p_energy)
             return forces
 
@@ -62,7 +62,7 @@ Trajectory Parsing
 
 To process information from a trajectory, use
 :py:func:`.iter_from_trajectory`. This generator will process information from a trajectory and
-yield a tuple of  ``[nlist, positions, box, sample_weight]`` (see :py:meth:`.SimModel.compute` for details)
+yield a tuple of  ``[nlist, positions, box]`` (see :py:meth:`.SimModel.compute` for details)
 and ``MDAnalysis.TimeStep`` object.
 The first list can be directly called with a :py:class:`.SimModel` (e.g., ``model(inputs)``).
 The ``MDAnalysis.TimeStep`` object can be used to compute other properties with MDAnalysis.

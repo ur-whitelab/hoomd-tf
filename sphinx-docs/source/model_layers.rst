@@ -45,12 +45,12 @@ biasing to a system, use an EDS Layer (:py:class:`.EDSLayer`):
             self.cv_avg = tf.keras.metrics.Mean()
             self.eds_bias = htf.EDSLayer(4., 5, 1/5)
 
-        def compute(self, nlist, positions, box, sample_weight):
+        def compute(self, nlist, positions, box):
             # get distance from center
             rvec = htf.wrap_vector(positions[0, :3], box)
             # compute CV
             cv = tf.norm(tensor=rvec)
-            self.cv_avg.update_state(cv, sample_weight=sample_weight)
+            self.cv_avg.update_state(cv)
             alpha = self.eds_bias(cv)
             # eds energy
             energy = cv * alpha
