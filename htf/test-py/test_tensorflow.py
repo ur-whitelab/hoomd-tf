@@ -261,7 +261,8 @@ class test_compute(unittest.TestCase):
         # checking that they are at least callable.
         model = tf.keras.models.load_model(
             os.path.join(self.tmp, 'test-model'),
-            custom_objects={**hoomd.htf.custom_objects, 'TrainableGraph': build_examples.TrainableGraph})
+            custom_objects={**hoomd.htf.custom_objects,
+                            'TrainableGraph': build_examples.TrainableGraph})
 
         tfcompute.disable()
 
