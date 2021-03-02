@@ -260,7 +260,8 @@ class test_compute(unittest.TestCase):
         # We keep the partial test because it calls the get_config methods,
         # checking that they are at least callable.
         model = tf.keras.models.load_model(
-            os.path.join(self.tmp, 'test-model'), custom_objects={**hoomd.htf.custom_objects, 'TrainableGraph': build_examples.TrainableGraph})
+            os.path.join(self.tmp, 'test-model'),
+            custom_objects={**hoomd.htf.custom_objects, 'TrainableGraph': build_examples.TrainableGraph})
 
         tfcompute.disable()
 
