@@ -185,7 +185,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
             // forces comm is full size because we use m_forces
             m_forces_comm.setOffset(offset);
             m_forces_comm.setBatchSize(N);
-            finishUpdate(i, static_cast<float>(N) / m_pdata->getN());
+            finishUpdate(i);
 
             if (m_prof)
                 m_prof->push("TensorflowCompute::Force Update");
@@ -210,11 +210,11 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
 }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::finishUpdate(unsigned int batch_index, float batch_frac)
+void TensorflowCompute<M>::finishUpdate(unsigned int batch_index)
 {
     if (m_prof)
         m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
-    m_py_self.attr("_finish_update")(batch_index, batch_frac);
+    m_py_self.attr("_finish_update")(batch_index);
     if (m_prof)
         m_prof->pop();
 }

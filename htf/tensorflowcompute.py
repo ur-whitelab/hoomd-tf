@@ -219,12 +219,10 @@ class tfcompute(hoomd.compute._compute):
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
 
-    def _finish_update(self, batch_index, batch_frac):
+    def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.
 
         :param batch_index: index of batch to be processed
-        :param batch_frac: fractional batch index, i.e.
-            ``batch_frac`` = ``batch_index / len(input)``
         '''
 
         if batch_index == 0:
@@ -236,8 +234,7 @@ class tfcompute(hoomd.compute._compute):
                 self.dtype,
                 self.cpp_force.getNlistBuffer(),
                 self.cpp_force.getPositionsBuffer(),
-                self.cpp_force.getBoxBuffer(),
-                batch_frac)
+                self.cpp_force.getBoxBuffer())
 
             output = self.model(inputs, self.train)
             if self.save_output_period and self._calls % self.save_output_period == 0:
@@ -262,7 +259,6 @@ class tfcompute(hoomd.compute._compute):
                 self.cpp_force.getNlistBuffer(),
                 self.cpp_force.getPositionsBuffer(),
                 self.cpp_force.getBoxBuffer(),
-                batch_frac,
                 self.cpp_force.getForcesBuffer())
 
             # do we need to save output?
