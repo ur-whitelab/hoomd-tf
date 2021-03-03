@@ -116,7 +116,7 @@ You can check out a specific version of HOOMD-blue now, if desired:
 
 .. code:: bash
 
-    cd hoomd-blue && git checkout tags/v2.9.3
+    cd hoomd-blue && git checkout tags/v2.9.3 -b v2.9.3
 
 Now we put our plugin in the source directory with a softlink:
 
@@ -202,8 +202,8 @@ These are instructions for our group's cluster (BlueHive), and not for general u
     source activate hoomd-tf
     export CMAKE_PREFIX_PATH=/path/to/environment
     python -m pip install tensorflow
-    git clone https://github.com/glotzerlab/hoomd-blue
-    cd hoomd-blue && mkdir build && cd build
+    git clone --recursive https://github.com/glotzerlab/hoomd-blue
+    cd hoomd-blue && git checkout tags/v2.9.3 -b v2.9.3 && mkdir build && cd build
     CXX=g++ CC=gcc cmake .. -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"` -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF
     make install && cd
     git clone https://github.com/ur-whitelab/hoomd-tf
