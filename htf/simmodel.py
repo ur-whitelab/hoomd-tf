@@ -31,7 +31,6 @@ class SimModel(tf.keras.Model):
             :type dtype: dtype
 
             '''
-
         super(SimModel, self).__init__(dtype=dtype, name=name)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
@@ -73,6 +72,17 @@ class SimModel(tf.keras.Model):
             name='htf-batch-steps', dtype=tf.int32, initial_value=0, trainable=False)
         self._running_means = []
         self.setup(**kwargs)
+
+    def get_config(self):
+        config = {
+            'nneighbor_cutoff': self.nneighbor_cutoff,
+            'output_forces': self.output_forces,
+            'virial': self.virial,
+            'check_nlist': self.check_nlist,
+            'name': self.name,
+            'dtype': self.dtype
+        }
+        return config
 
     def compute(self, nlist, positions, box, training=True):
         R'''
@@ -311,6 +321,15 @@ class MolSimModel(SimModel):
             raise AttributeError(
                 'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
+
+    def get_config(self):
+        config = super(MolSimModel, self).get_config()
+        config.update(
+            {
+                'MN': self.MN,
+                'mol_indices': self.mol_indices
+            })
+        return config
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''

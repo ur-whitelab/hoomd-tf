@@ -27,4 +27,8 @@ if gpus:
         # Memory growth must be set before GPUs have been initialized
         print(e)
 
-# need to import md to have library available.
+custom_things = [SimModel, MolSimModel, RBFExpansion, WCARepulsion,
+                 EDSLayer]
+custom_objects = {o.__name__: o for o in custom_things}
+custom_objects.update({o.__name__: o for o in custom_things})
+del custom_things

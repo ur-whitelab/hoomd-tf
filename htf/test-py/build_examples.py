@@ -129,8 +129,10 @@ class CGModel(htf.SimModel):
 
         jfile = os.path.join(os.path.dirname(__file__), 'test_cgmap.json')
 
-        u2 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA_xH.pdb'))
-        u1 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA.pdb'))
+        u2 = mda.Universe(os.path.join(
+            os.path.dirname(__file__), 'test_segA_xH.pdb'))
+        u1 = mda.Universe(os.path.join(
+            os.path.dirname(__file__), 'test_segA.pdb'))
 
         cg_feats = htf.compute_cg_graph(
             DSGPM=True,
@@ -317,8 +319,7 @@ class LJLayer(tf.keras.layers.Layer):
 
 
 class TrainableGraph(htf.SimModel):
-    def __init__(self, NN, **kwargs):
-        super().__init__(NN, **kwargs)
+    def setup(self):
         self.lj = LJLayer(1.0, 1.0)
 
     def compute(self, nlist, positions, box):
