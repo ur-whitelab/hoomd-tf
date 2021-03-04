@@ -1,5 +1,6 @@
 # Copyright (c) 2020 HOOMD-TF Developers
 import tensorflow as tf
+import hoomd.htf as htf
 import os
 import pickle
 from pkg_resources import parse_version
@@ -13,7 +14,7 @@ class SimModel(tf.keras.Model):
     def __init__(
             self, nneighbor_cutoff, output_forces=True,
             virial=False, check_nlist=False, dtype=tf.float32,
-            name='htf-model', **kwargs):
+            name='htf-model', cg_mapping=None, **kwargs):
         R'''
 
             SimModel is the main way that HOOMD-TF interacts with a simulation.
@@ -36,6 +37,7 @@ class SimModel(tf.keras.Model):
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
         self.virial = virial
+        self.cg_mapping = tf.cast(cg_mapping, dtype)
 
         # check if overridden
         if SimModel.compute == self.__class__.compute:
@@ -137,7 +139,7 @@ class SimModel(tf.keras.Model):
     def retrace_compute(self):
         R'''
         Force a retrace of the compute function. This is necessary
-        if your compute function depends variables inside ``self``.
+        if your compute function depends on variables inside ``self``.
         For  example:
 
         .. code:: python
@@ -165,13 +167,7 @@ class SimModel(tf.keras.Model):
                 name='nlist-input'
             ), [-1, self.nneighbor_cutoff, 4])
         else:
-            nlist = tf.zeros([1, 1, 4], dtype=self.dtype)
-        pos = hoomd_to_tf(
-            address=positions_addr,
-            shape=[4],
-            T=dtype,
-            name='pos-input'
-        )
+            nlist = tf.zeros([1, 1, 4], dtype=dtype)
 
         box = hoomd_to_tf(
             address=box_addr,
@@ -179,6 +175,29 @@ class SimModel(tf.keras.Model):
             T=dtype,
             name='box-input'
         )
+
+        # use CG mapped positions if cg_mapping exists, AA if not
+        if self.cg_mapping is None:
+            pos = hoomd_to_tf(
+                address=positions_addr,
+                shape=[4],
+                T=dtype,
+                name='pos-input'
+            )
+        else:
+            aa_pos = hoomd_to_tf(
+                address=positions_addr,
+                shape=[4],
+                T=dtype,
+                name='aa-pos-input'
+            )
+            pos = htf.center_of_mass(positions=aa_pos[:,:3],
+                mapping=self.cg_mapping,
+                box_size=tf.cast(htf.box_size(box), dtype),
+                dtype=dtype,
+                name='cg-pos-input'
+            )
+            
 
         # check box skew
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
@@ -212,8 +231,8 @@ class SimModel(tf.keras.Model):
             tf.debugging.assert_less(NN, self.nneighbor_cutoff,
                                      message='Neighbor list is full!')
 
-        result = [tf.cast(nlist, self.dtype), tf.cast(
-            pos, self.dtype), tf.cast(box, self.dtype)]
+        result = [tf.cast(nlist, dtype), tf.cast(
+            pos, dtype), tf.cast(box, dtype)]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
@@ -222,7 +241,13 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='forces-input'
             )
-            result.append(tf.cast(forces, self.dtype))
+            # apply CG mapping if it exists, return mapped positions/nlist/forces
+            if self.cg_mapping is not None:
+                result.append(tf.sparse.sparse_dense_matmul(tf.cast(self.cg_mapping, dtype), tf.cast(forces, dtype)))
+            else:
+                result.append(tf.cast(forces, dtype))
+
+        
 
         return result
 

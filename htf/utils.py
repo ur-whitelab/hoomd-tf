@@ -8,7 +8,7 @@ import hoomd
 from pkg_resources import parse_version
 
 
-def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
+def center_of_mass(positions, mapping, box_size, dtype=tf.float32, name='center-of-mass'):
     ''' Computes mapped positions given positions and system-level mapping
     by considering PBC.
 
@@ -39,14 +39,14 @@ def center_of_mass(positions, mapping, box_size, name='center-of-mass'):
     # /Center_of_mass#Systems_with_periodic_boundary_conditions
     # Adapted for -L to L boundary conditions
     # box dim in hoomd is 2 * L
-    box_dim = box_size
-    theta = positions / box_dim * 2 * np.pi
+    pi = tf.constant(np.pi, dtype=dtype)
+    theta = positions / box_size * 2 * pi
     xi = tf.math.cos(theta)
     zeta = tf.math.sin(theta)
-    ximean = tf.sparse.sparse_dense_matmul(mapping, xi)
-    zetamean = tf.sparse.sparse_dense_matmul(mapping, zeta)
+    ximean = tf.sparse.sparse_dense_matmul(tf.cast(mapping, dtype), tf.cast(xi, dtype))
+    zetamean = tf.sparse.sparse_dense_matmul(tf.cast(mapping, dtype), tf.cast(zeta, dtype))
     thetamean = tf.math.atan2(zetamean, ximean)
-    return tf.identity(thetamean / np.pi / 2 * box_dim, name=name)
+    return tf.identity(thetamean / pi / 2 * box_size, name=name)
 
 
 def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
