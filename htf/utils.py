@@ -156,7 +156,7 @@ def compute_nlist(
         return tf.concat([
             nlist_pos,
             tf.cast(tf.reshape(topk.indices, [-1, NN, 1]),
-                    tf.float32)], axis=-1) * nlist_mask
+                    nlist_pos.dtype)], axis=-1) * nlist_mask
 
 
 def compute_pairwise(model, r, type_i=0, type_j=0):

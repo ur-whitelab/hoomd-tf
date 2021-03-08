@@ -14,7 +14,7 @@ class SimModel(tf.keras.Model):
     def __init__(
             self, nneighbor_cutoff, output_forces=True,
             virial=False, check_nlist=False, dtype=tf.float32,
-            name='htf-model', cg_mapping=None, **kwargs):
+            name='htf-model', cg_mapping=None, r_cut=None, **kwargs):
         R'''
 
             SimModel is the main way that HOOMD-TF interacts with a simulation.
@@ -30,6 +30,13 @@ class SimModel(tf.keras.Model):
             :type check_nlist: bool
             :param dtype: The floating point specification for model (e.g., ``tf.float32``)
             :type dtype: dtype
+            :param name: The name of the TensorFlow keras model
+            :type name: string
+            :param cg_mapping: Optional. CG mapping matrix to use SimModel with CG mapped positions and neighbor list.
+                               If using with a CG mapping, must also specify r_cut. See TODO:add link to cg mapping notebook
+            :type cg_mapping: numpy array
+            :param r_cut: Optional, unless cg_mapping is not None. Cutoff radius for use in CG neighbor list.
+            :type r_cut: float
 
             '''
 
@@ -38,6 +45,7 @@ class SimModel(tf.keras.Model):
         self.output_forces = output_forces
         self.virial = virial
         self.cg_mapping = tf.cast(cg_mapping, dtype)
+        self.r_cut = tf.cast(r_cut, dtype)
 
         # check if overridden
         if SimModel.compute == self.__class__.compute:
@@ -159,16 +167,6 @@ class SimModel(tf.keras.Model):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
-        if self.nneighbor_cutoff > 0:
-            nlist = tf.reshape(hoomd_to_tf(
-                address=nlist_addr,
-                shape=[4 * self.nneighbor_cutoff],
-                T=dtype,
-                name='nlist-input'
-            ), [-1, self.nneighbor_cutoff, 4])
-        else:
-            nlist = tf.zeros([1, 1, 4], dtype=dtype)
-
         box = hoomd_to_tf(
             address=box_addr,
             shape=[3],
@@ -191,13 +189,38 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='aa-pos-input'
             )
-            pos = htf.center_of_mass(positions=aa_pos[:,:3],
+            mapped_pos = htf.center_of_mass(positions=aa_pos,
                 mapping=self.cg_mapping,
                 box_size=tf.cast(htf.box_size(box), dtype),
                 dtype=dtype,
-                name='cg-pos-input'
+                name='cg-pos-raw'
             )
-            
+            # fake the types for now TODO: add CG type tracking -- should this be optional/have default behavior?
+            pos = tf.concat([mapped_pos, tf.ones((mapped_pos.shape[0], 1), dtype=mapped_pos.dtype)], axis=-1, name='cg-pos-input')
+
+        if self.nneighbor_cutoff > 0:
+            if self.cg_mapping is None:
+                nlist = tf.reshape(hoomd_to_tf(
+                    address=nlist_addr,
+                    shape=[4 * self.nneighbor_cutoff],
+                    T=dtype,
+                    name='nlist-input'
+                ), [-1, self.nneighbor_cutoff, 4])
+            else:
+                # find CG mapped neighbor list
+                nlist = htf.compute_nlist(
+                    positions=tf.cast(pos, dtype),
+                    r_cut=tf.cast(self.r_cut, dtype),
+                    NN=tf.cast(self.nneighbor_cutoff, tf.int32),
+                    box_size=tf.cast(htf.box_size(box), dtype),
+                    sorted=True,
+                    return_types=False # if True: says pos needs to have types (it's Nx3 but needs to be Nx4)
+                )
+                
+        else:
+            nlist = tf.zeros([1, 1, 4], dtype=dtype)
+
+
 
         # check box skew
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
