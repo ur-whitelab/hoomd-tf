@@ -131,7 +131,7 @@ class SimModel(tf.keras.Model):
 
     def call(self, inputs, training):
         # can't do the beautiful simple way as before. Need to slice out the stupid box
-        if self._arg_count >= 2 and inputs[2].shape.rank == 3:
+        if self._arg_count > 2 and inputs[2].shape.rank == 3:
             # this is so stupid.
             bs = tf.sparse.slice(inputs[2], start=[0, 0, 0], size=[1, 3, 3])
             inputs = (

@@ -29,7 +29,7 @@ class BenchmarkPotential(htf.SimModel):
 
 
 class NoForceModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions):
         neighs_rs = tf.norm(tensor=nlist[:, :, :3], axis=2)
         energy = tf.math.divide_no_nan(tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype),
@@ -39,7 +39,7 @@ class NoForceModel(htf.SimModel):
 
 
 class TensorSaveModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions):
         pos_norm = tf.norm(tensor=positions, axis=1)
         return pos_norm
 
