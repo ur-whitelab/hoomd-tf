@@ -797,7 +797,8 @@ def mol_bond_distance(
         CG=False,
         cg_positions=None,
         b1=None,
-        b2=None):
+        b2=None,
+        box=None):
     ''' This method calculates the bond distance given two atoms batched by molecule.
     Or to output CG bond distances, input CG=True and indices of the CG bead pairs
     cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
@@ -817,6 +818,8 @@ def mol_bond_distance(
     :type b1: int
     :param b2: index of second CG bead
     :type b2: int
+    :param box: box length in each x,y,z direction
+    :type box: array [3,]
 
 
     :returns: v_ij: Tensor containing bond distances(CG=False)
@@ -829,16 +832,18 @@ def mol_bond_distance(
 
     if CG is False and mol_positions is not None:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        v_ij = tf.norm(tensor=v_ij, axis=1)
-        return v_ij
+        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vij = tf.norm(tensor=wrap_vij, axis=1)
+        return wrap_vij
 
-    if CG and cg_positions is None:
+    if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found')
 
-    if CG and cg_positions is not None:
+    if CG is True and cg_positions is not None:
         u_ij = cg_positions[b2] - cg_positions[b1]
-        u_ij = np.linalg.norm(u_ij)
-        return u_ij
+        wrap_uij = hoomd.htf.wrap_vector(u_ij,box)
+        wrap_uij = np.linalg.norm(wrap_uij)
+        return wrap_uij
 
 
 def mol_dihedral(
