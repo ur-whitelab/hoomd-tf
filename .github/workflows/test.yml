@@ -60,7 +60,7 @@ jobs:
     - name: Download and install HTF
       run: |
         mkdir build && cd build
-        CXX=g++ CC=gcc CMAKE_PREFIX_PATH=/usr/share/miniconda cmake ..
+        CXX=g++ CC=gcc CMAKE_PREFIX_PATH=/usr/share/miniconda cmake .. -DIGNORE_HTF_COMPILER=yes
         make install
         cd ..
     - name: Run tests
