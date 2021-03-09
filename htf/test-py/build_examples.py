@@ -11,7 +11,9 @@ class SimplePotential(htf.SimModel):
         nlist = nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
         # no need to use netwon's law because nlist should be double counted
-        fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
+        fr = tf.multiply(-1.0,
+                         tf.multiply(tf.math.reciprocal(neighs_rs),
+                                     nlist),
                          name='nan-pairwise-forces')
         zeros = tf.zeros_like(nlist)
         real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
@@ -112,9 +114,9 @@ class EDSModel(htf.SimModel):
 class MolFeatureModel(htf.MolSimModel):
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
-        r = htf.mol_bond_distance(mol_pos, 2, 1)
-        a = htf.mol_angle(mol_pos, 1, 2, 3)
-        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+        r = htf.mol_bond_distance(mol_pos, 2, 1, box=box)
+        a = htf.mol_angle(mol_pos, 1, 2, 3, box=box)
+        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4, box=box)
         avg_r = tf.reduce_mean(input_tensor=r)
         avg_a = tf.reduce_mean(input_tensor=a)
         avg_d = tf.reduce_mean(input_tensor=d)
