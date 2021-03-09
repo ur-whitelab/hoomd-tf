@@ -730,7 +730,8 @@ def mol_angle(
         cg_positions=None,
         b1=None,
         b2=None,
-        b3=None):
+        b3=None,
+        box=None):
     ''' This method calculates the bond angle given three atoms batched by molecule.
     Or to output CG angles input CG=True and indices of the CG beads making the angles.
     cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
@@ -754,6 +755,8 @@ def mol_angle(
     :type b2: int
     :param b3: index of third CG bead
     :type b3: int
+    :param box: box length in each x,y,z direction
+    :type box: array [3,]
 
     :returns: angles:Tensor containing all atom angles (CG=False)
               or
@@ -765,26 +768,30 @@ def mol_angle(
     if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
-        cos_a = tf.einsum('ij,ij->i', v_ij, v_jk)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        cos_a = tf.einsum('ij,ij->i', wrap_vij, wrap_vjk)
         cos_a = tf.math.divide(
             cos_a,
             (tf.norm(
-                tensor=v_ij,
+                tensor=wrap_vij,
                 axis=1) *
                 tf.norm(
-                tensor=v_jk,
+                tensor=wrap_vjk,
                 axis=1)))
         angles = tf.math.acos(cos_a)
         return angles
 
-    if CG and cg_positions is None:
+    if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found.')
 
-    if CG and cg_positions is not None:
+    if CG is True and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
-        cos_a = np.dot(v_ij, v_jk)
-        cos_a = np.divide(cos_a, (np.linalg.norm(v_ij) * np.linalg.norm(v_jk)))
+        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        cos_a = np.dot(wrap_vij, wrap_vjk)
+        cos_a = np.divide(cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
 
         cg_angles = np.arccos(cos_a)
         return cg_angles
@@ -857,7 +864,8 @@ def mol_dihedral(
         b1=None,
         b2=None,
         b3=None,
-        b4=None):
+        b4=None,
+        box=None):
     ''' This method calculates the dihedral angles given three atoms batched by molecule.
     Or to output CG dihedral angles input CG=True and indices of the CG beads making the angles.
     cg_positions and bead indices can be computed by calling :py:meth:`.generate_cg_graph()`
@@ -885,6 +893,8 @@ def mol_dihedral(
     :type b3: int
     :param b4: index of fourth CG bead
     :type b4: int
+    :param box: box length in each x,y,z direction
+    :type box: array [3,]
 
     :returns: dihedrals:Tensor containing all atom dihedral angles (CG=False)
               or
@@ -898,10 +908,13 @@ def mol_dihedral(
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
+        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        wrap_vkl = hoomd.htf.wrap_vector(v_kl,box)
 
         # calculation of normal vectors
-        n1 = tf.linalg.cross(v_ij, v_jk)
-        n2 = tf.linalg.cross(v_jk, v_kl)
+        n1 = tf.linalg.cross(wrap_vij, wrap_vjk)
+        n2 = tf.linalg.cross(wrap_vjk, wrap_vkl)
         n1_norm = tf.norm(tensor=n1)
         n2_norm = tf.norm(tensor=n2)
         if n1_norm == 0.0 or n2_norm == 0.0:
@@ -913,16 +926,19 @@ def mol_dihedral(
         dihedrals = tf.math.acos(cos_d)
         return dihedrals
 
-    if CG and cg_positions is None:
+    if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found.')
 
-    if CG and cg_positions is not None:
+    if CG is True and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
         v_kl = cg_positions[b4] - cg_positions[b3]
+        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        wrap_vkl = hoomd.htf.wrap_vector(v_kl,box)
 
-        n1 = np.cross(v_ij, v_jk)
-        n2 = np.cross(v_jk, v_kl)
+        n1 = np.cross(wrap_vij, wrap_vjk)
+        n2 = np.cross(wrap_vjk, wrap_vkl)
 
         n1_norm = np.linalg.norm(n1)
         n2_norm = np.linalg.norm(n2)
