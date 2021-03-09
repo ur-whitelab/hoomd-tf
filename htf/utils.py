@@ -596,9 +596,9 @@ def iter_from_trajectory(
     :type r_cut: float
     :param period: Period of reading the trajectory frames
     :type period: int
-    :param start: Start time (ns) of reading the trajectory frames
+    :param start: Starting frame for reading the trajectory frames
     :type period: int
-    :param period: End time (ns) reading the trajectory frames
+    :param period: Ending frame for reading the trajectory frames
     :type period: int
     '''
     import MDAnalysis
@@ -682,7 +682,7 @@ def iter_from_trajectory(
     # Run the model at every nth frame where time is in range [start,end] and
     # n = period
     for i, ts in enumerate(tqdm(universe.trajectory)):
-        if ts.time >= start and ts.time <= end:
+        if ts.frame >= start and ts.frame <= end:
             if i % period == 0:
                 yield [nlist, np.concatenate(
                     (atom_group.positions,

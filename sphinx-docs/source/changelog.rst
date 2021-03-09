@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+v2.21 (2021-03-08)
+
+*Bug Fixes*
+
+- Fixed bug on calls to model with 2 inputs
+
 v2.2 (2021-03-01)
 --------------------
 
@@ -13,7 +19,7 @@ v2.2 (2021-03-01)
 *Enhancements*
 
 - Added jupyter notebook testing to continuous integration
-- `iter_from_trajectory` can run in a user-defined time range
+- `iter_from_trajectory` can run in a user-defined frame range
 - Revised to work for TF 2.4
 - Can add exclusion lists when computing nlists using htf
 
