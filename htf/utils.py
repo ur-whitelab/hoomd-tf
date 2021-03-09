@@ -65,9 +65,10 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     '''
     m, n = tf.math.minimum(pos_btype[..., tf.newaxis], nlist_btype), tf.math.maximum(
         pos_btype[..., tf.newaxis], nlist_btype)
-    one_hot_indices = m*(2*n_btypes - m + 1)//2 + n - m
-    # Finding the total number of possible interactions between different bead types
-    total_interactions = n_btypes * (n_btypes-1) // 2 + n_btypes
+    one_hot_indices = m * (2 * n_btypes - m + 1) // 2 + n - m
+    # Finding the total number of possible interactions between different bead
+    # types
+    total_interactions = n_btypes * (n_btypes - 1) // 2 + n_btypes
     return tf.one_hot(one_hot_indices, depth=total_interactions)
 
 
@@ -352,7 +353,11 @@ def find_cgnode_id(atm_id, cg):
                 return num_index
 
 
-def gen_mapped_exclusion_list(universe, atoms_in_molecule, beads_mappings, selection='all'):
+def gen_mapped_exclusion_list(
+        universe,
+        atoms_in_molecule,
+        beads_mappings,
+        selection='all'):
     ''' Generates mapped exclusion list to compute mapped_nlist for non-bonded bead-type
     interactions.
 
@@ -379,7 +384,7 @@ def gen_mapped_exclusion_list(universe, atoms_in_molecule, beads_mappings, selec
     matrix_mapping_molecule = hoomd.htf.matrix_mapping(
         atoms_in_molecule, beads_mappings, mass_weighted=False)[1]
     # Get the number of molecules
-    M = N//matrix_mapping_molecule.shape[1]
+    M = N // matrix_mapping_molecule.shape[1]
     # repeat matrix_mapping_molecule along diag
     matrix_mapping_system = np.kron(
         np.eye(M, dtype=int), matrix_mapping_molecule).astype(bool)
@@ -674,7 +679,8 @@ def iter_from_trajectory(
             values=tf.reshape(box, (-1,)),
             dense_shape=(len(atom_group), 3, 3)
         )
-    # Run the model at every nth frame where time is in range [start,end] and n = period
+    # Run the model at every nth frame where time is in range [start,end] and
+    # n = period
     for i, ts in enumerate(tqdm(universe.trajectory)):
         if ts.time >= start and ts.time <= end:
             if i % period == 0:
@@ -768,8 +774,8 @@ def mol_angle(
     if mol_positions is not None and CG is False:
         v_ij = mol_positions[:, type_i, :3] - mol_positions[:, type_j, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
-        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
-        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         cos_a = tf.einsum('ij,ij->i', wrap_vij, wrap_vjk)
         cos_a = tf.math.divide(
             cos_a,
@@ -788,10 +794,11 @@ def mol_angle(
     if CG is True and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
-        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
-        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         cos_a = np.dot(wrap_vij, wrap_vjk)
-        cos_a = np.divide(cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
+        cos_a = np.divide(
+            cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
 
         cg_angles = np.arccos(cos_a)
         return cg_angles
@@ -839,7 +846,7 @@ def mol_bond_distance(
 
     if CG is False and mol_positions is not None:
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
-        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vij = tf.norm(tensor=wrap_vij, axis=1)
         return wrap_vij
 
@@ -848,7 +855,7 @@ def mol_bond_distance(
 
     if CG is True and cg_positions is not None:
         u_ij = cg_positions[b2] - cg_positions[b1]
-        wrap_uij = hoomd.htf.wrap_vector(u_ij,box)
+        wrap_uij = hoomd.htf.wrap_vector(u_ij, box)
         wrap_uij = np.linalg.norm(wrap_uij)
         return wrap_uij
 
@@ -908,9 +915,9 @@ def mol_dihedral(
         v_ij = mol_positions[:, type_j, :3] - mol_positions[:, type_i, :3]
         v_jk = mol_positions[:, type_k, :3] - mol_positions[:, type_j, :3]
         v_kl = mol_positions[:, type_l, :3] - mol_positions[:, type_k, :3]
-        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
-        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
-        wrap_vkl = hoomd.htf.wrap_vector(v_kl,box)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
+        wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
 
         # calculation of normal vectors
         n1 = tf.linalg.cross(wrap_vij, wrap_vjk)
@@ -933,9 +940,9 @@ def mol_dihedral(
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
         v_kl = cg_positions[b4] - cg_positions[b3]
-        wrap_vij = hoomd.htf.wrap_vector(v_ij,box)
-        wrap_vjk = hoomd.htf.wrap_vector(v_jk,box)
-        wrap_vkl = hoomd.htf.wrap_vector(v_kl,box)
+        wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
+        wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
+        wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
 
         n1 = np.cross(wrap_vij, wrap_vjk)
         n2 = np.cross(wrap_vjk, wrap_vkl)
