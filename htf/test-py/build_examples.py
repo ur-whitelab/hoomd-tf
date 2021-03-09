@@ -112,9 +112,9 @@ class EDSModel(htf.SimModel):
 class MolFeatureModel(htf.MolSimModel):
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
-        r = htf.mol_bond_distance(mol_pos, 2, 1)
-        a = htf.mol_angle(mol_pos, 1, 2, 3)
-        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+        r = htf.mol_bond_distance(mol_pos, 2, 1,box=box)
+        a = htf.mol_angle(mol_pos, 1, 2, 3,box=box)
+        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4,box=box)
         avg_r = tf.reduce_mean(input_tensor=r)
         avg_a = tf.reduce_mean(input_tensor=a)
         avg_d = tf.reduce_mean(input_tensor=d)
