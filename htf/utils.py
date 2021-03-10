@@ -761,8 +761,8 @@ def mol_angle(
     :type b2: int
     :param b3: index of third CG bead
     :type b3: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: angles:Tensor containing all atom angles (CG=False)
               or
@@ -832,9 +832,8 @@ def mol_bond_distance(
     :type b1: int
     :param b2: index of second CG bead
     :type b2: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
-
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: v_ij: Tensor containing bond distances(CG=False)
               or
@@ -900,8 +899,8 @@ def mol_dihedral(
     :type b3: int
     :param b4: index of fourth CG bead
     :type b4: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: dihedrals:Tensor containing all atom dihedral angles (CG=False)
               or
