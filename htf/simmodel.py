@@ -44,8 +44,15 @@ class SimModel(tf.keras.Model):
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
         self.virial = virial
-        self.cg_mapping = tf.cast(cg_mapping, dtype)
-        self.r_cut = tf.cast(r_cut, dtype)
+        if cg_mapping is not None:
+            if r_cut is None:
+                raise AssertionError('SimModel: When specifying a cg_mapping, you must also specify r_cut')
+            self.cg_mapping = tf.cast(cg_mapping, dtype)
+            self.r_cut = tf.cast(r_cut, dtype)
+        else:
+            self.cg_mapping = None
+            self.r_cut = None
+        
 
         # check if overridden
         if SimModel.compute == self.__class__.compute:
@@ -86,9 +93,9 @@ class SimModel(tf.keras.Model):
 
     def compute(self, nlist, positions, box, training=True):
         R'''
-        The main method were computation occurs occurs. This method must be implemented
+        The main method were computation occurs. This method must be implemented
         by subclass. You may take less args, e.g. ``(nlist, positions)``.
-        It should return one or more values as a tuple.
+        It should return one or more values as a tuple of tensors.
         The first element is interpreted as forces (if ``output_forces=True``, default).
         Second element is interpreted as virial (if ``virial=True``, not default). Subsequent
         elements of tuple are only accessible if :py:meth:`.tfcompute.attach` is passed
