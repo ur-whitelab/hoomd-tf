@@ -13,7 +13,7 @@ To begin subclass a :py:class:`.SimModel` class:
 
     import hoomd.htf as htf
     class MyModel(htf.SimModel):
-      def compute(self, nlist, positions, box, sample_weight):
+      def compute(self, nlist, positions, box):
         ...
         return forces, other, important, quantities
 
@@ -38,11 +38,6 @@ tensors that can be used:``nlist``, ``positions``, ``box``:
 
 * ``box`` is a 3x3 tensor containing the low box
   coordinate (row 0), high box coordinate (row 1), and then tilt factors (row 2).
-
-``sample_weight`` is a scalar indicating what fraction of the simulation
-being considered. This accounts for if you broke-up your simulation by batching (see :py:class:`.tfcompute`).
-Typically, this is only used if you want to correct for this when computing
-averages. If you did not break-up your simulation, it will always be 1.0.
 
 Your function can use fewer tensors, like ``compute(self, nlist)`` if
 desired.
@@ -205,27 +200,33 @@ A virial term can be added by doing the following extra steps:
 1. Compute virial with your forces :py:func:`.compute_nlist_forces` by adding the ``virial=True`` arg.
 2. Add the `modify_virial=True` argument to your model constructor
 
-.. _model_loading:
+.. _model_saving_and_loading:
 
-Model Loading
+Model Saving and Loading
 -----------------
 
-Because these models do not use standard layers, to reload a model
+To save a model:
+
+.. code::python
+
+  model.save('/path/to/save')
+
+Because these models do not use standard Keras objects, to reload a model
 you must first use your python code to build the model and then
 load weights into from a file like so:
 
 .. code:: python
 
-  loaded_model = tf.keras.load_model('/path/to/model') # this model cannot be used, only contains weights!
+  tmp_loaded_model = tf.keras.load_model('/path/to/model')
   model = MyModel(16, output_forces=True)
-  model.set_weights(loaded_model.get_weights())
+  model.set_weights(tmp_loaded_model.get_weights())
 
 .. _complete_examples:
 
 Complete Examples
 -----------------
 
-The directory ``htf/test-py/build_examples`` contains example models
+The file ``htf/test-py/build_examples.py`` contains example models
 
 .. _lennard_jones_example:
 

@@ -177,7 +177,7 @@ namespace hoomd_tf
         void updateBox();
 
         //! When TF updates are all finished, send word to python
-        void finishUpdate(unsigned int offset, float batch_frac);
+        void finishUpdate(unsigned int offset);
 
         //! pointer to the neighbor lists of all particles
         std::shared_ptr<NeighborList> m_nlist;

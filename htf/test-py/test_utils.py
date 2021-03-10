@@ -215,6 +215,40 @@ class test_mappings(unittest.TestCase):
         # particle 1 is closest to type 0
         np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
 
+    def test_compute_nlist_exclusion_matrix(self):
+        N = 10
+        em = np.zeros((N, N), dtype=np.bool)
+        em[0, 1] = True
+        em[0, 2] = True
+        positions = tf.cast(
+            tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3]), tf.float32)
+        box_size = [100., 100., 100.]
+        nlist = hoomd.htf.compute_nlist(
+            positions,
+            100.,
+            9,
+            box_size,
+            return_types=False,
+            sorted=True, exclusion_matrix=em)
+        nlist = nlist.numpy()
+        # particle 0 is closest to 3
+        np.testing.assert_array_almost_equal(nlist[0, 0, 3], 3)
+        # particle 0 is -9 away from 9
+        np.testing.assert_array_almost_equal(nlist[-1, -1, :],
+                                             [-9, -9, -9, 0])
+
+        extended_positions = tf.concat([positions, tf.zeros((N, 1))], axis=1)
+        nlist = hoomd.htf.compute_nlist(
+            extended_positions,
+            100.,
+            9,
+            box_size,
+            return_types=True,
+            sorted=True)
+        nlist = nlist.numpy()
+        # particle 1 is closest to type 0
+        np.testing.assert_array_almost_equal(nlist[0, 0, :], [1, 1, 1, 0])
+
     def test_compute_nlist_cut(self):
         N = 10
         positions = tf.tile(tf.reshape(tf.range(N), [-1, 1]), [1, 3])
@@ -240,7 +274,8 @@ class test_mappings(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_compute_ohe_bead_type_interactions")
+                "MDAnalysis not available; \
+                 skipping test_compute_ohe_bead_type_interactions")
         import os
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
@@ -280,8 +315,7 @@ class test_mappings(unittest.TestCase):
         for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
                                                          selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
-            box = inputs[2].astype('float32')
-            box_size = tf.constant([box[1, 0], box[1, 1], box[1, 2]])
+            box_size = tf.cast(hoomd.htf.box_size(inputs[2]), tf.float32)
             mapped_pos = hoomd.htf.center_of_mass(
                 positions[:, :3], cg_mapping, box_size)
             system_bead_types = tf.reshape(system_bead_types, [-1, 1])
@@ -296,6 +330,36 @@ class test_mappings(unittest.TestCase):
         assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
         assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
         assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
+
+    def test_gen_mapped_exclusion_list(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                "MDAnalysis not available; skipping test_gen_mapped_exclusion_list")
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        mapping_operator_FF = [['N', 'H1', 'H2', 'H3'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O'],
+                               ['N', 'H'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O1', 'O2']]
+        mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
+            u, protein_FF, mapping_operator_FF, selection="resname PHE")
+        self.assertTrue(mapped_exclusion_list[109, 111])
+        self.assertTrue(mapped_exclusion_list[22, 21])
+        self.assertTrue(mapped_exclusion_list[4, 5])
+        self.assertFalse(mapped_exclusion_list[150, 15])
 
     def test_nlist_compare(self):
         rcut = 5.0

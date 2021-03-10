@@ -2,6 +2,7 @@
 import tensorflow as tf
 import os
 import pickle
+from pkg_resources import parse_version
 
 
 class SimModel(tf.keras.Model):
@@ -30,7 +31,6 @@ class SimModel(tf.keras.Model):
             :type dtype: dtype
 
             '''
-
         super(SimModel, self).__init__(dtype=dtype, name=name)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
@@ -46,7 +46,6 @@ class SimModel(tf.keras.Model):
                 shape=[None, max(1, nneighbor_cutoff), 4], dtype=dtype),  # nlist
             tf.TensorSpec(shape=[None, 4], dtype=dtype),  # positions
             tf.TensorSpec(shape=[None, 3], dtype=dtype),  # box
-            tf.TensorSpec(shape=[])  # batch_frac (sample weight)
         ]
 
         try:
@@ -74,7 +73,18 @@ class SimModel(tf.keras.Model):
         self._running_means = []
         self.setup(**kwargs)
 
-    def compute(self, nlist, positions, box, sample_weight, training=True):
+    def get_config(self):
+        config = {
+            'nneighbor_cutoff': self.nneighbor_cutoff,
+            'output_forces': self.output_forces,
+            'virial': self.virial,
+            'check_nlist': self.check_nlist,
+            'name': self.name,
+            'dtype': self.dtype
+        }
+        return config
+
+    def compute(self, nlist, positions, box, training=True):
         R'''
         The main method were computation occurs occurs. This method must be implemented
         by subclass. You may take less args, e.g. ``(nlist, positions)``.
@@ -101,11 +111,6 @@ class SimModel(tf.keras.Model):
             Call :py:func:`.box_size` to convert to size
         :type box: tensor
 
-        :param sample_weight: a floating point fraction indicating
-            what amount of the total system is being passed in this call.
-            Is only NOT 1.0 if ``batch_size`` is passed to :py:meth:`.tfcompute.attach`.
-        :type sample_weight: tensor
-
         :param training: a boolean indicating if doing training or inference.
         :type trainig: bool
 
@@ -125,6 +130,12 @@ class SimModel(tf.keras.Model):
         pass
 
     def call(self, inputs, training):
+        # can't do the beautiful simple way as before. Need to slice out the stupid box
+        if self._arg_count > 2 and inputs[2].shape.rank == 3:
+            # this is so stupid.
+            bs = tf.sparse.slice(inputs[2], start=[0, 0, 0], size=[1, 3, 3])
+            inputs = (
+                *inputs[:2], tf.reshape(tf.sparse.to_dense(bs), (3, 3)), *inputs[3:self._arg_count])
         if self._pass_training:
             out = self._compute(*inputs[:self._arg_count], training)
         else:
@@ -152,7 +163,7 @@ class SimModel(tf.keras.Model):
 
     @tf.function
     def compute_inputs(self, dtype, nlist_addr, positions_addr,
-                       box_addr, batch_frac, forces_addr=0):
+                       box_addr, forces_addr=0):
         hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
         hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
 
@@ -182,6 +193,25 @@ class SimModel(tf.keras.Model):
         # check box skew
         tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
 
+        # for TF2.4.1 we hack the box to have leading batch dimension
+        # because TF has 4k backlogged issues
+        # get and parse the version of the detected TF version
+        vtf = parse_version(tf.__version__)
+        if vtf >= parse_version('2.4'):
+            box = tf.SparseTensor(
+                indices=[[0, 0, 0],
+                         [0, 0, 1],
+                         [0, 0, 2],
+                         [0, 1, 0],
+                         [0, 1, 1],
+                         [0, 1, 2],
+                         [0, 2, 0],
+                         [0, 2, 1],
+                         [0, 2, 2]],
+                values=tf.reshape(box, (-1,)),
+                dense_shape=(tf.shape(pos)[0], 3, 3)
+            )
+
         if self.check_nlist:
             NN = tf.reduce_max(
                 input_tensor=tf.reduce_sum(
@@ -193,7 +223,7 @@ class SimModel(tf.keras.Model):
                                      message='Neighbor list is full!')
 
         result = [tf.cast(nlist, self.dtype), tf.cast(
-            pos, self.dtype), tf.cast(box, self.dtype), batch_frac]
+            pos, self.dtype), tf.cast(box, self.dtype)]
 
         if forces_addr > 0:
             forces = hoomd_to_tf(
@@ -292,10 +322,18 @@ class MolSimModel(SimModel):
                 'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
 
+    def get_config(self):
+        config = super(MolSimModel, self).get_config()
+        config.update(
+            {
+                'MN': self.MN,
+                'mol_indices': self.mol_indices
+            })
+        return config
+
     def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''
-        See :py:meth:`.SimModel.compute` for details. ``sample_weight``
-        is not passed because simulations cannot currently be batched both by size and molecule.
+        See :py:meth:`.SimModel.compute` for details.
         Make sure that your forces still use ``nlist`` when computing, instead of ``mol_nlist``.
         You may take less args in your implementation, like
         ``mol_compute(self, nlist, positions, mol_nlist)``.
@@ -335,7 +373,7 @@ class MolSimModel(SimModel):
         '''
         raise AttributeError('You must implement mol_compute method')
 
-    def compute(self, nlist, positions, box, batch_frac, training):
+    def compute(self, nlist, positions, box, training):
 
         mol_flat_idx = tf.reshape(self.mol_indices, shape=[-1])
 
@@ -467,6 +505,15 @@ def safe_norm(tensor, delta=1e-7, **kwargs):
 
 
 @tf.function
+def box_size(box):
+    # stupid trick to treat 2.4 TF
+    if box.shape.rank == 3:
+        bs = tf.sparse.slice(box, start=[0, 0, 0], size=[1, 3, 3])
+        box = tf.reshape(tf.sparse.to_dense(bs), (3, 3))
+    return box[1, :] - box[0, :]
+
+
+@tf.function
 def wrap_vector(r, box):
     '''Computes the minimum image version of the given vector.
 
@@ -474,13 +521,8 @@ def wrap_vector(r, box):
         :type r: tensor
         :return: The wrapped vector as a TF tensor
     '''
-    box_size = box[1, :] - box[0, :]
-    return r - tf.math.round(r / box_size) * box_size
-
-
-@tf.function
-def box_size(box):
-    return box[1, :] - box[0, :]
+    bs = box_size(box)
+    return r - tf.math.round(r / bs) * bs
 
 
 @tf.function
