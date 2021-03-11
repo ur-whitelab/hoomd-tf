@@ -15,6 +15,7 @@ v2.2 (2021-03-01)
 - Can read molecules from GROAMCS topology
 - Can compute one-hot encoding for different bead type interactions in CG systems
 - Can generate mapped exclusion lists in CG systems
+- Can generate HOOMD snapshot bonds group based on mapped exclusion lists
 
 *Enhancements*
 
