@@ -372,7 +372,7 @@ def gen_mapped_exclusion_list(
     :type selection: string
 
     :return: A [B x B] array of dtype bools, indicating which pairs
-        should be excluded from nlist (True = exclude). B is the total number of 
+        should be excluded from nlist (True = exclude). B is the total number of
         bead particles in the system
     '''
     # Get the number of atoms
@@ -397,9 +397,9 @@ def gen_mapped_exclusion_list(
 
 def gen_bonds_group(mapped_exclusion_list):
     ''' Generates HOOMD snapshot bonds group based on
-    bead particle's exclusion list.
+    bead particles' exclusion list.
 
-    :param mapped_exclusion_list: A [B x B] array of dtype bools, 
+    :param mapped_exclusion_list: A [B x B] array of dtype bools,
         indicating which pairs should be excluded from nlist (True = exclude)
     :type obj: numpy array
 
