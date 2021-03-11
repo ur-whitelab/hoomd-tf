@@ -75,16 +75,15 @@ class WCARepulsion(tf.keras.layers.Layer):
         # we make it big to ensure
         self.sigma = self.add_weight(
             shape=(),
-            regularizer=lambda x: -1e-3 * x,
-            initializer=tf.keras.initializers.Constant(value=sigma),
-            name='sigma'
+            regularizer=lambda x: -regularization_strength * x,
+            initializer=tf.keras.initializers.Constant(value=sigma)
         )
 
     def get_config(self):
         config = super(WCARepulsion, self).get_config()
         config.update(
             {
-                'sigma': float(self.sigma.value)
+                'sigma': float(self.sigma.value())
             })
         return config
 

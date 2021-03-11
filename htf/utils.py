@@ -371,7 +371,8 @@ def gen_mapped_exclusion_list(
     :type selection: string
 
     :return: A [B x B] array of dtype bools, indicating which pairs
-        should be excluded from nlist (True = exclude)
+        should be excluded from nlist (True = exclude). B is the total number of
+        bead particles in the system
     '''
     # Get the number of atoms
     N = len(universe.select_atoms(selection))
@@ -391,6 +392,22 @@ def gen_mapped_exclusion_list(
         matrix_mapping_system.T)
     np.fill_diagonal(mapped_exclusion, False)
     return mapped_exclusion
+
+
+def gen_bonds_group(mapped_exclusion_list):
+    ''' Generates HOOMD snapshot bonds group based on
+    bead particles' exclusion list.
+
+    :param mapped_exclusion_list: A [B x B] array of dtype bools,
+        indicating which pairs should be excluded from nlist (True = exclude)
+    :type obj: numpy array
+
+    :return: :py:meth:`hoomd.data.make_snapshot.bonds.group`
+    '''
+    rows, cols = np.where(mapped_exclusion_list)
+    bonds_group = np.array([[rows[i], cols[i]]
+                            for i in range(rows.shape[0]) if rows[i] <= cols[i]])
+    return bonds_group
 
 
 def compute_adj_mat(obj):
@@ -760,8 +777,8 @@ def mol_angle(
     :type b2: int
     :param b3: index of third CG bead
     :type b3: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: angles:Tensor containing all atom angles (CG=False)
               or
@@ -831,9 +848,8 @@ def mol_bond_distance(
     :type b1: int
     :param b2: index of second CG bead
     :type b2: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
-
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: v_ij: Tensor containing bond distances(CG=False)
               or
@@ -899,8 +915,8 @@ def mol_dihedral(
     :type b3: int
     :param b4: index of fourth CG bead
     :type b4: int
-    :param box: box length in each x,y,z direction
-    :type box: array [3,]
+    :param box: low, high coordinates and tilt vectors of the box
+    :type box: [3,3] array
 
     :returns: dihedrals:Tensor containing all atom dihedral angles (CG=False)
               or
