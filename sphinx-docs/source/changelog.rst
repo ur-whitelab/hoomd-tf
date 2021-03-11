@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+v2.3 (2021-03-11)
+--------------------
+
+*New Features*
+
+- Can generate HOOMD snapshot bonds group based on mapped exclusion lists
+
+
 v2.21 (2021-03-08)
 
 *Bug Fixes*
