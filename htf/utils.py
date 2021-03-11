@@ -405,7 +405,7 @@ def gen_bonds_group(mapped_exclusion_list):
 
     :return: :py:meth:`hoomd.data.make_snapshot.bonds.group`
     '''
-    rows, cols = np.where(mapped_exclusion_list == True)
+    rows, cols = np.where(mapped_exclusion_list)
     bonds_group = np.array([[rows[i], cols[i]]
                             for i in range(rows.shape[0]) if rows[i] <= cols[i]])
     return bonds_group

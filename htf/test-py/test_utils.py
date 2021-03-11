@@ -388,7 +388,7 @@ class test_mappings(unittest.TestCase):
             u, protein_FF, mapping_operator_FF, selection="resname PHE")
         bonds_group = hoomd.htf.gen_bonds_group(mapped_exclusion_list)
         assert bonds_group.shape[0] == np.where(
-            mapped_exclusion_list == True)[0].shape[0]/2
+            mapped_exclusion_list)[0].shape[0]/2
         np.testing.assert_array_equal(bonds_group[20], [21, 23])
 
     def test_nlist_compare(self):
