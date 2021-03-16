@@ -76,7 +76,8 @@ class WCARepulsion(tf.keras.layers.Layer):
         self.sigma = self.add_weight(
             shape=(),
             regularizer=lambda x: -regularization_strength * x,
-            initializer=tf.keras.initializers.Constant(value=sigma)
+            initializer=tf.keras.initializers.Constant(value=sigma),
+            name='sigma'
         )
 
     def get_config(self):
