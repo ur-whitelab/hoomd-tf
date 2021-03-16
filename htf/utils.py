@@ -589,11 +589,11 @@ def mol_features_multiple(bnd_indices=None, ang_indices=None,
     and dihedrals for multiple molecules.
 
     :param bnd_indices: indices of atoms making bonds
-    :type bnd_indices: numpy array
+    :type bnd_indices: numpy array of type int
     :param ang_indices: indices of atoms making angles
-    :type ang_indices: numpy array
+    :type ang_indices: numpy array of type int
     :param dih_indices: indices of atoms making dihedrals
-    :type dih_indices: numpy array
+    :type dih_indices: numpy array of type int
     :param molecules: number of molecules in the system
     :type molecules: int
     :param beads: number of atoms/CG beads in a molecule
