@@ -577,11 +577,16 @@ class test_cg_features(unittest.TestCase):
         # load example graph that computes cg_graph
         cgmodel = build_examples.CGModel(16, output_forces=False)
         for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
-            result = cgmodel(input)
+            bond,ang,dihe,pos = cgmodel(input)
 
-        assert np.sum(result[-1]) != 0
+        assert np.sum(pos) != 0
 
-
+        # test `mol_features_multiple`
+        r_ids,a_ids,d_ids =hoomd.htf.mol_features_multiple(bond,ang,dihe,4,5)
+        self.assertTrue(len(bond))
+        self.assertTrue(len(ang))
+        self.assertTrue(len(dihe)) 
+ 
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
