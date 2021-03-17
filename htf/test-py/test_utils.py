@@ -305,15 +305,19 @@ class test_mappings(unittest.TestCase):
             u, [protein_FF.names], selection="resname PHE")
         number_of_molecules = len(molecule_mapping_index)
         system_bead_types = tf.cast(
-            tf.repeat(bead_types, number_of_molecules, axis=0), dtype=tf.float32)
-        cg_mapping = hoomd.htf.sparse_mapping([mapping_FF for _ in molecule_mapping_index],
-                                              molecule_mapping_index)
+            tf.repeat(
+                bead_types,
+                number_of_molecules,
+                axis=0),
+            dtype=tf.float32)
+        cg_mapping = hoomd.htf.sparse_mapping(
+            [mapping_FF for _ in molecule_mapping_index], molecule_mapping_index)
         CG_NN = 64
         r_cut = 25
         # disable sorting
         hoomd.context.current.sorter.disable()
-        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
-                                                         selection='resname PHE', r_cut=r_cut):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(
+                512, u, selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
             box_size = tf.cast(hoomd.htf.box_size(inputs[2]), tf.float32)
             mapped_pos = hoomd.htf.center_of_mass(
@@ -388,7 +392,7 @@ class test_mappings(unittest.TestCase):
             u, protein_FF, mapping_operator_FF, selection="resname PHE")
         bonds_group = hoomd.htf.gen_bonds_group(mapped_exclusion_list)
         assert bonds_group.shape[0] == np.where(
-            mapped_exclusion_list)[0].shape[0]/2
+            mapped_exclusion_list)[0].shape[0] / 2
         np.testing.assert_array_equal(bonds_group[20], [21, 23])
 
     def test_nlist_compare(self):
@@ -576,17 +580,20 @@ class test_cg_features(unittest.TestCase):
         universe = mda.Universe(test_pdb, test_traj)
         # load example graph that computes cg_graph
         cgmodel = build_examples.CGModel(16, output_forces=False)
-        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
-            bond,ang,dihe,pos = cgmodel(input)
+        for input, ts in hoomd.htf.iter_from_trajectory(
+                16, universe, period=1, r_cut=10.):
+            bond, ang, dihe, pos = cgmodel(input)
 
         assert np.sum(pos) != 0
 
         # test `mol_features_multiple`
-        r_ids,a_ids,d_ids =hoomd.htf.mol_features_multiple(bond,ang,dihe,4,5)
+        r_ids, a_ids, d_ids = hoomd.htf.mol_features_multiple(
+            bond, ang, dihe, 4, 5)
         self.assertTrue(len(bond))
         self.assertTrue(len(ang))
-        self.assertTrue(len(dihe)) 
- 
+        self.assertTrue(len(dihe))
+
+
 class test_trajectory(unittest.TestCase):
     def test_iter_from_trajectory(self):
         try:
@@ -601,7 +608,8 @@ class test_trajectory(unittest.TestCase):
         universe = mda.Universe(test_pdb, test_traj)
         # load example graph that calculates average energy
         model = build_examples.LJVirialModel(16)
-        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=25.):
+        for input, ts in hoomd.htf.iter_from_trajectory(
+                16, universe, period=1, r_cut=25.):
             result = model(input)
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
@@ -615,8 +623,8 @@ class test_trajectory(unittest.TestCase):
         box_dimensions = u.trajectory[1].dimensions
         selection = "resname PHE"
         N_atoms = len(u.select_atoms(selection))
-        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection,
-                                                         r_cut=1, period=1):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(
+                32, u, selection=selection, r_cut=1, period=1):
             #     print(ts.forces.shape)
             updated_N_atoms = ts.n_atoms
             updated_box_dimenstions = ts.dimensions
