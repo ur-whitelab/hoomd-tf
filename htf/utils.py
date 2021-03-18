@@ -582,6 +582,48 @@ def compute_cg_graph(
             return rs, angs, dihs
 
 
+def mol_features_multiple(bnd_indices=None, ang_indices=None,
+                          dih_indices=None, molecules=None, beads=None):
+    '''Use to apply the result of compute_cg_graph to multiple
+    molecules in a system. Computes the atom/cg bead indices of bonds,angles
+    and dihedrals for multiple molecules.
+
+    :param bnd_indices: indices of atoms making bonds
+    :type bnd_indices: numpy array of type int
+    :param ang_indices: indices of atoms making angles
+    :type ang_indices: numpy array of type int
+    :param dih_indices: indices of atoms making dihedrals
+    :type dih_indices: numpy array of type int
+    :param molecules: number of molecules in the system
+    :type molecules: int
+    :param beads: number of atoms/CG beads in a molecule
+    :type beads: int
+
+    :return: arrays of indices of atoms/cg beads making bonds,
+    angles and dihedrals in a system of molecules.
+    '''
+
+    bnd_ids = []
+    ang_ids = []
+    dih_ids = []
+
+    for n in range(molecules):
+        if bnd_indices is not None:
+            bnd_ids.append(bnd_indices + n * beads)
+
+        if ang_indices is not None:
+            ang_ids.append(ang_indices + n * beads)
+
+        if dih_indices is not None:
+            dih_ids.append(dih_indices + n * beads)
+
+    bnd_ids = np.asarray(bnd_ids).reshape((-1, 2))
+    ang_ids = np.asarray(ang_ids).reshape((-1, 3))
+    dih_ids = np.asarray(dih_ids).reshape((-1, 4))
+
+    return bnd_ids, ang_ids, dih_ids
+
+
 def iter_from_trajectory(
         nneighbor_cutoff,
         universe,
