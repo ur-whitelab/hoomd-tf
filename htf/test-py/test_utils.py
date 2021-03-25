@@ -331,9 +331,12 @@ class test_mappings(unittest.TestCase):
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
-        assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
-        assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[30, 10, 6].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[130, 16, 11].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[33, 50, 1].numpy(), 1.0)
 
     def test_gen_mapped_exclusion_list(self):
         try:
