@@ -313,7 +313,7 @@ class test_mappings(unittest.TestCase):
         cg_mapping = hoomd.htf.sparse_mapping(
             [mapping_FF for _ in molecule_mapping_index], molecule_mapping_index)
         CG_NN = 64
-        r_cut = 25
+        r_cut = 100
         # disable sorting
         hoomd.context.current.sorter.disable()
         for inputs, ts in hoomd.htf.iter_from_trajectory(
@@ -333,10 +333,6 @@ class test_mappings(unittest.TestCase):
             pos_btype, nlist_btype, n_bead_types)
         np.testing.assert_approx_equal(
             ohe_beadtype_interactions[30, 10, 6].numpy(), 1.0)
-        np.testing.assert_approx_equal(
-            ohe_beadtype_interactions[130, 16, 11].numpy(), 1.0)
-        np.testing.assert_approx_equal(
-            ohe_beadtype_interactions[33, 50, 1].numpy(), 1.0)
 
     def test_gen_mapped_exclusion_list(self):
         try:
@@ -457,7 +453,6 @@ class test_bias(unittest.TestCase):
         )).randomize_velocities(kT=0.2, seed=2)
         tfcompute.attach(save_output_period=10)
         hoomd.run(T)
-        print(model.cv_avg.result().numpy())
         assert np.isfinite(np.mean(tfcompute.outputs[0]))
         assert (model.cv_avg.result().numpy() - 4)**2 < 0.5
 
