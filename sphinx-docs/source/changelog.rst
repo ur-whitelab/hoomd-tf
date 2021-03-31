@@ -1,13 +1,16 @@
 Change Log
 ==========
 
-v2.3 (2021-03-11)
+v2.3
 --------------------
 
 *New Features*
 
 - Can generate HOOMD snapshot bonds group based on mapped exclusion lists
 
+*Bug Fixes*
+
+- Fixed bug in compute_nlist with types not masking out of cut nlists
 
 v2.21 (2021-03-08)
 --------------------

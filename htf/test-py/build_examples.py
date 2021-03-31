@@ -77,6 +77,30 @@ class LJModel(htf.SimModel):
         return forces
 
 
+class LJTypedModel(htf.SimModel):
+    def setup(self):
+        self.avg_rdfa = tf.keras.metrics.MeanTensor()
+        self.avg_rdfb = tf.keras.metrics.MeanTensor()
+
+    def compute(self, nlist, positions, box):
+        # get r
+        rinv = htf.nlist_rinv(nlist)
+        inv_r6 = rinv**6
+        # pairwise energy. Double count -> divide by 2
+        p_energy = 1e-10 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        rdfa, rs = htf.compute_rdf(
+            nlist, [0, 10], positions[:, 3], type_i=0, type_j=1)
+        rdfb, rs = htf.compute_rdf(
+            nlist, [0, 10], positions[:, 3], type_i=1, type_j=0)
+        # compute running mean
+        self.avg_rdfa.update_state(rdfa)
+        self.avg_rdfb.update_state(rdfb)
+        return forces
+
+
 class LJVirialModel(htf.SimModel):
     def compute(self, nlist, positions, box):
         # get r

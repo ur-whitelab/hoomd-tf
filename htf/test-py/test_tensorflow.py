@@ -447,6 +447,43 @@ class test_compute(unittest.TestCase):
         assert len(rdf) > 5
         assert np.sum(rdf) > 0
 
+    def test_typed_rdf(self):
+        '''Test RDF typing
+        '''
+        model = build_examples.LJTypedModel(32)
+        tfcompute = htf.tfcompute(model)
+        rcut = 10.0
+        # build system using example from hoomd
+        snapshot = hoomd.data.make_snapshot(N=10,
+                                            box=hoomd.data.boxdim(Lx=10,
+                                                                  Ly=10,
+                                                                  Lz=10),
+                                            particle_types=['A', 'B'],
+                                            bond_types=['polymer'])
+        snapshot.particles.position[:] = [[-4.5, 0, 0], [-3.5, 0, 0],
+                                          [-2.5, 0, 0], [-1.5, 0, 0],
+                                          [-0.5, 0, 0], [0.5, 0, 0],
+                                          [1.5, 0, 0], [2.5, 0, 0],
+                                          [3.5, 0, 0], [4.5, 0, 0]]
+        snapshot.particles.typeid[0:7] = 0
+        snapshot.particles.typeid[7:10] = 1
+        snapshot.bonds.resize(9)
+        snapshot.bonds.group[:] = [[0, 1], [1, 2], [2, 3],
+                                   [3, 4], [4, 5], [5, 6],
+                                   [6, 7], [7, 8], [8, 9]]
+        snapshot.replicate(3, 3, 3)
+        system = hoomd.init.read_snapshot(snapshot)
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.run(10)
+        rdfa = model.avg_rdfa.result().numpy()
+        rdfb = model.avg_rdfb.result().numpy()
+        assert np.sum(rdfa) > 0
+        np.testing.assert_array_almost_equal(rdfa, rdfb)
+
     def test_training_flag(self):
         model = build_examples.TrainModel(4, dim=1, top_neighs=2)
         model.compile(

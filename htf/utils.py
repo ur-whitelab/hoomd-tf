@@ -148,11 +148,11 @@ def compute_nlist(
 
     if return_types:
         nlist_type = tf.reshape(
-            tf.gather(positions[:, 3], flat_idx[:, 0]), [-1, NN, 1])
+            tf.gather(positions[:, 3], flat_idx[:, 1]), [-1, NN, 1])
         return tf.concat([
             nlist_pos,
-            nlist_type * nlist_mask
-        ], axis=-1)
+            nlist_type
+        ], axis=-1) * nlist_mask
     else:
         return tf.concat([
             nlist_pos,
