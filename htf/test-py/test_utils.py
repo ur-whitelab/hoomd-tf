@@ -313,7 +313,7 @@ class test_mappings(unittest.TestCase):
         cg_mapping = hoomd.htf.sparse_mapping(
             [mapping_FF for _ in molecule_mapping_index], molecule_mapping_index)
         CG_NN = 64
-        r_cut = 100
+        r_cut = 25
         # disable sorting
         hoomd.context.current.sorter.disable()
         for inputs, ts in hoomd.htf.iter_from_trajectory(
