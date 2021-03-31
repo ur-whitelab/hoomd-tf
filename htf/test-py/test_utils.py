@@ -333,6 +333,10 @@ class test_mappings(unittest.TestCase):
             pos_btype, nlist_btype, n_bead_types)
         np.testing.assert_approx_equal(
             ohe_beadtype_interactions[30, 10, 6].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[50, 20, 14].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[88, 61, 4].numpy(), 1.0)
 
     def test_gen_mapped_exclusion_list(self):
         try:
