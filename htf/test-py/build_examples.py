@@ -11,7 +11,9 @@ class SimplePotential(htf.SimModel):
         nlist = nlist[:, :, :3]
         neighs_rs = tf.norm(tensor=nlist, axis=2, keepdims=True)
         # no need to use netwon's law because nlist should be double counted
-        fr = tf.multiply(-1.0, tf.multiply(tf.math.reciprocal(neighs_rs), nlist),
+        fr = tf.multiply(-1.0,
+                         tf.multiply(tf.math.reciprocal(neighs_rs),
+                                     nlist),
                          name='nan-pairwise-forces')
         zeros = tf.zeros_like(nlist)
         real_fr = tf.where(tf.math.is_finite(fr), fr, zeros,
@@ -29,7 +31,7 @@ class BenchmarkPotential(htf.SimModel):
 
 
 class NoForceModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions):
         neighs_rs = tf.norm(tensor=nlist[:, :, :3], axis=2)
         energy = tf.math.divide_no_nan(tf.ones_like(
             neighs_rs, dtype=neighs_rs.dtype),
@@ -39,7 +41,7 @@ class NoForceModel(htf.SimModel):
 
 
 class TensorSaveModel(htf.SimModel):
-    def compute(self, nlist, positions, box):
+    def compute(self, nlist, positions):
         pos_norm = tf.norm(tensor=positions, axis=1)
         return pos_norm
 
@@ -72,6 +74,30 @@ class LJModel(htf.SimModel):
         # sum over pairwise energy
         energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
         forces = htf.compute_nlist_forces(nlist, energy)
+        return forces
+
+
+class LJTypedModel(htf.SimModel):
+    def setup(self):
+        self.avg_rdfa = tf.keras.metrics.MeanTensor()
+        self.avg_rdfb = tf.keras.metrics.MeanTensor()
+
+    def compute(self, nlist, positions, box):
+        # get r
+        rinv = htf.nlist_rinv(nlist)
+        inv_r6 = rinv**6
+        # pairwise energy. Double count -> divide by 2
+        p_energy = 1e-10 * (inv_r6 * inv_r6 - inv_r6)
+        # sum over pairwise energy
+        energy = tf.reduce_sum(input_tensor=p_energy, axis=1)
+        forces = htf.compute_nlist_forces(nlist, energy)
+        rdfa, rs = htf.compute_rdf(
+            nlist, [0, 10], positions[:, 3], type_i=0, type_j=1)
+        rdfb, rs = htf.compute_rdf(
+            nlist, [0, 10], positions[:, 3], type_i=1, type_j=0)
+        # compute running mean
+        self.avg_rdfa.update_state(rdfa)
+        self.avg_rdfb.update_state(rdfb)
         return forces
 
 
@@ -112,9 +138,9 @@ class EDSModel(htf.SimModel):
 class MolFeatureModel(htf.MolSimModel):
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_pos, box):
-        r = htf.mol_bond_distance(mol_pos, 2, 1)
-        a = htf.mol_angle(mol_pos, 1, 2, 3)
-        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4)
+        r = htf.mol_bond_distance(mol_pos, 2, 1, box=box)
+        a = htf.mol_angle(mol_pos, 1, 2, 3, box=box)
+        d = htf.mol_dihedral(mol_pos, 1, 2, 3, 4, box=box)
         avg_r = tf.reduce_mean(input_tensor=r)
         avg_a = tf.reduce_mean(input_tensor=a)
         avg_d = tf.reduce_mean(input_tensor=d)
@@ -129,8 +155,10 @@ class CGModel(htf.SimModel):
 
         jfile = os.path.join(os.path.dirname(__file__), 'test_cgmap.json')
 
-        u2 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA_xH.pdb'))
-        u1 = mda.Universe(os.path.join(os.path.dirname(__file__), 'test_segA.pdb'))
+        u2 = mda.Universe(os.path.join(
+            os.path.dirname(__file__), 'test_segA_xH.pdb'))
+        u1 = mda.Universe(os.path.join(
+            os.path.dirname(__file__), 'test_segA.pdb'))
 
         cg_feats = htf.compute_cg_graph(
             DSGPM=True,
@@ -317,8 +345,7 @@ class LJLayer(tf.keras.layers.Layer):
 
 
 class TrainableGraph(htf.SimModel):
-    def __init__(self, NN, **kwargs):
-        super().__init__(NN, **kwargs)
+    def setup(self):
         self.lj = LJLayer(1.0, 1.0)
 
     def compute(self, nlist, positions, box):

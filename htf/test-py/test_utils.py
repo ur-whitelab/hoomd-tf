@@ -48,16 +48,16 @@ class test_mappings(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_find_molecules_from_topology")
+                'MDAnalysis not available; skipping test_find_molecules_from_topology')
         # Loading inputs
         import os
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
         TRAJECTORY = os.path.join(os.path.dirname(__file__),
                                   'CG_mapping/test_traj.trr')
-        selection = "resname PHE"
+        selection = 'resname PHE'
         u = mda.Universe(TPR, TRAJECTORY)
-        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        protein_FF = u.select_atoms('resname PHE and resid 0:1')
         atoms_in_molecule_list = [protein_FF.names]
         molecule_mapping_index = hoomd.htf.find_molecules_from_topology(
             u, atoms_in_molecule_list, selection=selection)
@@ -69,7 +69,7 @@ class test_mappings(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_matrix_mapping")
+                'MDAnalysis not available; skipping test_matrix_mapping')
         # Loading inputs
         import os
         TPR = os.path.join(os.path.dirname(__file__),
@@ -78,7 +78,7 @@ class test_mappings(unittest.TestCase):
                                   'CG_mapping/test_traj.trr')
         u = mda.Universe(TPR, TRAJECTORY)
         # Generating Mapping Matrix for Water
-        water = u.select_atoms("resname SOL and resid 500")
+        water = u.select_atoms('resname SOL and resid 500')
         mapping_operator = [['OW', 'HW1', 'HW2']]
         mapped_water = hoomd.htf.matrix_mapping(water, mapping_operator)
         np.testing.assert_array_equal(np.round(mapped_water, 9), np.array([
@@ -274,15 +274,15 @@ class test_mappings(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; \
-                 skipping test_compute_ohe_bead_type_interactions")
+                'MDAnalysis not available; \
+                 skipping test_compute_ohe_bead_type_interactions')
         import os
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
         TRAJECTORY = os.path.join(os.path.dirname(__file__),
                                   'CG_mapping/test_traj.trr')
         u = mda.Universe(TPR, TRAJECTORY)
-        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        protein_FF = u.select_atoms('resname PHE and resid 0:1')
         mapping_operator = [['N', 'H1', 'H2', 'H3'],
                             ['CA', 'HA', 'CB', 'HB1', 'HB2'],
                             ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
@@ -302,18 +302,22 @@ class test_mappings(unittest.TestCase):
             bead_types.append(unique_beads.index(m))
         n_bead_types = len(unique_beads)
         molecule_mapping_index = hoomd.htf.find_molecules_from_topology(
-            u, [protein_FF.names], selection="resname PHE")
+            u, [protein_FF.names], selection='resname PHE')
         number_of_molecules = len(molecule_mapping_index)
         system_bead_types = tf.cast(
-            tf.repeat(bead_types, number_of_molecules, axis=0), dtype=tf.float32)
-        cg_mapping = hoomd.htf.sparse_mapping([mapping_FF for _ in molecule_mapping_index],
-                                              molecule_mapping_index)
+            tf.repeat(
+                bead_types,
+                number_of_molecules,
+                axis=0),
+            dtype=tf.float32)
+        cg_mapping = hoomd.htf.sparse_mapping(
+            [mapping_FF for _ in molecule_mapping_index], molecule_mapping_index)
         CG_NN = 64
         r_cut = 25
         # disable sorting
         hoomd.context.current.sorter.disable()
-        for inputs, ts in hoomd.htf.iter_from_trajectory(512, u,
-                                                         selection='resname PHE', r_cut=r_cut):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(
+                512, u, selection='resname PHE', r_cut=r_cut):
             positions = inputs[1]
             box_size = tf.cast(hoomd.htf.box_size(inputs[2]), tf.float32)
             mapped_pos = hoomd.htf.center_of_mass(
@@ -327,23 +331,26 @@ class test_mappings(unittest.TestCase):
         nlist_btype = tf.cast(mapped_nlist[..., -1], dtype=tf.int32)
         ohe_beadtype_interactions = hoomd.htf.compute_ohe_bead_type_interactions(
             pos_btype, nlist_btype, n_bead_types)
-        assert ohe_beadtype_interactions[30, 10, 6].numpy() == 1.0
-        assert ohe_beadtype_interactions[130, 16, 11].numpy() == 1.0
-        assert ohe_beadtype_interactions[33, 50, 1].numpy() == 1.0
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[30, 10, 6].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[50, 20, 14].numpy(), 1.0)
+        np.testing.assert_approx_equal(
+            ohe_beadtype_interactions[88, 61, 4].numpy(), 1.0)
 
     def test_gen_mapped_exclusion_list(self):
         try:
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_gen_mapped_exclusion_list")
+                'MDAnalysis not available; skipping test_gen_mapped_exclusion_list')
         import os
         TPR = os.path.join(os.path.dirname(__file__),
                            'CG_mapping/test_nvt_prod.tpr')
         TRAJECTORY = os.path.join(os.path.dirname(__file__),
                                   'CG_mapping/test_traj.trr')
         u = mda.Universe(TPR, TRAJECTORY)
-        protein_FF = u.select_atoms("resname PHE and resid 0:1")
+        protein_FF = u.select_atoms('resname PHE and resid 0:1')
         mapping_operator_FF = [['N', 'H1', 'H2', 'H3'],
                                ['CA', 'HA', 'CB', 'HB1', 'HB2'],
                                ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
@@ -355,11 +362,41 @@ class test_mappings(unittest.TestCase):
                                 'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
                                ['C', 'O1', 'O2']]
         mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
-            u, protein_FF, mapping_operator_FF, selection="resname PHE")
+            u, protein_FF, mapping_operator_FF, selection='resname PHE')
         self.assertTrue(mapped_exclusion_list[109, 111])
         self.assertTrue(mapped_exclusion_list[22, 21])
         self.assertTrue(mapped_exclusion_list[4, 5])
         self.assertFalse(mapped_exclusion_list[150, 15])
+
+    def test_gen_bonds_group(self):
+        try:
+            import MDAnalysis as mda
+        except ImportError:
+            self.skipTest(
+                'MDAnalysis not available; skipping test_gen_mapped_exclusion_list')
+        import os
+        TPR = os.path.join(os.path.dirname(__file__),
+                           'CG_mapping/test_nvt_prod.tpr')
+        TRAJECTORY = os.path.join(os.path.dirname(__file__),
+                                  'CG_mapping/test_traj.trr')
+        u = mda.Universe(TPR, TRAJECTORY)
+        protein_FF = u.select_atoms('resname PHE and resid 0:1')
+        mapping_operator_FF = [['N', 'H1', 'H2', 'H3'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O'],
+                               ['N', 'H'],
+                               ['CA', 'HA', 'CB', 'HB1', 'HB2'],
+                               ['CG', 'CD1', 'HD1', 'CD2', 'HD2', 'CE1',
+                                'HE1', 'CE2', 'HE2', 'CZ', 'HZ'],
+                               ['C', 'O1', 'O2']]
+        mapped_exclusion_list = hoomd.htf.gen_mapped_exclusion_list(
+            u, protein_FF, mapping_operator_FF, selection='resname PHE')
+        bonds_group = hoomd.htf.gen_bonds_group(mapped_exclusion_list)
+        assert bonds_group.shape[0] == np.where(
+            mapped_exclusion_list)[0].shape[0] / 2
+        np.testing.assert_array_equal(bonds_group[20], [21, 23])
 
     def test_nlist_compare(self):
         rcut = 5.0
@@ -420,7 +457,6 @@ class test_bias(unittest.TestCase):
         )).randomize_velocities(kT=0.2, seed=2)
         tfcompute.attach(save_output_period=10)
         hoomd.run(T)
-        print(model.cv_avg.result().numpy())
         assert np.isfinite(np.mean(tfcompute.outputs[0]))
         assert (model.cv_avg.result().numpy() - 4)**2 < 0.5
 
@@ -451,67 +487,67 @@ class test_mol_properties(unittest.TestCase):
         lj = hoomd.md.pair.force_shifted_lj(r_cut=set_rcut, nlist=nlist)
         forces = [lj]
         lj.pair_coeff.set(
-            "opls_156",
-            "opls_156",
+            'opls_156',
+            'opls_156',
             sigma=2.5,
             epsilon=0.0299)
         lj.pair_coeff.set(
-            "opls_156",
-            "opls_157",
+            'opls_156',
+            'opls_157',
             sigma=2.9580,
             epsilon=0.0445)
         lj.pair_coeff.set(
-            "opls_156",
-            "opls_154",
+            'opls_156',
+            'opls_154',
             sigma=2.7929,
             epsilon=0.0714)
-        lj.pair_coeff.set("opls_156", "opls_155", sigma=5.0, epsilon=0.0)
-        lj.pair_coeff.set("opls_157", "opls_157", sigma=3.5, epsilon=0.066)
+        lj.pair_coeff.set('opls_156', 'opls_155', sigma=5.0, epsilon=0.0)
+        lj.pair_coeff.set('opls_157', 'opls_157', sigma=3.5, epsilon=0.066)
         lj.pair_coeff.set(
-            "opls_157",
-            "opls_154",
+            'opls_157',
+            'opls_154',
             sigma=3.3045,
             epsilon=0.1059)
         lj.pair_coeff.set(
-            "opls_157",
-            "opls_155",
+            'opls_157',
+            'opls_155',
             sigma=5.9161,
             epsilon=0.0)
         lj.pair_coeff.set(
-            "opls_154",
-            "opls_154",
+            'opls_154',
+            'opls_154',
             sigma=3.12,
             epsilon=0.1699)
         lj.pair_coeff.set(
-            "opls_154",
-            "opls_155",
+            'opls_154',
+            'opls_155',
             sigma=5.5857,
             epsilon=0.0)
-        lj.pair_coeff.set("opls_155", "opls_155", sigma=10.0, epsilon=0.0)
+        lj.pair_coeff.set('opls_155', 'opls_155', sigma=10.0, epsilon=0.0)
         # set-up special pairs
         hoomd_special_coul = hoomd.md.special_pair.coulomb()
         hoomd_special_lj = hoomd.md.special_pair.lj()
         hoomd_special_lj.pair_coeff.set(
-            "opls_155-opls_156", epsilon=0.0, sigma=5.0, r_cut=10.0)
+            'opls_155-opls_156', epsilon=0.0, sigma=5.0, r_cut=10.0)
         hoomd_special_coul.pair_coeff.set(
-            "opls_155-opls_156", alpha=0.5, r_cut=10.0)
+            'opls_155-opls_156', alpha=0.5, r_cut=10.0)
         # set-up bonds
         harmonic = hoomd.md.bond.harmonic()
-        harmonic.bond_coeff.set("opls_156-opls_157", k=339.9999, r0=1.09)
-        harmonic.bond_coeff.set("opls_154-opls_157", k=319.9999, r0=1.41)
-        harmonic.bond_coeff.set("opls_154-opls_155", k=552.9999, r0=0.945)
+        harmonic.bond_coeff.set('opls_156-opls_157', k=339.9999, r0=1.09)
+        harmonic.bond_coeff.set('opls_154-opls_157', k=319.9999, r0=1.41)
+        harmonic.bond_coeff.set('opls_154-opls_155', k=552.9999, r0=0.945)
         # set-up angles
         harm_angle = hoomd.md.angle.harmonic()
         harm_angle.angle_coeff.set(
-            "opls_154-opls_157-opls_156", k=70.0, t0=1.9111)
+            'opls_154-opls_157-opls_156', k=70.0, t0=1.9111)
         harm_angle.angle_coeff.set(
-            "opls_155-opls_154-opls_157", k=110.0, t0=1.8937)
+            'opls_155-opls_154-opls_157', k=110.0, t0=1.8937)
         harm_angle.angle_coeff.set(
-            "opls_156-opls_157-opls_156", k=66.0, t0=1.8815)
+            'opls_156-opls_157-opls_156', k=66.0, t0=1.8815)
         # set-up dihedrals
         dihedral = hoomd.md.dihedral.opls()
         dihedral.dihedral_coeff.set(
-            "opls_155-opls_154-opls_157-opls_156",
+            'opls_155-opls_154-opls_157-opls_156',
             k1=0.0,
             k2=0.0,
             k3=0.45,
@@ -538,7 +574,7 @@ class test_cg_features(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_CGGraphGenerator")
+                'MDAnalysis not available; skipping test_CGGraphGenerator')
         import os
 
         test_pdb = os.path.join(os.path.dirname(__file__), 'test_segA.pdb')
@@ -546,10 +582,18 @@ class test_cg_features(unittest.TestCase):
         universe = mda.Universe(test_pdb, test_traj)
         # load example graph that computes cg_graph
         cgmodel = build_examples.CGModel(16, output_forces=False)
-        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=10.):
-            result = cgmodel(input)
+        for input, ts in hoomd.htf.iter_from_trajectory(
+                16, universe, period=1, r_cut=10.):
+            bond, ang, dihe, pos = cgmodel(input)
 
-        assert np.sum(result[-1]) != 0
+        assert np.sum(pos) != 0
+
+        # test `mol_features_multiple`
+        r_ids, a_ids, d_ids = hoomd.htf.mol_features_multiple(
+            bond, ang, dihe, 4, 5)
+        self.assertTrue(len(bond))
+        self.assertTrue(len(ang))
+        self.assertTrue(len(dihe))
 
 
 class test_trajectory(unittest.TestCase):
@@ -558,7 +602,7 @@ class test_trajectory(unittest.TestCase):
             import MDAnalysis as mda
         except ImportError:
             self.skipTest(
-                "MDAnalysis not available; skipping test_iter_from_trajectory")
+                'MDAnalysis not available; skipping test_iter_from_trajectory')
         import math
         import os
         test_pdb = os.path.join(os.path.dirname(__file__), 'test_topol.pdb')
@@ -566,7 +610,8 @@ class test_trajectory(unittest.TestCase):
         universe = mda.Universe(test_pdb, test_traj)
         # load example graph that calculates average energy
         model = build_examples.LJVirialModel(16)
-        for input, ts in hoomd.htf.iter_from_trajectory(16, universe, period=1, r_cut=25.):
+        for input, ts in hoomd.htf.iter_from_trajectory(
+                16, universe, period=1, r_cut=25.):
             result = model(input)
 
         assert np.sum(result[0]) != 0, 'Forces not be computed correctly'
@@ -578,10 +623,10 @@ class test_trajectory(unittest.TestCase):
                             'CG_mapping/test_traj.trr')
         u = mda.Universe(tpr, traj)
         box_dimensions = u.trajectory[1].dimensions
-        selection = "resname PHE"
+        selection = 'resname PHE'
         N_atoms = len(u.select_atoms(selection))
-        for inputs, ts in hoomd.htf.iter_from_trajectory(32, u, selection=selection,
-                                                         r_cut=1, period=1):
+        for inputs, ts in hoomd.htf.iter_from_trajectory(
+                32, u, selection=selection, r_cut=1, period=1):
             #     print(ts.forces.shape)
             updated_N_atoms = ts.n_atoms
             updated_box_dimenstions = ts.dimensions

@@ -1,6 +1,23 @@
 Change Log
 ==========
 
+v2.3 (2021-04-06)
+--------------------
+
+*New Features*
+
+- Can generate HOOMD snapshot bonds group based on mapped exclusion lists
+
+*Enhancements*
+
+- Made it possible to have multiple molecule features
+
+*Bug Fixes*
+
+- Fixed bug in compute_nlist with types not masking out of cut nlists
+- Fixed PBC error on molecular features
+- Fixed bug on calls to model with 2 inputs
+
 v2.2 (2021-03-01)
 --------------------
 
@@ -13,7 +30,7 @@ v2.2 (2021-03-01)
 *Enhancements*
 
 - Added jupyter notebook testing to continuous integration
-- `iter_from_trajectory` can run in a user-defined time range
+- `iter_from_trajectory` can run in a user-defined frame range
 - Revised to work for TF 2.4
 - Can add exclusion lists when computing nlists using htf
 
