@@ -39,7 +39,6 @@ class SimModel(tf.keras.Model):
             :type r_cut: float
 
             '''
-
         super(SimModel, self).__init__(dtype=dtype, name=name)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
@@ -91,6 +90,17 @@ class SimModel(tf.keras.Model):
         self._running_means = []
         self.setup(**kwargs)
 
+    def get_config(self):
+        config = {
+            'nneighbor_cutoff': self.nneighbor_cutoff,
+            'output_forces': self.output_forces,
+            'virial': self.virial,
+            'check_nlist': self.check_nlist,
+            'name': self.name,
+            'dtype': self.dtype
+        }
+        return config
+
     def compute(self, nlist, positions, box, training=True):
         R'''
         The main method were computation occurs. This method must be implemented
@@ -138,7 +148,7 @@ class SimModel(tf.keras.Model):
 
     def call(self, inputs, training):
         # can't do the beautiful simple way as before. Need to slice out the stupid box
-        if self._arg_count >= 2 and inputs[2].shape.rank == 3:
+        if self._arg_count > 2 and inputs[2].shape.rank == 3:
             # this is so stupid.
             bs = tf.sparse.slice(inputs[2], start=[0, 0, 0], size=[1, 3, 3])
             inputs = (
@@ -366,6 +376,15 @@ class MolSimModel(SimModel):
             raise AttributeError(
                 'MolSimModel child class must implement mol_compute method, '
                 'and should not implement call')
+
+    def get_config(self):
+        config = super(MolSimModel, self).get_config()
+        config.update(
+            {
+                'MN': self.MN,
+                'mol_indices': self.mol_indices
+            })
+        return config
 
     def mol_compute(self, nlist, positions, mol_nlist, mol_positions, box, training):
         R'''

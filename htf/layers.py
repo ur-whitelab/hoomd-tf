@@ -32,6 +32,16 @@ class RBFExpansion(tf.keras.layers.Layer):
         self.centers = tf.cast(tf.linspace(low, high, count), dtype=tf.float32)
         self.gap = self.centers[1] - self.centers[0]
 
+    def get_config(self):
+        config = super(RBFExpansion, self).get_config()
+        config.update(
+            {
+                'low': self.low,
+                'high': self.high,
+                'count': self.centers.shape[0]
+            })
+        return config
+
     def call(self, inputs):
         rbf = tf.math.exp(-(inputs[..., tf.newaxis] -
                             self.centers)**2 / self.gap)
@@ -65,9 +75,17 @@ class WCARepulsion(tf.keras.layers.Layer):
         # we make it big to ensure
         self.sigma = self.add_weight(
             shape=(),
-            regularizer=lambda x: -1e-3 * x,
+            regularizer=lambda x: -regularization_strength * x,
             initializer=tf.keras.initializers.Constant(value=sigma)
         )
+
+    def get_config(self):
+        config = super(WCARepulsion, self).get_config()
+        config.update(
+            {
+                'sigma': float(self.sigma.value())
+            })
+        return config
 
     def call(self, nlist):
         rinv = hoomd.htf.nlist_rinv(nlist)
