@@ -3,6 +3,7 @@ import tensorflow as tf
 import os
 import pickle
 from pkg_resources import parse_version
+from .utils import center_of_mass, compute_nlist
 
 
 class SimModel(tf.keras.Model):
