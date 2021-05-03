@@ -205,9 +205,9 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='aa-pos-input'
             )
-            mapped_pos = htf.center_of_mass(positions=aa_pos,
+            mapped_pos = center_of_mass(positions=aa_pos,
                 mapping=self.cg_mapping,
-                box_size=tf.cast(htf.box_size(box), dtype),
+                box_size=tf.cast(box_size(box), dtype),
                 dtype=dtype,
                 name='cg-pos-raw'
             )
@@ -224,11 +224,11 @@ class SimModel(tf.keras.Model):
                 ), [-1, self.nneighbor_cutoff, 4])
             else:
                 # find CG mapped neighbor list
-                nlist = htf.compute_nlist(
+                nlist = compute_nlist(
                     positions=tf.cast(pos, dtype),
                     r_cut=tf.cast(self.r_cut, dtype),
                     NN=tf.cast(self.nneighbor_cutoff, tf.int32),
-                    box_size=tf.cast(htf.box_size(box), dtype),
+                    box_size=tf.cast(box_size(box), dtype),
                     sorted=True,
                     return_types=False # if True: says pos needs to have types (it's Nx3 but needs to be Nx4)
                 )
