@@ -862,20 +862,15 @@ def mol_angle(
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         if type(cg_positions) == tf.Tensor:
-            cos_a = tf.reduce_sum(v_ij * tf.transpose(v_jk))
-            cos_a = tf.divide(cos_a, tf.norm(v_ij) * tf.norm(v_jk))
+            cos_a = tf.reduce_sum(wrap_vij * tf.transpose(wrap_vjk))
+            cos_a = tf.divide(cos_a, tf.norm(wrap_vij) * tf.norm(wrap_vjk))
             cg_angles = tf.math.acos(cos_a)
         else:
-            cos_a = np.dot(v_ij, v_jk)
-            cos_a = np.divide(cos_a, (np.linalg.norm(v_ij) * np.linalg.norm(v_jk)))
+            cos_a = np.dot(wrap_v_ij, wrap_v_jk)
+            cos_a = np.divide(
+                cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
             cg_angles = np.arccos(cos_a)
-
-        cos_a = np.dot(wrap_vij, wrap_vjk)
-        cos_a = np.divide(
-            cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
-
-        cg_angles = np.arccos(cos_a)
-        return cg_angles
+       return cg_angles
 
 
 def mol_bond_distance(
@@ -1021,8 +1016,8 @@ def mol_dihedral(
         wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
 
         if type(cg_positions) == tf.Tensor:
-            n1 = tf.linalg.cross(v_ij, v_jk)
-            n2 = tf.linalg.cross(v_jk, v_kl)
+            n1 = tf.linalg.cross(wrap_vij, wrap_vjk)
+            n2 = tf.linalg.cross(wrap_vjk, wrap_vkl)
             n1_norm = tf.norm(n1)
             n2_norm = tf.norm(n2)
             # TODO: make sure we don't have zeros here too
@@ -1031,8 +1026,8 @@ def mol_dihedral(
             cos_d = tf.tensordot(n1, n2, axes=1)
             cg_dihedrals = tf.math.acos(cos_d)
         else:
-            n1 = np.cross(v_ij, v_jk)
-            n2 = np.cross(v_jk, v_kl)
+            n1 = np.cross(wrap_vij, wrap_vjk)
+            n2 = np.cross(wrap_vjk, wrap_vkl)
             n1_norm = np.linalg.norm(n1)
             n2_norm = np.linalg.norm(n2)
 
