@@ -1,19 +1,21 @@
 Change Log
 ==========
 
-v2.3 (2021-03-11)
+v2.3 (2021-04-06)
 --------------------
 
 *New Features*
 
 - Can generate HOOMD snapshot bonds group based on mapped exclusion lists
 
+*Enhancements*
 
-v2.21 (2021-03-08)
---------------------
+- Made it possible to have multiple molecule features
 
 *Bug Fixes*
 
+- Fixed bug in compute_nlist with types not masking out of cut nlists
+- Fixed PBC error on molecular features
 - Fixed bug on calls to model with 2 inputs
 
 v2.2 (2021-03-01)
