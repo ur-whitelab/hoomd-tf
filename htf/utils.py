@@ -856,6 +856,8 @@ def mol_angle(
     if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found.')
 
+    # TODO: use ALL coordinates at once with tf.scatter_nd_sub and tf.gather, not loops
+
     if CG is True and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
         v_jk = cg_positions[b3] - cg_positions[b2]
@@ -897,10 +899,10 @@ def mol_bond_distance(
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
-    :param b1: index of first CG bead
-    :type b1: int
-    :param b2: index of second CG bead
-    :type b2: int
+    :param b1: indices of first set of CG beads
+    :type b1: list of ints
+    :param b2: indices of second set of CG beads
+    :type b2: list of ints
     :param box: low, high coordinates and tilt vectors of the box
     :type box: [3,3] array
 
@@ -922,7 +924,8 @@ def mol_bond_distance(
         raise ValueError('cg_positions not found')
 
     if CG is True and cg_positions is not None:
-        u_ij = cg_positions[b2] - cg_positions[b1]
+        u_ij = tf.tensor_scatter_nd_sub(cg_positions, indices=b2, updates=tf.gather(cg_positions, b1)
+        # wrap all distances
         wrap_uij = hoomd.htf.wrap_vector(u_ij, box)
         if type(cg_positions) == tf.Tensor:
             wrap_uij = tf.norm(wrap_uij)
@@ -1006,6 +1009,8 @@ def mol_dihedral(
 
     if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found.')
+
+    # TODO: use ALL coordinates at once with tf.scatter_nd_sub and tf.gather, not loops
 
     if CG is True and cg_positions is not None:
         v_ij = cg_positions[b2] - cg_positions[b1]
