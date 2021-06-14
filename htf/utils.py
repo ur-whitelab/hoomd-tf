@@ -964,14 +964,14 @@ def mol_dihedral(
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
-    :param b1: index of first CG bead
-    :type b1: int
-    :param b2: index of second CG bead
-    :type b2: int
-    :param b3: index of third CG bead
-    :type b3: int
-    :param b4: index of fourth CG bead
-    :type b4: int
+    :param b1: indices of first set of CG beads
+    :type b1: list of ints
+    :param b2: indices of second set of CG beads
+    :type b2: list of ints
+    :param b3: indices of third set of CG beads
+    :type b3: list of ints
+    :param b4: indices of fourth set of CG beads
+    :type b4: list of ints
     :param box: low, high coordinates and tilt vectors of the box
     :type box: [3,3] array
 
@@ -1011,9 +1011,9 @@ def mol_dihedral(
     # TODO: use ALL coordinates at once with tf.scatter_nd_sub and tf.gather, not loops
 
     if CG is True and cg_positions is not None:
-        v_ij = cg_positions[b2] - cg_positions[b1]
-        v_jk = cg_positions[b3] - cg_positions[b2]
-        v_kl = cg_positions[b4] - cg_positions[b3]
+        v_ij = tf.tensor_scatter_nd_sub(cg_positions, indices=b2, updates=tf.gather(cg_positions, b1)))
+        v_jk = tf.tensor_scatter_nd_sub(cg_positions, indices=b3, updates=tf.gather(cg_positions, b2))
+        v_kl = tf.tensor_scatter_nd_sub(cg_positions, indices=b4, updates=tf.gather(cg_positions, b3))
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
