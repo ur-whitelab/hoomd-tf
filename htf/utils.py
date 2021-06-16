@@ -870,7 +870,7 @@ def mol_angle(
             cos_a = np.divide(
                 cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
             cg_angles = np.arccos(cos_a)
-       return cg_angles
+        return cg_angles
 
 
 def mol_bond_distance(
