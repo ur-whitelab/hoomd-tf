@@ -857,8 +857,8 @@ def mol_angle(
         raise ValueError('cg_positions not found.')
 
     if CG is True and cg_positions is not None:
-        v_ij = tf.tensor_scatter_nd_sub(cg_positions, indices=b2, updates=tf.gather(cg_positions, b1))
-        v_jk = tf.tensor_scatter_nd_sub(cg_positions, indices=b3, updates=tf.gather(cg_positions, b2)) 
+        v_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1)
+        v_jk = tf.gather(cg_positions, indices=b3) - tf.gather(cg_positions, indices=b2)
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         if type(cg_positions) == tf.Tensor:
@@ -922,7 +922,7 @@ def mol_bond_distance(
         raise ValueError('cg_positions not found')
 
     if CG is True and cg_positions is not None:
-        u_ij = tf.tensor_scatter_nd_sub(cg_positions, indices=b2, updates=tf.gather(cg_positions, b1))
+        u_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1)
         # wrap all distances
         wrap_uij = hoomd.htf.wrap_vector(u_ij, box)
         if type(cg_positions) == tf.Tensor:
@@ -1008,12 +1008,10 @@ def mol_dihedral(
     if CG is True and cg_positions is None:
         raise ValueError('cg_positions not found.')
 
-    # TODO: use ALL coordinates at once with tf.scatter_nd_sub and tf.gather, not loops
-
     if CG is True and cg_positions is not None:
-        v_ij = tf.tensor_scatter_nd_sub(cg_positions, indices=b2, updates=tf.gather(cg_positions, b1))
-        v_jk = tf.tensor_scatter_nd_sub(cg_positions, indices=b3, updates=tf.gather(cg_positions, b2))
-        v_kl = tf.tensor_scatter_nd_sub(cg_positions, indices=b4, updates=tf.gather(cg_positions, b3))
+        v_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1)
+        v_jk = tf.gather(cg_positions, indices=b3) - tf.gather(cg_positions, indices=b2)
+        v_kl = tf.gather(cg_positions, indices=b4) - tf.gather(cg_positions, indices=b3)
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
