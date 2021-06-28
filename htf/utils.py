@@ -862,7 +862,7 @@ def mol_angle(
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         if type(cg_positions) == tf.Tensor:
-            cos_a = tf.reduce_sum(wrap_vij * tf.transpose(wrap_vjk))
+            cos_a = tf.reduce_sum(wrap_vij * wrap_vjk)
             cos_a = tf.divide(cos_a, tf.norm(wrap_vij) * tf.norm(wrap_vjk))
             cg_angles = tf.math.acos(cos_a)
         else:
