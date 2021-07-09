@@ -61,7 +61,7 @@ jobs:
         cd ..
     - name: Run tests
       run: |
-        pytest -v --forked
+        pytest
     - name: Run notebooks with MDAnalysis
       if: matrix.md-analysis == 'true'
       run: |
