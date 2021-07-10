@@ -11,6 +11,8 @@ potential regressions.
 
 .. code:: bash
 
+    pytest -c pytest-benchmark.ini
+    #consider changing benchmark name to be more descriptive
     pytest-benchmark compare | ansi2html  > sphinx-docs/source/benchmarks.html
 
 :download:`benchmark results<benchmarks.html>`
