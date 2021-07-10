@@ -22,7 +22,6 @@ def test_lj_benchmark(benchmark):
 
             return forces
 
-
     N = 256
     NN = 64
     model = LJModel(NN)
