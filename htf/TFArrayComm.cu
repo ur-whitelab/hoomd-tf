@@ -34,14 +34,14 @@ void htf_gpu_copy3_kerenl(Scalar4 *dest_array, Scalar4* src_array, unsigned int 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if ( i < N)
     {
-        dest_array[i].x = src_array.data[i].x;
-        dest_array[i].y = src_array.data[i].y;
-        dest_array[i].z = src_array.data[i].z;
+        dest_array[i].x = src_array[i].x;
+        dest_array[i].y = src_array[i].y;
+        dest_array[i].z = src_array[i].z;
     }
 
     }
 
-cudaError_t htf_gpu_copy3(Scalar4 *dest_array, Scalar4* src_array, , unsigned int m_N, cudaStream_t s)
+cudaError_t htf_gpu_copy3(Scalar4 *dest_array, Scalar4* src_array, unsigned int m_N, cudaStream_t s)
     {
     // setup the grid to run the kernel
     int block_size = 256;
