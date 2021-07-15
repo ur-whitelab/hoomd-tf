@@ -24,6 +24,7 @@ using namespace hoomd_tf;
     \param nneighs Maximum size for neighbors passed to TF
     \param force_mode Whether we should be computed forces in TF or sending them to TF
     \param period The period between TF updates
+    \param batch_size Batch size
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
@@ -50,7 +51,8 @@ TensorflowCompute<M>::TensorflowCompute(
       m_nneighs(nneighs),
       m_force_mode(force_mode),
       m_period(period),
-      m_batch_size(batch_size)
+      m_batch_size(batch_size),
+      m_b_mapped_nlist(false)
 {
     m_exec_conf->msg->notice(2)
         << "Starting TensorflowCompute "
@@ -234,6 +236,12 @@ void TensorflowCompute<M>::startUpdate()
 }
 
 template <TFCommMode M>
+void TensorflowCompute<M>::setMappedNlist(bool mn)
+{
+    m_b_mapped_nlist = mn;
+}
+
+template <TFCommMode M>
 void TensorflowCompute<M>::sumReferenceForces()
 {
     m_forces_comm.memsetArray(0);
@@ -343,7 +351,9 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
-            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut)
+            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut ||
+                // check if both cg mapped beads or not
+                (m_b_mapped_nlist && __scalar_as_int(h_pos.data[k].w) / CG_MAP_TYPE_SPLIT != __scalar_as_int(h_pos.data[i].w) / CG_MAP_TYPE_SPLIT))
                 continue;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
@@ -423,6 +433,8 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
                             FORCE_MODE,
                             unsigned int,
                             unsigned int>())
+        .def("setMappedNlist",
+             &TensorflowCompute<TFCommMode::CPU>::setMappedNlist)
         .def("getPositionsBuffer",
              &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer,
              pybind11::return_value_policy::reference)
@@ -463,9 +475,13 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
              &TensorflowCompute<TFCommMode::CPU>::addReferenceForce)
 
         ;
+
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
         .value("hoomd2tf", FORCE_MODE::hoomd2tf);
+
+    // add magic number to split CG/AA particles
+    m.attr("CG_MAP_TYPE_SPLIT") = CG_MAP_TYPE_SPLIT;
 }
 
 // ********************************
@@ -561,6 +577,8 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
                           m_exec_conf->getComputeCapability(),
                           m_exec_conf->dev_prop.maxTexture1DLinear,
                           m_r_cut,
+                          m_b_mapped_nlist,
+                          CG_MAP_TYPE_SPLIT,
                           m_nlist_comm.getCudaStream());
 
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
@@ -610,6 +628,8 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module &m)
                             FORCE_MODE,
                             unsigned int,
                             unsigned int>())
+        .def("setMappedNlist",
+             &TensorflowComputeGPU::setMappedNlist)
         .def("getPositionsBuffer",
              &TensorflowComputeGPU::getPositionsBuffer,
              pybind11::return_value_policy::reference)

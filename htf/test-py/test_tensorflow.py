@@ -586,17 +586,22 @@ class test_compute(unittest.TestCase):
         T = 10
         rcut = 5.0
 
-        model = build_examples.HTFNlist(NN, output_forces=False)
+        model = build_examples.MappedNlist(NN, output_forces=False)
         tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
+        self.assertEqual(len(system.particles), N)
+        tfcompute.enable_mapped_nlist(
+            system, build_examples.MappedNlist.my_map)
+        self.assertEqual(len(system.particles), N + 1)
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
+        print(tfcompute.outputs)
         positions = tfcompute.outputs[0].reshape(-1, N, 4)
         np.testing.assert_allclose(
             positions[:, :1], np.mean(positions[:, :-1], axis=1, keepdims=True))

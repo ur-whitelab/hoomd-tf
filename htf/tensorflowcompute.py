@@ -31,6 +31,7 @@ class tfcompute(hoomd.compute._compute):
         :type model: :py:class:`.SimModel`
         '''
         self.model = model
+        self.cpp_force = None
 
     def attach(self, nlist=None, r_cut=0, period=1,
                batch_size=None, train=False, save_output_period=None):
@@ -58,8 +59,6 @@ class tfcompute(hoomd.compute._compute):
             if your model outputs forces or forces and virial, then
             these will not be present.
         :type save_output_period: int
-
-
         '''
         # make sure we're initialized, so we can have logging
         if not hoomd.init.is_initialized():
@@ -78,6 +77,7 @@ class tfcompute(hoomd.compute._compute):
         self.outputs = None
         self._calls = 0
         self._output_offset = 0
+
         if self.model.output_forces:
             self._output_offset = 1
         if self.model.virial:
@@ -133,6 +133,7 @@ class tfcompute(hoomd.compute._compute):
             self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
+
         # initialize the c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             if hoomd.htf._tf_on_gpu:
@@ -168,6 +169,10 @@ class tfcompute(hoomd.compute._compute):
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.float64
 
+        # enable mapped_nlists if that has been called
+        if self.model._map_nlist:
+            self.cpp_force.setMappedNlist(True)
+
         # set this so disable works
         self.cpp_compute = self.cpp_force
 
@@ -181,6 +186,44 @@ class tfcompute(hoomd.compute._compute):
             if integrator is None:
                 raise ValueError('Must have integrator set to receive forces')
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
+
+    def enable_mapped_nlist(self, system, cg_mapping_fxn):
+        R''' Modifies existing snapshot to enable CG beads to
+        be in simulation simultaneously with AA so that CG bead nlists
+        can be accessed using hoomd's accelerated nlist methods. This must
+        be called in order to use :py:meth:`.SimModel.compute_nlist` in a model.
+        :param system: hoomd system
+        :type system: hoomd system
+        :param cg_mapping_fxn: a function whose signature is ``f(pos)`` where pos is an
+                               ``Nx4`` array of fine-grained positions and whose output is an ``Mx4`` array
+                                of coarse-grained positions.
+        :type cg_mapping_fxn: python callable
+        '''
+        # set-flag so model knows we're ready
+        if self.cpp_force:
+            self.cpp_force.setMappedNlist(True)
+        # get snapshot and insert cg beads
+        snap = system.take_snapshot()
+        cg_pos = cg_mapping_fxn(
+            snap.particles.position.astype(self.model.dtype))
+        M = cg_pos.shape[0]
+        aa_pos = snap.particles.position
+        aa_v = snap.particles.velocity
+        aa_t = snap.particles.typeid
+        snap.particles.resize(snap.particles.N + M)
+        snap.particles.position[:] = np.concatenate((aa_pos, cg_pos[:, :3]))
+        snap.particles.velocity[:] = np.concatenate((aa_v, np.zeros((M, 3))))
+        snap.particles.typeid[:] = np.concatenate(
+            (aa_t, cg_pos[:, 3] + _htf.CG_MAP_TYPE_SPLIT))
+
+        # restore with new snapshot
+        system.restore_snapshot(snap)
+
+        # setup model attrs
+        # TODO: make this correctly encapsulated
+        self.model._map_nlist = True
+        self.model._map_cg = cg_mapping_fxn
+        self.model._mapped_cg_i = M
 
     def set_reference_forces(self, *forces):
         R''' Sets the Hoomd reference forces to be used by TensorFlow.
@@ -223,7 +266,8 @@ class tfcompute(hoomd.compute._compute):
     def _start_update(self):
         ''' Perhaps suboptimal call to see if there is a precompute step.
         '''
-        self.model.precompute(self.dtype, self.cpp_force.getPositionsBuffer())
+        self.model.precompute(
+            self.dtype, self.cpp_force.getPositionsBuffer(), _htf.CG_MAP_TYPE_SPLIT)
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.

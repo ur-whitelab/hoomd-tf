@@ -22,6 +22,9 @@
 
 namespace hoomd_tf
 {
+    // magic number to split CG/AA particles
+    static const unsigned int CG_MAP_TYPE_SPLIT = 1024;
+
     /*! \file TensorflowCompute.h
      *  \brief Declaration of TensorflowCompute
      *
@@ -123,6 +126,8 @@ namespace hoomd_tf
 #endif // SINGLE_PRECISION
         }
 
+        void setMappedNlist(bool mn);
+
         //! Returns the array of forces from associated TFArrayComm object
         std::vector<Scalar4> getForcesArray() const;
 
@@ -199,6 +204,9 @@ namespace hoomd_tf
 
         //! The batch size for sending/receiving TF updates
         unsigned int m_batch_size;
+
+        //! Flag for mapped nlist computation
+        bool m_b_mapped_nlist;
 
         //! name of log used in TF
         std::string m_log_name;

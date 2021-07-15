@@ -14,15 +14,15 @@ using namespace hoomd_tf;
  */
 
 PYBIND11_PLUGIN(_htf)
-    {
+{
     pybind11::module m("_htf");
     export_TensorflowCompute(m);
 
-    #ifdef ENABLE_CUDA
-        export_TensorflowComputeGPU(m);
-    #endif
+#ifdef ENABLE_CUDA
+    export_TensorflowComputeGPU(m);
+#endif
 
     export_TFArrayComm(m);
 
     return m.ptr();
-    }
+}

@@ -29,7 +29,6 @@ class SimModel(tf.keras.Model):
             :type check_nlist: bool
             :param dtype: The floating point specification for model (e.g., ``tf.float32``)
             :type dtype: dtype
-
             '''
         super(SimModel, self).__init__(dtype=dtype, name=name)
         self.nneighbor_cutoff = nneighbor_cutoff
@@ -113,7 +112,7 @@ class SimModel(tf.keras.Model):
         :type box: tensor
 
         :param training: a boolean indicating if doing training or inference.
-        :type trainig: bool
+        :type training: bool
 
         :return: Tuple of tensors
 
@@ -254,16 +253,16 @@ class SimModel(tf.keras.Model):
                 tf.cast(virial, dtype),
                 address=virial_addr)
 
-    def mapped_nlist(self, nlist, pos, cg_mapping_fxn, cg_bead_number):
-        # should hit only once on trace
-        self._map_nlist = True
-        self._map_cg = cg_mapping_fxn
-        self._mapped_cg_i = cg_bead_number
+    def mapped_nlist(self, nlist, pos):
+        if not self._map_nlist:
+            raise ValueError(
+                'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
+
         # now should be pure TF
         return nlist[-self._mapped_cg_i:]
 
     @tf.function
-    def precompute(self, dtype, positions_addr):
+    def precompute(self, dtype, positions_addr, cg_id_offset):
         if self._map_nlist:
             tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
             tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
@@ -277,7 +276,10 @@ class SimModel(tf.keras.Model):
                 name='pos-input-pre'
             )
             cg_pos = self._map_cg(pos)
-            new_pos = tf.concat((pos[-self._mapped_cg_i:], cg_pos))
+            # add id offset
+            mod_cg_pos = tf.concat(
+                (cg_pos[..., :3], cg_pos[..., 3:4] + cg_id_offset), axis=-1)
+            new_pos = tf.concat((pos[-self._mapped_cg_i:], mod_cg_pos), axis=0)
             tf_to_hoomd(tf.cast(new_pos, dtype),
                         address=positions_addr)
 

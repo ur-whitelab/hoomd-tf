@@ -181,16 +181,17 @@ class CustomNlist(htf.SimModel):
         return r, cr
 
 
-class HTFNlist(htf.SimModel):
+class MappedNlist(htf.SimModel):
+    def my_map(pos):
+        x = tf.reduce_mean(pos, axis=0, keepdims=True)
+        return tf.concat((x, tf.zeros((1, 1), dtype=x.dtype)), -1)
+
     def compute(self, nlist, positions, box):
         r = tf.norm(tensor=nlist[:, :, :3], axis=2)
 
-        def my_map(pos):
-            return tf.reduce_mean(pos, axis=0, keepsims=True)
-
         # compute nlist
-        cnlist = self.mapped_nlist(nlist, positions, my_map, 1)
-        return positions
+        cnlist = self.mapped_nlist(nlist, positions, MappedNlist.my_map, 1)
+        return positions, nlist, cnlist
 
 
 class NlistNN(htf.SimModel):
