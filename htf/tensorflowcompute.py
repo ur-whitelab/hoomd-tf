@@ -204,7 +204,8 @@ class tfcompute(hoomd.compute._compute):
         :param system: hoomd system
         :type system: hoomd system
         :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
-                               ``Nx4`` array of fine-grained positions and whose output is an ``Mx4`` array
+                               ``Nx4`` array of fine-grained positions and
+                                whose output is an ``Mx4`` array
                                 of coarse-grained positions.
         :type mapping_fxn: python callable
         '''
@@ -245,7 +246,7 @@ class tfcompute(hoomd.compute._compute):
         self.model._map_i = AAN
         self._map_typeid_start = map_typeid_start
         # these are inclusive semantics
-        map_group = hoomd.group.tags(M, M + AAN - 1)
+        map_group = hoomd.group.tags(M,M + AAN - 1)
         aa_group = hoomd.group.tags(0,AAN - 1)
 
         if self._nlist is not None:

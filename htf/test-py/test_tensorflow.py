@@ -608,8 +608,8 @@ class test_compute(unittest.TestCase):
             positions[1:, N, :3], np.mean(positions[1:, :-1, :3], axis=1), atol=1e-5)
 
         # check that there is no mixing betwee neighbor lists
-        aa = set(np.unique(tfcompute.outputs[1][...,-1].astype(int)))
-        cg = set(np.unique(tfcompute.outputs[2][...,-1].astype(int)))
+        aa = set(np.unique(tfcompute.outputs[1][..., -1].astype(int)))
+        cg = set(np.unique(tfcompute.outputs[2][..., -1].astype(int)))
         self.assertTrue(aa.intersection(cg) == set([0]))
 
     def test_lj_pressure(self):

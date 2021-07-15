@@ -256,7 +256,8 @@ class SimModel(tf.keras.Model):
     def mapped_nlist(self, nlist):
         R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
         this method will split the nlist into the all atom and mapped nlists. The
-        first returned tensor is the all atom nlist and the second tensor is the mapped nlist
+        first returned tensor is the all atom nlist and
+        the second tensor is the mapped nlist.
 
         :param nlist: The ``nlist`` from py:meth:`.compute`
         :type nlist: tensor
@@ -272,7 +273,8 @@ class SimModel(tf.keras.Model):
     def mapped_positions(self, positions):
         R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
         this method will split the positions into the all atom and mapped. The
-        first returned tensor is the all atom positions and the second tensor is the mapped positions
+        first returned tensor is the all atom positions and the second tensor \
+        is the mapped positions.
 
         :param positions: The ``positions`` from py:meth:`.compute`
         :type positions: tensor
