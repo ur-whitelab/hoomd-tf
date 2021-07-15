@@ -254,18 +254,36 @@ class SimModel(tf.keras.Model):
                 address=virial_addr)
 
     def mapped_nlist(self, nlist):
+        R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the nlist into the all atom and mapped nlists. The
+        first returned tensor is the all atom nlist and the second tensor is the mapped nlist
+
+        :param nlist: The ``nlist`` from py:meth:`.compute`
+        :type nlist: tensor
+
+        :return: Tuple of 2 tensors
+        '''
         if not self._map_nlist:
             raise ValueError(
                 'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
 
-        return nlist[:self._mapped_cg_i], nlist[self._mapped_cg_i:]
+        return nlist[:self._map_i], nlist[self._map_i:]
 
     def mapped_positions(self, positions):
+        R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the positions into the all atom and mapped. The
+        first returned tensor is the all atom positions and the second tensor is the mapped positions
+
+        :param positions: The ``positions`` from py:meth:`.compute`
+        :type positions: tensor
+
+        :return: Tuple of 2 tensors
+        '''
         if not self._map_nlist:
             raise ValueError(
                 'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
 
-        return positions[:self._mapped_cg_i], positions[self._mapped_cg_i:]
+        return positions[:self._map_i], positions[self._map_i:]
 
     @tf.function
     def precompute(self, dtype, positions_addr):
@@ -281,9 +299,9 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='pos-input-pre'
             )
-            cg_pos = self._map_cg(pos[:self._mapped_cg_i])
+            cg_pos = self._map_fxn(pos[:self._map_i])
             # types will NOT be overwritten, so we do not need to add offset
-            new_pos = tf.concat((pos[:self._mapped_cg_i], cg_pos), axis=0)
+            new_pos = tf.concat((pos[:self._map_i], cg_pos), axis=0)
             tf_to_hoomd(tf.cast(new_pos, dtype),
                         address=positions_addr)
 

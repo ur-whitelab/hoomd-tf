@@ -169,7 +169,7 @@ class tfcompute(hoomd.compute._compute):
 
         # enable mapped_nlists if that has been called
         if self.model._map_nlist:
-            self.cpp_force.setMappedNlist(True, self.model._mapped_cg_typeid_start)
+            self.cpp_force.setMappedNlist(True, self._map_typeid_start)
             # Now we try to disable sorting
             self._disable_sorter()
 
@@ -195,22 +195,23 @@ class tfcompute(hoomd.compute._compute):
         else:
             c.disable()
 
-    def enable_mapped_nlist(self, system, cg_mapping_fxn):
+    def enable_mapped_nlist(self, system, mapping_fxn):
         R''' Modifies existing snapshot to enable CG beads to
         be in simulation simultaneously with AA so that CG bead nlists
         can be accessed using hoomd's accelerated nlist methods. This must
         be called in order to use :py:meth:`.SimModel.compute_nlist` in a model.
+
         :param system: hoomd system
         :type system: hoomd system
-        :param cg_mapping_fxn: a function whose signature is ``f(pos)`` where pos is an
+        :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
                                ``Nx4`` array of fine-grained positions and whose output is an ``Mx4`` array
                                 of coarse-grained positions.
-        :type cg_mapping_fxn: python callable
+        :type mapping_fxn: python callable
         '''
 
         # get snapshot and insert cg beads
         snap = system.take_snapshot()
-        cg_pos = cg_mapping_fxn(
+        cg_pos = mapping_fxn(
             snap.particles.position.astype(self.model.dtype))
         M = cg_pos.shape[0]
         AAN = snap.particles.N
@@ -218,11 +219,11 @@ class tfcompute(hoomd.compute._compute):
         aa_v = snap.particles.velocity
         aa_t = snap.particles.typeid
 
-        cg_typeid_start = np.max(snap.particles.typeid[M:]) + 1
+        map_typeid_start = np.max(snap.particles.typeid[M:]) + 1
 
         snap.particles.resize(snap.particles.N + M)
-        snap.particles.typeid[AAN:] = cg_pos[:, 3] + cg_typeid_start
-        for i in cg_pos[:, 3] + cg_typeid_start:
+        snap.particles.typeid[AAN:] = cg_pos[:, 3] + map_typeid_start
+        for i in cg_pos[:, 3] + map_typeid_start:
             self.map_types.add(int(i))
 
         snap.particles.types = snap.particles.types + [f'M-{i}' for i in self.map_types]
@@ -235,15 +236,14 @@ class tfcompute(hoomd.compute._compute):
 
         # set-flag so model knows we're ready
         if self.cpp_force:
-            self.cpp_force.setMappedNlist(True, cg_typeid_start)
+            self.cpp_force.setMappedNlist(True, map_typeid_start)
 
         print(snap.particles.position)
         # setup model attrs
-        # TODO: make this correctly encapsulated
         self.model._map_nlist = True
-        self.model._map_cg = cg_mapping_fxn
-        self.model._mapped_cg_i = AAN
-        self.model._mapped_cg_typeid_start = cg_typeid_start
+        self.model._map_fxn = mapping_fxn
+        self.model._map_i = AAN
+        self._map_typeid_start = map_typeid_start
         # these are inclusive semantics
         map_group = hoomd.group.tags(M, M + AAN - 1)
         aa_group = hoomd.group.tags(0,AAN - 1)
@@ -277,7 +277,6 @@ class tfcompute(hoomd.compute._compute):
         # Define the cutoff radius used in the neighbor list.
         # Adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
-        print('UPDATING RCUT')
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
         type_list = []
@@ -292,11 +291,9 @@ class tfcompute(hoomd.compute._compute):
                 # do not allow mapped to interact with AA
                 if bool(i in self.map_types) == bool(j in self.map_types):
                     r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
-                    print('ENABING', type_list[i], type_list[j])
                 else:
                     # according to doc, negative radius prevents being on nlist
                     r_cut_dict.set_pair(type_list[i], type_list[j], -1)
-                    print('DISABLING', type_list[i], type_list[j])
         return r_cut_dict
 
     def _start_update(self):
