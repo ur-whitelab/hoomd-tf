@@ -155,7 +155,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
                 // check again
                 if (m_nlist->getStorageMode() == NeighborList::half)
                 {
-                    m_exec_conf->msg->error() << "Must have full neigbhorlist" << std::endl;
+                    m_exec_conf->msg->error() << "Must have full neighbor list" << std::endl;
                     throw std::runtime_error("neighbor list wrong type");
                 }
                 // Update the neighborlist once
@@ -231,17 +231,20 @@ void TensorflowCompute<M>::startUpdate()
     if (m_prof)
         m_prof->push("TensorflowCompute<M>::Awaiting TF Pre-Update");
     //assume no batching
-    m_positions_comm.receiveArray(m_pdata->getPositions());
+    if(m_b_mapped_nlist)
+        m_positions_comm.receiveArray(m_pdata->getPositions(), 0, 0, true);
     m_py_self.attr("_start_update")();
-    /// TODO receive array -> somehow deal with stuffing
+    if(m_b_mapped_nlist)
+        m_positions_comm.sendArray(m_pdata->getPositions(), true);
     if (m_prof)
         m_prof->pop();
 }
 
 template <TFCommMode M>
-void TensorflowCompute<M>::setMappedNlist(bool mn)
+void TensorflowCompute<M>::setMappedNlist(bool mn, unsigned int cg_typeid_start)
 {
     m_b_mapped_nlist = mn;
+    m_cg_typeid_start = cg_typeid_start;
 }
 
 template <TFCommMode M>
@@ -340,7 +343,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
         // loop over all of the neighbors of this particle
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
         unsigned int j = 0;
-
+        std::cout << i << ": " << size << std::endl;
         for (; j < size; j++)
         {
 
@@ -354,9 +357,12 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
+            std::cout << i << "," << k << " N = " << m_pdata->getN() << " batch_size = " << batch_size << std::endl;
+            std::cout <<  __scalar_as_int(h_pos.data[i].w)  << ", " <<  __scalar_as_int(h_pos.data[k].w) << ", " << m_cg_typeid_start << " , " <<
+            ((__scalar_as_int(h_pos.data[k].w) < m_cg_typeid_start) != (__scalar_as_int(h_pos.data[i].w) < m_cg_typeid_start))  << std::endl;
             if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut ||
                 // check if both cg mapped beads or not
-                (m_b_mapped_nlist && __scalar_as_int(h_pos.data[k].w) / CG_MAP_TYPE_SPLIT != __scalar_as_int(h_pos.data[i].w) / CG_MAP_TYPE_SPLIT))
+                (m_b_mapped_nlist && ((__scalar_as_int(h_pos.data[k].w) < m_cg_typeid_start) != (__scalar_as_int(h_pos.data[i].w) < m_cg_typeid_start))))
                 continue;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
@@ -483,8 +489,6 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
         .value("hoomd2tf", FORCE_MODE::hoomd2tf);
 
-    // add magic number to split CG/AA particles
-    m.attr("CG_MAP_TYPE_SPLIT") = CG_MAP_TYPE_SPLIT;
 }
 
 // ********************************
@@ -581,7 +585,7 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
                           m_exec_conf->dev_prop.maxTexture1DLinear,
                           m_r_cut,
                           m_b_mapped_nlist,
-                          CG_MAP_TYPE_SPLIT,
+                          m_cg_typeid_start,
                           m_nlist_comm.getCudaStream());
 
     if (m_exec_conf->isCUDAErrorCheckingEnabled())

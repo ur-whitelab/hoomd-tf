@@ -253,16 +253,22 @@ class SimModel(tf.keras.Model):
                 tf.cast(virial, dtype),
                 address=virial_addr)
 
-    def mapped_nlist(self, nlist, pos):
+    def mapped_nlist(self, nlist):
         if not self._map_nlist:
             raise ValueError(
                 'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
 
-        # now should be pure TF
-        return nlist[-self._mapped_cg_i:]
+        return nlist[:self._mapped_cg_i], nlist[self._mapped_cg_i:]
+
+    def mapped_positions(self, positions):
+        if not self._map_nlist:
+            raise ValueError(
+                'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
+
+        return positions[:self._mapped_cg_i], positions[self._mapped_cg_i:]
 
     @tf.function
-    def precompute(self, dtype, positions_addr, cg_id_offset):
+    def precompute(self, dtype, positions_addr):
         if self._map_nlist:
             tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
             tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
@@ -275,11 +281,9 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='pos-input-pre'
             )
-            cg_pos = self._map_cg(pos)
-            # add id offset
-            mod_cg_pos = tf.concat(
-                (cg_pos[..., :3], cg_pos[..., 3:4] + cg_id_offset), axis=-1)
-            new_pos = tf.concat((pos[-self._mapped_cg_i:], mod_cg_pos), axis=0)
+            cg_pos = self._map_cg(pos[:self._mapped_cg_i])
+            # types will NOT be overwritten, so we do not need to add offset
+            new_pos = tf.concat((pos[:self._mapped_cg_i], cg_pos), axis=0)
             tf_to_hoomd(tf.cast(new_pos, dtype),
                         address=positions_addr)
 

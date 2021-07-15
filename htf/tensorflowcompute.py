@@ -106,12 +106,7 @@ class tfcompute(hoomd.compute._compute):
                 raise ValueError('Molecular batches are '
                                  'not supported with spatial decomposition (MPI)')
             # Now we try to disable sorting
-            c = hoomd.context.current.sorter
-            if c is None:
-                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
-                                         'Make sure you disable it to allow molecular batching')
-            else:
-                c.disable()
+            self._disable_sorter()
 
         # get neighbor cutoff
         self.nneighbor_cutoff = self.model.nneighbor_cutoff
@@ -171,7 +166,9 @@ class tfcompute(hoomd.compute._compute):
 
         # enable mapped_nlists if that has been called
         if self.model._map_nlist:
-            self.cpp_force.setMappedNlist(True)
+            self.cpp_force.setMappedNlist(True, self.model._mapped_cg_typeid_start)
+            # Now we try to disable sorting
+            self._disable_sorter()
 
         # set this so disable works
         self.cpp_compute = self.cpp_force
@@ -187,6 +184,14 @@ class tfcompute(hoomd.compute._compute):
                 raise ValueError('Must have integrator set to receive forces')
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
 
+    def _disable_sorter(self):
+        c = hoomd.context.current.sorter
+        if c is None:
+            hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                        'Make sure you disable it to allow molecular batching')
+        else:
+            c.disable()
+
     def enable_mapped_nlist(self, system, cg_mapping_fxn):
         R''' Modifies existing snapshot to enable CG beads to
         be in simulation simultaneously with AA so that CG bead nlists
@@ -199,31 +204,40 @@ class tfcompute(hoomd.compute._compute):
                                 of coarse-grained positions.
         :type cg_mapping_fxn: python callable
         '''
-        # set-flag so model knows we're ready
-        if self.cpp_force:
-            self.cpp_force.setMappedNlist(True)
+
         # get snapshot and insert cg beads
         snap = system.take_snapshot()
         cg_pos = cg_mapping_fxn(
             snap.particles.position.astype(self.model.dtype))
         M = cg_pos.shape[0]
+        AAN = snap.particles.N
         aa_pos = snap.particles.position
         aa_v = snap.particles.velocity
         aa_t = snap.particles.typeid
+
+        cg_typeid_start = np.max(snap.particles.typeid[M:]) + 1
+
         snap.particles.resize(snap.particles.N + M)
-        snap.particles.position[:] = np.concatenate((aa_pos, cg_pos[:, :3]))
-        snap.particles.velocity[:] = np.concatenate((aa_v, np.zeros((M, 3))))
-        snap.particles.typeid[:] = np.concatenate(
-            (aa_t, cg_pos[:, 3] + _htf.CG_MAP_TYPE_SPLIT))
+        snap.particles.typeid[AAN:] = cg_pos[:, 3] + cg_typeid_start
 
         # restore with new snapshot
         system.restore_snapshot(snap)
 
+        # set-flag so model knows we're ready
+        if self.cpp_force:
+            self.cpp_force.setMappedNlist(True, cg_typeid_start)
+
+        print(snap.particles.position)
         # setup model attrs
         # TODO: make this correctly encapsulated
         self.model._map_nlist = True
         self.model._map_cg = cg_mapping_fxn
-        self.model._mapped_cg_i = M
+        self.model._mapped_cg_i = AAN
+        self.model._mapped_cg_typeid_start = cg_typeid_start
+        # these are inclusive semantics
+        map_group = hoomd.group.tags(M, M + AAN - 1)
+        aa_group = hoomd.group.tags(0,AAN - 1)
+        return aa_group, map_group
 
     def set_reference_forces(self, *forces):
         R''' Sets the Hoomd reference forces to be used by TensorFlow.
@@ -267,7 +281,7 @@ class tfcompute(hoomd.compute._compute):
         ''' Perhaps suboptimal call to see if there is a precompute step.
         '''
         self.model.precompute(
-            self.dtype, self.cpp_force.getPositionsBuffer(), _htf.CG_MAP_TYPE_SPLIT)
+            self.dtype, self.cpp_force.getPositionsBuffer())
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.

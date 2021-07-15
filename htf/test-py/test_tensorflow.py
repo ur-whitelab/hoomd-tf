@@ -584,6 +584,7 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         T = 10
+        CGN = 2
         rcut = 5.0
 
         model = build_examples.MappedNlist(NN, output_forces=False)
@@ -592,19 +593,28 @@ class test_compute(unittest.TestCase):
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
         self.assertEqual(len(system.particles), N)
-        tfcompute.enable_mapped_nlist(
+        aa_group, mapped_group = tfcompute.enable_mapped_nlist(
             system, build_examples.MappedNlist.my_map)
-        self.assertEqual(len(system.particles), N + 1)
+        # 2 CG sites
+        self.assertEqual(len(system.particles), N + CGN)
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
-        )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.integrate.nve(group=aa_group).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
-        print(tfcompute.outputs)
-        positions = tfcompute.outputs[0].reshape(-1, N, 4)
+        hoomd_pos = system.take_snapshot().particles.position
+        print('hoomd_pos', hoomd_pos)
+        positions = tfcompute.outputs[0].reshape(-1, N + CGN, 4)
+        # check that mapping function was applied
         np.testing.assert_allclose(
-            positions[:, :1], np.mean(positions[:, :-1], axis=1, keepdims=True))
+            positions[1:, N, :3], np.mean(positions[1:, :-1, :3], axis=1), atol=1e-5)
+
+        # check that there is no mixing betwee neighbor lists
+        print(positions[1, N:])
+        print(tfcompute.outputs[1][1])
+        print(tfcompute.outputs[2][1])
+        print(np.unique(tfcompute.outputs[1][...,-1].astype(int)))
+        print(np.unique(tfcompute.outputs[2][...,-1].astype(int)))
 
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to
