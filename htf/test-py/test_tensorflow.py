@@ -578,6 +578,29 @@ class test_compute(unittest.TestCase):
         ncount = np.sum(np.sum(nl**2, axis=2) > 0.1, axis=1)
         self.assertEqual(np.min(ncount), 4)
 
+    def test_mapped_nlist(self):
+        '''Compute mapped nlist
+        '''
+        N = 3 * 3
+        NN = N - 1
+        T = 10
+        rcut = 5.0
+
+        model = build_examples.HTFNlist(NN, output_forces=False)
+        tfcompute = htf.tfcompute(model)
+        system = hoomd.init.create_lattice(
+            unitcell=hoomd.lattice.sq(a=4.0),
+            n=[3, 3])
+        nlist = hoomd.md.nlist.cell()
+        hoomd.md.integrate.mode_standard(dt=0.001)
+        hoomd.md.integrate.nve(group=hoomd.group.all(
+        )).randomize_velocities(seed=1, kT=0.8)
+        tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
+        hoomd.run(8)
+        positions = tfcompute.outputs[0].reshape(-1, N, 4)
+        np.testing.assert_allclose(
+            positions[:, :1], np.mean(positions[:, :-1], axis=1, keepdims=True))
+
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to
         # pressure differences of 1e-3.

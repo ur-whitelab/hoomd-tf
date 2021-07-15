@@ -181,6 +181,18 @@ class CustomNlist(htf.SimModel):
         return r, cr
 
 
+class HTFNlist(htf.SimModel):
+    def compute(self, nlist, positions, box):
+        r = tf.norm(tensor=nlist[:, :, :3], axis=2)
+
+        def my_map(pos):
+            return tf.reduce_mean(pos, axis=0, keepsims=True)
+
+        # compute nlist
+        cnlist = self.mapped_nlist(nlist, positions, my_map, 1)
+        return positions
+
+
 class NlistNN(htf.SimModel):
     def setup(self, dim, top_neighs):
         self.dense1 = tf.keras.layers.Dense(dim)

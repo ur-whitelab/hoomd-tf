@@ -35,6 +35,7 @@ class SimModel(tf.keras.Model):
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
         self.virial = virial
+        self._map_nlist = False
 
         # check if overridden
         if SimModel.compute == self.__class__.compute:
@@ -252,6 +253,33 @@ class SimModel(tf.keras.Model):
             tf_to_hoomd(
                 tf.cast(virial, dtype),
                 address=virial_addr)
+
+    def mapped_nlist(self, nlist, pos, cg_mapping_fxn, cg_bead_number):
+        # should hit only once on trace
+        self._map_nlist = True
+        self._map_cg = cg_mapping_fxn
+        self._mapped_cg_i = cg_bead_number
+        # now should be pure TF
+        return nlist[-self._mapped_cg_i:]
+
+    @tf.function
+    def precompute(self, dtype, positions_addr):
+        if self._map_nlist:
+            tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
+            tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
+            hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
+            hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
+
+            pos = hoomd_to_tf(
+                address=positions_addr,
+                shape=[4],
+                T=dtype,
+                name='pos-input-pre'
+            )
+            cg_pos = self._map_cg(pos)
+            new_pos = tf.concat((pos[-self._mapped_cg_i:], cg_pos))
+            tf_to_hoomd(tf.cast(new_pos, dtype),
+                        address=positions_addr)
 
 
 class MolSimModel(SimModel):

@@ -95,7 +95,8 @@ class tfcompute(hoomd.compute._compute):
         self.train = train
 
         if self.batch_size > 0:
-            hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
+            hoomd.context.msg.notice(
+                2, 'Using fixed batching in htf. Precompute will not be called\n')
 
         if issubclass(type(self.model), MolSimModel):
             if self.batch_size != 0:
@@ -132,7 +133,7 @@ class tfcompute(hoomd.compute._compute):
             self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
-        # initialize the reflected c++ class
+        # initialize the c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             if hoomd.htf._tf_on_gpu:
                 raise ValueError(
@@ -218,6 +219,11 @@ class tfcompute(hoomd.compute._compute):
                 # get the r_cut value
                 r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
         return r_cut_dict
+
+    def _start_update(self):
+        ''' Perhaps suboptimal call to see if there is a precompute step.
+        '''
+        self.model.precompute(self.dtype, self.cpp_force.getPositionsBuffer())
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.

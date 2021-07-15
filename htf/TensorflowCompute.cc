@@ -130,6 +130,10 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
     int offset, N;
     if (timestep % m_period == 0)
     {
+        // only want to call for unbatched, otherwise ambiguous
+        if (m_batch_size == 0)
+            startUpdate();
+
         if (m_prof)
             m_prof->push("TensorflowCompute");
         // Batch the operations
@@ -215,6 +219,16 @@ void TensorflowCompute<M>::finishUpdate(unsigned int batch_index)
     if (m_prof)
         m_prof->push("TensorflowCompute<M>::Awaiting TF Update");
     m_py_self.attr("_finish_update")(batch_index);
+    if (m_prof)
+        m_prof->pop();
+}
+
+template <TFCommMode M>
+void TensorflowCompute<M>::startUpdate()
+{
+    if (m_prof)
+        m_prof->push("TensorflowCompute<M>::Awaiting TF Pre-Update");
+    m_py_self.attr("_start_update")();
     if (m_prof)
         m_prof->pop();
 }
