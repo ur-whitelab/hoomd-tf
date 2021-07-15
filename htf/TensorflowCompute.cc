@@ -230,7 +230,10 @@ void TensorflowCompute<M>::startUpdate()
 {
     if (m_prof)
         m_prof->push("TensorflowCompute<M>::Awaiting TF Pre-Update");
+    //assume no batching
+    m_positions_comm.receiveArray(m_pdata->getPositions());
     m_py_self.attr("_start_update")();
+    /// TODO receive array -> somehow deal with stuffing
     if (m_prof)
         m_prof->pop();
 }
