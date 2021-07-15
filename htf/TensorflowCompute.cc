@@ -343,7 +343,6 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
         // loop over all of the neighbors of this particle
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
         unsigned int j = 0;
-        std::cout << i << ": " << size << std::endl;
         for (; j < size; j++)
         {
 
@@ -357,12 +356,7 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
 
             // apply periodic boundary conditions
             dx = box.minImage(dx);
-            std::cout << i << "," << k << " N = " << m_pdata->getN() << " batch_size = " << batch_size << std::endl;
-            std::cout <<  __scalar_as_int(h_pos.data[i].w)  << ", " <<  __scalar_as_int(h_pos.data[k].w) << ", " << m_cg_typeid_start << " , " <<
-            ((__scalar_as_int(h_pos.data[k].w) < m_cg_typeid_start) != (__scalar_as_int(h_pos.data[i].w) < m_cg_typeid_start))  << std::endl;
-            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut ||
-                // check if both cg mapped beads or not
-                (m_b_mapped_nlist && ((__scalar_as_int(h_pos.data[k].w) < m_cg_typeid_start) != (__scalar_as_int(h_pos.data[i].w) < m_cg_typeid_start))))
+            if (dx.x * dx.x + dx.y * dx.y + dx.z * dx.z > m_r_cut * m_r_cut)
                 continue;
             buffer[bi * m_nneighs + nnoffset[bi]].x = dx.x;
             buffer[bi * m_nneighs + nnoffset[bi]].y = dx.y;
@@ -584,8 +578,6 @@ void TensorflowComputeGPU::prepareNeighbors(unsigned int offset, unsigned int ba
                           m_exec_conf->getComputeCapability(),
                           m_exec_conf->dev_prop.maxTexture1DLinear,
                           m_r_cut,
-                          m_b_mapped_nlist,
-                          m_cg_typeid_start,
                           m_nlist_comm.getCudaStream());
 
     if (m_exec_conf->isCUDAErrorCheckingEnabled())

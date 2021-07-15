@@ -602,19 +602,15 @@ class test_compute(unittest.TestCase):
         hoomd.md.integrate.nve(group=aa_group).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
-        hoomd_pos = system.take_snapshot().particles.position
-        print('hoomd_pos', hoomd_pos)
         positions = tfcompute.outputs[0].reshape(-1, N + CGN, 4)
         # check that mapping function was applied
         np.testing.assert_allclose(
             positions[1:, N, :3], np.mean(positions[1:, :-1, :3], axis=1), atol=1e-5)
 
         # check that there is no mixing betwee neighbor lists
-        print(positions[1, N:])
-        print(tfcompute.outputs[1][1])
-        print(tfcompute.outputs[2][1])
-        print(np.unique(tfcompute.outputs[1][...,-1].astype(int)))
-        print(np.unique(tfcompute.outputs[2][...,-1].astype(int)))
+        aa = set(np.unique(tfcompute.outputs[1][...,-1].astype(int)))
+        cg = set(np.unique(tfcompute.outputs[2][...,-1].astype(int)))
+        self.assertTrue(aa.intersection(cg) == set([0]))
 
     def test_lj_pressure(self):
         # TODO The virials are off by 1e-6, leading to

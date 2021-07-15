@@ -45,8 +45,6 @@ extern "C" cudaError_t htf_gpu_reshape_nlist(Scalar4 *dest,
                                              const unsigned int compute_capability,
                                              const unsigned int max_tex1d_width,
                                              double rmax,
-                                             bool mapped_nlist,
-                                             unsigned int cg_map_type_split
-                                                 cudaStream_t stream);
+                                             cudaStream_t stream);
 
 #endif // m_TENSORFLOW_COMPUTE_CUH_

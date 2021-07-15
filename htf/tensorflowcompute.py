@@ -32,6 +32,8 @@ class tfcompute(hoomd.compute._compute):
         '''
         self.model = model
         self.cpp_force = None
+        self._nlist = None
+        self.map_types = set()
 
     def attach(self, nlist=None, r_cut=0, period=1,
                batch_size=None, train=False, save_output_period=None):
@@ -115,6 +117,7 @@ class tfcompute(hoomd.compute._compute):
             nlist.subscribe(self.rcut)
             # activate neighbor list
             nlist.update_rcut()
+            self._nlist = nlist
         elif self.nneighbor_cutoff != 0:
             raise ValueError('Must provide an nlist if you have '
                              'nneighbor_cutoff > 0')
@@ -219,6 +222,13 @@ class tfcompute(hoomd.compute._compute):
 
         snap.particles.resize(snap.particles.N + M)
         snap.particles.typeid[AAN:] = cg_pos[:, 3] + cg_typeid_start
+        for i in cg_pos[:, 3] + cg_typeid_start:
+            self.map_types.add(int(i))
+
+        snap.particles.types = snap.particles.types + [f'M-{i}' for i in self.map_types]
+
+        for i in self.map_types:
+            system.particles.types.add(f'M-{i}')
 
         # restore with new snapshot
         system.restore_snapshot(snap)
@@ -237,6 +247,11 @@ class tfcompute(hoomd.compute._compute):
         # these are inclusive semantics
         map_group = hoomd.group.tags(M, M + AAN - 1)
         aa_group = hoomd.group.tags(0,AAN - 1)
+
+        if self._nlist is not None:
+            # update with new types
+            self._nlist.update_rcut()
+
         return aa_group, map_group
 
     def set_reference_forces(self, *forces):
@@ -262,6 +277,7 @@ class tfcompute(hoomd.compute._compute):
         # Define the cutoff radius used in the neighbor list.
         # Adapted from hoomd/md/pair.py
         # go through the list of only the active particle types in the sim
+        print('UPDATING RCUT')
         sys_def = hoomd.context.current.system_definition
         ntypes = sys_def.getParticleData().getNTypes()
         type_list = []
@@ -273,8 +289,14 @@ class tfcompute(hoomd.compute._compute):
         r_cut_dict = hoomd.md.nlist.rcut()
         for i in range(0, ntypes):
             for j in range(i, ntypes):
-                # get the r_cut value
-                r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
+                # do not allow mapped to interact with AA
+                if bool(i in self.map_types) == bool(j in self.map_types):
+                    r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
+                    print('ENABING', type_list[i], type_list[j])
+                else:
+                    # according to doc, negative radius prevents being on nlist
+                    r_cut_dict.set_pair(type_list[i], type_list[j], -1)
+                    print('DISABLING', type_list[i], type_list[j])
         return r_cut_dict
 
     def _start_update(self):

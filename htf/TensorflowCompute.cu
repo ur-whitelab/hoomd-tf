@@ -87,9 +87,7 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
                                          const unsigned int *d_n_neigh,
                                          const unsigned int *d_nlist,
                                          const unsigned int *d_head_list,
-                                         double rmax,
-                                         bool mapped_nlist,
-                                        unsigned int cg_map_type_split)
+                                         double rmax)
     {
 
     // start by identifying which particle we are to handle
@@ -137,9 +135,7 @@ __global__ void htf_gpu_reshape_nlist_kernel(Scalar4* dest,
         // calculate r
         Scalar rsq = dot(dx, dx);
 
-        if (rsq < (rmax * rmax) ||
-            // check if both neighbors are AA or CG
-            (mapped_nlist && type_j / cg_map_type_split == typei / cg_map_type_split))
+        if (rsq < (rmax * rmax))
         {
             dest[(idx - offset) * NN + dest_idx].x = dx.x;
             dest[(idx - offset) * NN + dest_idx].y = dx.y;
@@ -171,8 +167,6 @@ cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
 			      const unsigned int compute_capability,
 			      const unsigned int max_tex1d_width,
 			      double rmax,
-                  bool mapped_nlist,
-                  unsigned int cg_map_type_split
 			      cudaStream_t stream)
     {
 
@@ -208,10 +202,7 @@ cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
         d_n_neigh,
         d_nlist,
         d_head_list,
-        rmax,
-        mapped_nlist,
-        cg_map_type_split);
-
+        rmax);
 
     return cudaSuccess;
 
