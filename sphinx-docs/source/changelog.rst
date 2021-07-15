@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v2.4 (TBD)
+--------------------
+
+*Enhancements*
+
+- Added benchmarking to CI and reporting
+
 v2.3 (2021-04-06)
 --------------------
 

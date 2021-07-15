@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd scipy
+        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd scipy pytest-benchmark
 
         # Install software dependencies
         pip install tensorflow==${{ matrix.tensorflow }}
@@ -61,7 +61,7 @@ jobs:
         cd ..
     - name: Run tests
       run: |
-        pytest -v --forked
+        pytest
     - name: Run notebooks with MDAnalysis
       if: matrix.md-analysis == 'true'
       run: |
