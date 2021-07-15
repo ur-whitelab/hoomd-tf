@@ -49,7 +49,7 @@ cudaError_t htf_gpu_copy3(Scalar4 *dest_array, Scalar4* src_array, , unsigned in
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    htf_gpu_stuff4_kerenl<<< grid, threads, 0, s >>>(dest_array, src_array, m_N);
+    htf_gpu_copy3_kerenl<<< grid, threads, 0, s >>>(dest_array, src_array, m_N);
 
     // this method always succeds.
     return cudaSuccess;
