@@ -310,6 +310,11 @@ class SimModel(tf.keras.Model):
 class MolSimModel(SimModel):
     '''
     A molecular batched :py:class:`.SimModel`
+
+    .. warning::
+        Hoomd re-orders positions to improve performance. MolSimModel will disable
+        this to keep a specific ordering of positions.
+
     '''
 
     def __init__(

@@ -201,6 +201,10 @@ class tfcompute(hoomd.compute._compute):
         can be accessed using hoomd's accelerated nlist methods. This must
         be called in order to use :py:meth:`.SimModel.mapped_nlist` in a model.
 
+        .. warning::
+            Hoomd re-orders positions to improve performance. Calling this will disable
+            sorting to keep a specific ordering of positions necessary for CG mapping.
+
         :param system: hoomd system
         :type system: hoomd system
         :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
