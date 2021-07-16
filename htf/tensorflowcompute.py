@@ -199,14 +199,14 @@ class tfcompute(hoomd.compute._compute):
         R''' Modifies existing snapshot to enable CG beads to
         be in simulation simultaneously with AA so that CG bead nlists
         can be accessed using hoomd's accelerated nlist methods. This must
-        be called in order to use :py:meth:`.SimModel.compute_nlist` in a model.
+        be called in order to use :py:meth:`.SimModel.mapped_nlist` in a model.
 
         :param system: hoomd system
         :type system: hoomd system
         :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
-                               ``Nx4`` array of fine-grained positions and
-                                whose output is an ``Mx4`` array
-                                of coarse-grained positions.
+                            ``Nx4`` array of fine-grained positions and
+                            whose return value is an ``Mx4`` array
+                            of coarse-grained positions.
         :type mapping_fxn: python callable
         '''
 
@@ -227,7 +227,8 @@ class tfcompute(hoomd.compute._compute):
         for i in cg_pos[:, 3] + map_typeid_start:
             self.map_types.add(int(i))
 
-        snap.particles.types = snap.particles.types + [f'M-{i}' for i in self.map_types]
+        snap.particles.types = snap.particles.types + \
+            [f'M-{i}' for i in self.map_types]
 
         for i in self.map_types:
             system.particles.types.add(f'M-{i}')

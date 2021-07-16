@@ -151,6 +151,7 @@ class SimModel(tf.keras.Model):
         For  example:
 
         .. code:: python
+
             def compute(self, nlist):
                 if self.flag:
                     nlist *= 2
@@ -254,15 +255,14 @@ class SimModel(tf.keras.Model):
                 address=virial_addr)
 
     def mapped_nlist(self, nlist):
-        R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
-        this method will split the nlist into the all atom and mapped nlists. The
-        first returned tensor is the all atom nlist and
-        the second tensor is the mapped nlist.
+        R'''If :py:meth:`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the nlist into the all atom and mapped.
 
         :param nlist: The ``nlist`` from py:meth:`.compute`
         :type nlist: tensor
 
-        :return: Tuple of 2 tensors
+        :return: Tuple of 2 tensors. First is all atom nlist. Second
+                 is the mapped nlist.
         '''
         if not self._map_nlist:
             raise ValueError(
@@ -271,15 +271,14 @@ class SimModel(tf.keras.Model):
         return nlist[:self._map_i], nlist[self._map_i:]
 
     def mapped_positions(self, positions):
-        R'''If :py:meth`.tfcompute.enable_mapped_nlist` is called,
-        this method will split the positions into the all atom and mapped. The
-        first returned tensor is the all atom positions and the second tensor \
-        is the mapped positions.
+        R'''If :py:meth:`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the positions into the all atom and mapped.
 
         :param positions: The ``positions`` from py:meth:`.compute`
         :type positions: tensor
 
-        :return: Tuple of 2 tensors
+        :return: Tuple of 2 tensors. First is all atom positions. Second
+                 is the mapped positions.
         '''
         if not self._map_nlist:
             raise ValueError(
@@ -310,7 +309,7 @@ class SimModel(tf.keras.Model):
 
 class MolSimModel(SimModel):
     '''
-    A molecular batched py:class:`.SimModel`
+    A molecular batched :py:class:`.SimModel`
     '''
 
     def __init__(

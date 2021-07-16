@@ -182,9 +182,9 @@ pairwise energies.
 Neighbor lists
 --------------
 
-``nlist``is an ``N x NN x 4``
-neighbor list tensor. You can ask for masked versions of this with
-:py:func:`.masked_nlist(nlist, type_tensor, type_i, type_j)`
+The ``nlist`` is an ``N x NN x 4``
+neighbor list tensor. You can compute a masked versions of this with
+:py:func:`.masked_nlist` via ``masked_nlist(nlist, type_tensor, type_i, type_j)``
 where ``type_i`` and ``type_j`` are optional integers that specify the type of
 the origin (``type_i``) or neighbor (``type_j``).  ``type_tensor`` is
 ``positions[:,3]`` or your own types can be chosen. You can also use :py:func:`.nlist_rinv` which gives a
@@ -198,12 +198,32 @@ Virial
 A virial term can be added by doing the following extra steps:
 
 1. Compute virial with your forces :py:func:`.compute_nlist_forces` by adding the ``virial=True`` arg.
-2. Add the `modify_virial=True` argument to your model constructor
+2. Add the ``modify_virial=True`` argument to your model constructor
 
 .. _model_saving_and_loading:
 
+
+Mapped quantities
+------------------
+
+If mapped quantities are desired for coarse-graining while running a simulation, you can call
+:py:meth:`.tfcompute.enable_mapped_nlist` to utilize hoomd to compute fast neigbhor lists.
+The model code can then use :py:meth:`.SimModel.mapped_nlist` and
+:py:meth:`.SimModel.mapped_positions` to access mapped nlist and positions. An example:
+
+.. code:: python
+
+  import hoomd.htf as htf
+  class MyModel(htf.SimModel):
+    def compute(self, nlist, positions, forces):
+      aa_nlist, mapped_nlist = self.mapped_nlist(nlist)
+      aa_pos, mapped_pos = self.mapped_positions(positions)
+
+Ensure you call then :py:meth:`.tfcompute.enable_mapped_nlist` prior to running
+the simulation via ``hoomd.run()``
+
 Model Saving and Loading
------------------
+---------------------------
 
 To save a model:
 
