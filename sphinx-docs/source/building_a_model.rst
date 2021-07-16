@@ -219,8 +219,8 @@ The model code can then use :py:meth:`.SimModel.mapped_nlist` and
       aa_nlist, mapped_nlist = self.mapped_nlist(nlist)
       aa_pos, mapped_pos = self.mapped_positions(positions)
 
-Ensure you call then :py:meth:`.tfcompute.enable_mapped_nlist` prior to running
-the simulation via ``hoomd.run()``
+Call :py:meth:`.tfcompute.enable_mapped_nlist` prior to running
+the simulation.
 
 Model Saving and Loading
 ---------------------------
