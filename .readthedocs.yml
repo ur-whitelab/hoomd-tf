@@ -3,4 +3,3 @@
 
 sphinx:
     configuration: sphinx-docs/source/conf.py
-version: 2
