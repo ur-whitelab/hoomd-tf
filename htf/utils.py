@@ -80,7 +80,9 @@ def compute_nlist(
         sorted=False,
         return_types=False,
         exclusion_matrix=None):
-    ''' Computes particle pairwise neighbor lists.
+    ''' Computes particle pairwise neighbor lists. This is intended to be used
+    with parsing a trajectory, not while running a simulation. It is much slower than
+    to :py:meth:`.SimModel.mapped_nlist`, but doesn't require running hoomd.
 
     :param positions: Positions of the particles
     :type positions: N x 4 or N x 3 tensor
@@ -99,7 +101,6 @@ def compute_nlist(
         of bead particles in the system) indicating which pairs
         should be excluded from nlist
     :type exclusion_matrix: Tensor of dtype bools
-
 
     :return: An [N x NN x 4] tensor containing neighbor lists of all
         particles and index

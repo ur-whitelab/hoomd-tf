@@ -204,7 +204,6 @@ cudaError_t htf_gpu_reshape_nlist(Scalar4* dest,
         d_head_list,
         rmax);
 
-
     return cudaSuccess;
 
     }
