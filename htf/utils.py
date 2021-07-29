@@ -503,7 +503,7 @@ def compute_cg_graph(
                 cg_l = length[i][j]
                 if cg_l == 1:
                     dist_idx.add(tuple(sorted(i, j)))
-               elif cg_l == 2:
+                elif cg_l == 2:
                     ang_idx.add(tuple(sorted(i, j)))
                 elif cg_l == 3:
                     dihe_idx.add(tuple(sorted(i, j)))
