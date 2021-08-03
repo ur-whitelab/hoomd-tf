@@ -29,7 +29,7 @@ release = __version__
 # -- Project information -----------------------------------------------------
 
 project = 'HOOMD-TF'
-copyright = '2020 HOOMD-TF Developers'
+copyright = '2021 HOOMD-TF Developers'
 author = 'Andrew D White, Rainier Barrett, Heta A Gandhi,\
           Geemi Wellawatte, Maghesree Chakraborty,\
           Mehrad Ansari, Dilnoza B Amirkulova, \
@@ -44,7 +44,8 @@ author = 'Andrew D White, Rainier Barrett, Heta A Gandhi,\
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx.ext.intersphinx'
 ]
 
 if sphinx_ver < (1, 8, 0):
@@ -80,3 +81,12 @@ autodoc_mock_imports = ['hoomd', 'hoomd.md', 'hoomd.md.nlist', 'hoomd.comm',
 
 # define master doc for newer versions of sphinx
 master_doc = 'index'
+
+# make sure we see broken links
+nitpicky = True
+
+intersphinx_mapping = {
+    'hoomd': ('https://hoomd-blue.readthedocs.io/en/stable/', None),
+    'tf': ('https://www.tensorflow.org/api_docs/python',
+           'https://github.com/mr-ubik/tensorflow-intersphinx/raw/master/tf2_py_objects.inv')
+}

@@ -58,6 +58,6 @@ biasing to a system, use an EDS Layer (:py:class:`.EDSLayer`):
             return forces, alpha
 
 Here,
-:py:class:`.EDSLayer.update_state`
+:obj:`EDSModel.update_state<tf.keras.metrics.Mean>`
 returns the lagrange multiplier/eds coupling that
 is used to bias the simulation.
