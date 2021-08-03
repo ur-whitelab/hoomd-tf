@@ -87,6 +87,6 @@ nitpicky = True
 
 intersphinx_mapping = {
     'hoomd': ('https://hoomd-blue.readthedocs.io/en/stable/', None),
-    'tf': ('https://www.tensorflow.org/api_docs/python', 
+    'tf': ('https://www.tensorflow.org/api_docs/python',
            'https://github.com/mr-ubik/tensorflow-intersphinx/raw/master/tf2_py_objects.inv')
 }
