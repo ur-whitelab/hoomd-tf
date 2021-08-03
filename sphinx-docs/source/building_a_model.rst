@@ -24,7 +24,7 @@ where ``NN`` is the maximum number of nearest neighbors to consider
 are unsure, you can guess and add ``check_nlist = True`` to your
 constructor. This will cause the program to halt if you choose too low.
 ``output_forces`` indicates if the model will output forces to use in
-the simulation. In the :py:meth:`compute(nlist, positions, box)<.SimModel.compute>` function you will have three
+the simulation. In the :py:meth:`SimModel.compute(nlist, positions, box)<.SimModel.compute>` function you will have three
 tensors that can be used:
 
 *  ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest
@@ -109,7 +109,7 @@ that the molecules can be different size and atoms can exist in multiple
 molecules.
 
 
-:obj:`mol_compute(self, nlist, positions, mol_nlist, mol_pos)<.mol_compute>` has the following additional arguments:
+:obj:`MolSimModel.mol_compute(self, nlist, positions, mol_nlist, mol_pos)<.mol_compute>` has the following additional arguments:
 ``mol_positions`` and ``mol_nlist``. These new attributes are dimension
 ``M x MN x ...`` where ``M`` is the number of molecules and ``MN`` is
 the atom index within the molecule. If your molecule has fewer than
