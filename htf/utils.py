@@ -478,6 +478,8 @@ def compute_cg_graph(
     ang_idx = []
     dihe_idx = []
     dist_list = []
+    ang_list = []
+    dih_list = []
 
     if DSGPM is True and infile is not None:
         obj = json.load(open(infile, 'r'))
@@ -487,29 +489,28 @@ def compute_cg_graph(
 
     elif DSGPM is False and adj_mat is not None:
         adj = adj_mat
-        cg_num = cg_beads
+        cg_num = len(adj_mat)
 
     else:
         print('correct inputs/flags are not given')
 
-    if adj is not None and cg_num is not None:
-        cg_grph = nx.Graph(adj)
+    cg_grph = nx.Graph(adj)
+    length = dict(nx.all_pairs_shortest_path_length(cg_grph))
 
-        length = dict(nx.all_pairs_shortest_path_length(cg_grph))
+    # find node connectivities from the CG graph
+    for i in range(cg_num):
+        for j in range(i + 1, cg_num):
+            cg_l = length[i][j]
+            if cg_l == 1:
+                dist_idx.append((i, j))
+            elif cg_l == 2:
+                ang_idx.append((i, j))
 
-        # find node connectivities from the CG graph
-        for i in range(cg_num):
-            for j in range(i + 1, cg_num):
-                cg_l = length[i][j]
-                if cg_l == 1:
-                    dist_idx.append((i, j))
-                elif cg_l == 2:
-                    ang_idx.append((i, j))
+            elif cg_l == 3:
+                dihe_idx.append((i, j))
 
-                elif cg_l == 3:
-                    dihe_idx.append((i, j))
-
-        # find indices of bonded pairs
+    # find indices of bonded pairs
+    if len(dist_idx) != 0:
         for x in range(len(dist_idx)):
             r_source = dist_idx[x][0]
             r_target = dist_idx[x][1]
@@ -520,10 +521,11 @@ def compute_cg_graph(
                         source=r_source,
                         target=r_target)))
 
-        rs = np.asarray(dist_list).squeeze(axis=(1,))
+        dist_list = np.asarray(dist_list).squeeze(axis=(1,))
 
-        # find indices of angles-making nodes
-        ang_list = []
+    # find indices of angles-making nodes
+
+    if len(ang_idx) != 0:
         for x in range(len(ang_idx)):
             a_source = ang_idx[x][0]
             a_target = ang_idx[x][1]
@@ -533,10 +535,11 @@ def compute_cg_graph(
                         cg_grph,
                         source=a_source,
                         target=a_target)))
-        angs = np.asarray(ang_list).squeeze(axis=(1,))
+        ang_list = np.asarray(ang_list).squeeze(axis=(1,))
 
-        # find indices of dihedral-making nodes
-        dih_list = []
+    # find indices of dihedral-making nodes
+
+    if len(dihe_idx) != 0:
         for x in range(len(dihe_idx)):
             d_source = dihe_idx[x][0]
             d_target = dihe_idx[x][1]
@@ -546,41 +549,41 @@ def compute_cg_graph(
                         cg_grph,
                         source=d_source,
                         target=d_target)))
-        dihs = np.asarray(dih_list).squeeze(axis=(1,))
+        dih_list = np.asarray(dih_list).squeeze(axis=(1,))
 
-        if group_atoms is True:
-            if u_no_H is None or u_H is None:
-                print('One or both MDAnalysis universe not specified')
+    if group_atoms is True:
+        if u_no_H is None or u_H is None:
+            print('One or both MDAnalysis universe not specified')
 
-            if u_H is not None and u_no_H is not None:
-                cg_positions = []
-                for i in range(cg_num):
-                    atm_group = 0
-                    for j in range(len(cg[i])):
-                        atm_id = cg[i][j]
-                        atom = u_no_H.atoms[atm_id]
-                        a_name = str(atom.name)
-                        a_resid = str(atom.resid)
-                        heavy_atom = u_H.select_atoms(
-                            'name ' + a_name + ' and resid ' + a_resid)
-                        h = u_H.select_atoms(
-                            'type H and bonded name ' + a_name + ' and resid ' + a_resid)
-                        if len(list(h)) == 0:
-                            atm_group += heavy_atom
-                        else:
-                            ah = heavy_atom + h
-                            atm_group += ah
+        if u_H is not None and u_no_H is not None:
+            cg_positions = []
+            for i in range(cg_num):
+                atm_group = 0
+                for j in range(len(cg[i])):
+                    atm_id = cg[i][j]
+                    atom = u_no_H.atoms[atm_id]
+                    a_name = str(atom.name)
+                    a_resid = str(atom.resid)
+                    heavy_atom = u_H.select_atoms(
+                        'name ' + a_name + ' and resid ' + a_resid)
+                    h = u_H.select_atoms(
+                        'type H and bonded name ' + a_name + ' and resid ' + a_resid)
+                    if len(list(h)) == 0:
+                        atm_group += heavy_atom
+                    else:
+                        ah = heavy_atom + h
+                        atm_group += ah
 
-                    com = atm_group.center_of_mass()
-                    cg_positions.append(com)
+                com = atm_group.center_of_mass()
+                cg_positions.append(com)
 
-                return rs, angs, dihs, np.asarray(cg_positions)
+            return dist_list, ang_list, dih_list, np.asarray(cg_positions)
 
-        else:
-            print(
-                'CG coordinates are not caculated. Only connectivities are calculated')
+    else:
+        print(
+            'CG coordinates are not caculated. Only connectivities are calculated')
 
-            return rs, angs, dihs
+        return dist_list, ang_list, dih_list
 
 
 def mol_features_multiple(bnd_indices=None, ang_indices=None,
