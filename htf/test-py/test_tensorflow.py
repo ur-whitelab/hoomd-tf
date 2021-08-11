@@ -595,11 +595,15 @@ class test_compute(unittest.TestCase):
         self.assertEqual(len(system.particles), N)
         aa_group, mapped_group = tfcompute.enable_mapped_nlist(
             system, build_examples.MappedNlist.my_map)
+
+        assert len(aa_group) == N
+        assert len(mapped_group) == 2
         # 2 CG sites
         self.assertEqual(len(system.particles), N + CGN)
         nlist = hoomd.md.nlist.cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=aa_group).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.integrate.nve(
+            group=aa_group).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
         positions = tfcompute.outputs[0].reshape(-1, N + CGN, 4)
