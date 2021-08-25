@@ -120,8 +120,8 @@ Here is a complete example:
 Changing Model Object
 ----------------------
 
-If your :py:class: `.MolSimModel.compute` method depends on attributes of ``self``,
-you have to call an :py:class: `.MolSimModel.retrace_compute` if you updated these attributes.
+If your :py:meth:`SimModel.compute(nlist, positions, box)<.SimModel.compute>` method depends on attributes of ``self``,
+you have to call an :py:meth:`.SimModel.retrace_compute` if you updated these attributes.
 See an example
 
 .. code:: python

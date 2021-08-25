@@ -251,7 +251,7 @@ class tfcompute(hoomd.compute._compute):
         self.model._map_i = AAN
         self._map_typeid_start = map_typeid_start
         # these are inclusive semantics
-        map_group = hoomd.group.tags(M, M + AAN - 1)
+        map_group = hoomd.group.tags(AAN, M + AAN - 1)
         aa_group = hoomd.group.tags(0, AAN - 1)
 
         if self._nlist is not None:

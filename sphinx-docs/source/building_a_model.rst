@@ -3,7 +3,7 @@
 Building a Model
 ==================
 
-To modify a simulation, you create a Keras model that will be executed at
+To modify a simulation, you create a Keras :obj:`tf.keras.Model` that will be executed at
 each step (or some multiple of steps) during the simulation. See the :ref:`running`
 to see how to train your model instead, though these instructions still apply.
 
@@ -24,15 +24,15 @@ where ``NN`` is the maximum number of nearest neighbors to consider
 are unsure, you can guess and add ``check_nlist = True`` to your
 constructor. This will cause the program to halt if you choose too low.
 ``output_forces`` indicates if the model will output forces to use in
-the simulation. In the :py:meth:`.SimModel.compute` function you will have three
-tensors that can be used:``nlist``, ``positions``, ``box``:
+the simulation. In the :py:meth:`SimModel.compute(nlist, positions, box)<.SimModel.compute>` function you will have three
+tensors that can be used:
 
-* ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest
-  neighbors. An entry of all zeros indicates that less than ``NN`` nearest
-  neighbors where present for a particular particle. The 4 right-most
-  dimensions are ``x,y,z`` and ``w``, which is the particle type. Particle
-  type is an integer starting at 0. Note that the ``x,y,z`` values are a
-  vector originating at the particle and ending at its neighbor.
+*  ``nlist`` is an ``N`` x ``NN`` x 4 tensor containing the nearest
+   neighbors. An entry of all zeros indicates that less than ``NN`` nearest
+   neighbors where present for a particular particle. The 4 right-most
+   dimensions are ``x,y,z`` and ``w``, which is the particle type. Particle
+   type is an integer starting at 0. Note that the ``x,y,z`` values are a
+   vector originating at the particle and ending at its neighbor.
 
 * ``positions`` is an ``N`` x 4 tensor of particle positions (x,y,z) and type.
 
@@ -47,7 +47,7 @@ desired.
 Keras Model
 -----------
 
-Your models are `Keras Models <https://keras.io/api/models/model/>`_ so that all
+Your models are Keras :obj:`tf.keras.Model`s so that all
 the usual process of building layers, saving, and computing metrics apply. For example,
 here is a two hidden layer neural network force-field that uses the 8 nearest neighbors to compute
 forces.
@@ -109,7 +109,7 @@ that the molecules can be different size and atoms can exist in multiple
 molecules.
 
 
-`mol_compute` has the following additional arguments:
+:obj:`MolSimModel.mol_compute(self, nlist, positions, mol_nlist, mol_pos)<.mol_compute>` has the following additional arguments:
 ``mol_positions`` and ``mol_nlist``. These new attributes are dimension
 ``M x MN x ...`` where ``M`` is the number of molecules and ``MN`` is
 the atom index within the molecule. If your molecule has fewer than
@@ -166,11 +166,11 @@ the neighbor list. For example, to compute a :math:`1 / r` potential:
 
 
 Notice that in the above example that we have used the
-``tf.math.divide_no_nan`` method, which allows
+:obj:`tf.math.divide_no_nan` method, which allows
 us to safely treat a :math:`1 / 0`, which can arise because ``nlist``
 contains 0s for when fewer than ``NN`` nearest neighbors are found.
 
-There is also a method :py:func:`.compute_positions_forces` which
+There is also a method :py:func:`compute_positions_forces(positions, energy)<.compute_positions_forces>` which
 can be used to compute position dependent forces.
 
 **Note:** because ``nlist`` is a *full*
@@ -184,10 +184,10 @@ Neighbor lists
 
 The ``nlist`` is an ``N x NN x 4``
 neighbor list tensor. You can compute a masked versions of this with
-:py:func:`.masked_nlist` via ``masked_nlist(nlist, type_tensor, type_i, type_j)``
+:py:func:`masked_nlist(nlist, type_tensor, type_i, type_j)<.masked_nlist>`
 where ``type_i`` and ``type_j`` are optional integers that specify the type of
 the origin (``type_i``) or neighbor (``type_j``).  ``type_tensor`` is
-``positions[:,3]`` or your own types can be chosen. You can also use :py:func:`.nlist_rinv` which gives a
+``positions[:,3]`` or your own types can be chosen. You can also use :py:func:`nlist_rinv(nlist)<.nlist_rinv>` which gives a
 pre-computed ``1 / r`` (dimension ``N x NN``).
 
 .. _virial:
@@ -195,9 +195,9 @@ pre-computed ``1 / r`` (dimension ``N x NN``).
 Virial
 ------
 
-A virial term can be added by doing the following extra steps:
+A virial term can be added by doing *both* of the following extra steps:
 
-1. Compute virial with your forces :py:func:`.compute_nlist_forces` by adding the ``virial=True`` arg.
+1. Compute virial with your forces :py:func:`compute_nlist_forces(nlist, energy,virial=True)<.compute_nlist_forces>` by adding the ``virial=True`` arg.
 2. Add the ``modify_virial=True`` argument to your model constructor
 
 .. _model_saving_and_loading:
@@ -207,17 +207,25 @@ Mapped quantities
 ------------------
 
 If mapped quantities are desired for coarse-graining while running a simulation, you can call
-:py:meth:`.tfcompute.enable_mapped_nlist` to utilize hoomd to compute fast neigbhor lists.
+:py:meth:`tfcompute.enable_mapped_nlist(system, mapping_fxn)<.tfcompute.enable_mapped_nlist>` to utilize hoomd to compute fast neighbor lists.
 The model code can then use :py:meth:`.SimModel.mapped_nlist` and
 :py:meth:`.SimModel.mapped_positions` to access mapped nlist and positions. An example:
 
 .. code:: python
 
   import hoomd.htf as htf
+
+  def mapping_fxn(AA):
+    return M @ AA
+
   class MyModel(htf.SimModel):
     def compute(self, nlist, positions, forces):
       aa_nlist, mapped_nlist = self.mapped_nlist(nlist)
       aa_pos, mapped_pos = self.mapped_positions(positions)
+
+  ...
+
+  tfcompute.enable_mapped_nlist(system, mapping_fxn)
 
 Call :py:meth:`.tfcompute.enable_mapped_nlist` prior to running
 the simulation.
