@@ -52,7 +52,7 @@ jobs:
     - name: MDAnalysis Install
       if: matrix.md-analysis == 'true'
       run: |
-          pip install mdanalysis<=1.1.1
+          pip install "mdanalysis<2.0"
     - name: Download and install HTF
       run: |
         mkdir build && cd build
