@@ -502,11 +502,11 @@ def compute_cg_graph(
             for j in length[i]:
                 cg_l = length[i][j]
                 if cg_l == 1:
-                    dist_idx.add(tuple(sorted(i, j)))
+                    dist_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 2:
-                    ang_idx.add(tuple(sorted(i, j)))
+                    ang_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 3:
-                    dihe_idx.add(tuple(sorted(i, j)))
+                    dihe_idx.add(tuple(sorted((i, j))))
 
         # find indices of bonded pairs
         for pair in dist_idx: 
