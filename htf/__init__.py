@@ -27,8 +27,12 @@ if gpus:
         # Memory growth must be set before GPUs have been initialized
         print(e)
 
-custom_things = [SimModel, MolSimModel, RBFExpansion, WCARepulsion,
-                 EDSLayer]
-custom_objects = {o.__name__: o for o in custom_things}
-custom_objects.update({o.__name__: o for o in custom_things})
-del custom_things
+try:
+    custom_things = [SimModel, MolSimModel, RBFExpansion, WCARepulsion,
+                     EDSLayer]
+    custom_objects = {o.__name__: o for o in custom_things}
+    custom_objects.update({o.__name__: o for o in custom_things})
+    del custom_things
+except NameError:
+    # somehow we can get here on doc build?
+    pass

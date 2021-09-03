@@ -80,7 +80,9 @@ def compute_nlist(
         sorted=False,
         return_types=False,
         exclusion_matrix=None):
-    ''' Computes particle pairwise neighbor lists.
+    ''' Computes particle pairwise neighbor lists. This is intended to be used
+    with parsing a trajectory, not while running a simulation. It is much slower than
+    to :py:meth:`.SimModel.mapped_nlist`, but doesn't require running hoomd.
 
     :param positions: Positions of the particles
     :type positions: N x 4 or N x 3 tensor
@@ -99,7 +101,6 @@ def compute_nlist(
         of bead particles in the system) indicating which pairs
         should be excluded from nlist
     :type exclusion_matrix: Tensor of dtype bools
-
 
     :return: An [N x NN x 4] tensor containing neighbor lists of all
         particles and index
@@ -473,9 +474,9 @@ def compute_cg_graph(
     import networkx as nx
     import json
 
-    dist_idx = []
-    ang_idx = []
-    dihe_idx = []
+    dist_idx = set({})
+    ang_idx = set({})
+    dihe_idx = set({})
     dist_list = []
 
     if DSGPM is True and infile is not None:
@@ -497,21 +498,20 @@ def compute_cg_graph(
         length = dict(nx.all_pairs_shortest_path_length(cg_grph))
 
         # find node connectivities from the CG graph
-        for i in range(cg_num):
-            for j in range(i + 1, cg_num):
+        for i in length:
+            for j in length[i]:
                 cg_l = length[i][j]
                 if cg_l == 1:
-                    dist_idx.append((i, j))
+                    dist_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 2:
-                    ang_idx.append((i, j))
-
+                    ang_idx.add(tuple(sorted((i, j))))
                 elif cg_l == 3:
-                    dihe_idx.append((i, j))
+                    dihe_idx.add(tuple(sorted((i, j))))
 
         # find indices of bonded pairs
-        for x in range(len(dist_idx)):
-            r_source = dist_idx[x][0]
-            r_target = dist_idx[x][1]
+        for pair in dist_idx: 
+            r_source = pair[0]
+            r_target = pair[1]
             dist_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -523,9 +523,9 @@ def compute_cg_graph(
 
         # find indices of angles-making nodes
         ang_list = []
-        for x in range(len(ang_idx)):
-            a_source = ang_idx[x][0]
-            a_target = ang_idx[x][1]
+        for pair in ang_idx:
+            a_source = pair[0]
+            a_target = pair[1]
             ang_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -536,9 +536,9 @@ def compute_cg_graph(
 
         # find indices of dihedral-making nodes
         dih_list = []
-        for x in range(len(dihe_idx)):
-            d_source = dihe_idx[x][0]
-            d_target = dihe_idx[x][1]
+        for pair in dihe_idx:
+            d_source = pair[0]
+            d_target = pair[1]
             dih_list.append(
                 list(
                     nx.all_shortest_paths(
@@ -814,12 +814,12 @@ def mol_angle(
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
-    :param b1: index of first CG bead
-    :type b1: int
-    :param b2: index of second CG bead
-    :type b2: int
-    :param b3: index of third CG bead
-    :type b3: int
+    :param b1: indices of first set of CG beads
+    :type b1: list of ints
+    :param b2: indices of second set of CG beads
+    :type b2: list of int
+    :param b3: indices of third set of CG beads
+    :type b3: list of ints
     :param box: low, high coordinates and tilt vectors of the box
     :type box: [3,3] array
 
@@ -851,16 +851,21 @@ def mol_angle(
         raise ValueError('cg_positions not found.')
 
     if CG is True and cg_positions is not None:
-        v_ij = cg_positions[b2] - cg_positions[b1]
-        v_jk = cg_positions[b3] - cg_positions[b2]
+        v_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1)
+        v_jk = tf.gather(cg_positions, indices=b3) - tf.gather(cg_positions, indices=b2)
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
-        cos_a = np.dot(wrap_vij, wrap_vjk)
-        cos_a = np.divide(
-            cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
-
-        cg_angles = np.arccos(cos_a)
-        return cg_angles
+        if type(cg_positions) == tf.Tensor:
+            cos_a = tf.reduce_sum(wrap_vij * wrap_vjk)
+            cos_a = tf.divide(cos_a, tf.norm(wrap_vij) * tf.norm(wrap_vjk))
+            cg_angles = tf.math.acos(cos_a)
+            return cg_angles
+        else:
+            cos_a = np.dot(wrap_vij, wrap_vjk)
+            cos_a = np.divide(
+                cos_a, (np.linalg.norm(wrap_vij) * np.linalg.norm(wrap_vjk)))
+            cg_angles = np.arccos(cos_a)
+            return cg_angles
 
 
 def mol_bond_distance(
@@ -887,10 +892,10 @@ def mol_bond_distance(
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
-    :param b1: index of first CG bead
-    :type b1: int
-    :param b2: index of second CG bead
-    :type b2: int
+    :param b1: indcies of first set of CG beads
+    :type b1: list of ints
+    :param b2: indices of second set of CG beads
+    :type b2: list of ints
     :param box: low, high coordinates and tilt vectors of the box
     :type box: [3,3] array
 
@@ -912,9 +917,12 @@ def mol_bond_distance(
         raise ValueError('cg_positions not found')
 
     if CG is True and cg_positions is not None:
-        u_ij = cg_positions[b2] - cg_positions[b1]
+        u_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1)
         wrap_uij = hoomd.htf.wrap_vector(u_ij, box)
-        wrap_uij = np.linalg.norm(wrap_uij)
+        if type(cg_positions) == tf.Tensor:
+            wrap_uij = tf.norm(wrap_uij)
+        else:
+            wrap_uij = np.linalg.norm(wrap_uij)
         return wrap_uij
 
 
@@ -950,14 +958,14 @@ def mol_dihedral(
     :type CG: bool
     :param cg_positions: array of CG coordinates
     :type cg_positions: float
-    :param b1: index of first CG bead
-    :type b1: int
-    :param b2: index of second CG bead
-    :type b2: int
-    :param b3: index of third CG bead
-    :type b3: int
-    :param b4: index of fourth CG bead
-    :type b4: int
+    :param b1: indices of first set of CG beads
+    :type b1: list of ints
+    :param b2: indices of second set of CG beads
+    :type b2: list of ints
+    :param b3: indices of third set of CG beads
+    :type b3: list of ints
+    :param b4: indices of fourth set of CG beads
+    :type b4: list of ints
     :param box: low, high coordinates and tilt vectors of the box
     :type box: [3,3] array
 
@@ -995,27 +1003,37 @@ def mol_dihedral(
         raise ValueError('cg_positions not found.')
 
     if CG is True and cg_positions is not None:
-        v_ij = cg_positions[b2] - cg_positions[b1]
-        v_jk = cg_positions[b3] - cg_positions[b2]
-        v_kl = cg_positions[b4] - cg_positions[b3]
+        v_ij = tf.gather(cg_positions, indices=b2) - tf.gather(cg_positions, indices=b1) 
+        v_jk = tf.gather(cg_positions, indices=b3) - tf.gather(cg_positions, indices=b2) 
+        v_kl = tf.gather(cg_positions, indices=b4) - tf.gather(cg_positions, indices=b3) 
         wrap_vij = hoomd.htf.wrap_vector(v_ij, box)
         wrap_vjk = hoomd.htf.wrap_vector(v_jk, box)
         wrap_vkl = hoomd.htf.wrap_vector(v_kl, box)
 
-        n1 = np.cross(wrap_vij, wrap_vjk)
-        n2 = np.cross(wrap_vjk, wrap_vkl)
+        if type(cg_positions) == tf.Tensor:
+            n1 = tf.linalg.cross(wrap_vij, wrap_vjk)
+            n2 = tf.linalg.cross(wrap_vjk, wrap_vkl)
+            n1_norm = tf.norm(n1)
+            n2_norm = tf.norm(n2)
+            n1 = n1 / n1_norm
+            n2 = n2 / n2_norm
+            cos_d = n1 * n2
+            cg_dihedrals = tf.math.acos(cos_d)
+        else:
+            n1 = np.cross(wrap_vij, wrap_vjk)
+            n2 = np.cross(wrap_vjk, wrap_vkl)
 
-        n1_norm = np.linalg.norm(n1)
-        n2_norm = np.linalg.norm(n2)
+            n1_norm = np.linalg.norm(n1)
+            n2_norm = np.linalg.norm(n2)
 
-        if n1_norm == 0.0 or n2_norm == 0.0:
-            print(n1_norm, n2_norm)
-            raise ValueError('Vectors are linear')
+            if n1_norm == 0.0 or n2_norm == 0.0:
+                print(n1_norm, n2_norm)
+                raise ValueError('Vectors are linear')
 
-        n1 = n1 / n1_norm
-        n2 = n2 / n2_norm
-        cos_d = np.dot(n1, n2)
-        cg_dihedrals = np.arccos(cos_d)
+            n1 = n1 / n1_norm
+            n2 = n2 / n2_norm
+            cos_d = np.dot(n1, n2)
+            cg_dihedrals = np.arccos(cos_d)
         return cg_dihedrals
 
 

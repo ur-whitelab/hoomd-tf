@@ -100,7 +100,6 @@ ENDMACRO(copy_file)
 set(files
     __init__.py
     tensorflowcompute.py
-    tfarraycomm.py
     version.py
     layers.py
     simmodel.py

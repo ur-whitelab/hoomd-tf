@@ -1,0 +1,4 @@
+tensorflow>=2.3
+hoomd>=2.6.0
+mdanalysis<=1.1.1
+NetworkX

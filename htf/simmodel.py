@@ -29,12 +29,12 @@ class SimModel(tf.keras.Model):
             :type check_nlist: bool
             :param dtype: The floating point specification for model (e.g., ``tf.float32``)
             :type dtype: dtype
-
             '''
         super(SimModel, self).__init__(dtype=dtype, name=name)
         self.nneighbor_cutoff = nneighbor_cutoff
         self.output_forces = output_forces
         self.virial = virial
+        self._map_nlist = False
 
         # check if overridden
         if SimModel.compute == self.__class__.compute:
@@ -112,7 +112,7 @@ class SimModel(tf.keras.Model):
         :type box: tensor
 
         :param training: a boolean indicating if doing training or inference.
-        :type trainig: bool
+        :type training: bool
 
         :return: Tuple of tensors
 
@@ -151,6 +151,7 @@ class SimModel(tf.keras.Model):
         For  example:
 
         .. code:: python
+
             def compute(self, nlist):
                 if self.flag:
                     nlist *= 2
@@ -253,10 +254,67 @@ class SimModel(tf.keras.Model):
                 tf.cast(virial, dtype),
                 address=virial_addr)
 
+    def mapped_nlist(self, nlist):
+        R'''If :py:meth:`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the nlist into the all atom and mapped.
+
+        :param nlist: The ``nlist`` from py:meth:`.compute`
+        :type nlist: tensor
+
+        :return: Tuple of 2 tensors. First is all atom nlist. Second
+                 is the mapped nlist.
+        '''
+        if not self._map_nlist:
+            raise ValueError(
+                'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
+
+        return nlist[:self._map_i], nlist[self._map_i:]
+
+    def mapped_positions(self, positions):
+        R'''If :py:meth:`.tfcompute.enable_mapped_nlist` is called,
+        this method will split the positions into the all atom and mapped.
+
+        :param positions: The ``positions`` from py:meth:`.compute`
+        :type positions: tensor
+
+        :return: Tuple of 2 tensors. First is all atom positions. Second
+                 is the mapped positions.
+        '''
+        if not self._map_nlist:
+            raise ValueError(
+                'You must call tfcompute.enable_mapped_nlist before using mapped_nlist')
+
+        return positions[:self._map_i], positions[self._map_i:]
+
+    @tf.function
+    def precompute(self, dtype, positions_addr):
+        if self._map_nlist:
+            tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
+            tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
+            hoomd_to_tf_module = load_htf_op_library('hoomd2tf_op')
+            hoomd_to_tf = hoomd_to_tf_module.hoomd_to_tf
+
+            pos = hoomd_to_tf(
+                address=positions_addr,
+                shape=[4],
+                T=dtype,
+                name='pos-input-pre'
+            )
+            cg_pos = self._map_fxn(pos[:self._map_i])
+            # types will NOT be overwritten, so we do not need to add offset
+            new_pos = tf.concat((pos[:self._map_i], cg_pos), axis=0)
+            tf_to_hoomd(tf.cast(new_pos, dtype),
+                        address=positions_addr)
+
 
 class MolSimModel(SimModel):
     '''
-    A molecular batched py:class:`.SimModel`
+    A molecular batched :py:class:`.SimModel`
+
+    .. warning::
+        Hoomd re-orders positions to improve performance. MolSimModel will disable
+        this to keep a specific ordering of positions.
+
     '''
 
     def __init__(

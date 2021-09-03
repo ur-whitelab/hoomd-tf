@@ -29,7 +29,8 @@ class RBFExpansion(tf.keras.layers.Layer):
         super(RBFExpansion, self).__init__(name='rbf-layer')
         self.low = low
         self.high = high
-        self.centers = tf.cast(tf.linspace(low, high, count), dtype=tf.float32)
+        self.centers = tf.cast(tf.linspace(
+            float(low), float(high), count), dtype=tf.float32)
         self.gap = self.centers[1] - self.centers[0]
 
     def get_config(self):

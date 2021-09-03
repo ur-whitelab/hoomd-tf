@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install testing dependencies
-        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd scipy
+        pip install pytest-cov pytest-xdist jupyter notebook matplotlib gsd scipy pytest-benchmark
 
         # Install software dependencies
         pip install tensorflow==${{ matrix.tensorflow }}
@@ -52,7 +52,7 @@ jobs:
     - name: MDAnalysis Install
       if: matrix.md-analysis == 'true'
       run: |
-          pip install MDAnalysis
+          pip install "mdanalysis<2.0"
     - name: Download and install HTF
       run: |
         mkdir build && cd build
@@ -61,7 +61,7 @@ jobs:
         cd ..
     - name: Run tests
       run: |
-        pytest -v --forked
+        pytest
     - name: Run notebooks with MDAnalysis
       if: matrix.md-analysis == 'true'
       run: |
@@ -71,5 +71,5 @@ jobs:
       if: matrix.md-analysis == 'false'
       run: |
         cd examples
-        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "01. Quickstart.ipynb" "02. Preparing Coarse-grained Mapped Simulation.ipynb" "03. Experiment Directed Simulations.ipynb" "04. Particle Simulations.ipynb" "07. Molecules CG Mapping.ipynb" --to notebook --clear-output --output-dir='temp' --Application.log_level='ERROR'
+        jupyter nbconvert --ExecutePreprocessor.timeout=-1 --execute "01. Quickstart.ipynb" "02. Preparing Coarse-grained Mapped Simulation.ipynb" "03. Experiment Directed Simulations.ipynb" "04. Particle Simulations.ipynb" "11. Using External Models.ipynb" --to notebook --clear-output --output-dir='temp' --Application.log_level='ERROR'
         rm -rf temp

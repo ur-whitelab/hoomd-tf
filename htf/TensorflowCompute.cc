@@ -24,6 +24,7 @@ using namespace hoomd_tf;
     \param nneighs Maximum size for neighbors passed to TF
     \param force_mode Whether we should be computed forces in TF or sending them to TF
     \param period The period between TF updates
+    \param batch_size Batch size
  */
 template <TFCommMode M>
 TensorflowCompute<M>::TensorflowCompute(
@@ -50,7 +51,8 @@ TensorflowCompute<M>::TensorflowCompute(
       m_nneighs(nneighs),
       m_force_mode(force_mode),
       m_period(period),
-      m_batch_size(batch_size)
+      m_batch_size(batch_size),
+      m_b_mapped_nlist(false)
 {
     m_exec_conf->msg->notice(2)
         << "Starting TensorflowCompute "
@@ -130,6 +132,10 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
     int offset, N;
     if (timestep % m_period == 0)
     {
+        // only want to call for unbatched, otherwise ambiguous
+        if (m_batch_size == 0)
+            startUpdate();
+
         if (m_prof)
             m_prof->push("TensorflowCompute");
         // Batch the operations
@@ -149,7 +155,7 @@ void TensorflowCompute<M>::computeForces(unsigned int timestep)
                 // check again
                 if (m_nlist->getStorageMode() == NeighborList::half)
                 {
-                    m_exec_conf->msg->error() << "Must have full neigbhorlist" << std::endl;
+                    m_exec_conf->msg->error() << "Must have full neighbor list" << std::endl;
                     throw std::runtime_error("neighbor list wrong type");
                 }
                 // Update the neighborlist once
@@ -217,6 +223,28 @@ void TensorflowCompute<M>::finishUpdate(unsigned int batch_index)
     m_py_self.attr("_finish_update")(batch_index);
     if (m_prof)
         m_prof->pop();
+}
+
+template <TFCommMode M>
+void TensorflowCompute<M>::startUpdate()
+{
+    if (m_prof)
+        m_prof->push("TensorflowCompute<M>::Awaiting TF Pre-Update");
+    //assume no batching
+    if(m_b_mapped_nlist)
+        m_positions_comm.receiveArray(m_pdata->getPositions(), 0, 0, true);
+    m_py_self.attr("_start_update")();
+    if(m_b_mapped_nlist)
+        m_positions_comm.sendArray(m_pdata->getPositions(), true);
+    if (m_prof)
+        m_prof->pop();
+}
+
+template <TFCommMode M>
+void TensorflowCompute<M>::setMappedNlist(bool mn, unsigned int cg_typeid_start)
+{
+    m_b_mapped_nlist = mn;
+    m_cg_typeid_start = cg_typeid_start;
 }
 
 template <TFCommMode M>
@@ -315,7 +343,6 @@ void TensorflowCompute<M>::prepareNeighbors(unsigned int batch_offset, unsigned 
         // loop over all of the neighbors of this particle
         const unsigned int size = (unsigned int)h_n_neigh.data[i];
         unsigned int j = 0;
-
         for (; j < size; j++)
         {
 
@@ -409,6 +436,8 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
                             FORCE_MODE,
                             unsigned int,
                             unsigned int>())
+        .def("setMappedNlist",
+             &TensorflowCompute<TFCommMode::CPU>::setMappedNlist)
         .def("getPositionsBuffer",
              &TensorflowCompute<TFCommMode::CPU>::getPositionsBuffer,
              pybind11::return_value_policy::reference)
@@ -449,9 +478,11 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
              &TensorflowCompute<TFCommMode::CPU>::addReferenceForce)
 
         ;
+
     pybind11::enum_<FORCE_MODE>(m, "FORCE_MODE")
         .value("tf2hoomd", FORCE_MODE::tf2hoomd)
         .value("hoomd2tf", FORCE_MODE::hoomd2tf);
+
 }
 
 // ********************************
@@ -596,6 +627,8 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module &m)
                             FORCE_MODE,
                             unsigned int,
                             unsigned int>())
+        .def("setMappedNlist",
+             &TensorflowComputeGPU::setMappedNlist)
         .def("getPositionsBuffer",
              &TensorflowComputeGPU::getPositionsBuffer,
              pybind11::return_value_policy::reference)
