@@ -31,6 +31,9 @@ class tfcompute(hoomd.compute._compute):
         :type model: :py:class:`.SimModel`
         '''
         self.model = model
+        self.cpp_force = None
+        self._nlist = None
+        self.map_types = set()
 
     def attach(self, nlist=None, r_cut=0, period=1,
                batch_size=None, train=False, save_output_period=None):
@@ -58,8 +61,6 @@ class tfcompute(hoomd.compute._compute):
             if your model outputs forces or forces and virial, then
             these will not be present.
         :type save_output_period: int
-
-
         '''
         # make sure we're initialized, so we can have logging
         if not hoomd.init.is_initialized():
@@ -78,6 +79,7 @@ class tfcompute(hoomd.compute._compute):
         self.outputs = None
         self._calls = 0
         self._output_offset = 0
+
         if self.model.output_forces:
             self._output_offset = 1
         if self.model.virial:
@@ -95,7 +97,8 @@ class tfcompute(hoomd.compute._compute):
         self.train = train
 
         if self.batch_size > 0:
-            hoomd.context.msg.notice(2, 'Using fixed batching in htf\n')
+            hoomd.context.msg.notice(
+                2, 'Using fixed batching in htf. Precompute will not be called\n')
 
         if issubclass(type(self.model), MolSimModel):
             if self.batch_size != 0:
@@ -105,12 +108,7 @@ class tfcompute(hoomd.compute._compute):
                 raise ValueError('Molecular batches are '
                                  'not supported with spatial decomposition (MPI)')
             # Now we try to disable sorting
-            c = hoomd.context.current.sorter
-            if c is None:
-                hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
-                                         'Make sure you disable it to allow molecular batching')
-            else:
-                c.disable()
+            self._disable_sorter()
 
         # get neighbor cutoff
         self.nneighbor_cutoff = self.model.nneighbor_cutoff
@@ -119,6 +117,7 @@ class tfcompute(hoomd.compute._compute):
             nlist.subscribe(self.rcut)
             # activate neighbor list
             nlist.update_rcut()
+            self._nlist = nlist
         elif self.nneighbor_cutoff != 0:
             raise ValueError('Must provide an nlist if you have '
                              'nneighbor_cutoff > 0')
@@ -132,7 +131,8 @@ class tfcompute(hoomd.compute._compute):
             self.force_mode_code = _htf.FORCE_MODE.tf2hoomd
         hoomd.context.msg.notice(2, 'Force mode is {}'
                                  ' \n'.format(self.force_mode_code))
-        # initialize the reflected c++ class
+
+        # initialize the c++ class
         if not hoomd.context.exec_conf.isCUDAEnabled():
             if hoomd.htf._tf_on_gpu:
                 raise ValueError(
@@ -167,6 +167,12 @@ class tfcompute(hoomd.compute._compute):
         if self.cpp_force.isDoublePrecision():
             self.dtype = tf.float64
 
+        # enable mapped_nlists if that has been called
+        if self.model._map_nlist:
+            self.cpp_force.setMappedNlist(True, self._map_typeid_start)
+            # Now we try to disable sorting
+            self._disable_sorter()
+
         # set this so disable works
         self.cpp_compute = self.cpp_force
 
@@ -180,6 +186,79 @@ class tfcompute(hoomd.compute._compute):
             if integrator is None:
                 raise ValueError('Must have integrator set to receive forces')
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
+
+    def _disable_sorter(self):
+        c = hoomd.context.current.sorter
+        if c is None:
+            hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
+                                        'Make sure you disable it to allow molecular batching')
+        else:
+            c.disable()
+
+    def enable_mapped_nlist(self, system, mapping_fxn):
+        R''' Modifies existing snapshot to enable CG beads to
+        be in simulation simultaneously with AA so that CG bead nlists
+        can be accessed using hoomd's accelerated nlist methods. This must
+        be called in order to use :py:meth:`.SimModel.mapped_nlist` in a model.
+
+        .. warning::
+            Hoomd re-orders positions to improve performance. Calling this will disable
+            sorting to keep a specific ordering of positions necessary for CG mapping.
+
+        :param system: hoomd system
+        :type system: hoomd system
+        :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
+                            ``Nx4`` array of fine-grained positions and
+                            whose return value is an ``Mx4`` array
+                            of coarse-grained positions.
+        :type mapping_fxn: python callable
+        '''
+
+        # get snapshot and insert cg beads
+        snap = system.take_snapshot()
+        cg_pos = mapping_fxn(
+            snap.particles.position.astype(self.model.dtype))
+        M = cg_pos.shape[0]
+        AAN = snap.particles.N
+        aa_pos = snap.particles.position
+        aa_v = snap.particles.velocity
+        aa_t = snap.particles.typeid
+
+        map_typeid_start = np.max(snap.particles.typeid[M:]) + 1
+
+        snap.particles.resize(snap.particles.N + M)
+        snap.particles.typeid[AAN:] = cg_pos[:, 3] + map_typeid_start
+        for i in cg_pos[:, 3] + map_typeid_start:
+            self.map_types.add(int(i))
+
+        snap.particles.types = snap.particles.types + \
+            [f'M-{i}' for i in self.map_types]
+
+        for i in self.map_types:
+            system.particles.types.add(f'M-{i}')
+
+        # restore with new snapshot
+        system.restore_snapshot(snap)
+
+        # set-flag so model knows we're ready
+        if self.cpp_force:
+            self.cpp_force.setMappedNlist(True, map_typeid_start)
+
+        print(snap.particles.position)
+        # setup model attrs
+        self.model._map_nlist = True
+        self.model._map_fxn = mapping_fxn
+        self.model._map_i = AAN
+        self._map_typeid_start = map_typeid_start
+        # these are inclusive semantics
+        map_group = hoomd.group.tags(AAN, M + AAN - 1)
+        aa_group = hoomd.group.tags(0, AAN - 1)
+
+        if self._nlist is not None:
+            # update with new types
+            self._nlist.update_rcut()
+
+        return aa_group, map_group
 
     def set_reference_forces(self, *forces):
         R''' Sets the Hoomd reference forces to be used by TensorFlow.
@@ -215,9 +294,19 @@ class tfcompute(hoomd.compute._compute):
         r_cut_dict = hoomd.md.nlist.rcut()
         for i in range(0, ntypes):
             for j in range(i, ntypes):
-                # get the r_cut value
-                r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
+                # do not allow mapped to interact with AA
+                if bool(i in self.map_types) == bool(j in self.map_types):
+                    r_cut_dict.set_pair(type_list[i], type_list[j], self.r_cut)
+                else:
+                    # according to doc, negative radius prevents being on nlist
+                    r_cut_dict.set_pair(type_list[i], type_list[j], -1)
         return r_cut_dict
+
+    def _start_update(self):
+        ''' Perhaps suboptimal call to see if there is a precompute step.
+        '''
+        self.model.precompute(
+            self.dtype, self.cpp_force.getPositionsBuffer())
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.

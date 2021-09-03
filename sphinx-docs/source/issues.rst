@@ -63,7 +63,7 @@ Another approach is to clip gradients instead of using safe\_norm:
 
     optimizer = tf.train.AdamOptimizer(1e-4)
     gvs = optimizer.compute_gradients(cost)
-    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    capped_gvs = [(tf.clip_by_norm(grad, 1.0), var) for grad, var in gvs]
     train_op = optimizer.apply_gradients(capped_gvs)
 
 .. _neighbor_lists_issue:

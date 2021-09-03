@@ -17,5 +17,9 @@
 extern "C" cudaError_t htf_gpu_unstuff4(Scalar4 *arrray,
                                        unsigned int N,
                                        cudaStream_t stream);
-
+//! copies excluding w variable in gpu array
+extern "C" cudaError_t htf_gpu_copy3(Scalar4 *dest_arrray,
+       	   	       		       Scalar4 *src_arrray,
+                                       unsigned int N,
+                                       cudaStream_t stream);
 #endif // m_TF_ARRAY_COMM_CUH_

@@ -1,6 +1,18 @@
 Change Log
 ==========
 
+v2.4 (2021-07-26)
+--------------------
+
+*New Features*
+
+- Can compute mapped nlists/positions while running a simulation
+
+*Enhancements*
+
+- Added benchmarking to CI and reporting
+- Various documentation improvements
+
 v2.3 (2021-04-06)
 --------------------
 

@@ -129,6 +129,56 @@ namespace hoomd_tf
                 }
             }
 
+        /*! Copy contents of this array to given array
+         *  \param array the array whose contents to overwrite
+         * \param ignore4 Set to true if the 4th column should not be overwritten
+         */
+        void sendArray(const GlobalArray<T>& array, bool ignore4 = false)
+            {
+            unsigned int size = m_comm_struct.mem_size;
+            if (M == TFCommMode::CPU)
+                {
+                ArrayHandle<T> handle(*m_array,
+                    access_location::host,
+                    access_mode::read);
+                ArrayHandle<T> ohandle(array,
+                    access_location::host,
+                    access_mode::overwrite);
+                if(ignore4)
+                {
+                    for(unsigned int i = 0; i < size / sizeof(T); i++)
+                    {
+                        ohandle.data[i].x = handle.data[i].x;
+                        ohandle.data[i].y = handle.data[i].y;
+                        ohandle.data[i].z = handle.data[i].z;
+                    }
+                }
+                else
+                    memcpy(ohandle.data, handle.data, size);
+
+                }
+            else
+                {
+                #ifdef ENABLE_CUDA
+                    ArrayHandle<T> handle(*m_array,
+                        access_location::device,
+                        access_mode::read);
+                    ArrayHandle<T> ohandle(array,
+                        access_location::device,
+                        access_mode::overwrite);
+
+                    if(ignore4)
+		                htf_gpu_copy3(ohandle.data, handle.data, size / sizeof(T), m_comm_struct.stream);
+                    else
+                        cudaMemcpy(ohandle.data,
+                            handle.data,
+                            size,
+                            cudaMemcpyDeviceToDevice);
+                    CHECK_CUDA_ERROR();
+                #endif
+                }
+            }
+
         //! Set all values in an array to target value
         //! \param v target int value to fill array with
         void memsetArray(int v)

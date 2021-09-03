@@ -39,7 +39,7 @@ tbb-devel is required for HOOMD-blue when using the
 HOOMD-blue conda release. It is not automatically installed when
 installing HOOMD-blue, so use ``conda install -c conda-forge
 tbb-devel`` to install. The TensorFlow version should be
-TensorFlow 2.3 or 2.4 release. It is recommended you install via pip:
+TensorFlow 2.3 or above releases. It is recommended you install via pip:
 
 .. code:: bash
 
