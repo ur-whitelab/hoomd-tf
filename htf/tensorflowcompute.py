@@ -234,6 +234,8 @@ class tfcompute(hoomd.compute._compute):
         snap.particles.types = snap.particles.types + \
             [f'M-{i}' for i in self.map_types]
 
+        snap.particles.positions[AAN:] = cg_pos[:, :3]
+
         for i in self.map_types:
             system.particles.types.add(f'M-{i}')
 
@@ -244,7 +246,6 @@ class tfcompute(hoomd.compute._compute):
         if self.cpp_force:
             self.cpp_force.setMappedNlist(True, map_typeid_start)
 
-        print(snap.particles.position)
         # setup model attrs
         self.model._map_nlist = True
         self.model._map_fxn = mapping_fxn
