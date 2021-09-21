@@ -234,7 +234,7 @@ class tfcompute(hoomd.compute._compute):
         snap.particles.types = snap.particles.types + \
             [f'M-{i}' for i in self.map_types]
 
-        snap.particles.positions[AAN:] = cg_pos[:, :3]
+        snap.particles.position[AAN:] = cg_pos[:, :3]
 
         for i in self.map_types:
             system.particles.types.add(f'M-{i}')
