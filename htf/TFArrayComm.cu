@@ -7,7 +7,7 @@
 */
 
 extern "C" __global__
-void htf_gpu_unstuff4_kerenl(Scalar4 *array, unsigned int N)
+void htf_gpu_unstuff4_kernel(Scalar4 *array, unsigned int N)
     {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if ( i < N)
@@ -22,14 +22,14 @@ cudaError_t htf_gpu_unstuff4(Scalar4 *array, unsigned int m_N, cudaStream_t s)
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    htf_gpu_unstuff4_kerenl<<< grid, threads, 0, s >>>(array, m_N);
+    htf_gpu_unstuff4_kernel<<< grid, threads, 0, s >>>(array, m_N);
 
     // this method always succeds.
     return cudaSuccess;
     }
 
 extern "C" __global__
-void htf_gpu_copy3_kerenl(Scalar4 *dest_array, Scalar4* src_array, unsigned int N)
+void htf_gpu_copy3_kernel(Scalar4 *dest_array, Scalar4* src_array, unsigned int N)
     {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if ( i < N)
@@ -49,7 +49,7 @@ cudaError_t htf_gpu_copy3(Scalar4 *dest_array, Scalar4* src_array, unsigned int 
     dim3 threads(block_size, 1, 1);
 
     // run the kernel
-    htf_gpu_copy3_kerenl<<< grid, threads, 0, s >>>(dest_array, src_array, m_N);
+    htf_gpu_copy3_kernel<<< grid, threads, 0, s >>>(dest_array, src_array, m_N);
 
     // this method always succeds.
     return cudaSuccess;
