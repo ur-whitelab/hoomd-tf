@@ -245,6 +245,8 @@ class tfcompute(hoomd.compute._compute):
         # set-flag so model knows we're ready
         if self.cpp_force:
             self.cpp_force.setMappedNlist(True, map_typeid_start)
+            # manually force it to set positions
+            self.cpp_force.StartUpdate()
 
         # setup model attrs
         self.model._map_nlist = True
@@ -258,6 +260,7 @@ class tfcompute(hoomd.compute._compute):
         if self._nlist is not None:
             # update with new types
             self._nlist.update_rcut()
+        
 
         return aa_group, map_group
 
