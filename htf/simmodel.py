@@ -318,14 +318,14 @@ class SimModel(tf.keras.Model):
             if vtf >= parse_version('2.4'):
                 box = tf.SparseTensor(
                     indices=[[0, 0, 0],
-                            [0, 0, 1],
-                            [0, 0, 2],
-                            [0, 1, 0],
-                            [0, 1, 1],
-                            [0, 1, 2],
-                            [0, 2, 0],
-                            [0, 2, 1],
-                            [0, 2, 2]],
+                             [0, 0, 1],
+                             [0, 0, 2],
+                             [0, 1, 0],
+                             [0, 1, 1],
+                             [0, 1, 2],
+                             [0, 2, 0],
+                             [0, 2, 1],
+                             [0, 2, 2]],
                     values=tf.reshape(box, (-1,)),
                     dense_shape=(tf.shape(pos)[0], 3, 3)
                 )
