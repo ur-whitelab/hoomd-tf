@@ -219,7 +219,7 @@ class tfcompute(hoomd.compute._compute):
         snap = system.take_snapshot()
         cg_pos = mapping_fxn(
             snap.particles.position.astype(self.model.dtype),
-            [snap.Lx, snap.Ly, snap.Lz])
+            [snap.box.Lx, snap.box.Ly, snap.box.Lz])
         M = cg_pos.shape[0]
         AAN = snap.particles.N
         aa_pos = snap.particles.position
