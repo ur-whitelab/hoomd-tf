@@ -308,7 +308,7 @@ class tfcompute(hoomd.compute._compute):
         ''' Perhaps suboptimal call to see if there is a precompute step.
         '''
         self.model.precompute(
-            self.dtype, self.cpp_force.getPositionsBuffer())
+            self.dtype, self.cpp_force.getPositionsBuffer(), self.cpp_force.getBoxBuffer())
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.
