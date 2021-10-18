@@ -287,7 +287,7 @@ class SimModel(tf.keras.Model):
         return positions[:self._map_i], positions[self._map_i:]
 
     @tf.function
-    def precompute(self, dtype, positions_addr):
+    def precompute(self, dtype, positions_addr, box_addr):
         if self._map_nlist:
             tf_to_hoomd_module = load_htf_op_library('tf2hoomd_op')
             tf_to_hoomd = tf_to_hoomd_module.tf_to_hoomd
@@ -300,7 +300,39 @@ class SimModel(tf.keras.Model):
                 T=dtype,
                 name='pos-input-pre'
             )
-            cg_pos = self._map_fxn(pos[:self._map_i])
+
+            box = hoomd_to_tf(
+                address=box_addr,
+                shape=[3],
+                T=dtype,
+                name='box-input'
+            )
+
+            # check box skew
+            tf.Assert(tf.less(tf.reduce_sum(box[2]), 0.0001), ['box is skewed'])
+
+            # for TF2.4.1 we hack the box to have leading batch dimension
+            # because TF has 4k backlogged issues
+            # get and parse the version of the detected TF version
+            vtf = parse_version(tf.__version__)
+            if vtf >= parse_version('2.4'):
+                box = tf.SparseTensor(
+                    indices=[[0, 0, 0],
+                             [0, 0, 1],
+                             [0, 0, 2],
+                             [0, 1, 0],
+                             [0, 1, 1],
+                             [0, 1, 2],
+                             [0, 2, 0],
+                             [0, 2, 1],
+                             [0, 2, 2]],
+                    values=tf.reshape(box, (-1,)),
+                    dense_shape=(tf.shape(pos)[0], 3, 3)
+                )
+
+            bs = box_size(box)
+
+            cg_pos = self._map_fxn(pos[:self._map_i], bs)
             # types will NOT be overwritten, so we do not need to add offset
             new_pos = tf.concat((pos[:self._map_i], cg_pos), axis=0)
             tf_to_hoomd(tf.cast(new_pos, dtype),

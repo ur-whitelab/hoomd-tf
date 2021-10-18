@@ -207,17 +207,19 @@ class tfcompute(hoomd.compute._compute):
 
         :param system: hoomd system
         :type system: hoomd system
-        :param mapping_fxn: a function whose signature is ``f(positions)`` where positions is an
-                            ``Nx4`` array of fine-grained positions and
-                            whose return value is an ``Mx4`` array
-                            of coarse-grained positions.
+        :param mapping_fxn: a function whose signature is ``f(positions, box)`` where
+                            positions is an ``Nx4`` array of fine-grained positions and
+                            box is a list containing Lx, Ly, and Lz of the simulation box,
+                            and whose return value is an ``Mx4`` array of
+                            coarse-grained positions.
         :type mapping_fxn: python callable
         '''
 
         # get snapshot and insert cg beads
         snap = system.take_snapshot()
         cg_pos = mapping_fxn(
-            snap.particles.position.astype(self.model.dtype))
+            snap.particles.position.astype(self.model.dtype),
+            [snap.box.Lx, snap.box.Ly, snap.box.Lz])
         M = cg_pos.shape[0]
         AAN = snap.particles.N
         aa_pos = snap.particles.position
@@ -306,7 +308,7 @@ class tfcompute(hoomd.compute._compute):
         ''' Perhaps suboptimal call to see if there is a precompute step.
         '''
         self.model.precompute(
-            self.dtype, self.cpp_force.getPositionsBuffer())
+            self.dtype, self.cpp_force.getPositionsBuffer(), self.cpp_force.getBoxBuffer())
 
     def _finish_update(self, batch_index):
         ''' Allow TF to read output and we wait for it to finish.

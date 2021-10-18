@@ -182,7 +182,7 @@ class CustomNlist(htf.SimModel):
 
 
 class MappedNlist(htf.SimModel):
-    def my_map(pos):
+    def my_map(pos, box):
         x = tf.reduce_mean(pos[:, :3], axis=0, keepdims=True)
         cg1 = tf.concat((x, tf.zeros((1, 1), dtype=x.dtype)), -1)
         cg2 = tf.convert_to_tensor([[0, 0, 0.1, 1]], dtype=x.dtype)
