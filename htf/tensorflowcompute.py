@@ -239,6 +239,8 @@ class tfcompute(hoomd.compute._compute):
         for i in self.map_types:
             system.particles.types.add(f'M-{i}')
 
+        snap.particles.position[AAN:] = cg_pos[:,:3]
+
         # restore with new snapshot
         system.restore_snapshot(snap)
 
