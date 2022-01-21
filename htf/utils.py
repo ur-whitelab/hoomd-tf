@@ -71,7 +71,6 @@ def compute_ohe_bead_type_interactions(pos_btype, nlist_btype, n_btypes):
     total_interactions = n_btypes * (n_btypes - 1) // 2 + n_btypes
     return tf.one_hot(one_hot_indices, depth=total_interactions)
 
-
 def compute_nlist(
         positions,
         r_cut,

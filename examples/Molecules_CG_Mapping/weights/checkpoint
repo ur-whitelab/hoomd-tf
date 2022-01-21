@@ -1,0 +1,2 @@
+model_checkpoint_path: "weights_epoch_20_lr_0.001_l1_0.1"
+all_model_checkpoint_paths: "weights_epoch_20_lr_0.001_l1_0.1"
