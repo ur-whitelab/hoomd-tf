@@ -12,11 +12,13 @@ set(_${COMPONENT_NAME}_sources
     TensorflowCompute.cc
     TFArrayComm.cc
     )
-
+  
+if(ENABLE_CUDA)
 set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
     TFArrayComm.cu
     )
+endif(ENABLE_CUDA
 
   # check if we have python dependencies for compiling
   set(TF_REQUIRE_COMPILER "")
@@ -38,12 +40,12 @@ endif()
 # Need to define NO_IMPORT_ARRAY in every file but module.cc
 set_source_files_properties(${_${COMPONENT_NAME}_sources} ${_${COMPONENT_NAME}_cu_sources} PROPERTIES COMPILE_DEFINITIONS NO_IMPORT_ARRAY)
 
-if(ENABLE_CUDA)
-CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
-endif(ENABLE_CUDA)
+#if(ENABLE_CUDA)
+#CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
+#endif(ENABLE_CUDA)
 
-add_library (_${COMPONENT_NAME}_static STATIC ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES})
-pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_CUDA_GENERATED_FILES} NO_EXTRAS)
+add_library (_${COMPONENT_NAME}_static STATIC ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources})
+pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources} NO_EXTRAS)
 # add visilibty flag, which is missing from hoomd?
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
