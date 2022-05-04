@@ -78,7 +78,7 @@ endif(ENABLE_CUDA)
 
 # install the library
 install(TARGETS _${COMPONENT_NAME}
-        LIBRARY DESTINATION ${PYTHON_MODULE_BASE_DIR}/${COMPONENT_NAME}
+        LIBRARY DESTINATION ${PYTHON_SITE_INSTALL_DIR}/${COMPONENT_NAME}
         )
 
 ##############################
@@ -109,7 +109,7 @@ set(files
     )
 
 install(FILES ${files}
-        DESTINATION ${PYTHON_MODULE_BASE_DIR}/${COMPONENT_NAME}
+        DESTINATION ${PYTHON_SITE_INSTALL_DIR}/${COMPONENT_NAME}
        )
 
 foreach(file ${files})
