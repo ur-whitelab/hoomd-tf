@@ -40,7 +40,7 @@ add_library (_${SUB_COMPONENT_NAME} SHARED ${_${SUB_COMPONENT_NAME}_sources} ${_
 message(STATUS "HOOMD_TF_CUDA_C++_FLAGS: ${TF_CFLAGS}")
 target_compile_options(_${SUB_COMPONENT_NAME} PRIVATE ${TF_CFLAGS})
 target_link_libraries(_${SUB_COMPONENT_NAME} ${TF_LFLAGS})
-target_link_libraries(_${SUB_COMPONENT_NAME} ${HOOMD_LIBRARIES})
+target_link_libraries(_${SUB_COMPONENT_NAME} HOOMD::_hoomd)
 
 
 # install the library

@@ -59,7 +59,7 @@ endif()
 if(NOT HOOMD_MD_LIB)
   set(HOOMD_MD_LIB _md)
 endif()
-target_link_libraries(_${COMPONENT_NAME} PRIVATE ${HOOMD_MD_LIB} ${HOOMD_LIBRARIES})
+target_link_libraries(_${COMPONENT_NAME} PRIVATE HOOMD::_md HOOMD::_hoomd)
 
 # if we are compiling with MPI support built in, set appropriate
 # compiler/linker flags
