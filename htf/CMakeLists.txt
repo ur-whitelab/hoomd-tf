@@ -112,9 +112,7 @@ install(FILES ${files}
         DESTINATION ${PYTHON_SITE_INSTALL_DIR}/${COMPONENT_NAME}
        )
 
-foreach(file ${files})
-    copy_file(${file})
-endforeach()
+copy_files_to_build("${files}" "${COMPONENT_NAME}" "*.py")
 
 add_custom_target(copy_${COMPONENT_NAME} ALL DEPENDS ${files})
 
