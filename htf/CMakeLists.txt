@@ -18,7 +18,7 @@ set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
     TFArrayComm.cu
     )
-endif(ENABLE_CUDA
+endif(ENABLE_CUDA)
 
   # check if we have python dependencies for compiling
   set(TF_REQUIRE_COMPILER "")
