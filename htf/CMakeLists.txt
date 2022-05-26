@@ -13,12 +13,12 @@ set(_${COMPONENT_NAME}_sources
     TFArrayComm.cc
     )
   
-if(ENABLE_CUDA)
+if(ENABLE_HIP)
 set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
     TFArrayComm.cu
     )
-endif(ENABLE_CUDA)
+endif(ENABLE_HIP)
 
   # check if we have python dependencies for compiling
   set(TF_REQUIRE_COMPILER "")
@@ -73,9 +73,9 @@ if(ENABLE_MPI)
    endif(MPI_LINK_FLAGS)
 endif(ENABLE_MPI)
 
-if(ENABLE_CUDA)
+if(ENABLE_HIP)
 fix_cudart_rpath(_${COMPONENT_NAME})
-endif(ENABLE_CUDA)
+endif(ENABLE_HIP)
 
 # install the library
 install(TARGETS _${COMPONENT_NAME}
