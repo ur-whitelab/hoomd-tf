@@ -60,7 +60,7 @@ if(NOT HOOMD_MD_LIB)
   set(HOOMD_MD_LIB _md)
 endif()
 target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_hoomd)
-target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_md)
+#target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_md)
 
 # if we are compiling with MPI support built in, set appropriate
 # compiler/linker flags
