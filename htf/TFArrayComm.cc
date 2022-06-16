@@ -1,9 +1,9 @@
 // Copyright (c) 2020 HOOMD-TF Developers
 
 #include "TFArrayComm.h"
-#include <hoomd/extern/pybind/include/pybind11/pybind11.h>
-#include <hoomd/extern/pybind/include/pybind11/stl.h>
-#include <hoomd/extern/pybind/include/pybind11/stl_bind.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 namespace hoomd_tf
 {

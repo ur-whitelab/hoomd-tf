@@ -4,7 +4,7 @@
 #include "TensorflowCompute.h"
 #include "TFArrayComm.h"
 
-#include <hoomd/extern/pybind/include/pybind11/pybind11.h>
+#include <pybind11/pybind11.h>
 
 using namespace hoomd_tf;
 
