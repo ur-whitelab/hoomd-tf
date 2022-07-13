@@ -96,7 +96,7 @@ namespace hoomd_tf
 
         //! Returns log value of specified quantity at chosen timestep
         Scalar getLogValue(const std::string &quantity,
-                           unsigned int timestep) override;
+                           unsigned int timestep);
 
         //! Returns address of TFArrayComm object holding forces
         int64_t getForcesBuffer() const;
@@ -267,7 +267,7 @@ namespace hoomd_tf
              *  \param enable whether to use autotuner
              *  \param period period with which to use autotuner
              */
-        void setAutotunerParams(bool enable, unsigned int period) override;
+        void setAutotunerParams(bool enable, unsigned int period);
 
     protected:
         /*! GPU version calls CPU reallocate and resets cudaStreams for comm objects
@@ -277,17 +277,17 @@ namespace hoomd_tf
 
         //! invokes a kernel version of prepareNeighbors
         //! \sa TensorflowCompute::prepareNeighbors()
-        void prepareNeighbors(unsigned int offset, unsigned int batch_size) override;
+        void prepareNeighbors(unsigned int offset, unsigned int batch_size);
 
         /*! Use a GPU kernel to transfer the virial values
              *  \sa TensorflowCompute::receiveVirial()
              */
-        void receiveVirial(unsigned int offset, unsigned int batch_size) override;
+        void receiveVirial(unsigned int offset, unsigned int batch_size);
 
         /*! Use a GPU kernel to add up reference forces
              *  \sa TensorflowCompute::sumReferenceForces()
              */
-        void sumReferenceForces() override;
+        void sumReferenceForces();
 
     private:
         std::unique_ptr<Autotuner> m_tuner; //! Autotuner for block size
