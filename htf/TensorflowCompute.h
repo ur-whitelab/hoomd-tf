@@ -58,7 +58,7 @@ namespace hoomd_tf
         HalfStepHookWrapper(T &f) : m_f(f) {}
 
         //! override update from HOOMD to compute TF forces also
-        void update(unsigned int timestep) override
+        void update(uint64_t timestep) override
         {
             m_f.computeForces(timestep);
         }
