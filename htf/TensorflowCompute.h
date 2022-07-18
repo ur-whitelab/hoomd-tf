@@ -141,7 +141,7 @@ namespace hoomd_tf
         std::vector<Scalar> getVirialArray() const;
 
         //! Dispatches computation of forces according to FORCE_MODE
-        virtual void computeForces(unsigned int timestep) override;
+        virtual void computeForces(uint64_t timestep) override;
 
         //! Get the memory pitch of the virial
         unsigned int getVirialPitch() const { return m_virial.getPitch(); }

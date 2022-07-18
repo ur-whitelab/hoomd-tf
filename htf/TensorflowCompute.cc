@@ -127,7 +127,7 @@ TensorflowCompute<M>::~TensorflowCompute() {}
     \param timestep Current time step of the simulation
 */
 template <TFCommMode M>
-void TensorflowCompute<M>::computeForces(unsigned int timestep)
+void TensorflowCompute<M>::computeForces(uint64_t timestep)
 {
     int offset, N;
     if (timestep % m_period == 0)
