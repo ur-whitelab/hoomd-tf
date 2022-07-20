@@ -1,7 +1,7 @@
 # Maintainer: Andrew White
 
 if(NOT BUILD_MD)
-    message(FATAL_ERROR "MPCD package cannot be built without MD.")
+    message(FATAL_ERROR "HOOMD-TF package cannot be built without MD.")
 endif(NOT BUILD_MD)
 
 set(COMPONENT_NAME htf)
@@ -12,19 +12,21 @@ set(_${COMPONENT_NAME}_sources
     TensorflowCompute.cc
     TFArrayComm.cc
     )
-  
-if(ENABLE_HIP)
+
 set(_${COMPONENT_NAME}_cu_sources
     TensorflowCompute.cu
     TFArrayComm.cu
     )
+  
+if(ENABLE_HIP)
+set(_cuda_sources ${_${COMPONENT_NAME}_cu_sources))
 endif(ENABLE_HIP)
 
-  # check if we have python dependencies for compiling
-  set(TF_REQUIRE_COMPILER "")
-  if(NOT IGNORE_HTF_COMPILER)
-    set(TF_REQUIRE_COMPILER ${CMAKE_CXX_COMPILER_VERSION})
-  endif()
+# check if we have python dependencies for compiling
+set(TF_REQUIRE_COMPILER "")
+if(NOT IGNORE_HTF_COMPILER)
+  set(TF_REQUIRE_COMPILER ${CMAKE_CXX_COMPILER_VERSION})
+endif()
 set(TF_REQUIRE_VERSION "2.3")
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -W ignore ${CMAKE_CURRENT_SOURCE_DIR}/check_tf_version.py ${TF_REQUIRE_VERSION} ${TF_REQUIRE_COMPILER}
     RESULT_VARIABLE ret)
@@ -44,8 +46,10 @@ set_source_files_properties(${_${COMPONENT_NAME}_sources} ${_${COMPONENT_NAME}_c
 #CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
 #endif(ENABLE_CUDA)
 
-add_library (_${COMPONENT_NAME}_static STATIC ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources})
+
 pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources} NO_EXTRAS)
+# alias into the HOOMD namespace so that plugins and symlinked components both work
+add_library (HOOMD::_${COMPONENT_NAME} ALIAS _${COMPONENT_NAME})
 # add visilibty flag, which is missing from hoomd?
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
@@ -60,7 +64,7 @@ if(NOT HOOMD_MD_LIB)
   set(HOOMD_MD_LIB _md)
 endif()
 target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_hoomd)
-#target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_md)
+target_link_libraries(_${COMPONENT_NAME} PUBLIC HOOMD::_md)
 
 # if we are compiling with MPI support built in, set appropriate
 # compiler/linker flags
