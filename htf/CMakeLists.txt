@@ -19,7 +19,7 @@ set(_${COMPONENT_NAME}_cu_sources
     )
   
 if(ENABLE_HIP)
-  set(_cuda_sources ${_${COMPONENT_NAME}_cu_sources)
+  set(_cuda_sources ${_${COMPONENT_NAME}_cu_sources})
 endif(ENABLE_HIP)
 
 # check if we have python dependencies for compiling
