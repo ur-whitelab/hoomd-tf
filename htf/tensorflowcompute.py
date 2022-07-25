@@ -17,7 +17,7 @@ import hoomd.htf
 import tensorflow as tf
 
 
-class tfcompute(hoomd.compute._compute):
+class tfcompute(hoomd.md.compute.Compute):
     R'''
     The main class for applying :py:class:`.SimModel`
     to Hoomd simulation.
@@ -123,7 +123,7 @@ class tfcompute(hoomd.compute._compute):
                              'nneighbor_cutoff > 0')
         hoomd.util.print_status_line()
         # initialize base class
-        hoomd.compute._compute.__init__(self)
+        hoomd.md.compute.Compute.__init__(self)
 
         # check if we are outputting forces
         self.force_mode_code = _htf.FORCE_MODE.hoomd2tf
