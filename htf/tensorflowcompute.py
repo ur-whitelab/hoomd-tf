@@ -12,7 +12,7 @@ import os
 import time
 import hoomd
 import hoomd.md.nlist
-import hoomd.comm
+import hoomd.communicator
 import hoomd.htf
 import tensorflow as tf
 
@@ -104,7 +104,7 @@ class tfcompute(hoomd.compute._compute):
             if self.batch_size != 0:
                 raise ValueError(
                     'Cannot batch by molecule and by batch_number')
-            if hoomd.comm.get_num_ranks() > 1:
+            if hoomd.communicator._current_communicator.num_ranks > 1:
                 raise ValueError('Molecular batches are '
                                  'not supported with spatial decomposition (MPI)')
             # Now we try to disable sorting
