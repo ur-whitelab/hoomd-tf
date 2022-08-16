@@ -26,7 +26,7 @@ def test_lj_benchmark(benchmark):
     NN = 64
     model = LJModel(NN)
     tfcompute = htf.tfcompute(model)
-    hoomd.context.initialize('')
+    hoomd.device.CPU()
     rcut = 3.0
     sqrt_N = int(np.sqrt(N))
 

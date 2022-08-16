@@ -10,7 +10,7 @@ class test_force_gpu(unittest.TestCase):
     def test_force_overwrite(self):
         model = build_examples.BenchmarkNonlistModel(0)
         tfcompute = hoomd.htf.tfcompute(model)
-        hoomd.context.initialize('--mode=gpu')
+        hoomd.device.GPU()
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[32, 32])

@@ -37,7 +37,7 @@ def compute_forces(system, rcut):
 
 class test_access(unittest.TestCase):
     def setUp(self):
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -72,7 +72,7 @@ class test_access(unittest.TestCase):
 
 class test_compute(unittest.TestCase):
     def setUp(self):
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -356,7 +356,7 @@ class test_compute(unittest.TestCase):
                               for j in range(N)])
         tf_forces = np.array(tf_forces)
         # now run with stock lj
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=3.0),
             n=[5, 5])
@@ -399,7 +399,7 @@ class test_compute(unittest.TestCase):
 
     def test_force_output(self):
         Ne = 5
-        c = hoomd.context.initialize('')
+        c = hoomd.device.CPU('')
         model = build_examples.LJModel(32, output_forces=False)
         model.compile(loss='MeanSquaredError')
         tfcompute = htf.tfcompute(model)
@@ -646,7 +646,7 @@ class test_compute(unittest.TestCase):
             thermo_scalars.append([log.query('potential_energy'
                                              ), log.query('pressure')])
         # now run with stock lj
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
@@ -675,7 +675,7 @@ class test_mol_batching(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        self.c = hoomd.context.initialize('')
+        self.c = hoomd.device.CPU('')
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -775,7 +775,7 @@ class test_mol_batching(unittest.TestCase):
 
 class test_saving(unittest.TestCase):
     def setUp(self):
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -822,7 +822,7 @@ class test_bad_models(unittest.TestCase):
 class test_nlist(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
 
     def tearDown(self):
         shutil.rmtree(self.tmp)

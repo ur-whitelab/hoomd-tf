@@ -8,7 +8,7 @@ import tensorflow as tf
 
 class test_layers(unittest.TestCase):
     def test_wca(self):
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         model = build_examples.WCA(32)
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
@@ -23,7 +23,7 @@ class test_layers(unittest.TestCase):
         hoomd.run(10)
 
     def test_rbf(self):
-        hoomd.context.initialize('')
+        hoomd.device.CPU('')
         rbf = htf.RBFExpansion(0, 2, 10)
         nlist = tf.ones((10, 6, 3))
         r = htf.safe_norm(nlist, axis=2)

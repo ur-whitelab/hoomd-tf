@@ -13,7 +13,7 @@ class test_mappings(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         # build system using example from hoomd
-        hoomd.context.initialize('')
+        hoomd.device.CPU()
         snapshot = hoomd.data.make_snapshot(N=10,
                                             box=hoomd.data.boxdim(Lx=10,
                                                                   Ly=0.5,
@@ -400,7 +400,7 @@ class test_mappings(unittest.TestCase):
 
     def test_nlist_compare(self):
         rcut = 5.0
-        c = hoomd.context.initialize('')
+        c = hoomd.device.CPU()
         # disable sorting
         if c.sorter is not None:
             c.sorter.disable()
@@ -446,7 +446,7 @@ class test_bias(unittest.TestCase):
 
     def test_eds(self):
         T = 1000
-        hoomd.context.initialize('')
+        hoomd.device.CPU()
         model = build_examples.EDSModel(0, set_point=4.0)
         tfcompute = hoomd.htf.tfcompute(model)
         hoomd.init.create_lattice(
@@ -471,7 +471,7 @@ class test_mol_properties(unittest.TestCase):
         test_gsd = os.path.join(os.path.dirname(__file__), 'meth.gsd')
         # g = gsd.hoomd.open(test_gsd)
         set_rcut = 6.0
-        c = hoomd.context.initialize('')
+        c = hoomd.device.CPU()
         system = hoomd.init.read_gsd(filename=test_gsd)
         c.sorter.disable()
         mol_indices = hoomd.htf.find_molecules(system)

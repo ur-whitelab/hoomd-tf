@@ -14,6 +14,8 @@ Using Positions
 Hoomd re-orders positions to improve performance. If you are using CG
 mappings that rely on ordering of positions, be sure to disable this:
 
+TODO: update this with new sorter disable method (and examples notebooks)
+
 .. code:: python
 
     c = hoomd.context.initialize()
