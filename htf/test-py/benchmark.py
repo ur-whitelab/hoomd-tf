@@ -8,6 +8,7 @@ def test_lj_benchmark(benchmark):
     import hoomd.group
     import numpy as np
     import tensorflow as tf
+    from build_examples import generic_square_lattice
 
     class LJModel(htf.SimModel):
         def compute(self, nlist, positions, box):
@@ -26,13 +27,16 @@ def test_lj_benchmark(benchmark):
     NN = 64
     model = LJModel(NN)
     tfcompute = htf.tfcompute(model)
-    hoomd.device.CPU()
+    device = hoomd.device.CPU()
     rcut = 3.0
     sqrt_N = int(np.sqrt(N))
 
-    system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
-                                       n=[sqrt_N, sqrt_N])
+    system = generic_square_lattice(
+        lattice_constant=2.0,
+        n_replicas=[sqrt_N, sqrt_N],
+        device=device)
     nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
+    #TODO: update syntax
     # basic LJ forces from Hoomd
     lj = hoomd.md.pair.lj(rcut, nlist)
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -45,4 +49,4 @@ def test_lj_benchmark(benchmark):
                      r_cut=rcut)
 
     # train on 1k timesteps
-    benchmark.pedantic(hoomd.run, (1000,), rounds=5, iterations=1)
+    benchmark.pedantic(sim.run, (1000,), rounds=5, iterations=1)

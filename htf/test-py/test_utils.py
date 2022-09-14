@@ -400,13 +400,14 @@ class test_mappings(unittest.TestCase):
 
     def test_nlist_compare(self):
         rcut = 5.0
-        c = hoomd.device.CPU()
-        # disable sorting
+        device = hoomd.device.CPU()
+        # TODO: disable sorting
         if c.sorter is not None:
             c.sorter.disable()
         # want to have a big enough system so that we actually have a cutoff
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.bcc(a=4.0),
-                                           n=[4, 4, 4])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                                    n_replicas=[4, 4, 4],
+                                                    device=device)
 
         model = build_examples.CustomNlist(32, output_forces=False)
         model.r_cut = rcut
@@ -414,13 +415,14 @@ class test_mappings(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell()
         lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+        #TODO: update syntax
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
         tfcompute.attach(nlist, r_cut=rcut,
                          save_output_period=100, train=False)
         # add lj so we can hopefully get particles mixing
-        hoomd.run(101)
+        sim.run(101)
         # the two nlists need to be sorted to be compared
         nlist = tfcompute.outputs[0]
         cnlist = tfcompute.outputs[1]
@@ -445,18 +447,20 @@ class test_bias(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def test_eds(self):
-        T = 1000
-        hoomd.device.CPU()
+        nsteps = 1000
+        device = hoomd.device.CPU()
         model = build_examples.EDSModel(0, set_point=4.0)
         tfcompute = hoomd.htf.tfcompute(model)
-        hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=[3, 3],
+            device=device)
+        #TODO: update syntax
         hoomd.md.integrate.mode_standard(dt=0.05)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=0.2, seed=2)
         tfcompute.attach(save_output_period=10)
-        hoomd.run(T)
+        hoomd.run(nsteps)
         assert np.isfinite(np.mean(tfcompute.outputs[0]))
         assert (model.cv_avg.result().numpy() - 4)**2 < 0.5
 

@@ -17,7 +17,7 @@ def run_tf_lj(N, T, device):
     rcut = 5.0
     sim = build_exaples.generic_square_lattice(
         lattice_constant=4.0,
-        n_replicas=np.sqrt(N).astype(np.int),
+        n_replicas=np.ones(2)*np.sqrt(N).astype(np.int),
         device=device)
     nlist = md.nlist.Cell()
     md.integrate.mode_standard(dt=0.005)
@@ -38,7 +38,7 @@ def run_tf_lj(N, T, device):
 def run_hoomd_lj(N, T, device):
     sim = build_exaples.generic_square_lattice(
         lattice_constant=4.0,
-        n_replicas=np.sqrt(N).astype(np.int),
+        n_replicas=np.ones(2)*np.sqrt(N).astype(np.int),
         device=device)
     nlist = md.nlist.Cell()
     #TODO: syntax update
