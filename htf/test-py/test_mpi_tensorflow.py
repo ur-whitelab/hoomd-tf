@@ -11,45 +11,49 @@ import tempfile
 import shutil
 
 
-def run_tf_lj(N, T):
+def run_tf_lj(N, T, device):
     model = build_examples.LJModel(256)
     tfcompute = hoomd.htf.tfcompute(model)
     rcut = 5.0
-    system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                 n=[np.sqrt(N).astype(np.int),
-                                    np.sqrt(N).astype(np.int)])
+    sim = build_exaples.generic_square_lattice(
+        lattice_constant=4.0,
+        n_replicas=np.sqrt(N).astype(np.int),
+        device=device)
     nlist = md.nlist.Cell()
     md.integrate.mode_standard(dt=0.005)
+    #TODO: syntax update
     md.integrate.nvt(group=hoomd.group.all(),
                      kT=1, tau=0.2).randomize_velocities(seed=1)
     tfcompute.attach(nlist, r_cut=rcut)
-    hoomd.run(2)
+    sim.run(2)
     tf_forces = []
     for i in range(T):
-        hoomd.run(1)
-        snapshot = system.take_snapshot()
-        tf_forces.append([system.particles[j].net_force for j in range(N)])
+        sim.run(1)
+        snapshot = sim.state.get_snapshot()
+        tf_forces.append([system.state.particles[j].net_force for j in range(N)])
     tf_forces = np.array(tf_forces)
     return tf_forces
 
 
-def run_hoomd_lj(N, T):
-    system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                 n=[np.sqrt(N).astype(np.int),
-                                    np.sqrt(N).astype(np.int)])
+def run_hoomd_lj(N, T, device):
+    sim = build_exaples.generic_square_lattice(
+        lattice_constant=4.0,
+        n_replicas=np.sqrt(N).astype(np.int),
+        device=device)
     nlist = md.nlist.Cell()
+    #TODO: syntax update
     md.integrate.mode_standard(dt=0.005)
     md.integrate.nvt(group=hoomd.group.all(),
                      kT=1, tau=0.2).randomize_velocities(seed=1)
     lj = md.pair.lj(r_cut=5.0, nlist=nlist)
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
 
-    hoomd.run(2)
+    sim.run(2)
     lj_forces = []
     for i in range(T):
-        hoomd.run(1)
-        snapshot = system.take_snapshot()
-        lj_forces.append([system.particles[j].net_force for j in range(N)])
+        sim.run(1)
+        snapshot = sim.state.get_snapshot()
+        lj_forces.append([sim.state.particles[j].net_force for j in range(N)])
     lj_forces = np.array(lj_forces)
     return lj_forces
 
@@ -65,12 +69,12 @@ class test_mpi(unittest.TestCase):
         params = [{'nx': 2}, {'x': [0.33]}]
         for p in params:
             with self.subTest(decomp=p):
-                hoomd.device.CPU('')
+                device = hoomd.device.CPU('')
                 comm.decomposition(**p)
-                tf_forces = run_tf_lj(N, T)
-                hoomd.device.CPU('')
+                tf_forces = run_tf_lj(N, T, device)
+                device = hoomd.device.CPU('')
                 comm.decomposition(**p)
-                hoomd_forces = run_hoomd_lj(N, T)
+                hoomd_forces = run_hoomd_lj(N, T, device)
                 print(N, T, tf_forces.shape)
                 for i in range(T):
                     for j in range(N):

@@ -3,7 +3,6 @@
 import hoomd
 import hoomd.md
 import hoomd.htf as htf
-import gsd.hoomd
 import unittest
 import os
 import tempfile
@@ -18,9 +17,9 @@ import build_examples
 from hoomd.htf.simmodel import _make_reverse_indices
 
 
-def compute_forces(system, rcut):
+def compute_forces(sim, rcut):
     '''1 / r^2 force'''
-    snapshot = system.take_snapshot()
+    snapshot = sim.State.get_snapshot()
     position = snapshot.particles.position
     N = len(position)
     forces = np.zeros((N, 3))
@@ -35,7 +34,6 @@ def compute_forces(system, rcut):
                 forces[j, :] -= f
     return forces
 
-
 class test_access(unittest.TestCase):
     def setUp(self):
         self.device = hoomd.device.CPU('')
@@ -48,7 +46,7 @@ class test_access(unittest.TestCase):
         model = build_examples.SimplePotential(32)
         tfcompute = htf.tfcompute(model)
         rcut = 3
-        # create a system with a few types
+        # create a 3D system with a few types
         snap = gsd.hoomd.Snapshot()
         snap.particles.N = 3
         snap.particles.types = ['A', 'B', 'C']
@@ -63,7 +61,7 @@ class test_access(unittest.TestCase):
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
         hoomd.md.Integrator(dt=0.005, methods=[nve])
         tfcompute.attach(nlist, r_cut=rcut)
-        hoomd.run(1)
+        sim.run(1)
         tfcompute.get_virial_array()
         tfcompute.get_forces_array()
         pa = tfcompute.get_positions_array()
@@ -75,7 +73,7 @@ class test_access(unittest.TestCase):
 
 class test_compute(unittest.TestCase):
     def setUp(self):
-        hoomd.device.CPU('')
+        self.device = hoomd.device.CPU('')
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -87,9 +85,9 @@ class test_compute(unittest.TestCase):
         rcut = 5.0
         model = build_examples.SimplePotential(NN)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+            n_replicas=3, device=self.device)
+
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -97,12 +95,12 @@ class test_compute(unittest.TestCase):
 
         tfcompute.attach(nlist, r_cut=rcut)
         # use these to throw off timesteps
-        hoomd.run(1)
-        hoomd.run(1)
+        sim.run(1)
+        sim.run(1)
         for i in range(3):
-            py_forces = compute_forces(system, rcut)
+            py_forces = compute_forces(sim, rcut)
             for j in range(N):
-                np.testing.assert_allclose(system.particles[j].net_force,
+                np.testing.assert_allclose(sim.state.particles[j].net_force,
                                            py_forces[j, :], atol=1e-5)
             hoomd.run(100)
 
@@ -112,9 +110,9 @@ class test_compute(unittest.TestCase):
         rcut = 5.0
         model = build_examples.SimplePotential(NN)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -134,9 +132,9 @@ class test_compute(unittest.TestCase):
     def test_nonlist(self):
         model = build_examples.BenchmarkNonlistModel(0)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[32, 32])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=32, device=self.device)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -146,9 +144,9 @@ class test_compute(unittest.TestCase):
     def test_full_batch(self):
         model = build_examples.BenchmarkNonlistModel(0)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[32, 32])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=32, device=self.device)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -163,8 +161,8 @@ class test_compute(unittest.TestCase):
         start = model.get_layer('lj').trainable_weights[0].numpy()
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0, n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -186,9 +184,9 @@ class test_compute(unittest.TestCase):
 
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -209,9 +207,9 @@ class test_compute(unittest.TestCase):
 
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -243,9 +241,9 @@ class test_compute(unittest.TestCase):
 
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -279,9 +277,9 @@ class test_compute(unittest.TestCase):
         rcut = 5.0
         model = build_examples.PrintModel(NN)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -297,9 +295,9 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
@@ -313,9 +311,9 @@ class test_compute(unittest.TestCase):
     def test_wrap(self):
         model = build_examples.WrapModel(0, output_forces=False)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
         tfcompute.attach()
@@ -324,9 +322,9 @@ class test_compute(unittest.TestCase):
     def test_skew_fails(self):
         model = build_examples.WrapModel(0, output_forces=False)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         hoomd.update.box_resize(xy=0.5)
         hoomd.run(1)
         hoomd.md.integrate.mode_standard(dt=0.005)
@@ -341,9 +339,9 @@ class test_compute(unittest.TestCase):
         T = 10
         N = 5 * 5
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=3.0),
-            n=[5, 5])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=3.0,
+            n_replicas=5, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
@@ -359,10 +357,9 @@ class test_compute(unittest.TestCase):
                               for j in range(N)])
         tf_forces = np.array(tf_forces)
         # now run with stock lj
-        hoomd.device.CPU('')
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=3.0),
-            n=[5, 5])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=3.0,
+            n_replicas=5, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2
@@ -388,9 +385,9 @@ class test_compute(unittest.TestCase):
         model = build_examples.LJRunningMeanModel(32)
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all()
@@ -402,14 +399,15 @@ class test_compute(unittest.TestCase):
 
     def test_force_output(self):
         Ne = 5
-        c = hoomd.device.CPU('')
+        c = self.device
         model = build_examples.LJModel(32, output_forces=False)
         model.compile(loss='MeanSquaredError')
         tfcompute = htf.tfcompute(model)
         rcut = 3.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=2.0),
-            n=[Ne, Ne])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=2.0,
+            n_replicas=Ne, device=self.device)
+        #TODO: figure out how to do this with new syntax
         c.sorter.disable()
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.01)
@@ -437,9 +435,9 @@ class test_compute(unittest.TestCase):
         model = build_examples.LJRDF(32)
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -494,9 +492,9 @@ class test_compute(unittest.TestCase):
             loss='MeanSquaredError')
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -511,9 +509,9 @@ class test_compute(unittest.TestCase):
         model = build_examples.TrainModel(4, dim=1, top_neighs=2)
         tfcompute = htf.tfcompute(model)
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -539,9 +537,9 @@ class test_compute(unittest.TestCase):
         NN = N - 1
         T = 10
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -568,9 +566,9 @@ class test_compute(unittest.TestCase):
         NN = N - 1
         T = 10
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
@@ -592,9 +590,9 @@ class test_compute(unittest.TestCase):
 
         model = build_examples.MappedNlist(NN, output_forces=False)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         self.assertEqual(len(system.particles), N)
         aa_group, mapped_group = tfcompute.enable_mapped_nlist(
             system, build_examples.MappedNlist.my_map)
@@ -630,9 +628,9 @@ class test_compute(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
@@ -649,10 +647,9 @@ class test_compute(unittest.TestCase):
             thermo_scalars.append([log.query('potential_energy'
                                              ), log.query('pressure')])
         # now run with stock lj
-        hoomd.device.CPU('')
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[3, 3])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1,
@@ -678,7 +675,7 @@ class test_mol_batching(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        self.c = hoomd.device.CPU('')
+        self.device = hoomd.device.CPU('')
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -687,8 +684,8 @@ class test_mol_batching(unittest.TestCase):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                           n_replicas=3, device=self.device)
 
         mol_indices = htf.find_molecules(system)
         model = build_examples.LJMolModel(
@@ -697,18 +694,19 @@ class test_mol_batching(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-        assert self.c.sorter.enabled
+        #TODO: figure out how to do this with new syntax
+        assert self.device.sorter.enabled
         tfcompute.attach(nlist, r_cut=rcut)
         # make sure tfcompute disabled the sorting
-        assert not self.c.sorter.enabled
+        assert not self.device.sorter.enabled
         hoomd.run(8)
 
     def test_single_atom_batched(self):
         N = 3 * 3
         NN = N - 1
         rcut = 5.0
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                           n_replicas=3, device=self.device)
 
         mol_indices = htf.find_molecules(system)
         model = build_examples.LJMolModel(
@@ -733,8 +731,8 @@ class test_mol_batching(unittest.TestCase):
             MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
             nneighbor_cutoff=NN)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                           n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
@@ -749,8 +747,8 @@ class test_mol_batching(unittest.TestCase):
             MN=3, mol_indices=[[0, 1, 2], [3, 4], [5, 6, 7], [8]],
             nneighbor_cutoff=NN, output_forces=False)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                           n_replicas=3, device=self.device)
         nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
@@ -778,7 +776,7 @@ class test_mol_batching(unittest.TestCase):
 
 class test_saving(unittest.TestCase):
     def setUp(self):
-        hoomd.device.CPU('')
+        self.device = hoomd.device.CPU('')
         self.tmp = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -787,8 +785,8 @@ class test_saving(unittest.TestCase):
     def test_tensor_save(self):
         model = build_examples.TensorSaveModel(0, output_forces=False)
         tfcompute = htf.tfcompute(model)
-        system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
-                                           n=[3, 3])
+        sim = build_examples.generic_square_lattice(lattice_constant=4.0,
+                                           n_replicas=3, device=self.device)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         tfcompute.attach(batch_size=3, save_output_period=2)
@@ -825,7 +823,7 @@ class test_bad_models(unittest.TestCase):
 class test_nlist(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        hoomd.device.CPU('')
+        self.device = hoomd.device.CPU('')
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -838,9 +836,9 @@ class test_nlist(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         T = 10
         rcut = 10.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[8, 8])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=8, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
@@ -856,9 +854,9 @@ class test_nlist(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         T = 10
         rcut = 10.0
-        system = hoomd.init.create_lattice(
-            unitcell=hoomd.lattice.sq(a=4.0),
-            n=[8, 8])
+        sim = build_examples.generic_square_lattice(
+            lattice_constant=4.0,
+            n_replicas=8, device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
