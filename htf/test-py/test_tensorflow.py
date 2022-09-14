@@ -49,17 +49,17 @@ class test_access(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         rcut = 3
         # create a system with a few types
-        snap = gsd.hoomd.Snaphsot()
+        snap = gsd.hoomd.Snapshot()
         snap.particles.N = 3
-        snap.particles.type = ['A', 'B', 'C']
+        snap.particles.types = ['A', 'B', 'C']
         snap.particles.typeid = [0, 1, 2]
         snap.particles.position = [[2, 2, 2], [1, 3, 1], [3, 1, 1]]
-        snap.configuration.box = [6, 6, 6]
+        snap.configuration.box = [6, 6, 6, 0, 0, 0]
         sim = hoomd.Simulation(self.device)
         sim.create_state_from_snapshot(snap)
         sim.state.replicate(5, 5, 5)
 
-        nlist = hoomd.md.nlist.cell(rebuild_check_delay=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
         hoomd.md.Integrator(dt=0.005, methods=[nve])
         tfcompute.attach(nlist, r_cut=rcut)
