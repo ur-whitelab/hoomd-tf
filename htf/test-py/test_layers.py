@@ -15,7 +15,7 @@ class test_layers(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)

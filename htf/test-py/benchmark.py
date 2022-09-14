@@ -32,7 +32,7 @@ def test_lj_benchmark(benchmark):
 
     system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=2.0),
                                        n=[sqrt_N, sqrt_N])
-    nlist = hoomd.md.nlist.cell(check_period=1)
+    nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
     # basic LJ forces from Hoomd
     lj = hoomd.md.pair.lj(rcut, nlist)
     lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)

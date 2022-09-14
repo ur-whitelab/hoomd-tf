@@ -411,7 +411,7 @@ class test_mappings(unittest.TestCase):
         model = build_examples.CustomNlist(32, output_forces=False)
         model.r_cut = rcut
         tfcompute = hoomd.htf.tfcompute(model)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         hoomd.md.integrate.mode_standard(dt=0.001)
@@ -477,7 +477,7 @@ class test_mol_properties(unittest.TestCase):
         mol_indices = hoomd.htf.find_molecules(system)
         model = build_examples.MolFeatureModel(8, mol_indices, 32)
         tfcompute = hoomd.htf.tfcompute(model)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         # set-up pppm
         charged = hoomd.group.all()
         pppm = hoomd.md.charge.pppm(nlist=nlist, group=charged)

@@ -90,7 +90,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -115,7 +115,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -165,7 +165,7 @@ class test_compute(unittest.TestCase):
         rcut = 5.0
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0), n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -189,7 +189,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -212,7 +212,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -246,7 +246,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=2, seed=2)
@@ -282,7 +282,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(kT=4, seed=1)
@@ -300,7 +300,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nve(group=hoomd.group.all())
         tfcompute.attach(nlist, r_cut=rcut)
@@ -344,7 +344,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=3.0),
             n=[5, 5])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2
@@ -363,7 +363,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=3.0),
             n=[5, 5])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
@@ -391,7 +391,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all()
                                ).randomize_velocities(seed=1, kT=0.8)
@@ -411,7 +411,7 @@ class test_compute(unittest.TestCase):
             unitcell=hoomd.lattice.sq(a=2.0),
             n=[Ne, Ne])
         c.sorter.disable()
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.01)
         lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -440,7 +440,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -476,7 +476,7 @@ class test_compute(unittest.TestCase):
                                    [6, 7], [7, 8], [8, 9]]
         snapshot.replicate(3, 3, 3)
         system = hoomd.init.read_snapshot(snapshot)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -497,7 +497,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -514,7 +514,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -542,7 +542,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -571,7 +571,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(group=hoomd.group.all(
         )).randomize_velocities(seed=1, kT=0.8)
@@ -603,7 +603,7 @@ class test_compute(unittest.TestCase):
         assert len(mapped_group) == 2
         # 2 CG sites
         self.assertEqual(len(system.particles), N + CGN)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.001)
         hoomd.md.integrate.nve(
             group=aa_group).randomize_velocities(seed=1, kT=0.8)
@@ -633,7 +633,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2).randomize_velocities(seed=1)
@@ -653,7 +653,7 @@ class test_compute(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[3, 3])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1,
                                tau=0.2).randomize_velocities(seed=1)
@@ -694,7 +694,7 @@ class test_mol_batching(unittest.TestCase):
         model = build_examples.LJMolModel(
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
         tfcompute = htf.tfcompute(model)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         assert self.c.sorter.enabled
@@ -714,7 +714,7 @@ class test_mol_batching(unittest.TestCase):
         model = build_examples.LJMolModel(
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
         tfcompute = htf.tfcompute(model)
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         with self.assertRaises(ValueError):
@@ -735,7 +735,7 @@ class test_mol_batching(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         tfcompute.attach(nlist, r_cut=rcut)
@@ -751,7 +751,7 @@ class test_mol_batching(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         system = hoomd.init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                            n=[3, 3])
-        nlist = hoomd.md.nlist.cell()
+        nlist = hoomd.md.nlist.Cell()
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         tfcompute.attach(nlist, r_cut=rcut)
@@ -841,7 +841,7 @@ class test_nlist(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[8, 8])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2
@@ -859,7 +859,7 @@ class test_nlist(unittest.TestCase):
         system = hoomd.init.create_lattice(
             unitcell=hoomd.lattice.sq(a=4.0),
             n=[8, 8])
-        nlist = hoomd.md.nlist.cell(check_period=1)
+        nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         hoomd.md.integrate.mode_standard(dt=0.005)
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2
