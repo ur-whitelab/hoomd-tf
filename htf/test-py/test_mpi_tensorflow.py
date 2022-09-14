@@ -18,7 +18,7 @@ def run_tf_lj(N, T):
     system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                  n=[np.sqrt(N).astype(np.int),
                                     np.sqrt(N).astype(np.int)])
-    nlist = md.nlist.cell()
+    nlist = md.nlist.Cell()
     md.integrate.mode_standard(dt=0.005)
     md.integrate.nvt(group=hoomd.group.all(),
                      kT=1, tau=0.2).randomize_velocities(seed=1)
@@ -37,7 +37,7 @@ def run_hoomd_lj(N, T):
     system = init.create_lattice(unitcell=hoomd.lattice.sq(a=4.0),
                                  n=[np.sqrt(N).astype(np.int),
                                     np.sqrt(N).astype(np.int)])
-    nlist = md.nlist.cell()
+    nlist = md.nlist.Cell()
     md.integrate.mode_standard(dt=0.005)
     md.integrate.nvt(group=hoomd.group.all(),
                      kT=1, tau=0.2).randomize_velocities(seed=1)
