@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import pickle
 import glob
+import gsd.hoomd
 import numpy as np
 import math
 import tensorflow as tf

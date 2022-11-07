@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 import os
+import hoomd
 import gsd.hoomd
 import hoomd.htf as htf
 import pickle
