@@ -2,9 +2,32 @@
 
 import tensorflow as tf
 import os
+import gsd.hoomd
 import hoomd.htf as htf
 import pickle
 
+def generic_square_lattice(lattice_constant, n_replicas, device):
+    '''Helper function to make a 2D square lattice of generic "A" particles.
+    :param lattice_constant: lattice vector in HOOMD distance units.
+    :type lattice_constant: float
+
+    :param n_replicas: number of times to replicate the lattice in both directions.
+    :type n_replicas: list of (2 or 3) integers
+
+    :param device: HOOMD device that will be used for system configuration
+    :type device: HOOMD device (e.g. from 'hoomd.device.CPU()')
+
+    :return: simulation object with initial lattice positions of generic particles'''
+    snap = gsd.hoomd.Snapshot()
+    snap.particles.N = 1
+    snap.particles.types = ['A']
+    snap.particles.typeid = [1]
+    snap.particles.position = [[lattice_constant/2, lattice_constant/2, lattice_constant/2]]
+    snap.configuration.box = [lattice_constant, lattice_constant, lattice_constant, 0, 0, 0]
+    sim = hoomd.Simulation(device)
+    sim.create_state_from_snapshot(snap)
+    sim.state.replicate(*n_replicas)
+    return sim
 
 class SimplePotential(htf.SimModel):
     def compute(self, nlist, positions):
