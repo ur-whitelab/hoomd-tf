@@ -90,9 +90,10 @@ class test_compute(unittest.TestCase):
             n_replicas=[3,3], device=self.device)
 
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
 
         tfcompute.attach(nlist, r_cut=rcut)
         # use these to throw off timesteps
@@ -115,9 +116,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3])
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         # use these to throw off timesteps
@@ -136,9 +138,10 @@ class test_compute(unittest.TestCase):
         sim = build_examples.generic_square_lattice(
             lattice_constant=4.0,
             n_replicas=[32,32], device=self.device)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach()
         hoomd.run(10)
 
@@ -148,9 +151,10 @@ class test_compute(unittest.TestCase):
         sim = build_examples.generic_square_lattice(
             lattice_constant=4.0,
             n_replicas=[32,32], device=self.device)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(batch_size=None)
         hoomd.run(10)
 
@@ -165,9 +169,10 @@ class test_compute(unittest.TestCase):
         sim = build_examples.generic_square_lattice(
             lattice_constant=4.0, n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4, train=True)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.1, sigma=0.9)
@@ -189,9 +194,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
 
@@ -212,9 +218,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
 
@@ -246,9 +253,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=2, seed=2)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
 
@@ -282,9 +290,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(kT=4, seed=1)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         for i in range(3):
@@ -300,9 +309,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all())
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
         tfcompute.attach(nlist, r_cut=rcut)
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         for i in range(3):
             hoomd.run(1)
             for j in range(N):
@@ -315,9 +325,10 @@ class test_compute(unittest.TestCase):
         sim = build_examples.generic_square_lattice(
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all())
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
         tfcompute.attach()
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         hoomd.run(1)
 
     def test_skew_fails(self):
@@ -328,9 +339,10 @@ class test_compute(unittest.TestCase):
             n_replicas=[3,3], device=self.device)
         hoomd.update.box_resize(xy=0.5)
         hoomd.run(1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nve(group=hoomd.group.all())
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
         tfcompute.attach()
+        hoomd.md.Integrator(methods=[nve], dt=0.005)
         with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(1)
 
@@ -344,10 +356,11 @@ class test_compute(unittest.TestCase):
             lattice_constant=3.0,
             n_replicas=[5,5], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+        
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(20)
         tf_forces = []
@@ -362,9 +375,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=3.0,
             n_replicas=[5,5], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2
+        
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         hoomd.run(20)
@@ -390,9 +404,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all()
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All()
                                ).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
         result = model.avg_energy.result().numpy()
@@ -411,13 +426,14 @@ class test_compute(unittest.TestCase):
         #TODO: figure out how to do this with new syntax
         c.sorter.disable()
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.01)
+        
         lj = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         lj2 = hoomd.md.pair.lj(r_cut=rcut, nlist=nlist)
         lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.01)
         tfcompute.attach(nlist, train=True, r_cut=rcut, period=100)
         tfcompute.set_reference_forces(lj)
         hoomd.run(300)
@@ -440,9 +456,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
         rdf = model.avg_rdf.result().numpy()
@@ -476,9 +493,10 @@ class test_compute(unittest.TestCase):
         snapshot.replicate(3, 3, 3)
         system = hoomd.init.read_snapshot(snapshot)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(10)
         rdfa = model.avg_rdfa.result().numpy()
@@ -497,9 +515,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, train=True, r_cut=rcut, batch_size=4)
         hoomd.run(10)
 
@@ -514,9 +533,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=1)
         hoomd.run(1)
         assert tfcompute.outputs[0][-1] != 0
@@ -542,9 +562,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         log = hoomd.analyze.log(filename=None,
                                 quantities=['potential_energy',
                                             'kinetic_energy'], period=1)
@@ -571,9 +592,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(group=hoomd.group.all(
+        
+        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         )).randomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(1)  # in lattice, should have 4 neighbors
         nl = tfcompute.get_nlist_array()
@@ -603,9 +625,10 @@ class test_compute(unittest.TestCase):
         # 2 CG sites
         self.assertEqual(len(system.particles), N + CGN)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.001)
-        hoomd.md.integrate.nve(
-            group=aa_group).randomize_velocities(seed=1, kT=0.8)
+        
+        nve = hoomd.md.methods.NVE(
+            filter=aa_filter)Arandomize_velocities(seed=1, kT=0.8)
+        hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
         positions = tfcompute.outputs[0].reshape(-1, N + CGN, 4)
@@ -633,9 +656,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+        
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         log = hoomd.analyze.log(filename=None, quantities=[
             'potential_energy', 'pressure'], period=1)
@@ -652,9 +676,10 @@ class test_compute(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1,
+        
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1,
                                tau=0.2).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
         log = hoomd.analyze.log(filename=None,
@@ -693,10 +718,11 @@ class test_mol_batching(unittest.TestCase):
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
         tfcompute = htf.tfcompute(model)
         nlist = hoomd.md.nlist.Cell()
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        dt=0.005
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
         #TODO: figure out how to do this with new syntax
         assert self.device.sorter.enabled
+        hoomd.md.Integrator(dt=dt, methods=[nvt])
         tfcompute.attach(nlist, r_cut=rcut)
         # make sure tfcompute disabled the sorting
         assert not self.device.sorter.enabled
@@ -841,10 +867,11 @@ class test_nlist(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[8,8], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
+        hoomd.md.integrate.mode_standard(
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005))
         tfcompute.attach(nlist, r_cut=rcut)
         with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(2)
@@ -859,10 +886,11 @@ class test_nlist(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[8,8], device=self.device)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        hoomd.md.integrate.mode_standard(dt=0.005)
-        hoomd.md.integrate.nvt(group=hoomd.group.all(),
+        
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2
                                ).randomize_velocities(seed=1)
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(10)
 

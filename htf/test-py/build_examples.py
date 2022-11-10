@@ -22,7 +22,7 @@ def generic_square_lattice(lattice_constant, n_replicas, device):
     snap = gsd.hoomd.Snapshot()
     snap.particles.N = 1
     snap.particles.types = ['A']
-    snap.particles.typeid = [1]
+    snap.particles.typeid = [0]
     snap.particles.position = [[lattice_constant/2, lattice_constant/2, lattice_constant/2]]
     snap.configuration.box = [lattice_constant, lattice_constant, lattice_constant, 0, 0, 0]
     sim = hoomd.Simulation(device)
