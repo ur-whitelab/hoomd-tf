@@ -35,7 +35,7 @@ class tfcompute(hoomd.md.compute.Compute):
         self._nlist = None
         self.map_types = set()
 
-    def attach(self, nlist=None, r_cut=0, period=1,
+    def attach(self, nlist=None, r_cut=0, period=1, device=None,
                batch_size=None, train=False, save_output_period=None):
         R''' Attaches the TensorFlow instance to Hoomd.
         This method sets up TensorFlow and
@@ -47,6 +47,8 @@ class tfcompute(hoomd.md.compute.Compute):
         :type r_cut: float
         :param period: How many Hoomd steps should pass before updating the TensorFlow model.
         :type period: int
+        :param device: HOOMD device on which simulation will be running.
+        :type device: hoomd.device.Device
         :param batch_size: The size of batches if we are using batching.
             Cannot be used if molecule-wise batching is active.
         :type batch_size: int
@@ -63,8 +65,8 @@ class tfcompute(hoomd.md.compute.Compute):
         :type save_output_period: int
         '''
         # make sure we're initialized, so we can have logging
-        if not hoomd.init.is_initialized():
-            raise RuntimeError('Must initialize hoomd first')
+        if device is None:
+            raise RuntimeError('Must initialize hoomd device first')
 
         self.enabled = True
         self.log = True
