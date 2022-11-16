@@ -255,14 +255,14 @@ class tfcompute(hoomd.md.compute.Compute):
         self.model._map_i = AAN
         self._map_typeid_start = map_typeid_start
         # these are inclusive semantics
-        map_group = hoomd.group.tags(AAN, M + AAN - 1)
-        aa_group = hoomd.group.tags(0, AAN - 1)
+        map_filter = hoomd.filter.Tags(AAN, M + AAN - 1)
+        aa_filter = hoomd.filter.Tags(0, AAN - 1)
 
         if self._nlist is not None:
             # update with new types
             self._nlist.update_rcut()
 
-        return aa_group, map_group
+        return aa_filter, map_filter
 
     def set_reference_forces(self, *forces):
         R''' Sets the Hoomd reference forces to be used by TensorFlow.
