@@ -7,7 +7,7 @@ import gsd.hoomd
 import hoomd.htf as htf
 import pickle
 
-def generic_square_lattice(lattice_constant, n_replicas, device):
+def generic_square_lattice(lattice_constant, n_replicas, device, seed=42):
     '''Helper function to make a 2D square lattice of generic "A" particles.
     :param lattice_constant: lattice vector in HOOMD distance units.
     :type lattice_constant: float
@@ -18,6 +18,9 @@ def generic_square_lattice(lattice_constant, n_replicas, device):
     :param device: HOOMD device that will be used for system configuration
     :type device: HOOMD device (e.g. from 'hoomd.device.CPU()')
 
+    :param seed: RNG seed to use for the resultant HOOMD sim object
+    :type seed: integer
+
     :return: simulation object with initial lattice positions of generic particles'''
     snap = gsd.hoomd.Snapshot()
     snap.particles.N = 1
@@ -25,7 +28,7 @@ def generic_square_lattice(lattice_constant, n_replicas, device):
     snap.particles.typeid = [0]
     snap.particles.position = [[lattice_constant/2, lattice_constant/2, lattice_constant/2]]
     snap.configuration.box = [lattice_constant, lattice_constant, lattice_constant, 0, 0, 0]
-    sim = hoomd.Simulation(device)
+    sim = hoomd.Simulation(device, seed=seed)
     sim.create_state_from_snapshot(snap)
     sim.state.replicate(*n_replicas)
     return sim
