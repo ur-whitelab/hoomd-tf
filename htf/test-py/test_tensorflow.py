@@ -359,10 +359,8 @@ class test_compute(unittest.TestCase):
             n_replicas=[5,5], device=self.device, seed=1)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         
-        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
-                               kT=1, tau=0.2
-                               )
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),kT=1, tau=0.2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(20)
@@ -380,7 +378,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -662,7 +660,7 @@ class test_compute(unittest.TestCase):
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2)
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         log = hoomd.analyze.log(filename=None, quantities=[
@@ -683,7 +681,7 @@ class test_compute(unittest.TestCase):
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1,
                                tau=0.2)
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -745,7 +743,7 @@ class test_mol_batching(unittest.TestCase):
             MN=1, mol_indices=mol_indices, nneighbor_cutoff=NN)
         tfcompute = htf.tfcompute(model)
         nlist = hoomd.md.nlist.Cell()
-        nvt = hoomd.md.methods.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
+        nvt = hoomd.md.methods.nvt(filter=hoomd.filter.All(), kT=1, tau=0.2)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         with self.assertRaises(ValueError):
             tfcompute.attach(nlist, r_cut=rcut, batch_size=3)
@@ -766,7 +764,7 @@ class test_mol_batching(unittest.TestCase):
         sim = build_examples.generic_square_lattice(lattice_constant=4.0,
                                            n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        nvt = hoomd.md.methods.NVT(group=hoomd.group.all(), kT=1, tau=0.2)
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(8)
@@ -782,7 +780,7 @@ class test_mol_batching(unittest.TestCase):
         sim = build_examples.generic_square_lattice(lattice_constant=4.0,
                                            n_replicas=[3,3], device=self.device)
         nlist = hoomd.md.nlist.Cell()
-        nvt = hoomd.md.methods.NVT(group=hoomd.group.all(), kT=1, tau=0.2)
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(8)
@@ -819,7 +817,7 @@ class test_saving(unittest.TestCase):
         tfcompute = htf.tfcompute(model)
         sim = build_examples.generic_square_lattice(lattice_constant=4.0,
                                            n_replicas=[3,3], device=self.device)
-        nvt = hoomd.md.methods.NVT(group=hoomd.group.all(), kT=1, tau=0.2)
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(batch_size=3, save_output_period=2)
         hoomd.run(8)
@@ -872,8 +870,8 @@ class test_nlist(unittest.TestCase):
             lattice_constant=4.0,
             n_replicas=[8,8], device=self.device, seed=1)
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
-        nvt = hoomd.md.methods.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         with self.assertRaises(tf.errors.InvalidArgumentError):
@@ -893,7 +891,7 @@ class test_nlist(unittest.TestCase):
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2
                                )
-        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=1)
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(10)
