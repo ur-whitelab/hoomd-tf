@@ -120,7 +120,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
@@ -142,7 +142,7 @@ class test_compute(unittest.TestCase):
             n_replicas=[32,32], device=self.device)
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach()
         hoomd.run(10)
@@ -155,7 +155,7 @@ class test_compute(unittest.TestCase):
             n_replicas=[32,32], device=self.device)
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(batch_size=None)
         hoomd.run(10)
@@ -173,7 +173,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4, train=True)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
@@ -198,7 +198,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
@@ -223,7 +223,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
@@ -259,7 +259,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=2)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
         tfcompute.attach(nlist, train=True, r_cut=rcut)
         hoomd.run(5)
@@ -297,7 +297,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=4)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=4)
         hoomd.md.Integrator(methods=[nve], dt=0.005)
 
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
@@ -365,7 +365,7 @@ class test_compute(unittest.TestCase):
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2
                                )
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(20)
@@ -384,7 +384,7 @@ class test_compute(unittest.TestCase):
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1, tau=0.2
                                )
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -414,7 +414,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All()
                                )
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
@@ -441,7 +441,7 @@ class test_compute(unittest.TestCase):
         lj2.pair_coeff.set('A', 'A', epsilon=4.0, sigma=0.8)
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.01)
         tfcompute.attach(nlist, train=True, r_cut=rcut, period=100)
         tfcompute.set_reference_forces(lj)
@@ -468,7 +468,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, batch_size=4)
         hoomd.run(10)
@@ -506,7 +506,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(10)
@@ -529,7 +529,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, train=True, r_cut=rcut, batch_size=4)
         hoomd.run(10)
@@ -548,7 +548,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=1)
         hoomd.run(1)
@@ -578,7 +578,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         log = hoomd.analyze.log(filename=None,
                                 quantities=['potential_energy',
@@ -609,7 +609,7 @@ class test_compute(unittest.TestCase):
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All(
         ))
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(1)  # in lattice, should have 4 neighbors
@@ -642,7 +642,7 @@ class test_compute(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell()
         
         nve = hoomd.md.methods.NVE(filter=aa_filter)
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All(), kT=0.8)
         hoomd.md.Integrator(methods=[nve], dt=0.001)
         tfcompute.attach(nlist, r_cut=rcut, save_output_period=2)
         hoomd.run(8)
@@ -674,7 +674,7 @@ class test_compute(unittest.TestCase):
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2)
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         log = hoomd.analyze.log(filename=None, quantities=[
@@ -695,7 +695,7 @@ class test_compute(unittest.TestCase):
         
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(), kT=1,
                                tau=0.2)
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         lj = hoomd.md.pair.lj(r_cut=5.0, nlist=nlist)
         lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
@@ -888,7 +888,7 @@ class test_nlist(unittest.TestCase):
         hoomd.md.integrate.nvt(group=hoomd.group.all(),
                                kT=1, tau=0.2
                                )
-            sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005))
         tfcompute.attach(nlist, r_cut=rcut)
         with self.assertRaises(tf.errors.InvalidArgumentError):
@@ -908,7 +908,7 @@ class test_nlist(unittest.TestCase):
         nvt = hoomd.md.methods.NVT(filter=hoomd.filter.All(),
                                kT=1, tau=0.2
                                )
-        sim.thermalize_particle_momenta(filter=hoomd.filter.All())
+        sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
         hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         hoomd.run(10)
