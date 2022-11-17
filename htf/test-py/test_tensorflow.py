@@ -457,7 +457,7 @@ class test_compute(unittest.TestCase):
         rcut = 5.0
         sim = build_examples.generic_square_lattice(
             lattice_constant=4.0,
-            n_replicas=[3,3], device=self.device, seed=1, seed=1)
+            n_replicas=[3,3], device=self.device, seed=1)
         nlist = hoomd.md.nlist.Cell()
         
         nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
