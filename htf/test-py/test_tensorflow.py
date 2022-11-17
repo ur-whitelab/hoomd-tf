@@ -874,7 +874,7 @@ class test_nlist(unittest.TestCase):
         nlist = hoomd.md.nlist.Cell(rebuild_check_delay=1)
         nvt = hoomd.md.methods.nvt(group=hoomd.group.all(), kT=1, tau=0.2)
         sim.state.thermalize_particle_momenta(filter=hoomd.filter.All())
-        hoomd.md.Integrator(methods=[nvt], dt=0.005))
+        hoomd.md.Integrator(methods=[nvt], dt=0.005)
         tfcompute.attach(nlist, r_cut=rcut)
         with self.assertRaises(tf.errors.InvalidArgumentError):
             hoomd.run(2)
