@@ -190,12 +190,12 @@ class tfcompute(hoomd.md.compute.Compute):
             integrator.cpp_integrator.setHalfStepHook(self.cpp_force.hook())
 
     def _disable_sorter(self):
-        c = hoomd.context.current.sorter
-        if c is None:
-            hoomd.context.msg.notice(1, 'Unable to disable molecular sorting.'
-                                        'Make sure you disable it to allow molecular batching')
+        if self._nlist is None:
+            hoomd.context.msg.notice(1, 'No neighbor list provided.'
+                                     'Unable to disable molecular sorting.'
+                                     'Make sure you disable it to allow molecular batching.')
         else:
-            c.disable()
+            self._nlist.deterministic=True
 
     def enable_mapped_nlist(self, system, mapping_fxn):
         R''' Modifies existing snapshot to enable CG beads to
