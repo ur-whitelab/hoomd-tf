@@ -36,17 +36,6 @@ else()
     message("-- Found suitable tensorflow version for minimum ${TF_REQUIRE_VERSION}")
 endif()
 
-
-
-
-# Need to define NO_IMPORT_ARRAY in every file but module.cc
-set_source_files_properties(${_${COMPONENT_NAME}_sources} ${_${COMPONENT_NAME}_cu_sources} PROPERTIES COMPILE_DEFINITIONS NO_IMPORT_ARRAY)
-
-#if(ENABLE_CUDA)
-#CUDA_COMPILE(_CUDA_GENERATED_FILES ${_${COMPONENT_NAME}_cu_sources} OPTIONS ${CUDA_ADDITIONAL_OPTIONS} SHARED)
-#endif(ENABLE_CUDA)
-
-
 pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources} NO_EXTRAS)
 # alias into the HOOMD namespace so that plugins and symlinked components both work
 add_library (HOOMD::_${COMPONENT_NAME} ALIAS _${COMPONENT_NAME})
