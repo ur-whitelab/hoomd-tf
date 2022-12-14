@@ -1,7 +1,7 @@
 // Copyright (c) 2020 HOOMD-TF Developers
 
 #include "TensorflowCompute.h"
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
 #include "TensorflowCompute.cuh"
 #endif
 
@@ -205,10 +205,10 @@ void TensorflowCompute<M>::computeForces(uint64_t timestep)
             if (m_prof)
                 m_prof->pop(); // force update
 
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
             if (M == TFCommMode::GPU)
                 cudaDeviceSynchronize();
-#endif // ENABLE_CUDA
+#endif // ENABLE_GPU
         }
         if (m_prof)
             m_prof->pop(); // compute
@@ -488,7 +488,7 @@ void hoomd_tf::export_TensorflowCompute(pybind11::module &m)
 // ********************************
 // here follows the code for TensorflowCompute on the GPU
 
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
 
 TensorflowComputeGPU::TensorflowComputeGPU(pybind11::object &py_self,
                                            std::shared_ptr<SystemDefinition> sysdef,
@@ -669,4 +669,4 @@ void hoomd_tf::export_TensorflowComputeGPU(pybind11::module &m)
              &TensorflowComputeGPU::addReferenceForce);
 }
 
-#endif // ENABLE_CUDA
+#endif // ENABLE_GPU

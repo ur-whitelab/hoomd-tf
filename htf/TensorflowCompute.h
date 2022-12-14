@@ -245,7 +245,7 @@ namespace hoomd_tf
     //! Export the TensorflowCompute class to python
     void export_TensorflowCompute(pybind11::module &m);
 
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
 
     /*! GPU version of TensorflowCompute class
          *
@@ -299,7 +299,7 @@ namespace hoomd_tf
     void export_TensorflowComputeGPU(pybind11::module &m);
 
     template class TensorflowCompute<TFCommMode::GPU>;
-#endif // ENABLE_CUDA
+#endif // ENABLE_GPU
 
     //! force implementation even if no CUDA found
     template class TensorflowCompute<TFCommMode::CPU>;

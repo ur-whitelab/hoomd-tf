@@ -11,9 +11,9 @@
 #include <stdexcept>
 #include <sstream>
 #include "CommStruct.h"
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
 #include "TFArrayComm.cuh"
-#endif //ENABLE_CUDA
+#endif //ENABLE_GPU
 
 /*! \file TFArrayComm.h
     \brief Declaration of TFArrayComm class
@@ -111,7 +111,7 @@ namespace hoomd_tf
                 }
             else
                 {
-                #ifdef ENABLE_CUDA
+                #ifdef ENABLE_GPU
                     ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
@@ -159,7 +159,7 @@ namespace hoomd_tf
                 }
             else
                 {
-                #ifdef ENABLE_CUDA
+                #ifdef ENABLE_GPU
                     ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::read);
@@ -192,7 +192,7 @@ namespace hoomd_tf
                 }
             else
                 {
-                #ifdef ENABLE_CUDA
+                #ifdef ENABLE_GPU
                     ArrayHandle<T> handle(*m_array,
                         access_location::device,
                         access_mode::overwrite);
@@ -230,7 +230,7 @@ namespace hoomd_tf
             return reinterpret_cast<int64_t>(static_cast<const CommStruct*>(&m_comm_struct));
             }
 
-        #ifdef ENABLE_CUDA
+        #ifdef ENABLE_GPU
             //! Set the CUDA stream that will be used
             void setCudaStream(cudaStream_t s) { m_comm_struct.stream = s;}
             cudaStream_t getCudaStream() const
@@ -243,7 +243,7 @@ namespace hoomd_tf
         //! Make sure that CUDA is enabled before running in GPU mode
         void checkDevice()
             {
-            #ifndef ENABLE_CUDA
+            #ifndef ENABLE_GPU
                 if (M == TFCommMode::GPU)
                     throw std::runtime_error(
                         "CUDA compilation not enabled so cannot use GPU CommMode");

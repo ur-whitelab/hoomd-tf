@@ -132,7 +132,7 @@ necessary. Set build type to `DEBUG` if you need to troubleshoot.
 
     mkdir build && cd build
     CXX=g++ CC=gcc cmake .. -DCMAKE_BUILD_TYPE=Release \
-     -DENABLE_CUDA=ON -DENABLE_MPI=OFF\
+     -DENABLE_GPU=ON -DENABLE_MPI=OFF\
      -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on\
      -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
      -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`
@@ -204,7 +204,7 @@ These are instructions for our group's cluster (BlueHive), and not for general u
     python -m pip install tensorflow
     git clone --recursive https://github.com/glotzerlab/hoomd-blue
     cd hoomd-blue && git checkout tags/v2.9.3 -b v2.9.3 && mkdir build && cd build
-    CXX=g++ CC=gcc cmake .. -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"` -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_CUDA=ON -DENABLE_MPI=OFF
+    CXX=g++ CC=gcc cmake .. -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"` -DCMAKE_CXX_FLAGS=-march=native -DCMAKE_C_FLAGS=-march=native -DENABLE_GPU=ON -DENABLE_MPI=OFF
     make install && cd
     git clone https://github.com/ur-whitelab/hoomd-tf
     cd hoomd-tf && mkdir build && cd build
@@ -258,7 +258,7 @@ different cmake step**
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
     -DPYTHON_EXECUTABLE=$(which python) \
-    -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
+    -DCMAKE_BUILD_TYPE=Release -DENABLE_GPU=ON -DENABLE_MPI=OFF -DBUILD_HPMC=off -DBUILD_CGCMM=off -DBUILD_MD=on \
     -DBUILD_METAL=off -DBUILD_TESTING=off -DBUILD_DEPRECATED=off -DBUILD_MPCD=OFF \
     -DCMAKE_INSTALL_PREFIX=`python -c "import site; print(site.getsitepackages()[0])"`\
     -DNVCC_FLAGS="-ccbin /software/gcc/7.3.0/bin"

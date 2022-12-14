@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cstddef>
 
-#if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
+#if defined(ENABLE_GPU) || defined(GOOGLE_CUDA)
 #include <cuda_runtime.h>
 #endif
 
@@ -60,7 +60,7 @@ namespace hoomd_tf
             mem_size = other.mem_size;
             name = other.name;
             offset = other.offset;
-#if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
+#if defined(ENABLE_GPU) || defined(GOOGLE_CUDA)
             stream = other.stream;
 #endif
 
@@ -97,8 +97,8 @@ namespace hoomd_tf
         size_t offset;       //! Offset for doing batches
         size_t mem_size;     //! Total memory of all elements together
         const char* name;    //! Name of this communication object
-        //TODO Why is ENABLE_CUDA set for compilng tf code? We don't have any hoomd headers...
-#if defined(ENABLE_CUDA) || defined(GOOGLE_CUDA)
+        //TODO Why is ENABLE_GPU set for compilng tf code? We don't have any hoomd headers...
+#if defined(ENABLE_GPU) || defined(GOOGLE_CUDA)
         cudaStream_t stream = 0;  //! This CommStruct's CUDA stream
 #endif
         };
@@ -138,7 +138,7 @@ namespace hoomd_tf
             return *this;
             }
 
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
         void readGPUMemory(void *dest, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);
@@ -160,7 +160,7 @@ namespace hoomd_tf
             {
             throw "Should not call readGPUMemory without CUDA";
             }
-#endif //ENABLE_CUDA
+#endif //ENABLE_GPU
         void readCPUMemory(void* dest, size_t n) override
             {
             assert(offset * sizeof(T) + n <= mem_size);

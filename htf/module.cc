@@ -18,7 +18,7 @@ PYBIND11_PLUGIN(_htf)
     pybind11::module m("_htf");
     export_TensorflowCompute(m);
 
-#ifdef ENABLE_CUDA
+#ifdef ENABLE_GPU
     export_TensorflowComputeGPU(m);
 #endif
 
