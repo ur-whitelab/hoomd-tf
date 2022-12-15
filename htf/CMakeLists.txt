@@ -36,9 +36,9 @@ else()
     message("-- Found suitable tensorflow version for minimum ${TF_REQUIRE_VERSION}")
 endif()
 
-pybind11_add_module (_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${${_COMPONENT_NAME}_cu_sources} NO_EXTRAS)
+pybind11_add_module(_${COMPONENT_NAME} SHARED ${_${COMPONENT_NAME}_sources} ${_cuda_soruces} NO_EXTRAS)
 # alias into the HOOMD namespace so that plugins and symlinked components both work
-add_library (HOOMD::_${COMPONENT_NAME} ALIAS _${COMPONENT_NAME})
+add_library(HOOMD::_${COMPONENT_NAME} ALIAS _${COMPONENT_NAME})
 # add visilibty flag, which is missing from hoomd?
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
@@ -84,7 +84,7 @@ add_subdirectory(tf2hoomd_op)
 ################ Python only modules
 # copy python modules to the build directory to make it a working python package
 MACRO(copy_file file)
-    add_custom_command (
+    add_custom_command(
         OUTPUT ${file}
         POST_BUILD
         COMMAND    ${CMAKE_COMMAND}
