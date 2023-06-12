@@ -3,10 +3,10 @@
 #ifndef m_TF_ARRAY_COMM_CUH_
 #define m_TF_ARRAY_COMM_CUH_
 
-#include <hoomd/HOOMDMath.h>
-#include <hoomd/ParticleData.cuh>
-#include <hoomd/Index1D.h>
-#include <hoomd/HOOMDMath.h>
+#include "hoomd/HOOMDMath.h"
+#include "hoomd/ParticleData.cuh"
+#include "hoomd/Index1D.h"
+#include "hoomd/HOOMDMath.h"
 
 
 /*! \file TFArrayComm.cuh

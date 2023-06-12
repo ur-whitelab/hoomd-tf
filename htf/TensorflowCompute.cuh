@@ -3,10 +3,10 @@
 #ifndef m_TENSORFLOW_COMPUTE_CUH_
 #define m_TENSORFLOW_COMPUTE_CUH_
 
-#include <hoomd/HOOMDMath.h>
-#include <hoomd/ParticleData.cuh>
-#include <hoomd/Index1D.h>
-#include <hoomd/HOOMDMath.h>
+#include "hoomd/HOOMDMath.h"
+#include "hoomd/ParticleData.cuh"
+#include "hoomd/Index1D.h"
+#include "hoomd/HOOMDMath.h"
 
 /*! \file TensorflowCompute.cuh
  *  \brief Declarations of GPU version of some TensorflowCompute methods

@@ -112,7 +112,7 @@ namespace hoomd_tf
      */
 
 #ifndef GOOGLE_CUDA
-#include <hoomd/GlobalArray.h>
+#include "hoomd/GlobalArray.h"
 namespace hoomd_tf
     {
     template <typename T>

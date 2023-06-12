@@ -3,8 +3,8 @@
 #ifndef m_IPC_ARRAY_COMM_
 #define m_IPC_ARRAY_COMM_
 
-#include <hoomd/ExecutionConfiguration.h>
-#include <hoomd/GlobalArray.h>
+#include "hoomd/ExecutionConfiguration.h"
+#include "hoomd/GlobalArray.h"
 #include <string.h>
 #include <sys/mman.h>
 #include <iostream>

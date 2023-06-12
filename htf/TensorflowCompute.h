@@ -3,13 +3,13 @@
 #ifndef m_TENSORFLOW_COMPUTE_H_
 #define m_TENSORFLOW_COMPUTE_H_
 
-#include <hoomd/Autotuner.h>
-#include <hoomd/ForceCompute.h>
-#include <hoomd/HOOMDMath.h>
-#include <hoomd/HalfStepHook.h>
-#include <hoomd/ParticleData.h>
-#include <hoomd/SystemDefinition.h>
-#include <hoomd/md/NeighborList.h>
+#include "hoomd/Autotuner.h"
+#include "hoomd/ForceCompute.h"
+#include "hoomd/HOOMDMath.h"
+#include "hoomd/HalfStepHook.h"
+#include "hoomd/ParticleData.h"
+#include "hoomd/SystemDefinition.h"
+#include "hoomd/md/NeighborList.h"
 #include "TFArrayComm.h"
 
 // pybind11 is used to create the python bindings to the C++ object,
